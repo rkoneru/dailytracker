@@ -44,6 +44,10 @@
 
 * { box-sizing: border-box; }
 
+/* Component classes below set explicit `display` values, which would
+   otherwise beat the browser's default `[hidden]{display:none}` UA rule. */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
@@ -336,6 +340,19 @@ textarea.field-input { padding: 8px 10px; resize: vertical; }
 .col-status { width: 150px; }
 .col-progress { width: 160px; }
 .col-ganttname { width: 200px; position: sticky; left: 0; background: var(--color-surface); }
+.col-days { width: 56px; }
+.col-taskname { width: 220px; }
+.col-assignee { width: 130px; }
+.col-comments { width: 220px; }
+
+/* table-layout:fixed makes these two dense tables honor column widths
+   exactly (auto layout redistributes width based on content, which
+   squeezes text columns unpredictably when many fixed-width columns
+   compete for space). min-width comes from JS (gantt) / above (dash tasks)
+   sized to the actual column count, so overflow-x:auto on .table-scroll
+   takes over on narrow viewports instead of columns shrinking. */
+#dash-tasks-table { min-width: 1250px; table-layout: fixed; }
+#gantt-table { table-layout: fixed; }
 
 .row-input {
   width: 100%;
@@ -422,6 +439,10 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.gantt-row-name .row-input {
+  flex: 1;
+  min-width: 0;
 }
 .gantt-type-btn {
   min-width: 32px;

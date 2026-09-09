@@ -1,5 +1,5 @@
 import { listFullProjects } from './state.js';
-import { parseDate } from './charts.js';
+import { parseDate, daysBetween } from './charts.js';
 import { buildMailtoUrl } from './export.js';
 
 function el(tag, props = {}, children = []) {
@@ -10,238 +10,563 @@ function el(tag, props = {}, children = []) {
     else if (key.startsWith('data-')) node.setAttribute(key, value);
     else node[key] = value;
   });
-  children.forEach((child) => node.appendChild(child));
+  children.filter(Boolean).forEach((child) => node.appendChild(child));
   return node;
 }
 
-// ---------- Week math (Monday-start) ----------
+// ---------- Report types ----------
 
-function startOfWeek(date) {
+const REPORT_TYPES = {
+  daily: { title: 'Daily Status Report', period: 'day', currentLabel: 'Today' },
+  weekly: { title: 'Weekly Status Report', period: 'week', currentLabel: 'This Week' },
+  steerco: { title: 'Steering Committee Report', period: 'month', currentLabel: 'This Month' },
+  executive: { title: 'Executive Leadership Report', period: 'month', currentLabel: 'This Month' },
+};
+
+// ---------- Period math ----------
+
+function startOfDay(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function startOfWeek(date) {
+  const d = startOfDay(date);
   const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1) - day;
-  d.setDate(d.getDate() + diff);
+  d.setDate(d.getDate() + ((day === 0 ? -6 : 1) - day));
   return d;
 }
 
-function endOfWeek(weekStart) {
-  const d = new Date(weekStart);
-  d.setDate(d.getDate() + 6);
+function startOfMonth(date) {
+  const d = startOfDay(date);
+  d.setDate(1);
   return d;
 }
 
-function inRange(date, start, end) {
-  return date >= start && date <= end;
+function endOfMonth(date) {
+  const d = startOfDay(date);
+  d.setMonth(d.getMonth() + 1, 0);
+  return d;
+}
+
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
 }
 
 function fmtDate(d) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function fmtRange(start, end) {
-  return `${fmtDate(start)} – ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+function fmtDateFull(d) {
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// ---------- Report computation ----------
+function periodFor(type, anchor) {
+  const kind = REPORT_TYPES[type].period;
+  if (kind === 'day') {
+    const start = startOfDay(anchor);
+    return { start, end: start, label: start.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }) };
+  }
+  if (kind === 'week') {
+    const start = startOfWeek(anchor);
+    const end = addDays(start, 6);
+    return { start, end, label: `${fmtDate(start)} – ${fmtDateFull(end)}` };
+  }
+  const start = startOfMonth(anchor);
+  const end = endOfMonth(anchor);
+  return { start, end, label: start.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) };
+}
 
-function computeProjectWeekly(project, weekStart, weekEnd, today) {
+function shiftAnchor(type, anchor, direction) {
+  const kind = REPORT_TYPES[type].period;
+  if (kind === 'day') return addDays(anchor, direction);
+  if (kind === 'week') return addDays(anchor, direction * 7);
+  const d = new Date(anchor);
+  d.setMonth(d.getMonth() + direction);
+  return d;
+}
+
+function isCurrentPeriod(type, anchor) {
+  const now = periodFor(type, new Date());
+  const shown = periodFor(type, anchor);
+  return now.start.getTime() === shown.start.getTime();
+}
+
+// ---------- Shared per-project computation ----------
+
+// RAG is derived, not stored: the project's own status field wins when it
+// says something is wrong, otherwise overdue items drive it.
+function ragFor(statusText, overdueCount) {
+  const s = (statusText || '').toUpperCase();
+  if (s.includes('OFF TRACK')) return 'Red';
+  if (s.includes('AT RISK')) return 'Amber';
+  if (overdueCount >= 3) return 'Red';
+  if (overdueCount > 0) return 'Amber';
+  return 'Green';
+}
+
+function inRange(date, start, end) {
+  return date >= start && date <= end;
+}
+
+function computeProject(project, periodStart, periodEnd, today) {
   const dashTasks = project.dashTasks || [];
   const milestones = project.milestones || [];
 
-  const completedThisWeek = dashTasks.filter((t) => {
-    if (t.status !== 'Complete') return false;
-    const end = parseDate(t.end);
-    return end && inRange(end, weekStart, weekEnd);
-  });
-  const dueThisWeek = dashTasks.filter((t) => {
-    if (t.status === 'Complete') return false;
-    const end = parseDate(t.end);
-    return end && inRange(end, weekStart, weekEnd);
-  });
-  const overdue = dashTasks.filter((t) => {
-    if (t.status === 'Complete') return false;
-    const end = parseDate(t.end);
-    return end && end < today;
-  });
-  const milestonesThisWeek = milestones.filter((m) => {
-    if ((m.progress || 0) >= 5) return false;
+  const withEnd = dashTasks.map((t) => ({ task: t, end: parseDate(t.end), start: parseDate(t.start) }));
+
+  const completedInPeriod = withEnd
+    .filter(({ task, end }) => task.status === 'Complete' && end && inRange(end, periodStart, periodEnd))
+    .map(({ task }) => task);
+  const dueInPeriod = withEnd
+    .filter(({ task, end }) => task.status !== 'Complete' && end && inRange(end, periodStart, periodEnd))
+    .map(({ task }) => task);
+  const overdue = withEnd
+    .filter(({ task, end }) => task.status !== 'Complete' && end && end < today)
+    .map(({ task, end }) => ({ ...task, daysLate: daysBetween(end, today) }))
+    .sort((a, b) => b.daysLate - a.daysLate);
+  const inProgress = dashTasks.filter((t) => t.status === 'In Progress');
+  const onHold = dashTasks.filter((t) => t.status === 'On Hold');
+
+  const milestonesInPeriod = milestones.filter((m) => {
     const due = parseDate(m.due);
-    return due && inRange(due, weekStart, weekEnd);
+    return due && inRange(due, periodStart, periodEnd);
   });
+  const upcomingMilestones = milestones
+    .filter((m) => (m.progress || 0) < 5 && parseDate(m.due))
+    .sort((a, b) => parseDate(a.due) - parseDate(b.due))
+    .slice(0, 4);
+  const milestonesDone = milestones.filter((m) => (m.progress || 0) >= 5).length;
 
   const total = dashTasks.length;
   const complete = dashTasks.filter((t) => t.status === 'Complete').length;
   const pctComplete = total > 0 ? Math.round((complete / total) * 100) : 0;
 
+  const budgetPlanned = project.budgetPlanned || 0;
+  const budgetActual = project.budgetActual || 0;
+  const burnPct = budgetPlanned > 0 ? Math.round((budgetActual / budgetPlanned) * 100) : 0;
+
+  const status = (project.dashStatus || 'ON TRACK').trim();
+  const rag = ragFor(status, overdue.length);
+
+  // One-line headline for the executive table: worst thing first.
+  let headline;
+  if (overdue.length > 0) headline = `${overdue.length} overdue · ${overdue[0].name || 'untitled task'}`;
+  else if (onHold.length > 0) headline = `${onHold.length} on hold · ${onHold[0].name || 'untitled task'}`;
+  else if (upcomingMilestones.length > 0) headline = `Next: ${upcomingMilestones[0].text || 'untitled milestone'}`;
+  else headline = 'No blockers';
+
   return {
     id: project.id,
     name: project.projectName || 'Untitled project',
-    status: (project.dashStatus || 'ON TRACK').trim(),
+    objective: project.objective || '',
+    dueDate: project.dueDate || '',
+    status,
+    rag,
     pctComplete,
-    completedThisWeek,
-    dueThisWeek,
+    taskTotal: total,
+    taskComplete: complete,
+    completedInPeriod,
+    dueInPeriod,
     overdue,
-    milestonesThisWeek,
-    budgetPlanned: project.budgetPlanned || 0,
-    budgetActual: project.budgetActual || 0,
+    inProgress,
+    onHold,
+    milestonesInPeriod,
+    upcomingMilestones,
+    milestonesDone,
+    milestoneTotal: milestones.length,
+    budgetPlanned,
+    budgetActual,
+    burnPct,
+    pending: project.pending || { decisions: 0, actions: 0, changeRequests: 0 },
+    headline,
   };
 }
 
-function computeWeeklyReport(anchorDate) {
-  const weekStart = startOfWeek(anchorDate);
-  const weekEnd = endOfWeek(weekStart);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function computeReport(type, anchor) {
+  const { start, end, label } = periodFor(type, anchor);
+  const today = startOfDay(new Date());
+  const projects = listFullProjects().map((p) => computeProject(p, start, end, today));
 
-  const projects = listFullProjects().map((p) => computeProjectWeekly(p, weekStart, weekEnd, today));
+  const budgetPlanned = projects.reduce((s, p) => s + p.budgetPlanned, 0);
+  const budgetActual = projects.reduce((s, p) => s + p.budgetActual, 0);
+  const taskTotal = projects.reduce((s, p) => s + p.taskTotal, 0);
+  const taskComplete = projects.reduce((s, p) => s + p.taskComplete, 0);
 
   const summary = {
     totalProjects: projects.length,
-    completedThisWeek: projects.reduce((sum, p) => sum + p.completedThisWeek.length, 0),
-    dueThisWeek: projects.reduce((sum, p) => sum + p.dueThisWeek.length, 0),
-    overdue: projects.reduce((sum, p) => sum + p.overdue.length, 0),
-    atRisk: projects.filter((p) => p.status.toUpperCase() !== 'ON TRACK').length,
+    completedInPeriod: projects.reduce((s, p) => s + p.completedInPeriod.length, 0),
+    dueInPeriod: projects.reduce((s, p) => s + p.dueInPeriod.length, 0),
+    overdue: projects.reduce((s, p) => s + p.overdue.length, 0),
+    inProgress: projects.reduce((s, p) => s + p.inProgress.length, 0),
+    milestonesInPeriod: projects.reduce((s, p) => s + p.milestonesInPeriod.length, 0),
+    decisions: projects.reduce((s, p) => s + (p.pending.decisions || 0), 0),
+    actions: projects.reduce((s, p) => s + (p.pending.actions || 0), 0),
+    changeRequests: projects.reduce((s, p) => s + (p.pending.changeRequests || 0), 0),
+    red: projects.filter((p) => p.rag === 'Red').length,
+    amber: projects.filter((p) => p.rag === 'Amber').length,
+    green: projects.filter((p) => p.rag === 'Green').length,
+    budgetPlanned,
+    budgetActual,
+    burnPct: budgetPlanned > 0 ? Math.round((budgetActual / budgetPlanned) * 100) : 0,
+    portfolioPct: taskTotal > 0 ? Math.round((taskComplete / taskTotal) * 100) : 0,
   };
 
-  return { weekStart, weekEnd, projects, summary };
+  return { type, periodStart: start, periodEnd: end, periodLabel: label, projects, summary };
 }
 
-// ---------- Rendering ----------
+// ---------- Shared render pieces ----------
 
-let currentAnchor = new Date();
-
-function renderSummaryCards(summary) {
-  const container = document.getElementById('report-summary-cards');
-  container.innerHTML = '';
-  [
-    ['📁', 'blue', String(summary.totalProjects), 'Total Projects'],
-    ['✅', 'green', String(summary.completedThisWeek), 'Completed This Week'],
-    ['📅', 'amber', String(summary.dueThisWeek), 'Due This Week'],
-    ['⚠️', 'purple', String(summary.overdue), 'Overdue'],
-  ].forEach(([icon, tone, value, label]) => {
-    container.appendChild(el('div', { class: 'stat-card' }, [
-      el('div', { class: `stat-card__icon stat-card__icon--${tone}`, 'aria-hidden': 'true', text: icon }),
-      el('div', { class: 'stat-card__body' }, [
-        el('span', { class: 'stat-card__value', text: value }),
-        el('span', { class: 'stat-card__label', text: label }),
-      ]),
-    ]));
-  });
+function statCard(icon, tone, value, label) {
+  return el('div', { class: 'stat-card' }, [
+    el('div', { class: `stat-card__icon stat-card__icon--${tone}`, 'aria-hidden': 'true', text: icon }),
+    el('div', { class: 'stat-card__body' }, [
+      el('span', { class: 'stat-card__value', text: value }),
+      el('span', { class: 'stat-card__label', text: label }),
+    ]),
+  ]);
 }
 
-function taskListSection(title, items, emptyText) {
+function ragBadge(rag) {
+  const cls = rag === 'Red' ? 'report-badge--bad' : rag === 'Amber' ? 'report-badge--warn' : 'report-badge--ok';
+  return el('span', { class: `report-badge ${cls}`, text: rag });
+}
+
+function statBox(value, label) {
+  return el('div', {}, [el('strong', { text: value }), el('span', { text: label })]);
+}
+
+// Returns null for an empty section with no empty-state text, so callers can
+// drop it entirely rather than printing a heading with nothing under it.
+function listSection(title, items, emptyText) {
+  if (items.length === 0 && !emptyText) return null;
   const section = el('div', { class: 'report-card__section' }, [el('h4', { text: title })]);
   if (items.length === 0) {
     section.appendChild(el('p', { class: 'empty-hint', text: emptyText }));
     return section;
   }
   const ul = el('ul', { class: 'report-card__list' });
-  items.forEach((item) => {
+  items.forEach(({ label, meta }) => {
     ul.appendChild(el('li', {}, [
-      el('span', { text: item.label }),
-      el('span', { class: 'report-card__list-meta', text: item.meta }),
+      el('span', { text: label }),
+      el('span', { class: 'report-card__list-meta', text: meta || '' }),
     ]));
   });
   section.appendChild(ul);
   return section;
 }
 
-function renderProjectCards(projects) {
-  const container = document.getElementById('report-project-cards');
-  container.innerHTML = '';
+function taskItems(tasks) {
+  return tasks.map((t) => ({ label: t.name || '(untitled task)', meta: t.assigned || '' }));
+}
 
-  if (projects.length === 0) {
-    container.appendChild(el('p', { class: 'empty-hint', text: 'No projects yet.' }));
-    return;
+function projectCard(p, children) {
+  return el('div', { class: 'card report-card' }, [
+    el('div', { class: 'report-card__head' }, [
+      el('h3', { class: 'report-card__name', text: p.name }),
+      ragBadge(p.rag),
+      el('span', { class: 'report-card__status', text: p.status }),
+    ]),
+    ...children.filter(Boolean),
+  ]);
+}
+
+// ---------- Per-type renderers ----------
+
+function renderDaily(report, cards, summaryEl) {
+  summaryEl.append(
+    statCard('📁', 'blue', String(report.summary.totalProjects), 'Projects'),
+    statCard('📅', 'amber', String(report.summary.dueInPeriod), 'Due Today'),
+    statCard('🔨', 'green', String(report.summary.inProgress), 'In Progress'),
+    statCard('⚠️', 'purple', String(report.summary.overdue), 'Overdue'),
+  );
+
+  report.projects.forEach((p) => {
+    cards.appendChild(projectCard(p, [
+      el('div', { class: 'report-card__stats' }, [
+        statBox(`${p.pctComplete}%`, 'Complete'),
+        statBox(String(p.completedInPeriod.length), 'Done today'),
+        statBox(String(p.dueInPeriod.length), 'Due today'),
+        statBox(String(p.inProgress.length), 'In progress'),
+        statBox(String(p.overdue.length), 'Overdue'),
+      ]),
+      listSection('Due today', taskItems(p.dueInPeriod), 'Nothing due today.'),
+      listSection('In progress', taskItems(p.inProgress), 'Nothing in progress.'),
+      listSection('Blocked / on hold', taskItems(p.onHold), ''),
+      listSection('Overdue', p.overdue.map((t) => ({ label: t.name || '(untitled task)', meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}` })), ''),
+    ]));
+  });
+}
+
+function renderWeekly(report, cards, summaryEl) {
+  summaryEl.append(
+    statCard('📁', 'blue', String(report.summary.totalProjects), 'Projects'),
+    statCard('✅', 'green', String(report.summary.completedInPeriod), 'Completed This Week'),
+    statCard('📅', 'amber', String(report.summary.dueInPeriod), 'Due This Week'),
+    statCard('⚠️', 'purple', String(report.summary.overdue), 'Overdue'),
+  );
+
+  report.projects.forEach((p) => {
+    const children = [
+      el('div', { class: 'report-card__stats' }, [
+        statBox(`${p.pctComplete}%`, 'Complete'),
+        statBox(String(p.completedInPeriod.length), 'Done this week'),
+        statBox(String(p.dueInPeriod.length), 'Due this week'),
+        statBox(String(p.overdue.length), 'Overdue'),
+        statBox(`$${p.budgetActual.toLocaleString()}`, `of $${p.budgetPlanned.toLocaleString()} budget`),
+      ]),
+      listSection('Completed this week', taskItems(p.completedInPeriod), 'Nothing completed this week.'),
+      listSection('Due this week', taskItems(p.dueInPeriod), 'Nothing due this week.'),
+      listSection('Overdue', p.overdue.map((t) => ({ label: t.name || '(untitled task)', meta: `${t.daysLate}d late` })), 'Nothing overdue — nice.'),
+    ];
+    if (p.milestonesInPeriod.length > 0) {
+      children.push(listSection('Milestones this week', p.milestonesInPeriod.map((m) => ({ label: m.text || '(untitled milestone)', meta: m.due })), ''));
+    }
+    cards.appendChild(projectCard(p, children));
+  });
+}
+
+function renderSteerCo(report, cards, summaryEl) {
+  const s = report.summary;
+  summaryEl.append(
+    statCard('🚦', 'blue', `${s.green}/${s.amber}/${s.red}`, 'Green / Amber / Red'),
+    statCard('🎯', 'green', String(s.milestonesInPeriod), 'Milestones This Period'),
+    statCard('🗳', 'amber', String(s.decisions), 'Decisions Pending'),
+    statCard('💷', 'purple', `${s.burnPct}%`, 'Portfolio Budget Used'),
+  );
+
+  report.projects.forEach((p) => {
+    const variance = p.budgetActual - p.budgetPlanned;
+    const varianceLabel = variance > 0 ? `$${variance.toLocaleString()} over` : `$${Math.abs(variance).toLocaleString()} under`;
+
+    cards.appendChild(projectCard(p, [
+      p.objective ? el('p', { class: 'report-card__objective', text: p.objective }) : null,
+      el('div', { class: 'report-card__stats' }, [
+        statBox(`${p.pctComplete}%`, 'Tasks complete'),
+        statBox(`${p.milestonesDone}/${p.milestoneTotal}`, 'Milestones done'),
+        statBox(String(p.completedInPeriod.length), 'Delivered this period'),
+        statBox(`${p.burnPct}%`, `Budget used · ${varianceLabel}`),
+        statBox(p.dueDate || '—', 'Target date'),
+      ]),
+      listSection('Milestone outlook', p.upcomingMilestones.map((m) => ({
+        label: m.text || '(untitled milestone)',
+        meta: `${m.due || 'no date'} · ${Math.round(((m.progress || 0) / 5) * 100)}%`,
+      })), 'All milestones complete.'),
+      listSection('Decisions / actions / change requests', [
+        { label: 'Decisions pending', meta: String(p.pending.decisions || 0) },
+        { label: 'Open actions', meta: String(p.pending.actions || 0) },
+        { label: 'Change requests', meta: String(p.pending.changeRequests || 0) },
+      ], ''),
+      listSection('Key risks', [
+        ...p.overdue.slice(0, 5).map((t) => ({ label: t.name || '(untitled task)', meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}` })),
+        ...p.onHold.map((t) => ({ label: t.name || '(untitled task)', meta: `on hold · ${t.comments || 'no note'}` })),
+      ], 'No overdue or blocked items.'),
+    ]));
+  });
+}
+
+function renderExecutive(report, cards, summaryEl) {
+  const s = report.summary;
+  summaryEl.append(
+    statCard('📁', 'blue', String(s.totalProjects), 'Projects'),
+    statCard('📈', 'green', `${s.portfolioPct}%`, 'Portfolio Complete'),
+    statCard('💷', 'amber', `${s.burnPct}%`, `Budget Used · $${s.budgetActual.toLocaleString()} of $${s.budgetPlanned.toLocaleString()}`),
+    statCard('🚦', 'purple', String(s.red + s.amber), 'Needing Attention'),
+  );
+
+  const table = el('table', { class: 'data-table exec-table' });
+  table.appendChild(el('thead', {}, [
+    el('tr', {}, [
+      el('th', { text: 'Project' }),
+      el('th', { class: 'exec-table__rag', text: 'RAG' }),
+      el('th', { class: 'exec-table__num', text: 'Complete' }),
+      el('th', { class: 'exec-table__num', text: 'Target' }),
+      el('th', { class: 'exec-table__num', text: 'Budget' }),
+      el('th', { text: 'Headline' }),
+    ]),
+  ]));
+
+  const tbody = el('tbody');
+  report.projects.forEach((p) => {
+    tbody.appendChild(el('tr', {}, [
+      el('td', {}, [el('strong', { text: p.name })]),
+      el('td', { class: 'exec-table__rag' }, [ragBadge(p.rag)]),
+      el('td', { class: 'exec-table__num', text: `${p.pctComplete}%` }),
+      el('td', { class: 'exec-table__num', text: p.dueDate || '—' }),
+      el('td', { class: 'exec-table__num', text: `${p.burnPct}%` }),
+      el('td', { text: p.headline }),
+    ]));
+  });
+  table.appendChild(tbody);
+
+  cards.appendChild(el('div', { class: 'card' }, [
+    el('div', { class: 'card__head' }, [el('h2', { text: 'Portfolio at a glance' })]),
+    el('div', { class: 'table-scroll' }, [table]),
+  ]));
+
+  const topRisks = report.projects
+    .flatMap((p) => p.overdue.map((t) => ({ ...t, project: p.name })))
+    .sort((a, b) => b.daysLate - a.daysLate)
+    .slice(0, 6);
+
+  cards.appendChild(el('div', { class: 'card' }, [
+    el('div', { class: 'card__head' }, [el('h2', { text: 'Top risks across the portfolio' })]),
+    listSection('', topRisks.map((t) => ({
+      label: `${t.project} — ${t.name || '(untitled task)'}`,
+      meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}`,
+    })), 'No overdue work anywhere in the portfolio.'),
+  ]));
+}
+
+const RENDERERS = { daily: renderDaily, weekly: renderWeekly, steerco: renderSteerCo, executive: renderExecutive };
+
+// ---------- Email / copy text ----------
+
+function buildReportText(report) {
+  const { type, periodLabel, projects, summary } = report;
+  const lines = [`${REPORT_TYPES[type].title} — ${periodLabel}`, ''];
+
+  if (type === 'executive') {
+    lines.push(`${summary.totalProjects} projects · ${summary.portfolioPct}% complete · budget ${summary.burnPct}% used ($${summary.budgetActual.toLocaleString()} of $${summary.budgetPlanned.toLocaleString()})`);
+    lines.push(`RAG: ${summary.green} green, ${summary.amber} amber, ${summary.red} red`);
+    lines.push('');
+    projects.forEach((p) => {
+      lines.push(`[${p.rag}] ${p.name} — ${p.pctComplete}% complete, budget ${p.burnPct}% used${p.dueDate ? `, target ${p.dueDate}` : ''}`);
+      lines.push(`    ${p.headline}`);
+    });
+  } else if (type === 'steerco') {
+    lines.push(`${summary.totalProjects} projects · ${summary.green} green / ${summary.amber} amber / ${summary.red} red`);
+    lines.push(`Decisions pending: ${summary.decisions} · Open actions: ${summary.actions} · Change requests: ${summary.changeRequests}`);
+    lines.push('');
+    projects.forEach((p) => {
+      lines.push(`[${p.rag}] ${p.name} — ${p.pctComplete}% complete, milestones ${p.milestonesDone}/${p.milestoneTotal}, budget ${p.burnPct}% used`);
+      if (p.upcomingMilestones.length > 0) {
+        lines.push(`    Next milestone: ${p.upcomingMilestones[0].text || 'untitled'} (${p.upcomingMilestones[0].due || 'no date'})`);
+      }
+      lines.push(`    Decisions ${p.pending.decisions || 0} · Actions ${p.pending.actions || 0} · CRs ${p.pending.changeRequests || 0}`);
+      if (p.overdue.length > 0) {
+        lines.push(`    Risks: ${p.overdue.slice(0, 3).map((t) => `${t.name || 'untitled'} (${t.daysLate}d late)`).join(', ')}`);
+      }
+      lines.push('');
+    });
+  } else {
+    const periodWord = type === 'daily' ? 'today' : 'this week';
+    lines.push(`${summary.totalProjects} projects · ${summary.completedInPeriod} completed ${periodWord} · ${summary.dueInPeriod} due · ${summary.overdue} overdue`);
+    lines.push('');
+    projects.forEach((p) => {
+      lines.push(`[${p.rag}] ${p.name} (${p.pctComplete}% complete)`);
+      lines.push(`    Done: ${p.completedInPeriod.length}  Due: ${p.dueInPeriod.length}  Overdue: ${p.overdue.length}`);
+      if (p.dueInPeriod.length > 0) {
+        lines.push(`    Due ${periodWord}: ${p.dueInPeriod.slice(0, 5).map((t) => t.name || 'untitled').join(', ')}`);
+      }
+      if (p.overdue.length > 0) {
+        lines.push(`    Overdue: ${p.overdue.slice(0, 5).map((t) => `${t.name || 'untitled'} (${t.daysLate}d)`).join(', ')}`);
+      }
+      lines.push('');
+    });
   }
 
-  projects.forEach((p) => {
-    const badgeClass = p.status.toUpperCase() === 'ON TRACK' ? 'report-badge--ok'
-      : p.status.toUpperCase() === 'OFF TRACK' ? 'report-badge--bad' : 'report-badge--warn';
-
-    const card = el('div', { class: 'card report-card' }, [
-      el('div', { class: 'report-card__head' }, [
-        el('h3', { class: 'report-card__name', text: p.name }),
-        el('span', { class: `report-badge ${badgeClass}`, text: p.status }),
-      ]),
-      el('div', { class: 'report-card__stats' }, [
-        el('div', {}, [el('strong', { text: `${p.pctComplete}%` }), el('span', { text: 'Complete' })]),
-        el('div', {}, [el('strong', { text: String(p.completedThisWeek.length) }), el('span', { text: 'Done this week' })]),
-        el('div', {}, [el('strong', { text: String(p.dueThisWeek.length) }), el('span', { text: 'Due this week' })]),
-        el('div', {}, [el('strong', { text: String(p.overdue.length) }), el('span', { text: 'Overdue' })]),
-        el('div', {}, [el('strong', { text: `$${p.budgetActual.toLocaleString()}` }), el('span', { text: `of $${p.budgetPlanned.toLocaleString()} budget` })]),
-      ]),
-      taskListSection('Due this week', p.dueThisWeek.map((t) => ({ label: t.name || '(untitled task)', meta: t.assigned || '' })), 'Nothing due this week.'),
-      taskListSection('Overdue', p.overdue.map((t) => ({ label: t.name || '(untitled task)', meta: t.assigned || '' })), 'Nothing overdue — nice.'),
-    ]);
-
-    if (p.milestonesThisWeek.length > 0) {
-      card.appendChild(taskListSection('Milestones this week', p.milestonesThisWeek.map((m) => ({ label: m.text || '(untitled milestone)', meta: m.due || '' })), ''));
-    }
-
-    container.appendChild(card);
-  });
+  return lines.join('\n');
 }
+
+// ---------- State + rendering ----------
+
+let currentType = 'weekly';
+let currentAnchor = new Date();
+let lastReport = null;
 
 function renderReport() {
-  const { weekStart, weekEnd, projects, summary } = computeWeeklyReport(currentAnchor);
-  document.getElementById('week-range-label').textContent = fmtRange(weekStart, weekEnd);
-  renderSummaryCards(summary);
-  renderProjectCards(projects);
-  return { weekStart, weekEnd, projects, summary };
+  const report = computeReport(currentType, currentAnchor);
+  lastReport = report;
+
+  document.getElementById('report-title').textContent = REPORT_TYPES[currentType].title;
+  document.getElementById('period-range-label').textContent = report.periodLabel;
+  document.getElementById('btn-current-period').textContent = REPORT_TYPES[currentType].currentLabel;
+
+  const historical = !isCurrentPeriod(currentType, currentAnchor);
+  document.getElementById('report-subtitle').textContent =
+    `Generated ${fmtDateFull(new Date())} · RAG is derived from each project's status plus its overdue items`
+    + (historical ? ' · viewing a past/future period, but overdue counts are always measured against today' : '');
+
+  const summaryEl = document.getElementById('report-summary-cards');
+  const cards = document.getElementById('report-project-cards');
+  summaryEl.innerHTML = '';
+  cards.innerHTML = '';
+
+  if (report.projects.length === 0) {
+    cards.appendChild(el('p', { class: 'empty-hint', text: 'No projects yet.' }));
+    return report;
+  }
+
+  RENDERERS[currentType](report, cards, summaryEl);
+  return report;
 }
 
-// ---------- Email summary ----------
-
-function buildEmailBody({ weekStart, weekEnd, projects, summary }) {
-  const lines = [];
-  lines.push(`Weekly Status Report — ${fmtRange(weekStart, weekEnd)}`);
-  lines.push('');
-  lines.push(`${summary.totalProjects} projects · ${summary.completedThisWeek} tasks completed this week · ${summary.dueThisWeek} due · ${summary.overdue} overdue`);
-  lines.push('');
-  projects.forEach((p) => {
-    lines.push(`— ${p.name} (${p.status}, ${p.pctComplete}% complete)`);
-    lines.push(`   Done: ${p.completedThisWeek.length}  Due: ${p.dueThisWeek.length}  Overdue: ${p.overdue.length}`);
-    if (p.overdue.length > 0) {
-      lines.push(`   Overdue: ${p.overdue.slice(0, 5).map((t) => t.name || '(untitled)').join(', ')}`);
-    }
-    lines.push('');
+function setType(type) {
+  currentType = type;
+  document.querySelectorAll('.report-type-btn').forEach((btn) => {
+    const active = btn.dataset.report === type;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
   });
-  return lines.join('\n');
+  renderReport();
+}
+
+async function copyReportText(btn) {
+  const text = buildReportText(lastReport || computeReport(currentType, currentAnchor));
+  const original = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    // Clipboard API needs a secure context / permission; fall back to a
+    // temporary textarea so this still works over plain http or in older browsers.
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand('copy');
+    area.remove();
+  }
+  btn.textContent = '✓ Copied';
+  setTimeout(() => { btn.textContent = original; }, 1500);
 }
 
 // ---------- Boot ----------
 
 export function initReports() {
-  document.getElementById('btn-prev-week').addEventListener('click', () => {
-    const d = new Date(currentAnchor);
-    d.setDate(d.getDate() - 7);
-    currentAnchor = d;
+  document.getElementById('report-type-picker').addEventListener('click', (e) => {
+    const btn = e.target.closest('.report-type-btn');
+    if (btn) setType(btn.dataset.report);
+  });
+
+  document.getElementById('btn-prev-period').addEventListener('click', () => {
+    currentAnchor = shiftAnchor(currentType, currentAnchor, -1);
     renderReport();
   });
-  document.getElementById('btn-next-week').addEventListener('click', () => {
-    const d = new Date(currentAnchor);
-    d.setDate(d.getDate() + 7);
-    currentAnchor = d;
+  document.getElementById('btn-next-period').addEventListener('click', () => {
+    currentAnchor = shiftAnchor(currentType, currentAnchor, 1);
     renderReport();
   });
-  document.getElementById('btn-this-week').addEventListener('click', () => {
+  document.getElementById('btn-current-period').addEventListener('click', () => {
     currentAnchor = new Date();
     renderReport();
   });
 
-  document.getElementById('btn-report-print').addEventListener('click', () => {
-    window.print();
-  });
+  document.getElementById('btn-report-print').addEventListener('click', () => window.print());
+
+  document.getElementById('btn-report-copy').addEventListener('click', (e) => copyReportText(e.currentTarget));
 
   document.getElementById('btn-report-email').addEventListener('click', () => {
-    const data = renderReport();
-    const body = buildEmailBody(data);
+    const report = renderReport();
     window.location.href = buildMailtoUrl({
       to: '',
-      subject: `Weekly Status Report — ${fmtRange(data.weekStart, data.weekEnd)}`,
-      body,
+      subject: `${REPORT_TYPES[report.type].title} — ${report.periodLabel}`,
+      body: buildReportText(report),
     });
   });
 

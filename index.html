@@ -371,28 +371,53 @@
 
     <section id="page-reports" class="page" role="tabpanel" aria-labelledby="tab-reports">
       <div class="print-page">
+        <div class="report-type-picker no-print" id="report-type-picker" role="group" aria-label="Report type">
+          <button type="button" class="report-type-btn" data-report="daily" aria-pressed="false">
+            <span class="report-type-btn__icon" aria-hidden="true">☀️</span>
+            <span class="report-type-btn__label">Daily</span>
+            <span class="report-type-btn__sub">Standup view</span>
+          </button>
+          <button type="button" class="report-type-btn is-active" data-report="weekly" aria-pressed="true">
+            <span class="report-type-btn__icon" aria-hidden="true">📅</span>
+            <span class="report-type-btn__label">Weekly</span>
+            <span class="report-type-btn__sub">Team status</span>
+          </button>
+          <button type="button" class="report-type-btn" data-report="steerco" aria-pressed="false">
+            <span class="report-type-btn__icon" aria-hidden="true">🚦</span>
+            <span class="report-type-btn__label">SteerCo</span>
+            <span class="report-type-btn__sub">Decisions &amp; risks</span>
+          </button>
+          <button type="button" class="report-type-btn" data-report="executive" aria-pressed="false">
+            <span class="report-type-btn__icon" aria-hidden="true">📈</span>
+            <span class="report-type-btn__label">Executive</span>
+            <span class="report-type-btn__sub">Portfolio rollup</span>
+          </button>
+        </div>
+
         <header class="dash-header">
           <div class="dash-header__title">
-            <span>Weekly Status Report</span>
+            <span id="report-title">Weekly Status Report</span>
           </div>
           <div class="dash-header__meta">
             <div class="week-nav no-print">
-              <button type="button" class="btn btn-small" id="btn-prev-week" aria-label="Previous week">← Prev</button>
-              <span class="week-range-label" id="week-range-label"></span>
-              <button type="button" class="btn btn-small" id="btn-next-week" aria-label="Next week">Next →</button>
-              <button type="button" class="btn btn-small" id="btn-this-week">This Week</button>
+              <button type="button" class="btn btn-small" id="btn-prev-period" aria-label="Previous period">← Prev</button>
+              <span class="week-range-label" id="period-range-label"></span>
+              <button type="button" class="btn btn-small" id="btn-next-period" aria-label="Next period">Next →</button>
+              <button type="button" class="btn btn-small" id="btn-current-period">This Week</button>
             </div>
           </div>
+          <p class="hint report-subtitle" id="report-subtitle"></p>
         </header>
 
         <section class="stat-cards" id="report-summary-cards"></section>
 
         <section class="card no-print">
           <div class="card__head"><h2>Share this report</h2></div>
-          <p class="hint">Print gives you a clean PDF of every project below. Email drops a plain-text summary into your email app — no attachment needed.</p>
+          <p class="hint">Print gives you a clean PDF. Email opens your mail app with a plain-text version in the body. Copy puts the same text on your clipboard for Slack or Teams.</p>
           <div class="report-share-actions">
             <button type="button" class="btn btn-primary" id="btn-report-print">🖨 Print / Save as PDF</button>
             <button type="button" class="btn btn-primary" id="btn-report-email">✉ Email Summary</button>
+            <button type="button" class="btn btn-ghost" id="btn-report-copy">📋 Copy Text</button>
           </div>
         </section>
 

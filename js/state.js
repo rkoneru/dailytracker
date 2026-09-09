@@ -181,6 +181,15 @@ export function listProjectsWithProgress() {
     .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+// Full project data for every project (read-only use only — callers must
+// not mutate these directly, they're the live store objects). Used by the
+// weekly report, which needs each project's actual tasks/milestones, not
+// just the summary listProjectsWithProgress() returns.
+export function listFullProjects() {
+  const s = getStore();
+  return Object.values(s.projects).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+}
+
 export function switchProject(id) {
   const s = getStore();
   if (!s.projects[id] || id === s.activeProjectId) return;

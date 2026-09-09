@@ -3,6 +3,7 @@ import { initPlanner, renderPlanner } from './planner.js';
 import { initDashboard, renderDashboard, renderDashHeader, renderComputed as refreshDashboardDerived } from './dashboard.js';
 import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON } from './export.js';
 import { initProjects } from './projects.js';
+import { initReports, refreshReport } from './reports.js';
 
 // ---------- Service worker ----------
 
@@ -21,6 +22,7 @@ function initTabs() {
   const tabs = [
     { btn: document.getElementById('tab-dashboard'), page: document.getElementById('page-dashboard'), title: 'Dashboard' },
     { btn: document.getElementById('tab-planner'), page: document.getElementById('page-planner'), title: 'Planner' },
+    { btn: document.getElementById('tab-reports'), page: document.getElementById('page-reports'), title: 'Reports' },
   ];
 
   tabs.forEach(({ btn, page, title }) => {
@@ -37,6 +39,8 @@ function initTabs() {
       // Milestone Progress / Upcoming Deadlines widgets — recompute on
       // arrival so they reflect edits made while on the other page.
       if (page.id === 'page-dashboard') refreshDashboardDerived();
+      // The report spans every project, so recompute whenever it's opened.
+      if (page.id === 'page-reports') refreshReport();
     });
   });
 }
@@ -116,6 +120,7 @@ function refreshActiveProjectView() {
   hydrateTopLevelFields();
   renderPlanner();
   renderDashboard();
+  refreshReport();
 }
 
 // ---------- Reset this project ----------
@@ -222,6 +227,7 @@ function init() {
   initPlanner();
   initDashboard({ onProjectSwitch: refreshActiveProjectView });
   initProjects({ onProjectChange: refreshActiveProjectView });
+  initReports();
 }
 
 if (document.readyState === 'loading') {

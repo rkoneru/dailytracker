@@ -28,6 +28,9 @@
         <button type="button" class="nav-item" id="tab-planner" role="tab" aria-selected="false" aria-controls="page-planner">
           <span class="nav-item__icon" aria-hidden="true">📝</span> Planner
         </button>
+        <button type="button" class="nav-item" id="tab-reports" role="tab" aria-selected="false" aria-controls="page-reports">
+          <span class="nav-item__icon" aria-hidden="true">📈</span> Reports
+        </button>
         <button type="button" class="nav-item" id="btn-projects">
           <span class="nav-item__icon" aria-hidden="true">📁</span> Projects
         </button>
@@ -363,6 +366,37 @@
             </div>
           </div>
         </section>
+      </div>
+    </section>
+
+    <section id="page-reports" class="page" role="tabpanel" aria-labelledby="tab-reports">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title">
+            <span>Weekly Status Report</span>
+          </div>
+          <div class="dash-header__meta">
+            <div class="week-nav no-print">
+              <button type="button" class="btn btn-small" id="btn-prev-week" aria-label="Previous week">← Prev</button>
+              <span class="week-range-label" id="week-range-label"></span>
+              <button type="button" class="btn btn-small" id="btn-next-week" aria-label="Next week">Next →</button>
+              <button type="button" class="btn btn-small" id="btn-this-week">This Week</button>
+            </div>
+          </div>
+        </header>
+
+        <section class="stat-cards" id="report-summary-cards"></section>
+
+        <section class="card no-print">
+          <div class="card__head"><h2>Share this report</h2></div>
+          <p class="hint">Print gives you a clean PDF of every project below. Email drops a plain-text summary into your email app — no attachment needed.</p>
+          <div class="report-share-actions">
+            <button type="button" class="btn btn-primary" id="btn-report-print">🖨 Print / Save as PDF</button>
+            <button type="button" class="btn btn-primary" id="btn-report-email">✉ Email Summary</button>
+          </div>
+        </section>
+
+        <div id="report-project-cards" class="report-project-cards"></div>
       </div>
     </section>
       </main>

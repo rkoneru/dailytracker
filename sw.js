@@ -1,5 +1,5 @@
 // Bump this on every release to roll out a fresh cache and drop the old one.
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `project-planner-${CACHE_VERSION}`;
 
 // App shell: everything needed to run fully offline after first load.
@@ -19,6 +19,7 @@ const PRECACHE_URLS = [
   './js/charts.js',
   './js/projects.js',
   './js/dragReorder.js',
+  './js/reports.js',
   './icons/icon-32.png',
   './icons/icon-192.png',
   './icons/icon-512.png',

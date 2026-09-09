@@ -367,6 +367,7 @@ textarea.field-input { padding: 8px 10px; resize: vertical; }
 .col-taskname { width: 220px; }
 .col-assignee { width: 130px; }
 .col-comments { width: 220px; }
+.col-drag { width: 28px; }
 
 /* table-layout:fixed makes these two dense tables honor column widths
    exactly (auto layout redistributes width based on content, which
@@ -374,7 +375,7 @@ textarea.field-input { padding: 8px 10px; resize: vertical; }
    compete for space). min-width comes from JS (gantt) / above (dash tasks)
    sized to the actual column count, so overflow-x:auto on .table-scroll
    takes over on narrow viewports instead of columns shrinking. */
-#dash-tasks-table { min-width: 1250px; table-layout: fixed; }
+#dash-tasks-table { min-width: 1278px; table-layout: fixed; }
 #gantt-table { table-layout: fixed; }
 
 .row-input {
@@ -398,6 +399,40 @@ input[type="checkbox"] {
   height: 22px;
   cursor: pointer;
 }
+
+/* ---------- Drag-to-reorder ---------- */
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  color: var(--color-text-muted);
+  cursor: grab;
+  font-size: 16px;
+  user-select: none;
+  flex: none;
+}
+/* Fill the narrow drag column when wrapped in a table cell (milestones,
+   gantt, tasks tables) — not set on .drag-handle itself, since that same
+   class is also used as a plain flex child in the notes list, where
+   width:100% would blow up its flex-basis and steal space from the input. */
+.col-drag .drag-handle { width: 100%; }
+tr[draggable="true"] { cursor: default; }
+tr.is-dragging, li.is-dragging { opacity: 0.4; }
+tr.is-drop-target { box-shadow: inset 0 2px 0 var(--color-primary); }
+li.is-drop-target { box-shadow: inset 0 2px 0 var(--color-primary); }
+
+/* ---------- Filter bars ---------- */
+
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.filter-bar .field-input { min-width: 160px; }
+.filter-bar input[type="search"] { flex: 1; min-width: 220px; }
 
 .icon-btn {
   min-width: 40px;
@@ -741,6 +776,89 @@ input[type="checkbox"] {
 .panel__section:first-of-type { border-top: none; }
 .panel__section h3 { margin: 0 0 6px; font-size: 14px; }
 .panel__section .field-label--block { margin-top: 8px; }
+.panel--wide { width: min(680px, 100%); }
+
+/* ---------- Project switcher & panel ---------- */
+
+.btn-project-switcher {
+  max-width: 260px;
+  overflow: hidden;
+}
+.btn-project-switcher span:first-of-type {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.project-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.project-list__item.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.project-list__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.project-list__info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-list__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  position: relative;
+}
+.template-card:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.template-card input[type="radio"] {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  margin: 0;
+}
+.template-card__label { font-weight: 700; font-size: 13px; padding-right: 20px; }
+.template-card__desc { font-size: 12px; color: var(--color-text-muted); }
 
 /* ---------- Print ---------- */
 

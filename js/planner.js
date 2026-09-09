@@ -1,5 +1,6 @@
 import { getState, scheduleSave, uid } from './state.js';
 import { GANTT_DAYS } from './sampleData.js';
+import { makeSortable, reorderById } from './dragReorder.js';
 
 function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
@@ -21,6 +22,12 @@ function rowIdOf(el) {
   return el.closest('[data-id]')?.dataset.id;
 }
 
+function dragHandleCell() {
+  return el('td', { class: 'col-drag no-print' }, [
+    el('span', { class: 'drag-handle', 'aria-hidden': 'true', title: 'Drag to reorder' }, [document.createTextNode('⠿')]),
+  ]);
+}
+
 // ---------- Milestones ----------
 
 function renderMilestones() {
@@ -39,7 +46,8 @@ function renderMilestones() {
       }));
     }
 
-    const tr = el('tr', { 'data-id': m.id }, [
+    const tr = el('tr', { 'data-id': m.id, draggable: true }, [
+      dragHandleCell(),
       el('td', { class: 'col-num', text: String(index + 1) }),
       el('td', {}, [el('input', { class: 'row-input', 'data-field': 'text', value: m.text || '', placeholder: 'Milestone name' })]),
       el('td', { class: 'col-progress' }, [segments]),
@@ -91,6 +99,14 @@ function bindMilestones() {
     }
   });
 
+  makeSortable(tbody, {
+    onDrop: (draggedId, targetId) => {
+      reorderById(getState().milestones, draggedId, targetId);
+      scheduleSave();
+      renderMilestones();
+    },
+  });
+
   document.querySelector('#page-planner [data-action="add-milestone"]').addEventListener('click', () => {
     getState().milestones.push({ id: uid(), text: '', progress: 0, due: '', done: false });
     scheduleSave();
@@ -114,10 +130,11 @@ function renderGanttHead() {
   // .data-table has width:100%, which would otherwise clamp this table to its
   // scroll container and shrink every day column instead of scrolling.
   // Pin a min-width sized to the actual day count so overflow-x:auto takes over.
+  const dragColWidth = 28;
   const nameColWidth = 200;
   const dayColWidth = 28;
   const actionColWidth = 44;
-  document.getElementById('gantt-table').style.minWidth = `${nameColWidth + GANTT_DAYS * dayColWidth + actionColWidth}px`;
+  document.getElementById('gantt-table').style.minWidth = `${dragColWidth + nameColWidth + GANTT_DAYS * dayColWidth + actionColWidth}px`;
 }
 
 function renderGanttRow(g) {
@@ -128,7 +145,7 @@ function renderGanttRow(g) {
     ]),
   ]);
 
-  const tr = el('tr', { 'data-id': g.id }, [nameCell]);
+  const tr = el('tr', { 'data-id': g.id, draggable: true }, [dragHandleCell(), nameCell]);
   for (let day = 1; day <= GANTT_DAYS; day++) {
     tr.appendChild(el('td', {
       class: 'gantt-day-cell',
@@ -199,6 +216,14 @@ function bindGantt() {
     toggleRowType(rowIdOf(e.target));
   });
 
+  makeSortable(tbody, {
+    onDrop: (draggedId, targetId) => {
+      reorderById(getState().gantt, draggedId, targetId);
+      scheduleSave();
+      renderGanttBody();
+    },
+  });
+
   document.querySelector('#page-planner [data-action="add-gantt-row"]').addEventListener('click', () => {
     getState().gantt.push({ id: uid(), name: '', type: 'check', cells: [] });
     scheduleSave();
@@ -220,8 +245,11 @@ function toggleRowType(rowId) {
 
 // ---------- Tasks (Page 1 simple list) ----------
 
+let taskSearchTerm = '';
+
 function renderTasksRow(t, index) {
-  return el('tr', { 'data-id': t.id }, [
+  return el('tr', { 'data-id': t.id, draggable: true }, [
+    dragHandleCell(),
     el('td', { class: 'col-num', text: String(index + 1) }),
     el('td', {}, [el('input', { class: 'row-input', 'data-field': 'task', value: t.task || '', placeholder: 'Task name' })]),
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'start', value: t.start || '' })]),
@@ -237,6 +265,17 @@ function renderTasks() {
   const tbody = document.getElementById('tasks-body');
   tbody.innerHTML = '';
   state.tasks.forEach((t, i) => tbody.appendChild(renderTasksRow(t, i)));
+  applyTaskFilter();
+}
+
+function applyTaskFilter() {
+  const term = taskSearchTerm.trim().toLowerCase();
+  const state = getState();
+  document.querySelectorAll('#tasks-body tr').forEach((row) => {
+    const item = findById(state.tasks, row.dataset.id);
+    const matches = !term || (item?.task || '').toLowerCase().includes(term);
+    row.hidden = !matches;
+  });
 }
 
 function bindTasks() {
@@ -248,6 +287,7 @@ function bindTasks() {
     const item = findById(getState().tasks, rowIdOf(e.target));
     item[field] = e.target.value;
     scheduleSave();
+    if (field === 'task') applyTaskFilter();
   });
 
   tbody.addEventListener('change', (e) => {
@@ -266,17 +306,31 @@ function bindTasks() {
     renderTasks();
   });
 
+  makeSortable(tbody, {
+    onDrop: (draggedId, targetId) => {
+      reorderById(getState().tasks, draggedId, targetId);
+      scheduleSave();
+      renderTasks();
+    },
+  });
+
   document.querySelector('#page-planner [data-action="add-task"]').addEventListener('click', () => {
     getState().tasks.push({ id: uid(), task: '', start: '', end: '', prio: '', done: false });
     scheduleSave();
     renderTasks();
+  });
+
+  document.getElementById('task-search').addEventListener('input', (e) => {
+    taskSearchTerm = e.target.value;
+    applyTaskFilter();
   });
 }
 
 // ---------- Notes (bullet list) ----------
 
 function renderNoteItem(note) {
-  return el('li', { 'data-id': note.id, class: 'notes-list__item' }, [
+  return el('li', { 'data-id': note.id, class: 'notes-list__item', draggable: true }, [
+    el('span', { class: 'drag-handle', 'aria-hidden': 'true', title: 'Drag to reorder' }, [document.createTextNode('⠿')]),
     el('input', { class: 'row-input', 'data-field': 'text', value: note.text || '', placeholder: 'Add a note...' }),
     el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-note', 'aria-label': 'Delete note', text: '🗑' }),
   ]);
@@ -306,6 +360,14 @@ function bindNotes() {
     state.notes = state.notes.filter((n) => n.id !== id);
     scheduleSave();
     renderNotes();
+  });
+
+  makeSortable(list, {
+    onDrop: (draggedId, targetId) => {
+      reorderById(getState().notes, draggedId, targetId);
+      scheduleSave();
+      renderNotes();
+    },
   });
 
   document.querySelector('#page-planner [data-action="add-note"]').addEventListener('click', () => {

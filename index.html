@@ -20,6 +20,10 @@
       <span>Project Planner</span>
     </div>
 
+    <button type="button" class="btn btn-ghost btn-project-switcher" id="btn-projects">
+      📁 <span id="active-project-label">Project</span> <span aria-hidden="true">▾</span>
+    </button>
+
     <nav class="tabs" role="tablist" aria-label="Pages">
       <button type="button" class="tab-btn is-active" id="tab-planner" role="tab" aria-selected="true" aria-controls="page-planner">Planner</button>
       <button type="button" class="tab-btn" id="tab-dashboard" role="tab" aria-selected="false" aria-controls="page-dashboard">Dashboard</button>
@@ -28,7 +32,7 @@
     <div class="app-header__actions">
       <span class="save-indicator" id="save-indicator" aria-live="polite">Saved</span>
       <button type="button" class="btn btn-ghost" id="btn-export-panel">Export / Share</button>
-      <button type="button" class="btn btn-ghost" id="btn-reset">Reset sample data</button>
+      <button type="button" class="btn btn-ghost" id="btn-reset">Reset this project</button>
       <button type="button" class="btn btn-primary" id="btn-install" hidden>Install App</button>
     </div>
   </header>
@@ -57,6 +61,7 @@
             <table class="data-table" id="milestones-table">
               <thead>
                 <tr>
+                  <th class="col-drag no-print"></th>
                   <th class="col-num">#</th>
                   <th>Milestone</th>
                   <th class="col-progress">Progress</th>
@@ -83,6 +88,7 @@
             <table class="data-table gantt-table" id="gantt-table">
               <thead>
                 <tr id="gantt-head-row">
+                  <th class="col-drag no-print"></th>
                   <th class="col-ganttname">Task</th>
                   <th class="col-action no-print"></th>
                 </tr>
@@ -97,10 +103,14 @@
             <h2>Tasks</h2>
             <button type="button" class="btn btn-small no-print" data-action="add-task">+ Add Task</button>
           </div>
+          <div class="filter-bar no-print">
+            <input type="search" class="field-input" id="task-search" placeholder="Search tasks...">
+          </div>
           <div class="table-scroll">
             <table class="data-table" id="tasks-table">
               <thead>
                 <tr>
+                  <th class="col-drag no-print"></th>
                   <th class="col-num">#</th>
                   <th>Task</th>
                   <th class="col-date">Start</th>
@@ -205,10 +215,28 @@
             <h2>Tasks</h2>
             <button type="button" class="btn btn-small no-print" data-action="add-dash-task">+ Add Task</button>
           </div>
+          <div class="filter-bar no-print">
+            <input type="search" class="field-input" id="dash-task-search" placeholder="Search tasks, assignee, comments...">
+            <select class="field-input" id="dash-status-filter">
+              <option value="">All statuses</option>
+              <option>Not Started</option>
+              <option>In Progress</option>
+              <option>Complete</option>
+              <option>Overdue</option>
+              <option>On Hold</option>
+            </select>
+            <select class="field-input" id="dash-prio-filter">
+              <option value="">All priorities</option>
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+            </select>
+          </div>
           <div class="table-scroll">
             <table class="data-table" id="dash-tasks-table">
               <thead>
                 <tr>
+                  <th class="col-drag no-print"></th>
                   <th class="col-taskname">Task</th>
                   <th class="col-assignee">Assignee</th>
                   <th class="col-date">Start</th>
@@ -278,6 +306,41 @@
           <textarea class="field-input" id="share-body" rows="4"></textarea>
         </label>
         <button type="button" class="btn btn-primary" id="btn-share-email">Open Email App</button>
+      </div>
+
+      <div class="panel__section">
+        <h3>Export Project Data</h3>
+        <p class="hint">Download this project as a JSON file — for backup, or to move it to another device or browser.</p>
+        <button type="button" class="btn btn-primary" id="btn-export-json">Download JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-overlay no-print" id="projects-overlay" hidden>
+    <div class="panel panel--wide" role="dialog" aria-modal="true" aria-labelledby="projects-panel-title">
+      <div class="panel__head">
+        <h2 id="projects-panel-title">Projects</h2>
+        <button type="button" class="btn btn-icon" id="btn-close-projects" aria-label="Close">✕</button>
+      </div>
+
+      <div class="panel__section">
+        <h3>Your projects</h3>
+        <ul class="project-list" id="project-list"></ul>
+      </div>
+
+      <div class="panel__section">
+        <h3>New project</h3>
+        <div class="template-grid" id="template-grid"></div>
+        <label class="field-label field-label--block">Project name
+          <input type="text" class="field-input" id="new-project-name" placeholder="Leave blank to use the template's name">
+        </label>
+        <button type="button" class="btn btn-primary" id="btn-create-project">Create Project</button>
+      </div>
+
+      <div class="panel__section">
+        <h3>Import project</h3>
+        <p class="hint">Import a project previously exported as JSON (see Export / Share). This adds a new project — it won't overwrite anything.</p>
+        <input type="file" accept="application/json" class="field-input" id="import-project-file">
       </div>
     </div>
   </div>

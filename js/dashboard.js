@@ -1,5 +1,6 @@
 import { getState, scheduleSave, uid } from './state.js';
 import { parseDate, daysBetween, renderPieChart, renderLegend, renderGanttChart } from './charts.js';
+import { makeSortable, reorderById } from './dragReorder.js';
 
 const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Complete', 'Overdue', 'On Hold'];
 const PRIORITY_OPTIONS = ['High', 'Medium', 'Low'];
@@ -40,7 +41,13 @@ function findById(list, id) {
 }
 
 function rowIdOf(target) {
-  return target.closest('tr')?.dataset.id;
+  return target.closest('[data-id]')?.dataset.id;
+}
+
+function dragHandleCell() {
+  return el('td', { class: 'col-drag no-print' }, [
+    el('span', { class: 'drag-handle', 'aria-hidden': 'true', title: 'Drag to reorder' }, [document.createTextNode('⠿')]),
+  ]);
 }
 
 // ---------- Header ----------
@@ -206,7 +213,8 @@ function buildSelect(options, value, dataField, classPrefix) {
 function renderDashTaskRow(t) {
   const durationCell = el('td', { class: 'col-days', 'data-role': 'duration', text: durationLabel(t.start, t.end) });
 
-  return el('tr', { 'data-id': t.id }, [
+  return el('tr', { 'data-id': t.id, draggable: true }, [
+    dragHandleCell(),
     el('td', {}, [el('input', { class: 'row-input', 'data-field': 'name', value: t.name || '', placeholder: 'Task name' })]),
     el('td', {}, [el('input', { class: 'row-input', 'data-field': 'assigned', value: t.assigned || '', placeholder: 'Assignee' })]),
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'start', value: t.start || '' })]),
@@ -224,6 +232,46 @@ function renderDashTasks() {
   const tbody = document.getElementById('dash-tasks-body');
   tbody.innerHTML = '';
   state.dashTasks.forEach((t) => tbody.appendChild(renderDashTaskRow(t)));
+  applyDashTaskFilters();
+}
+
+// ---------- Filters (view-only — never mutates dashTasks; charts/summaries
+// below always reflect the full project, only this table's rows are hidden) ----------
+
+const dashTaskFilters = { search: '', status: '', prio: '' };
+
+function matchesDashTaskFilters(t) {
+  const term = dashTaskFilters.search.trim().toLowerCase();
+  const matchesSearch = !term
+    || (t.name || '').toLowerCase().includes(term)
+    || (t.assigned || '').toLowerCase().includes(term)
+    || (t.comments || '').toLowerCase().includes(term);
+  const matchesStatus = !dashTaskFilters.status || t.status === dashTaskFilters.status;
+  const matchesPrio = !dashTaskFilters.prio || t.prio === dashTaskFilters.prio;
+  return matchesSearch && matchesStatus && matchesPrio;
+}
+
+function applyDashTaskFilters() {
+  const state = getState();
+  document.querySelectorAll('#dash-tasks-body tr').forEach((row) => {
+    const item = findById(state.dashTasks, row.dataset.id);
+    row.hidden = !item || !matchesDashTaskFilters(item);
+  });
+}
+
+function bindDashTaskFilters() {
+  document.getElementById('dash-task-search').addEventListener('input', (e) => {
+    dashTaskFilters.search = e.target.value;
+    applyDashTaskFilters();
+  });
+  document.getElementById('dash-status-filter').addEventListener('change', (e) => {
+    dashTaskFilters.status = e.target.value;
+    applyDashTaskFilters();
+  });
+  document.getElementById('dash-prio-filter').addEventListener('change', (e) => {
+    dashTaskFilters.prio = e.target.value;
+    applyDashTaskFilters();
+  });
 }
 
 function bindDashTasks() {
@@ -269,6 +317,14 @@ function bindDashTasks() {
     renderDashTasks();
     renderComputed();
   });
+
+  makeSortable(tbody, {
+    onDrop: (draggedId, targetId) => {
+      reorderById(getState().dashTasks, draggedId, targetId);
+      scheduleSave();
+      renderDashTasks();
+    },
+  });
 }
 
 function bindBudgetAndPending() {
@@ -291,4 +347,5 @@ export function initDashboard() {
   renderDashboard();
   bindDashTasks();
   bindBudgetAndPending();
+  bindDashTaskFilters();
 }

@@ -1,7 +1,8 @@
-import { getState, getPath, setPath, scheduleSave, onSaveStatusChange, resetToSampleData } from './state.js';
+import { getState, getPath, setPath, scheduleSave, onSaveStatusChange, resetActiveProjectToTemplate } from './state.js';
 import { initPlanner, renderPlanner } from './planner.js';
 import { initDashboard, renderDashboard, renderDashHeader } from './dashboard.js';
-import { exportAsPDF, exportAsPNG, buildMailtoUrl } from './export.js';
+import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON } from './export.js';
+import { initProjects } from './projects.js';
 
 // ---------- Service worker ----------
 
@@ -94,16 +95,22 @@ function initSaveIndicator() {
   });
 }
 
-// ---------- Reset to sample data ----------
+// ---------- Full re-render (project switched, cloned, created, imported, or reset) ----------
+
+function refreshActiveProjectView() {
+  hydrateTopLevelFields();
+  renderPlanner();
+  renderDashboard();
+}
+
+// ---------- Reset this project ----------
 
 function initResetButton() {
   document.getElementById('btn-reset').addEventListener('click', () => {
-    const confirmed = window.confirm('Reset to the sample dataset? This discards all of your local edits and cannot be undone.');
+    const confirmed = window.confirm('Reset this project to its starting sample data? This discards all of your local edits and cannot be undone.');
     if (!confirmed) return;
-    resetToSampleData();
-    hydrateTopLevelFields();
-    renderPlanner();
-    renderDashboard();
+    resetActiveProjectToTemplate();
+    refreshActiveProjectView();
   });
 }
 
@@ -179,6 +186,10 @@ function initExportPanel() {
     const body = document.getElementById('share-body').value;
     window.location.href = buildMailtoUrl({ to, subject, body });
   });
+
+  document.getElementById('btn-export-json').addEventListener('click', () => {
+    exportProjectJSON(getState());
+  });
 }
 
 // ---------- Boot ----------
@@ -193,6 +204,7 @@ function init() {
   initExportPanel();
   initPlanner();
   initDashboard();
+  initProjects({ onProjectChange: refreshActiveProjectView });
 }
 
 if (document.readyState === 'loading') {

@@ -58,3 +58,33 @@ export function buildMailtoUrl({ to, subject, body }) {
   const query = params.length ? `?${params.join('&')}` : '';
   return `mailto:${(to || '').trim()}${query}`;
 }
+
+// Full project data as a downloadable .json file — for backup, or moving a
+// project to another device (there's no account/cloud sync, so this is it).
+export function exportProjectJSON(projectData) {
+  const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const slug = (projectData.projectName || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${slug || 'project'}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function readJSONFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        resolve(JSON.parse(reader.result));
+      } catch (err) {
+        reject(new Error('That file is not valid JSON.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.readAsText(file);
+  });
+}

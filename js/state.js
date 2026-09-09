@@ -1,30 +1,87 @@
-import { sampleData } from './sampleData.js';
+import { TEMPLATES, DEFAULT_TEMPLATE_KEY } from './sampleData.js';
 
-const STORAGE_KEY = 'projectPlannerData_v1';
+const STORAGE_KEY = 'projectPlannerStore_v2';
+const LEGACY_STORAGE_KEY = 'projectPlannerData_v1';
 const SAVE_DEBOUNCE_MS = 400;
 
-let state = null;
+// store shape: { activeProjectId, projects: { [id]: projectData } }
+let store = null;
 let saveTimer = null;
 const saveStatusListeners = new Set();
+const projectsChangeListeners = new Set();
 
 function clone(obj) {
   return typeof structuredClone === 'function' ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
 }
 
-function readFromStorage() {
+export function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+// Notes used to be stored as a single newline-delimited string; migrate any
+// data saved in that shape to the current list-of-{id,text} shape.
+function migrateNotes(data) {
+  if (typeof data.notes === 'string') {
+    data.notes = data.notes.split('\n').filter((line) => line.trim() !== '').map((text) => ({ id: uid(), text }));
+  }
+  return data;
+}
+
+function findTemplate(key) {
+  return TEMPLATES.find((t) => t.key === key) || TEMPLATES.find((t) => t.key === DEFAULT_TEMPLATE_KEY);
+}
+
+function buildProjectFromTemplate(templateKey, name) {
+  const data = findTemplate(templateKey).build();
+  if (name) data.projectName = name;
+  data.id = uid();
+  data.updatedAt = Date.now();
+  return data;
+}
+
+function readStoreFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    return raw ? JSON.parse(raw) : null;
   } catch (err) {
-    console.warn('Failed to read saved data, falling back to sample data.', err);
+    console.warn('Failed to read saved projects, falling back to defaults.', err);
     return null;
   }
 }
 
-function writeToStorage(data) {
+// One-time upgrade from the original single-project version of this app.
+function migrateLegacyStore() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) return null;
+    const data = migrateNotes(JSON.parse(raw));
+    data.id = uid();
+    data.updatedAt = Date.now();
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return { activeProjectId: data.id, projects: { [data.id]: data } };
+  } catch (err) {
+    console.warn('Failed to migrate legacy project data.', err);
+    return null;
+  }
+}
+
+function createDefaultStore() {
+  const project = buildProjectFromTemplate(DEFAULT_TEMPLATE_KEY);
+  return { activeProjectId: project.id, projects: { [project.id]: project } };
+}
+
+function loadStore() {
+  return readStoreFromStorage() || migrateLegacyStore() || createDefaultStore();
+}
+
+function getStore() {
+  if (!store) store = loadStore();
+  return store;
+}
+
+function writeStore() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
     return true;
   } catch (err) {
     console.warn('Failed to save data locally (storage full or unavailable).', err);
@@ -32,20 +89,11 @@ function writeToStorage(data) {
   }
 }
 
-// Notes used to be stored as a single newline-delimited string; migrate any
-// data saved in that shape to the current list-of-{id,text} shape.
-function migrate(data) {
-  if (typeof data.notes === 'string') {
-    data.notes = data.notes.split('\n').filter((line) => line.trim() !== '').map((text) => ({ id: uid(), text }));
-  }
-  return data;
-}
-
+// Returns the active project's data object directly — this is the object
+// planner.js/dashboard.js read from and mutate in place.
 export function getState() {
-  if (!state) {
-    state = migrate(readFromStorage() || clone(sampleData));
-  }
-  return state;
+  const s = getStore();
+  return s.projects[s.activeProjectId];
 }
 
 export function onSaveStatusChange(listener) {
@@ -57,33 +105,23 @@ function emitSaveStatus(status) {
   saveStatusListeners.forEach((fn) => fn(status));
 }
 
-// Call after any mutation to the state object. Debounces the actual
-// localStorage write so rapid edits (typing, dragging) don't thrash it.
 export function scheduleSave() {
   emitSaveStatus('saving');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    writeToStorage(getState());
+    getState().updatedAt = Date.now();
+    writeStore();
     emitSaveStatus('saved');
   }, SAVE_DEBOUNCE_MS);
 }
 
 export function saveImmediately() {
   clearTimeout(saveTimer);
-  writeToStorage(getState());
+  getState().updatedAt = Date.now();
+  writeStore();
   emitSaveStatus('saved');
 }
 
-export function resetToSampleData() {
-  clearTimeout(saveTimer);
-  state = clone(sampleData);
-  writeToStorage(state);
-  emitSaveStatus('saved');
-  return state;
-}
-
-// Dot-path helpers so a single input can bind to nested fields
-// (e.g. "pending.decisions") without every caller writing its own walk.
 export function getPath(obj, path) {
   return path.split('.').reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
 }
@@ -95,6 +133,128 @@ export function setPath(obj, path, value) {
   target[last] = value;
 }
 
-export function uid() {
-  return Math.random().toString(36).slice(2, 10);
+// ---------- Project management ----------
+// Anything that adds/removes/renames/switches a project notifies these
+// listeners so the UI (project switcher, tab pages) can re-render.
+
+export function onProjectsChange(listener) {
+  projectsChangeListeners.add(listener);
+  return () => projectsChangeListeners.delete(listener);
+}
+
+function emitProjectsChanged() {
+  projectsChangeListeners.forEach((fn) => fn());
+}
+
+export function listTemplates() {
+  return TEMPLATES.map(({ key, label, description }) => ({ key, label, description }));
+}
+
+export function listProjects() {
+  const s = getStore();
+  return Object.values(s.projects)
+    .map((p) => ({ id: p.id, name: p.projectName || 'Untitled project', dueDate: p.dueDate, updatedAt: p.updatedAt || 0 }))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export function getActiveProjectId() {
+  return getStore().activeProjectId;
+}
+
+export function switchProject(id) {
+  const s = getStore();
+  if (!s.projects[id] || id === s.activeProjectId) return;
+  s.activeProjectId = id;
+  saveImmediately();
+  emitProjectsChanged();
+}
+
+export function createProject({ name, templateKey } = {}) {
+  const s = getStore();
+  const project = buildProjectFromTemplate(templateKey, name);
+  s.projects[project.id] = project;
+  s.activeProjectId = project.id;
+  saveImmediately();
+  emitProjectsChanged();
+  return project;
+}
+
+function regenerateRowIds(project) {
+  ['milestones', 'gantt', 'tasks', 'dashTasks', 'notes'].forEach((key) => {
+    (project[key] || []).forEach((item) => { item.id = uid(); });
+  });
+}
+
+export function cloneProject(id, newName) {
+  const s = getStore();
+  const source = s.projects[id];
+  if (!source) return null;
+  const copy = clone(source);
+  regenerateRowIds(copy);
+  copy.id = uid();
+  copy.projectName = newName || `${source.projectName} (Copy)`;
+  copy.updatedAt = Date.now();
+  s.projects[copy.id] = copy;
+  s.activeProjectId = copy.id;
+  saveImmediately();
+  emitProjectsChanged();
+  return copy;
+}
+
+export function renameProject(id, name) {
+  const s = getStore();
+  const project = s.projects[id];
+  if (!project) return;
+  project.projectName = name;
+  project.updatedAt = Date.now();
+  writeStore();
+  emitProjectsChanged();
+}
+
+export function deleteProject(id) {
+  const s = getStore();
+  if (!s.projects[id]) return;
+  delete s.projects[id];
+
+  const remaining = Object.values(s.projects);
+  if (remaining.length === 0) {
+    const fresh = buildProjectFromTemplate(DEFAULT_TEMPLATE_KEY);
+    s.projects[fresh.id] = fresh;
+    s.activeProjectId = fresh.id;
+  } else if (s.activeProjectId === id) {
+    s.activeProjectId = remaining.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0].id;
+  }
+  saveImmediately();
+  emitProjectsChanged();
+}
+
+const IMPORT_REQUIRED_ARRAYS = ['milestones', 'gantt', 'tasks', 'dashTasks'];
+
+export function importProjectFromJSON(rawData, name) {
+  if (!rawData || typeof rawData !== 'object' || !IMPORT_REQUIRED_ARRAYS.every((k) => Array.isArray(rawData[k]))) {
+    throw new Error("That file doesn't look like a Project Planner export.");
+  }
+  const data = migrateNotes(clone(rawData));
+  data.projectName = name || data.projectName || 'Imported project';
+  data.id = uid();
+  data.updatedAt = Date.now();
+  regenerateRowIds(data);
+
+  const s = getStore();
+  s.projects[data.id] = data;
+  s.activeProjectId = data.id;
+  saveImmediately();
+  emitProjectsChanged();
+  return data;
+}
+
+export function resetActiveProjectToTemplate(templateKey) {
+  const s = getStore();
+  const activeId = s.activeProjectId;
+  const fresh = buildProjectFromTemplate(templateKey || DEFAULT_TEMPLATE_KEY);
+  fresh.id = activeId;
+  s.projects[activeId] = fresh;
+  saveImmediately();
+  emitProjectsChanged();
+  return fresh;
 }

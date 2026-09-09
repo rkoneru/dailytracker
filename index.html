@@ -14,31 +14,50 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <header class="app-header no-print">
-    <div class="app-header__brand">
-      <img src="icons/icon-32.png" alt="" width="24" height="24">
-      <span>Project Planner</span>
-    </div>
+  <div class="app-shell">
+    <aside class="sidebar no-print">
+      <div class="sidebar__brand">
+        <img src="icons/icon-32.png" alt="" width="26" height="26">
+        <span>Project Planner</span>
+      </div>
 
-    <button type="button" class="btn btn-ghost btn-project-switcher" id="btn-projects">
-      📁 <span id="active-project-label">Project</span> <span aria-hidden="true">▾</span>
-    </button>
+      <nav class="sidebar__nav" role="tablist" aria-label="Pages">
+        <button type="button" class="nav-item is-active" id="tab-dashboard" role="tab" aria-selected="true" aria-controls="page-dashboard">
+          <span class="nav-item__icon" aria-hidden="true">📊</span> Dashboard
+        </button>
+        <button type="button" class="nav-item" id="tab-planner" role="tab" aria-selected="false" aria-controls="page-planner">
+          <span class="nav-item__icon" aria-hidden="true">📝</span> Planner
+        </button>
+        <button type="button" class="nav-item" id="btn-projects">
+          <span class="nav-item__icon" aria-hidden="true">📁</span> Projects
+        </button>
+        <button type="button" class="nav-item" id="btn-export-panel">
+          <span class="nav-item__icon" aria-hidden="true">📤</span> Export / Share
+        </button>
+      </nav>
 
-    <nav class="tabs" role="tablist" aria-label="Pages">
-      <button type="button" class="tab-btn is-active" id="tab-planner" role="tab" aria-selected="true" aria-controls="page-planner">Planner</button>
-      <button type="button" class="tab-btn" id="tab-dashboard" role="tab" aria-selected="false" aria-controls="page-dashboard">Dashboard</button>
-    </nav>
+      <div class="sidebar__footer">
+        <button type="button" class="btn btn-primary btn-install-sidebar" id="btn-install" hidden>⬇ Install App</button>
+        <button type="button" class="sidebar__link" id="btn-reset">Reset this project</button>
+      </div>
+    </aside>
 
-    <div class="app-header__actions">
-      <span class="save-indicator" id="save-indicator" aria-live="polite">Saved</span>
-      <button type="button" class="btn btn-ghost" id="btn-export-panel">Export / Share</button>
-      <button type="button" class="btn btn-ghost" id="btn-reset">Reset this project</button>
-      <button type="button" class="btn btn-primary" id="btn-install" hidden>Install App</button>
-    </div>
-  </header>
+    <div class="app-content">
+      <header class="app-header no-print">
+        <button type="button" class="btn btn-icon-only sidebar-toggle" id="btn-sidebar-toggle" aria-label="Toggle menu">☰</button>
+        <h1 class="app-header__title" id="page-title">Dashboard</h1>
 
-  <main id="main">
-    <section id="page-planner" class="page is-active" role="tabpanel" aria-labelledby="tab-planner">
+        <button type="button" class="btn btn-ghost btn-project-switcher" id="btn-projects-2">
+          📁 <span id="active-project-label">Project</span> <span aria-hidden="true">▾</span>
+        </button>
+
+        <div class="app-header__actions">
+          <span class="save-indicator" id="save-indicator" aria-live="polite">Saved</span>
+        </div>
+      </header>
+
+      <main id="main">
+    <section id="page-planner" class="page" role="tabpanel" aria-labelledby="tab-planner">
       <div class="print-page">
         <header class="sheet-header">
           <h1 class="editable" contenteditable="true" data-field="projectName" data-placeholder="Project name"></h1>
@@ -135,7 +154,7 @@
       </div>
     </section>
 
-    <section id="page-dashboard" class="page" role="tabpanel" aria-labelledby="tab-dashboard">
+    <section id="page-dashboard" class="page is-active" role="tabpanel" aria-labelledby="tab-dashboard">
       <div class="print-page">
         <header class="dash-header">
           <div class="dash-header__title">
@@ -269,7 +288,9 @@
         </section>
       </div>
     </section>
-  </main>
+      </main>
+    </div>
+  </div>
 
   <div class="panel-overlay no-print" id="export-overlay" hidden>
     <div class="panel" role="dialog" aria-modal="true" aria-labelledby="export-panel-title">

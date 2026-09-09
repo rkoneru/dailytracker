@@ -17,12 +17,13 @@ if ('serviceWorker' in navigator) {
 // ---------- Tabs ----------
 
 function initTabs() {
+  const pageTitle = document.getElementById('page-title');
   const tabs = [
-    { btn: document.getElementById('tab-planner'), page: document.getElementById('page-planner') },
-    { btn: document.getElementById('tab-dashboard'), page: document.getElementById('page-dashboard') },
+    { btn: document.getElementById('tab-dashboard'), page: document.getElementById('page-dashboard'), title: 'Dashboard' },
+    { btn: document.getElementById('tab-planner'), page: document.getElementById('page-planner'), title: 'Planner' },
   ];
 
-  tabs.forEach(({ btn, page }) => {
+  tabs.forEach(({ btn, page, title }) => {
     btn.addEventListener('click', () => {
       tabs.forEach(({ btn: b, page: p }) => {
         const active = p === page;
@@ -30,7 +31,17 @@ function initTabs() {
         b.setAttribute('aria-selected', String(active));
         p.classList.toggle('is-active', active);
       });
+      pageTitle.textContent = title;
+      document.body.classList.remove('sidebar-open');
     });
+  });
+}
+
+// ---------- Sidebar (mobile toggle) ----------
+
+function initSidebarToggle() {
+  document.getElementById('btn-sidebar-toggle').addEventListener('click', () => {
+    document.body.classList.toggle('sidebar-open');
   });
 }
 
@@ -148,6 +159,7 @@ function initExportPanel() {
   const overlay = document.getElementById('export-overlay');
   const open = () => {
     overlay.hidden = false;
+    document.body.classList.remove('sidebar-open');
     const state = getState();
     document.getElementById('share-subject').value ||= `${state.projectName || 'Project'} update`;
     document.getElementById('share-body').value ||=
@@ -198,6 +210,7 @@ function init() {
   hydrateTopLevelFields();
   bindTopLevelFields();
   initTabs();
+  initSidebarToggle();
   initSaveIndicator();
   initResetButton();
   initInstallPrompt();

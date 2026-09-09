@@ -84,10 +84,12 @@ export function initProjects({ onProjectChange }) {
     renderProjectList();
     nameInput.value = '';
     overlay.hidden = false;
+    document.body.classList.remove('sidebar-open');
   }
   function close() { overlay.hidden = true; }
 
   document.getElementById('btn-projects').addEventListener('click', open);
+  document.getElementById('btn-projects-2').addEventListener('click', open);
   document.getElementById('btn-close-projects').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) close(); });

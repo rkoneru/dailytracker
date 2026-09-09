@@ -266,7 +266,30 @@ main { padding: 20px 16px 64px; }
   color: var(--color-text-muted);
 }
 .editable--inline { display: inline-block; min-width: 120px; }
-.editable--notes { min-height: 120px; white-space: pre-wrap; }
+.notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.notes-list__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.notes-list__item::before {
+  content: '•';
+  color: var(--color-text-muted);
+  font-size: 18px;
+  line-height: 1;
+  flex: none;
+}
+.notes-list__item .row-input {
+  flex: 1;
+  min-width: 0;
+}
 
 .sheet-header h1.editable {
   font-size: 28px;

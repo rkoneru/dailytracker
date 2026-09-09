@@ -11,10 +11,11 @@ export const sampleData = {
   objective: 'Grow brand awareness and drive 5,000 site visits via a coordinated multi-channel social campaign.',
   dueDate: '2026-09-30',
   reward: 'Team lunch + campaign highlight reel shared company-wide.',
-  notes:
-    'Kickoff call held 9/1 with marketing + design.\n' +
-    'Waiting on legal sign-off for influencer contracts (expected 9/10).\n' +
-    'Revisit ad spend split after week 1 performance data.',
+  notes: [
+    { id: id('n'), text: 'Kickoff call held 9/1 with marketing + design.' },
+    { id: id('n'), text: 'Waiting on legal sign-off for influencer contracts (expected 9/10).' },
+    { id: id('n'), text: 'Revisit ad spend split after week 1 performance data.' },
+  ],
 
   milestones: [
     { id: id('m'), text: 'Creative assets approved', progress: 5, due: '2026-09-05', done: true },

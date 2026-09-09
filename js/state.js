@@ -32,9 +32,18 @@ function writeToStorage(data) {
   }
 }
 
+// Notes used to be stored as a single newline-delimited string; migrate any
+// data saved in that shape to the current list-of-{id,text} shape.
+function migrate(data) {
+  if (typeof data.notes === 'string') {
+    data.notes = data.notes.split('\n').filter((line) => line.trim() !== '').map((text) => ({ id: uid(), text }));
+  }
+  return data;
+}
+
 export function getState() {
   if (!state) {
-    state = readFromStorage() || clone(sampleData);
+    state = migrate(readFromStorage() || clone(sampleData));
   }
   return state;
 }

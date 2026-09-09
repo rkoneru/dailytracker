@@ -18,7 +18,7 @@ function findById(list, id) {
 }
 
 function rowIdOf(el) {
-  return el.closest('tr')?.dataset.id;
+  return el.closest('[data-id]')?.dataset.id;
 }
 
 // ---------- Milestones ----------
@@ -273,10 +273,54 @@ function bindTasks() {
   });
 }
 
+// ---------- Notes (bullet list) ----------
+
+function renderNoteItem(note) {
+  return el('li', { 'data-id': note.id, class: 'notes-list__item' }, [
+    el('input', { class: 'row-input', 'data-field': 'text', value: note.text || '', placeholder: 'Add a note...' }),
+    el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-note', 'aria-label': 'Delete note', text: '🗑' }),
+  ]);
+}
+
+function renderNotes() {
+  const state = getState();
+  const list = document.getElementById('notes-list');
+  list.innerHTML = '';
+  state.notes.forEach((note) => list.appendChild(renderNoteItem(note)));
+}
+
+function bindNotes() {
+  const list = document.getElementById('notes-list');
+
+  list.addEventListener('input', (e) => {
+    if (e.target.dataset.field !== 'text') return;
+    const item = findById(getState().notes, rowIdOf(e.target));
+    item.text = e.target.value;
+    scheduleSave();
+  });
+
+  list.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-action="delete-note"]')) return;
+    const id = rowIdOf(e.target);
+    const state = getState();
+    state.notes = state.notes.filter((n) => n.id !== id);
+    scheduleSave();
+    renderNotes();
+  });
+
+  document.querySelector('#page-planner [data-action="add-note"]').addEventListener('click', () => {
+    getState().notes.push({ id: uid(), text: '' });
+    scheduleSave();
+    renderNotes();
+    list.lastElementChild.querySelector('input').focus();
+  });
+}
+
 export function renderPlanner() {
   renderMilestones();
   renderGanttBody();
   renderTasks();
+  renderNotes();
 }
 
 export function initPlanner() {
@@ -284,4 +328,5 @@ export function initPlanner() {
   bindMilestones();
   bindGantt();
   bindTasks();
+  bindNotes();
 }

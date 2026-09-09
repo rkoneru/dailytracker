@@ -116,8 +116,11 @@
         </section>
 
         <section class="card">
-          <div class="card__head"><h2>Notes</h2></div>
-          <div class="editable editable--notes" contenteditable="true" data-field="notes" data-placeholder="Anything else worth writing down..."></div>
+          <div class="card__head">
+            <h2>Notes</h2>
+            <button type="button" class="btn btn-small no-print" data-action="add-note">+ Add Note</button>
+          </div>
+          <ul class="notes-list" id="notes-list"></ul>
         </section>
       </div>
     </section>

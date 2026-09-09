@@ -695,6 +695,141 @@ li.is-drop-target { box-shadow: inset 0 2px 0 var(--color-primary); }
   overflow: hidden;
 }
 
+.gantt-chart__today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-danger);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ---------- Upcoming deadlines / team workload / active projects ---------- */
+
+.deadline-list, .team-list, .active-projects-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.deadline-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.deadline-list__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.deadline-list__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.deadline-list__title {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deadline-list__meta { font-size: 11px; color: var(--color-text-muted); }
+.deadline-list__when {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  flex: none;
+  white-space: nowrap;
+}
+.deadline-list__when--soon { background: #fecaca; color: #7f1d1d; }
+.deadline-list__when--ok { background: var(--color-bg); color: var(--color-text-muted); }
+.empty-hint { color: var(--color-text-muted); font-size: 13px; margin: 0; }
+
+.team-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.team-list__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+.team-list__info { flex: 1; min-width: 0; }
+.team-list__name {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+.team-list__name span:last-child { color: var(--color-text-muted); font-weight: 400; font-size: 12px; }
+.team-list__track {
+  height: 6px;
+  background: var(--color-bg);
+  border-radius: 4px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.team-list__fill { height: 100%; background: var(--color-primary); border-radius: 4px; }
+
+.active-projects-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 6px;
+  margin: -6px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: calc(100% + 12px);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.active-projects-list li:hover { background: var(--color-bg); }
+.active-projects-list li.is-current { background: var(--color-primary-light); }
+.active-projects-list__info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.active-projects-list__name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.active-projects-list__meta { font-size: 11px; color: var(--color-text-muted); }
+.active-projects-list__track {
+  height: 6px;
+  background: var(--color-bg);
+  border-radius: 4px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.active-projects-list__fill { height: 100%; background: var(--color-primary); border-radius: 4px; }
+.active-projects-list__pct { font-size: 12px; font-weight: 700; flex: none; }
+
 /* ---------- Pie charts / legends ---------- */
 
 .chart-grid {
@@ -702,9 +837,123 @@ li.is-drop-target { box-shadow: inset 0 2px 0 var(--color-primary); }
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
+.chart-grid--3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 900px) {
+  .chart-grid--3 { grid-template-columns: 1fr 1fr; }
+}
 @media (max-width: 700px) {
   .chart-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- Stat cards ---------- */
+
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .stat-cards { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .stat-cards { grid-template-columns: 1fr; }
+}
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.stat-card__icon {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.stat-card__icon--blue { background: #dbeafe; }
+.stat-card__icon--green { background: #dcfce7; }
+.stat-card__icon--amber { background: #fef3c7; }
+.stat-card__icon--purple { background: #ede9fe; }
+.stat-card__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.stat-card__value {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.stat-card__label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.stat-card__sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Milestone progress / Kanban summary ---------- */
+
+.mini-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mini-progress__pct {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-primary);
+  flex: none;
+}
+.mini-progress .bar-row__track { flex: 1; }
+
+.mini-stat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.mini-stat-list li {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-muted);
+}
+.mini-stat-list li strong { color: var(--color-text); font-weight: 700; }
+
+.kanban-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.kanban-summary__col {
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--color-bg);
+}
+.kanban-summary__col-count { font-size: 20px; font-weight: 800; display: block; }
+.kanban-summary__col-label { font-size: 12px; color: var(--color-text-muted); }
+.kanban-summary__total {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.kanban-summary__total span { font-weight: 700; color: var(--color-text); }
 
 .chart-with-legend {
   display: flex;
@@ -816,9 +1065,13 @@ li.is-drop-target { box-shadow: inset 0 2px 0 var(--color-primary); }
 .status-overdue { background: var(--status-overdue); color: var(--status-overdue-text); }
 .status-on-hold { background: var(--status-on-hold); color: var(--status-on-hold-text); }
 
-.prio-high { background: color-mix(in srgb, var(--prio-high) 20%, transparent); color: var(--prio-high); }
-.prio-medium { background: color-mix(in srgb, var(--prio-medium) 20%, transparent); color: var(--prio-medium); }
-.prio-low { background: color-mix(in srgb, var(--prio-low) 20%, transparent); color: var(--prio-low); }
+/* Plain hex/rgba rather than color-mix(): html2canvas's own CSS parser
+   (used for PNG export) doesn't understand the color-mix() function and
+   throws, which would break PNG export as soon as a priority pill is
+   visible on the captured page. */
+.prio-high { background: #fee2e2; color: var(--prio-high); }
+.prio-medium { background: #fef3c7; color: var(--prio-medium); }
+.prio-low { background: #dcfce7; color: var(--prio-low); }
 
 .summary-table td.total-row, .summary-table th.total-row { font-weight: 800; border-top: 2px solid var(--color-border); }
 

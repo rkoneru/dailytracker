@@ -161,6 +161,26 @@ export function getActiveProjectId() {
   return getStore().activeProjectId;
 }
 
+// Cross-project summary for the "Active Projects" dashboard widget — cheap
+// to compute since every project's full data already lives in the store.
+export function listProjectsWithProgress() {
+  const s = getStore();
+  return Object.values(s.projects)
+    .map((p) => {
+      const total = p.dashTasks.length;
+      const complete = p.dashTasks.filter((t) => t.status === 'Complete').length;
+      return {
+        id: p.id,
+        name: p.projectName || 'Untitled project',
+        dueDate: p.dueDate,
+        updatedAt: p.updatedAt || 0,
+        pctComplete: total > 0 ? Math.round((complete / total) * 100) : 0,
+        isActive: p.id === s.activeProjectId,
+      };
+    })
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 export function switchProject(id) {
   const s = getStore();
   if (!s.projects[id] || id === s.activeProjectId) return;

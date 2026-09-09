@@ -1,6 +1,6 @@
 import { getState, getPath, setPath, scheduleSave, onSaveStatusChange, resetActiveProjectToTemplate } from './state.js';
 import { initPlanner, renderPlanner } from './planner.js';
-import { initDashboard, renderDashboard, renderDashHeader } from './dashboard.js';
+import { initDashboard, renderDashboard, renderDashHeader, renderComputed as refreshDashboardDerived } from './dashboard.js';
 import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON } from './export.js';
 import { initProjects } from './projects.js';
 
@@ -33,6 +33,10 @@ function initTabs() {
       });
       pageTitle.textContent = title;
       document.body.classList.remove('sidebar-open');
+      // Milestones (edited on the Planner page) feed the Dashboard's
+      // Milestone Progress / Upcoming Deadlines widgets — recompute on
+      // arrival so they reflect edits made while on the other page.
+      if (page.id === 'page-dashboard') refreshDashboardDerived();
     });
   });
 }
@@ -216,7 +220,7 @@ function init() {
   initInstallPrompt();
   initExportPanel();
   initPlanner();
-  initDashboard();
+  initDashboard({ onProjectSwitch: refreshActiveProjectView });
   initProjects({ onProjectChange: refreshActiveProjectView });
 }
 

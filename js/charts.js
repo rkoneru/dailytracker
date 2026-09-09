@@ -78,8 +78,10 @@ export function renderLegend(listEl, slices, total) {
 /**
  * Renders a simple date-proportional Gantt chart into `container`.
  * `items`: [{ label, start: Date, end: Date, color }]
+ * `today`: optional Date — draws a vertical marker line across every row
+ * when it falls within the displayed range.
  */
-export function renderGanttChart(container, items) {
+export function renderGanttChart(container, items, today = null) {
   container.innerHTML = '';
   const valid = items.filter((i) => i.start && i.end);
   if (valid.length === 0) {
@@ -99,6 +101,14 @@ export function renderGanttChart(container, items) {
   const fmt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   ruler.innerHTML = `<span>${fmt(minStart)}</span><span>${fmt(maxEnd)}</span>`;
   container.appendChild(ruler);
+
+  let todayLeftPct = null;
+  if (today) {
+    const todayOffsetDays = daysBetween(minStart, today) + padDays;
+    if (todayOffsetDays >= 0 && todayOffsetDays <= spanDays) {
+      todayLeftPct = (todayOffsetDays / spanDays) * 100;
+    }
+  }
 
   valid.forEach((item) => {
     const row = document.createElement('div');
@@ -126,6 +136,12 @@ export function renderGanttChart(container, items) {
     bar.title = `${item.label}: ${item.start.toLocaleDateString()} – ${item.end.toLocaleDateString()}`;
 
     track.appendChild(bar);
+    if (todayLeftPct !== null) {
+      const marker = document.createElement('div');
+      marker.className = 'gantt-chart__today';
+      marker.style.left = `${todayLeftPct}%`;
+      track.appendChild(marker);
+    }
     row.appendChild(label);
     row.appendChild(track);
     container.appendChild(row);

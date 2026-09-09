@@ -175,8 +175,67 @@
           </div>
         </header>
 
+        <section class="stat-cards">
+          <div class="stat-card">
+            <div class="stat-card__icon stat-card__icon--blue" aria-hidden="true">📁</div>
+            <div class="stat-card__body">
+              <span class="stat-card__value" id="stat-active-projects">0</span>
+              <span class="stat-card__label">Active Projects</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__icon stat-card__icon--green" aria-hidden="true">✅</div>
+            <div class="stat-card__body">
+              <span class="stat-card__value" id="stat-tasks-completed">0</span>
+              <span class="stat-card__label">Tasks Completed</span>
+              <span class="stat-card__sub" id="stat-tasks-completed-sub"></span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__icon stat-card__icon--amber" aria-hidden="true">⏳</div>
+            <div class="stat-card__body">
+              <span class="stat-card__value" id="stat-pending-tasks">0</span>
+              <span class="stat-card__label">Pending Tasks</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__icon stat-card__icon--purple" aria-hidden="true">👥</div>
+            <div class="stat-card__body">
+              <span class="stat-card__value" id="stat-team-workload">0%</span>
+              <span class="stat-card__label">Team Workload</span>
+              <span class="stat-card__sub" id="stat-team-workload-sub">Average completion</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="chart-grid chart-grid--3">
+          <div class="card">
+            <div class="card__head"><h2>Milestone Progress</h2></div>
+            <div class="mini-progress">
+              <span class="mini-progress__pct" id="milestone-progress-pct">0%</span>
+              <div class="bar-row__track"><div class="bar-row__fill" id="milestone-progress-bar" style="background:var(--color-primary)"></div></div>
+            </div>
+            <ul class="mini-stat-list" id="milestone-progress-breakdown"></ul>
+          </div>
+
+          <div class="card">
+            <div class="card__head"><h2>Kanban Summary</h2></div>
+            <div class="kanban-summary" id="kanban-summary"></div>
+            <p class="kanban-summary__total">
+              <span id="kanban-total-tasks">0</span> total tasks · <span id="kanban-completion-rate">0%</span> complete
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card__head"><h2>Weekly Workload</h2></div>
+            <p class="hint">Scheduled task-days for the next 7 days.</p>
+            <div class="bar-chart bar-chart--v bar-chart--week" id="weekly-workload-chart"></div>
+          </div>
+        </section>
+
         <section class="card">
           <div class="card__head"><h2>Task Timeline</h2></div>
+          <p class="hint">The red line marks today.</p>
           <div class="table-scroll">
             <div class="gantt-chart" id="dash-gantt"></div>
           </div>
@@ -196,6 +255,24 @@
               <div class="pie-holder" id="priority-pie"></div>
               <ul class="legend" id="priority-legend"></ul>
             </div>
+          </div>
+        </section>
+
+        <section class="chart-grid chart-grid--3">
+          <div class="card">
+            <div class="card__head"><h2>Upcoming Deadlines</h2></div>
+            <ul class="deadline-list" id="upcoming-deadlines"></ul>
+          </div>
+          <div class="card">
+            <div class="card__head"><h2>Team Workload</h2></div>
+            <ul class="team-list" id="team-workload-list"></ul>
+          </div>
+          <div class="card">
+            <div class="card__head">
+              <h2>Active Projects</h2>
+              <button type="button" class="btn btn-small no-print" id="btn-view-all-projects">View All</button>
+            </div>
+            <ul class="active-projects-list" id="active-projects-list"></ul>
           </div>
         </section>
 

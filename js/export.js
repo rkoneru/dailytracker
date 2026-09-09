@@ -59,19 +59,29 @@ export function buildMailtoUrl({ to, subject, body }) {
   return `mailto:${(to || '').trim()}${query}`;
 }
 
-// Full project data as a downloadable .json file — for backup, or moving a
-// project to another device (there's no account/cloud sync, so this is it).
-export function exportProjectJSON(projectData) {
-  const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+function downloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  const slug = (projectData.projectName || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${slug || 'project'}.json`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+// Full project data as a downloadable .json file — for backup, or moving a
+// project to another device (there's no account/cloud sync, so this is it).
+export function exportProjectJSON(projectData) {
+  const slug = (projectData.projectName || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  downloadJSON(projectData, `${slug || 'project'}.json`);
+}
+
+// Every project in one file — the only copy that survives clearing site data.
+export function exportBackupJSON(backup) {
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadJSON(backup, `project-planner-backup-${stamp}.json`);
 }
 
 export function readJSONFile(file) {

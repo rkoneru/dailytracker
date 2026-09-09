@@ -645,6 +645,47 @@ li.is-drop-target { box-shadow: inset 0 2px 0 var(--color-primary); }
   color: var(--color-text-muted);
 }
 
+/* ---------- Backup nudge ---------- */
+
+/* Revealing the banner inserts content above the viewport, and scroll
+   anchoring would "helpfully" scroll by exactly its height to keep the page
+   still — pushing the warning straight out of view. Opt this scroll
+   container out so the banner is actually seen. */
+body { overflow-anchor: none; }
+
+.backup-nudge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #fef3c7;
+  color: #78350f;
+  border-bottom: 1px solid #fcd34d;
+  font-size: 13px;
+}
+.backup-nudge__text { flex: 1; min-width: 0; }
+.backup-nudge .btn-small { background: #78350f; color: #fff; }
+.backup-nudge .btn-icon { color: #78350f; }
+
+/* ---------- Trend chips ---------- */
+
+.report-stat-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.trend {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.trend--good { background: #dcfce7; color: #14532d; }
+.trend--bad { background: #fee2e2; color: #7f1d1d; }
+.trend--flat { background: var(--color-bg); color: var(--color-text-muted); }
+
 /* ---------- Reports ---------- */
 
 .report-type-picker {

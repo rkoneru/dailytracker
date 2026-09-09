@@ -1,9 +1,13 @@
-import { getState, getPath, setPath, scheduleSave, onSaveStatusChange, resetActiveProjectToTemplate } from './state.js';
+import {
+  getState, getPath, setPath, scheduleSave, onSaveStatusChange, resetActiveProjectToTemplate,
+  buildBackup, restoreBackup, markBackedUp, getLastBackupAt, dismissBackupNudge, shouldNudgeBackup,
+} from './state.js';
 import { initPlanner, renderPlanner } from './planner.js';
 import { initDashboard, renderDashboard, renderDashHeader, renderComputed as refreshDashboardDerived } from './dashboard.js';
-import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON } from './export.js';
+import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON, exportBackupJSON, readJSONFile } from './export.js';
 import { initProjects } from './projects.js';
 import { initReports, refreshReport } from './reports.js';
+import { captureSnapshotIfDue } from './history.js';
 
 // ---------- Service worker ----------
 
@@ -123,6 +127,71 @@ function refreshActiveProjectView() {
   refreshReport();
 }
 
+// ---------- Backup ----------
+
+function daysAgo(ts) {
+  return Math.floor((Date.now() - ts) / 86400000);
+}
+
+function updateLastBackupLabel() {
+  const label = document.getElementById('last-backup-label');
+  const last = getLastBackupAt();
+  if (!last) {
+    label.textContent = 'No backup taken yet on this device.';
+    return;
+  }
+  const days = daysAgo(last);
+  const when = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+  label.textContent = `Last backup: ${when} (${new Date(last).toLocaleDateString()}).`;
+}
+
+function downloadBackup() {
+  exportBackupJSON(buildBackup());
+  markBackedUp();
+  updateLastBackupLabel();
+  refreshBackupNudge();
+}
+
+function refreshBackupNudge() {
+  const nudge = document.getElementById('backup-nudge');
+  if (!shouldNudgeBackup()) {
+    nudge.hidden = true;
+    return;
+  }
+  const last = getLastBackupAt();
+  document.getElementById('backup-nudge-text').textContent = last
+    ? `You haven't backed up in ${daysAgo(last)} days. This data only lives in this browser.`
+    : "You haven't backed up yet. This data only lives in this browser — clearing site data would erase it.";
+  nudge.hidden = false;
+}
+
+function initBackup() {
+  document.getElementById('btn-backup-all').addEventListener('click', downloadBackup);
+  document.getElementById('btn-nudge-backup').addEventListener('click', downloadBackup);
+  document.getElementById('btn-nudge-dismiss').addEventListener('click', () => {
+    dismissBackupNudge();
+    document.getElementById('backup-nudge').hidden = true;
+  });
+
+  const fileInput = document.getElementById('restore-backup-file');
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    try {
+      const { restored, skipped } = restoreBackup(await readJSONFile(file));
+      refreshActiveProjectView();
+      window.alert(`Restored ${restored} project${restored === 1 ? '' : 's'}${skipped > 0 ? ` (${skipped} skipped — not readable)` : ''}.`);
+    } catch (err) {
+      window.alert(err.message || 'Could not restore that file.');
+    } finally {
+      fileInput.value = '';
+    }
+  });
+
+  updateLastBackupLabel();
+  refreshBackupNudge();
+}
+
 // ---------- Reset this project ----------
 
 function initResetButton() {
@@ -216,6 +285,10 @@ function initExportPanel() {
 // ---------- Boot ----------
 
 function init() {
+  // Take this week's snapshot before anything renders, so report trends
+  // have a baseline from the moment the app is opened in a new week.
+  captureSnapshotIfDue();
+
   hydrateTopLevelFields();
   bindTopLevelFields();
   initTabs();
@@ -224,6 +297,7 @@ function init() {
   initResetButton();
   initInstallPrompt();
   initExportPanel();
+  initBackup();
   initPlanner();
   initDashboard({ onProjectSwitch: refreshActiveProjectView });
   initProjects({ onProjectChange: refreshActiveProjectView });

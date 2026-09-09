@@ -46,6 +46,12 @@
     </aside>
 
     <div class="app-content">
+      <div class="backup-nudge no-print" id="backup-nudge" hidden>
+        <span class="backup-nudge__text" id="backup-nudge-text"></span>
+        <button type="button" class="btn btn-small" id="btn-nudge-backup">Download Backup</button>
+        <button type="button" class="btn btn-icon" id="btn-nudge-dismiss" aria-label="Dismiss">✕</button>
+      </div>
+
       <header class="app-header no-print">
         <button type="button" class="btn btn-icon-only sidebar-toggle" id="btn-sidebar-toggle" aria-label="Toggle menu">☰</button>
         <h1 class="app-header__title" id="page-title">Dashboard</h1>
@@ -469,6 +475,22 @@
         <h3>Export Project Data</h3>
         <p class="hint">Download this project as a JSON file — for backup, or to move it to another device or browser.</p>
         <button type="button" class="btn btn-primary" id="btn-export-json">Download JSON</button>
+      </div>
+
+      <div class="panel__section">
+        <h3>Backup &amp; restore</h3>
+        <p class="hint">
+          Everything lives in this browser only. A backup covers <strong>all</strong> projects in one file —
+          it's the only copy that survives clearing site data or moving to another device.
+        </p>
+        <p class="hint" id="last-backup-label"></p>
+        <div class="report-share-actions">
+          <button type="button" class="btn btn-primary" id="btn-backup-all">💾 Download Backup (all projects)</button>
+        </div>
+        <label class="field-label field-label--block">Restore from a backup file
+          <input type="file" accept="application/json" class="field-input" id="restore-backup-file">
+        </label>
+        <p class="hint">Restoring adds the backed-up projects alongside what's already here — it never overwrites your current work.</p>
       </div>
     </div>
   </div>

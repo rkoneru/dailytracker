@@ -1,6 +1,7 @@
 import { listFullProjects } from './state.js';
 import { parseDate, daysBetween } from './charts.js';
 import { buildMailtoUrl } from './export.js';
+import { projectTrend, portfolioTrend, portfolioPctTrend } from './history.js';
 
 function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
@@ -220,12 +221,17 @@ function computeReport(type, anchor) {
 
 // ---------- Shared render pieces ----------
 
-function statCard(icon, tone, value, label) {
+function statCard(icon, tone, value, label, trend, goodDirection) {
+  const chip = trendChip(trend, goodDirection);
   return el('div', { class: 'stat-card' }, [
     el('div', { class: `stat-card__icon stat-card__icon--${tone}`, 'aria-hidden': 'true', text: icon }),
     el('div', { class: 'stat-card__body' }, [
-      el('span', { class: 'stat-card__value', text: value }),
+      el('div', { class: 'report-stat-value' }, [
+        el('span', { class: 'stat-card__value', text: value }),
+        chip,
+      ]),
       el('span', { class: 'stat-card__label', text: label }),
+      trend ? el('span', { class: 'stat-card__sub', text: `vs ${trend.previous} on ${trend.since.toLocaleDateString()}` }) : null,
     ]),
   ]);
 }
@@ -235,8 +241,31 @@ function ragBadge(rag) {
   return el('span', { class: `report-badge ${cls}`, text: rag });
 }
 
-function statBox(value, label) {
-  return el('div', {}, [el('strong', { text: value }), el('span', { text: label })]);
+/**
+ * Renders a change-since-last-snapshot chip, or nothing when there's no
+ * baseline yet (first week of use) — an absent chip is honest, a "0" chip
+ * would imply we compared and found no change.
+ * `goodDirection` decides the colour: 'up' for completion, 'down' for overdue.
+ */
+function trendChip(trend, goodDirection) {
+  if (!trend || trend.delta === 0) return null;
+  const up = trend.delta > 0;
+  const good = goodDirection === 'up' ? up : goodDirection === 'down' ? !up : null;
+  const tone = good === null ? 'trend--flat' : good ? 'trend--good' : 'trend--bad';
+  const sign = up ? '+' : '−';
+  return el('span', {
+    class: `trend ${tone}`,
+    title: `Was ${trend.previous} on ${trend.since.toLocaleDateString()}`,
+    text: `${up ? '▲' : '▼'} ${sign}${Math.abs(trend.delta)}`,
+  });
+}
+
+function statBox(value, label, trend, goodDirection) {
+  const chip = trendChip(trend, goodDirection);
+  return el('div', {}, [
+    el('div', { class: 'report-stat-value' }, [el('strong', { text: value }), chip]),
+    el('span', { text: label }),
+  ]);
 }
 
 // Returns null for an empty section with no empty-state text, so callers can
@@ -281,7 +310,7 @@ function renderDaily(report, cards, summaryEl) {
     statCard('📁', 'blue', String(report.summary.totalProjects), 'Projects'),
     statCard('📅', 'amber', String(report.summary.dueInPeriod), 'Due Today'),
     statCard('🔨', 'green', String(report.summary.inProgress), 'In Progress'),
-    statCard('⚠️', 'purple', String(report.summary.overdue), 'Overdue'),
+    statCard('⚠️', 'purple', String(report.summary.overdue), 'Overdue', portfolioTrend('overdue', report.summary.overdue), 'down'),
   );
 
   report.projects.forEach((p) => {
@@ -306,16 +335,16 @@ function renderWeekly(report, cards, summaryEl) {
     statCard('📁', 'blue', String(report.summary.totalProjects), 'Projects'),
     statCard('✅', 'green', String(report.summary.completedInPeriod), 'Completed This Week'),
     statCard('📅', 'amber', String(report.summary.dueInPeriod), 'Due This Week'),
-    statCard('⚠️', 'purple', String(report.summary.overdue), 'Overdue'),
+    statCard('⚠️', 'purple', String(report.summary.overdue), 'Overdue', portfolioTrend('overdue', report.summary.overdue), 'down'),
   );
 
   report.projects.forEach((p) => {
     const children = [
       el('div', { class: 'report-card__stats' }, [
-        statBox(`${p.pctComplete}%`, 'Complete'),
+        statBox(`${p.pctComplete}%`, 'Complete', projectTrend(p.id, 'pctComplete', p.pctComplete), 'up'),
         statBox(String(p.completedInPeriod.length), 'Done this week'),
         statBox(String(p.dueInPeriod.length), 'Due this week'),
-        statBox(String(p.overdue.length), 'Overdue'),
+        statBox(String(p.overdue.length), 'Overdue', projectTrend(p.id, 'overdue', p.overdue.length), 'down'),
         statBox(`$${p.budgetActual.toLocaleString()}`, `of $${p.budgetPlanned.toLocaleString()} budget`),
       ]),
       listSection('Completed this week', taskItems(p.completedInPeriod), 'Nothing completed this week.'),
@@ -345,10 +374,10 @@ function renderSteerCo(report, cards, summaryEl) {
     cards.appendChild(projectCard(p, [
       p.objective ? el('p', { class: 'report-card__objective', text: p.objective }) : null,
       el('div', { class: 'report-card__stats' }, [
-        statBox(`${p.pctComplete}%`, 'Tasks complete'),
-        statBox(`${p.milestonesDone}/${p.milestoneTotal}`, 'Milestones done'),
+        statBox(`${p.pctComplete}%`, 'Tasks complete', projectTrend(p.id, 'pctComplete', p.pctComplete), 'up'),
+        statBox(`${p.milestonesDone}/${p.milestoneTotal}`, 'Milestones done', projectTrend(p.id, 'milestonesDone', p.milestonesDone), 'up'),
         statBox(String(p.completedInPeriod.length), 'Delivered this period'),
-        statBox(`${p.burnPct}%`, `Budget used · ${varianceLabel}`),
+        statBox(`${p.burnPct}%`, `Budget used · ${varianceLabel}`, projectTrend(p.id, 'budgetActual', p.budgetActual), null),
         statBox(p.dueDate || '—', 'Target date'),
       ]),
       listSection('Milestone outlook', p.upcomingMilestones.map((m) => ({
@@ -372,7 +401,7 @@ function renderExecutive(report, cards, summaryEl) {
   const s = report.summary;
   summaryEl.append(
     statCard('📁', 'blue', String(s.totalProjects), 'Projects'),
-    statCard('📈', 'green', `${s.portfolioPct}%`, 'Portfolio Complete'),
+    statCard('📈', 'green', `${s.portfolioPct}%`, 'Portfolio Complete', portfolioPctTrend(s.portfolioPct), 'up'),
     statCard('💷', 'amber', `${s.burnPct}%`, `Budget Used · $${s.budgetActual.toLocaleString()} of $${s.budgetPlanned.toLocaleString()}`),
     statCard('🚦', 'purple', String(s.red + s.amber), 'Needing Attention'),
   );
@@ -425,16 +454,21 @@ const RENDERERS = { daily: renderDaily, weekly: renderWeekly, steerco: renderSte
 
 // ---------- Email / copy text ----------
 
+function trendText(trend) {
+  if (!trend || trend.delta === 0) return '';
+  return ` (${trend.delta > 0 ? '+' : '−'}${Math.abs(trend.delta)} since ${trend.since.toLocaleDateString()})`;
+}
+
 function buildReportText(report) {
   const { type, periodLabel, projects, summary } = report;
   const lines = [`${REPORT_TYPES[type].title} — ${periodLabel}`, ''];
 
   if (type === 'executive') {
-    lines.push(`${summary.totalProjects} projects · ${summary.portfolioPct}% complete · budget ${summary.burnPct}% used ($${summary.budgetActual.toLocaleString()} of $${summary.budgetPlanned.toLocaleString()})`);
+    lines.push(`${summary.totalProjects} projects · ${summary.portfolioPct}% complete${trendText(portfolioPctTrend(summary.portfolioPct))} · budget ${summary.burnPct}% used ($${summary.budgetActual.toLocaleString()} of $${summary.budgetPlanned.toLocaleString()})`);
     lines.push(`RAG: ${summary.green} green, ${summary.amber} amber, ${summary.red} red`);
     lines.push('');
     projects.forEach((p) => {
-      lines.push(`[${p.rag}] ${p.name} — ${p.pctComplete}% complete, budget ${p.burnPct}% used${p.dueDate ? `, target ${p.dueDate}` : ''}`);
+      lines.push(`[${p.rag}] ${p.name} — ${p.pctComplete}% complete${trendText(projectTrend(p.id, 'pctComplete', p.pctComplete))}, budget ${p.burnPct}% used${p.dueDate ? `, target ${p.dueDate}` : ''}`);
       lines.push(`    ${p.headline}`);
     });
   } else if (type === 'steerco') {
@@ -442,7 +476,7 @@ function buildReportText(report) {
     lines.push(`Decisions pending: ${summary.decisions} · Open actions: ${summary.actions} · Change requests: ${summary.changeRequests}`);
     lines.push('');
     projects.forEach((p) => {
-      lines.push(`[${p.rag}] ${p.name} — ${p.pctComplete}% complete, milestones ${p.milestonesDone}/${p.milestoneTotal}, budget ${p.burnPct}% used`);
+      lines.push(`[${p.rag}] ${p.name} — ${p.pctComplete}% complete${trendText(projectTrend(p.id, 'pctComplete', p.pctComplete))}, milestones ${p.milestonesDone}/${p.milestoneTotal}, budget ${p.burnPct}% used`);
       if (p.upcomingMilestones.length > 0) {
         lines.push(`    Next milestone: ${p.upcomingMilestones[0].text || 'untitled'} (${p.upcomingMilestones[0].due || 'no date'})`);
       }
@@ -457,7 +491,7 @@ function buildReportText(report) {
     lines.push(`${summary.totalProjects} projects · ${summary.completedInPeriod} completed ${periodWord} · ${summary.dueInPeriod} due · ${summary.overdue} overdue`);
     lines.push('');
     projects.forEach((p) => {
-      lines.push(`[${p.rag}] ${p.name} (${p.pctComplete}% complete)`);
+      lines.push(`[${p.rag}] ${p.name} (${p.pctComplete}% complete${trendText(projectTrend(p.id, 'pctComplete', p.pctComplete))})`);
       lines.push(`    Done: ${p.completedInPeriod.length}  Due: ${p.dueInPeriod.length}  Overdue: ${p.overdue.length}`);
       if (p.dueInPeriod.length > 0) {
         lines.push(`    Due ${periodWord}: ${p.dueInPeriod.slice(0, 5).map((t) => t.name || 'untitled').join(', ')}`);

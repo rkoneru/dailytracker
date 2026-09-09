@@ -70,12 +70,21 @@ function createDefaultStore() {
   return { activeProjectId: project.id, projects: { [project.id]: project } };
 }
 
-function loadStore() {
-  return readStoreFromStorage() || migrateLegacyStore() || createDefaultStore();
-}
-
 function getStore() {
-  if (!store) store = loadStore();
+  if (store) return store;
+
+  const saved = readStoreFromStorage();
+  if (saved) {
+    store = saved;
+    return store;
+  }
+
+  // Nothing saved yet: persist the freshly built store straight away rather
+  // than waiting for the first edit. Otherwise project ids are regenerated on
+  // every reload until the user types something, which silently breaks
+  // anything that references a project across sessions (snapshot history).
+  store = migrateLegacyStore() || createDefaultStore();
+  writeStore();
   return store;
 }
 
@@ -286,4 +295,96 @@ export function resetActiveProjectToTemplate(templateKey) {
   saveImmediately();
   emitProjectsChanged();
   return fresh;
+}
+
+// ---------- Backup ----------
+// Everything lives in this browser's localStorage, so a downloaded backup is
+// the only copy that survives clearing site data or switching devices.
+
+const BACKUP_KEY = 'projectPlannerLastBackup_v1';
+const NUDGE_DISMISS_KEY = 'projectPlannerBackupNudge_v1';
+const BACKUP_FORMAT = 'project-planner-backup';
+
+export function buildBackup() {
+  const s = getStore();
+  return {
+    format: BACKUP_FORMAT,
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    projects: Object.values(s.projects),
+  };
+}
+
+/**
+ * Restores projects from a backup file. Additive on purpose: it adds the
+ * backed-up projects alongside whatever is already here rather than wiping
+ * the store, so restoring onto a device that already has work can't destroy
+ * it. Ids are regenerated so a project restored twice becomes two projects
+ * instead of silently overwriting itself.
+ */
+export function restoreBackup(rawData) {
+  const projects = rawData && Array.isArray(rawData.projects) ? rawData.projects : null;
+  if (!projects || rawData.format !== BACKUP_FORMAT) {
+    throw new Error("That file doesn't look like a Project Planner backup.");
+  }
+  const valid = projects.filter((p) => p && IMPORT_REQUIRED_ARRAYS.every((k) => Array.isArray(p[k])));
+  if (valid.length === 0) throw new Error('That backup file has no readable projects in it.');
+
+  const s = getStore();
+  let lastId = null;
+  valid.forEach((raw) => {
+    const data = migrateNotes(clone(raw));
+    data.id = uid();
+    data.updatedAt = Date.now();
+    regenerateRowIds(data);
+    s.projects[data.id] = data;
+    lastId = data.id;
+  });
+  if (lastId) s.activeProjectId = lastId;
+  saveImmediately();
+  emitProjectsChanged();
+  return { restored: valid.length, skipped: projects.length - valid.length };
+}
+
+export function markBackedUp() {
+  try {
+    localStorage.setItem(BACKUP_KEY, String(Date.now()));
+  } catch (err) {
+    console.warn('Could not record the backup time.', err);
+  }
+}
+
+export function getLastBackupAt() {
+  const raw = localStorage.getItem(BACKUP_KEY);
+  return raw ? Number(raw) : null;
+}
+
+export function dismissBackupNudge() {
+  try {
+    localStorage.setItem(NUDGE_DISMISS_KEY, String(Date.now()));
+  } catch (err) {
+    console.warn('Could not record the dismissal.', err);
+  }
+}
+
+const DAY_MS = 86400000;
+
+/**
+ * True when work has gone unbacked-up for over a week. Measured from the
+ * oldest un-backed-up change rather than from "now", so a brand new install
+ * is never nagged and someone who backs up regularly never sees it.
+ */
+export function shouldNudgeBackup() {
+  const dismissedAt = Number(localStorage.getItem(NUDGE_DISMISS_KEY)) || 0;
+  if (Date.now() - dismissedAt < 7 * DAY_MS) return false;
+
+  const projects = Object.values(getStore().projects);
+  if (projects.length === 0) return false;
+
+  const lastBackup = getLastBackupAt() || 0;
+  const changedSinceBackup = projects.filter((p) => (p.updatedAt || 0) > lastBackup);
+  if (changedSinceBackup.length === 0) return false;
+
+  const oldestChange = Math.min(...changedSinceBackup.map((p) => p.updatedAt || Date.now()));
+  return Date.now() - oldestChange > 7 * DAY_MS;
 }

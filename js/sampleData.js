@@ -227,12 +227,285 @@ function createBlankProject() {
   };
 }
 
+function createLLMFeatureLaunch() {
+  return {
+    projectName: 'AI Assistant Feature Launch',
+    objective: 'Ship the in-product AI assistant to general availability with a measured quality bar and no P1 safety incidents in the first month.',
+    dueDate: '2026-10-16',
+    reward: 'Team dinner + a demo slot at the next all-hands.',
+    notes: [
+      { id: id('n'), text: 'Quality bar agreed: ≥85% helpful ratings on the golden set before GA.' },
+      { id: id('n'), text: 'Streaming responses are a hard requirement — p95 first-token under 800ms.' },
+      { id: id('n'), text: 'Legal wants the data-retention wording finalised before dogfood widens.' },
+    ],
+    milestones: [
+      { id: id('m'), text: 'Prompt + eval baseline set', progress: 5, due: '2026-09-18', done: true },
+      { id: id('m'), text: 'Internal dogfood open', progress: 3, due: '2026-09-28', done: false },
+      { id: id('m'), text: 'Safety & red-team sign-off', progress: 1, due: '2026-10-08', done: false },
+      { id: id('m'), text: 'GA rollout complete', progress: 0, due: '2026-10-16', done: false },
+    ],
+    gantt: [
+      { id: id('g'), name: 'Prompt iteration', type: 'check', cells: [1, 2, 3, 4, 5, 8, 9, 10] },
+      { id: id('g'), name: 'Eval harness build', type: 'check', cells: [3, 4, 5, 8, 9, 10, 11, 12] },
+      { id: id('g'), name: 'Dogfood opens', type: 'diamond', cells: [12] },
+      { id: id('g'), name: 'Red-team window', type: 'check', cells: [15, 16, 17, 18, 19, 22] },
+      { id: id('g'), name: 'Safety sign-off', type: 'diamond', cells: [22] },
+      { id: id('g'), name: 'Staged rollout', type: 'check', cells: [23, 24, 25, 26, 29] },
+      { id: id('g'), name: 'GA', type: 'diamond', cells: [30] },
+    ],
+    tasks: [
+      { id: id('t'), task: 'Define quality bar + golden set', start: '2026-09-14', end: '2026-09-18', prio: 'High', done: true },
+      { id: id('t'), task: 'Build automated eval harness', start: '2026-09-16', end: '2026-09-25', prio: 'High', done: false },
+      { id: id('t'), task: 'Prompt iteration on failure cases', start: '2026-09-18', end: '2026-09-30', prio: 'High', done: false },
+      { id: id('t'), task: 'Latency + cost benchmarking', start: '2026-09-24', end: '2026-09-30', prio: 'Medium', done: false },
+      { id: id('t'), task: 'Red-team + safety review', start: '2026-10-01', end: '2026-10-08', prio: 'High', done: false },
+      { id: id('t'), task: 'Staged rollout 5% → 100%', start: '2026-10-09', end: '2026-10-16', prio: 'High', done: false },
+    ],
+    dashDate: '2026-09-28',
+    dashStatus: 'ON TRACK',
+    budgetPlanned: 60000,
+    budgetActual: 31000,
+    pending: { decisions: 2, actions: 6, changeRequests: 1 },
+    dashTasks: [
+      { id: id('d'), name: 'Quality bar & golden eval set', assigned: 'Nadia R.', start: '2026-09-14', end: '2026-09-18', status: 'Complete', prio: 'High', comments: '250 labelled examples, signed off by product.' },
+      { id: id('d'), name: 'Automated eval harness', assigned: 'Tom B.', start: '2026-09-16', end: '2026-09-25', status: 'In Progress', prio: 'High', comments: 'Runs on every prompt change in CI.' },
+      { id: id('d'), name: 'Prompt iteration on failures', assigned: 'Nadia R.', start: '2026-09-18', end: '2026-09-30', status: 'In Progress', prio: 'High', comments: 'Refusal rate down from 9% to 3%.' },
+      { id: id('d'), name: 'Guardrails & refusal handling', assigned: 'Priya S.', start: '2026-09-21', end: '2026-09-30', status: 'In Progress', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Latency & cost benchmarking', assigned: 'Tom B.', start: '2026-09-24', end: '2026-09-30', status: 'Not Started', prio: 'Medium', comments: 'Need a decision on caching strategy.' },
+      { id: id('d'), name: 'Dogfood feedback triage', assigned: 'Marcus L.', start: '2026-09-28', end: '2026-10-07', status: 'Not Started', prio: 'Medium', comments: '' },
+      { id: id('d'), name: 'Red-team exercise', assigned: 'Priya S.', start: '2026-10-01', end: '2026-10-08', status: 'Not Started', prio: 'High', comments: 'External reviewer booked.' },
+      { id: id('d'), name: 'Data retention wording', assigned: 'Legal', start: '2026-09-22', end: '2026-09-29', status: 'On Hold', prio: 'Medium', comments: 'Waiting on privacy counsel review.' },
+      { id: id('d'), name: 'Rollout runbook & on-call', assigned: 'Marcus L.', start: '2026-10-08', end: '2026-10-14', status: 'Not Started', prio: 'Medium', comments: '' },
+    ],
+  };
+}
+
+function createRagAssistant() {
+  return {
+    projectName: 'RAG Knowledge Base Assistant',
+    objective: 'Give support agents an assistant that answers from our internal docs with at least 85% answer accuracy on the eval set, always with citations.',
+    dueDate: '2026-11-06',
+    reward: 'Present the results at the engineering guild.',
+    notes: [
+      { id: id('n'), text: 'Every answer must cite its source doc — uncited answers count as failures.' },
+      { id: id('n'), text: 'Confluence export is messy; ~12% of pages are stale and need owner review.' },
+      { id: id('n'), text: 'Reranking gave a bigger accuracy lift than a larger embedding model.' },
+    ],
+    milestones: [
+      { id: id('m'), text: 'Corpus ingested & indexed', progress: 5, due: '2026-10-09', done: true },
+      { id: id('m'), text: 'Retrieval baseline measured', progress: 4, due: '2026-10-16', done: false },
+      { id: id('m'), text: 'Answer accuracy ≥85%', progress: 2, due: '2026-10-28', done: false },
+      { id: id('m'), text: 'Support team pilot live', progress: 0, due: '2026-11-06', done: false },
+    ],
+    gantt: [
+      { id: id('g'), name: 'Source inventory', type: 'check', cells: [1, 2, 3] },
+      { id: id('g'), name: 'Ingestion pipeline', type: 'check', cells: [3, 4, 5, 8, 9, 10] },
+      { id: id('g'), name: 'Corpus indexed', type: 'diamond', cells: [10] },
+      { id: id('g'), name: 'Retrieval experiments', type: 'check', cells: [11, 12, 15, 16, 17, 18, 19] },
+      { id: id('g'), name: 'Accuracy target hit', type: 'diamond', cells: [22] },
+      { id: id('g'), name: 'Pilot onboarding', type: 'check', cells: [23, 24, 25, 26] },
+      { id: id('g'), name: 'Pilot live', type: 'diamond', cells: [29] },
+    ],
+    tasks: [
+      { id: id('t'), task: 'Inventory doc sources + access', start: '2026-10-05', end: '2026-10-07', prio: 'High', done: true },
+      { id: id('t'), task: 'Build ingestion + chunking pipeline', start: '2026-10-07', end: '2026-10-14', prio: 'High', done: false },
+      { id: id('t'), task: 'Build retrieval eval set (200 Qs)', start: '2026-10-12', end: '2026-10-16', prio: 'High', done: false },
+      { id: id('t'), task: 'Reranking experiments', start: '2026-10-16', end: '2026-10-23', prio: 'Medium', done: false },
+      { id: id('t'), task: 'Citation & grounding checks', start: '2026-10-21', end: '2026-10-28', prio: 'High', done: false },
+      { id: id('t'), task: 'Onboard 5 support agents', start: '2026-11-02', end: '2026-11-06', prio: 'Medium', done: false },
+    ],
+    dashDate: '2026-10-16',
+    dashStatus: 'AT RISK',
+    budgetPlanned: 45000,
+    budgetActual: 21000,
+    pending: { decisions: 3, actions: 5, changeRequests: 2 },
+    dashTasks: [
+      { id: id('d'), name: 'Source inventory & access', assigned: 'Dev A.', start: '2026-10-05', end: '2026-10-07', status: 'Complete', prio: 'High', comments: '9 sources, 4.2k pages total.' },
+      { id: id('d'), name: 'Ingestion & chunking pipeline', assigned: 'Dev A.', start: '2026-10-07', end: '2026-10-14', status: 'Complete', prio: 'High', comments: 'Semantic chunking beat fixed-size.' },
+      { id: id('d'), name: 'Vector store setup', assigned: 'Ravi M.', start: '2026-10-09', end: '2026-10-14', status: 'Complete', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Retrieval eval set', assigned: 'Sara K.', start: '2026-10-12', end: '2026-10-16', status: 'In Progress', prio: 'High', comments: '140 of 200 questions written.' },
+      { id: id('d'), name: 'Reranking experiments', assigned: 'Ravi M.', start: '2026-10-16', end: '2026-10-23', status: 'In Progress', prio: 'Medium', comments: 'Recall@5 up from 71% to 88%.' },
+      { id: id('d'), name: 'Stale content cleanup', assigned: 'Sara K.', start: '2026-10-14', end: '2026-10-20', status: 'Overdue', prio: 'High', comments: 'Blocked — needs doc owners to confirm.' },
+      { id: id('d'), name: 'Citation & grounding checks', assigned: 'Dev A.', start: '2026-10-21', end: '2026-10-28', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Hallucination review pass', assigned: 'Sara K.', start: '2026-10-26', end: '2026-10-30', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Pilot onboarding & training', assigned: 'Support Lead', start: '2026-11-02', end: '2026-11-06', status: 'Not Started', prio: 'Medium', comments: '' },
+    ],
+  };
+}
+
+function createMLModelDevelopment() {
+  return {
+    projectName: 'Churn Prediction Model',
+    objective: 'Deploy a churn model that beats the current heuristic by 15% on recall at fixed precision, with drift monitoring from day one.',
+    dueDate: '2026-11-27',
+    reward: 'Conference ticket for the team.',
+    notes: [
+      { id: id('n'), text: 'Baseline to beat: rules engine at 0.42 recall / 0.60 precision.' },
+      { id: id('n'), text: 'Label leakage found in the first feature set — cancellation_date had to be dropped.' },
+      { id: id('n'), text: 'Fairness check across tenure bands is a release gate, not a nice-to-have.' },
+    ],
+    milestones: [
+      { id: id('m'), text: 'Training data pipeline ready', progress: 5, due: '2026-10-30', done: true },
+      { id: id('m'), text: 'Baseline model trained', progress: 4, due: '2026-11-06', done: false },
+      { id: id('m'), text: 'Validation + fairness passed', progress: 1, due: '2026-11-18', done: false },
+      { id: id('m'), text: 'Deployed with monitoring', progress: 0, due: '2026-11-27', done: false },
+    ],
+    gantt: [
+      { id: id('g'), name: 'Data collection & labelling', type: 'check', cells: [1, 2, 3, 4, 5] },
+      { id: id('g'), name: 'Feature engineering', type: 'check', cells: [4, 5, 8, 9, 10, 11] },
+      { id: id('g'), name: 'Baseline trained', type: 'diamond', cells: [11] },
+      { id: id('g'), name: 'Tuning & experiments', type: 'check', cells: [12, 15, 16, 17, 18] },
+      { id: id('g'), name: 'Validation gate', type: 'diamond', cells: [19] },
+      { id: id('g'), name: 'Deployment', type: 'check', cells: [22, 23, 24, 25] },
+      { id: id('g'), name: 'Monitoring live', type: 'diamond', cells: [26] },
+    ],
+    tasks: [
+      { id: id('t'), task: 'Assemble training dataset', start: '2026-10-26', end: '2026-10-30', prio: 'High', done: true },
+      { id: id('t'), task: 'Feature engineering + leakage audit', start: '2026-10-29', end: '2026-11-06', prio: 'High', done: false },
+      { id: id('t'), task: 'Train baseline + candidates', start: '2026-11-04', end: '2026-11-12', prio: 'High', done: false },
+      { id: id('t'), task: 'Bias & fairness evaluation', start: '2026-11-12', end: '2026-11-18', prio: 'High', done: false },
+      { id: id('t'), task: 'Model card + documentation', start: '2026-11-16', end: '2026-11-20', prio: 'Low', done: false },
+      { id: id('t'), task: 'Deploy to serving + monitors', start: '2026-11-20', end: '2026-11-27', prio: 'High', done: false },
+    ],
+    dashDate: '2026-11-06',
+    dashStatus: 'ON TRACK',
+    budgetPlanned: 75000,
+    budgetActual: 28000,
+    pending: { decisions: 1, actions: 4, changeRequests: 0 },
+    dashTasks: [
+      { id: id('d'), name: 'Training dataset assembly', assigned: 'Iris P.', start: '2026-10-26', end: '2026-10-30', status: 'Complete', prio: 'High', comments: '3 years of history, 1.1M rows.' },
+      { id: id('d'), name: 'Feature engineering', assigned: 'Iris P.', start: '2026-10-29', end: '2026-11-06', status: 'In Progress', prio: 'High', comments: 'Dropped 2 leaky features.' },
+      { id: id('d'), name: 'Leakage & data quality audit', assigned: 'Ben O.', start: '2026-11-02', end: '2026-11-06', status: 'In Progress', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Baseline model training', assigned: 'Iris P.', start: '2026-11-04', end: '2026-11-12', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Hyperparameter tuning', assigned: 'Ben O.', start: '2026-11-09', end: '2026-11-16', status: 'Not Started', prio: 'Medium', comments: '' },
+      { id: id('d'), name: 'Bias & fairness evaluation', assigned: 'Ana T.', start: '2026-11-12', end: '2026-11-18', status: 'Not Started', prio: 'High', comments: 'Release gate.' },
+      { id: id('d'), name: 'Holdout validation', assigned: 'Iris P.', start: '2026-11-16', end: '2026-11-20', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Serving deployment', assigned: 'Ravi M.', start: '2026-11-20', end: '2026-11-25', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Drift & performance monitoring', assigned: 'Ravi M.', start: '2026-11-23', end: '2026-11-27', status: 'Not Started', prio: 'Medium', comments: '' },
+    ],
+  };
+}
+
+function createAgentAutomationPilot() {
+  return {
+    projectName: 'Support Triage Agent Pilot',
+    objective: 'Pilot an agent that triages and drafts replies for tier-1 tickets, targeting 40% deflection with a human reviewing every send.',
+    dueDate: '2026-10-30',
+    reward: 'Whole team gets the automation win in their review packet.',
+    notes: [
+      { id: id('n'), text: 'Non-negotiable: no message reaches a customer without human approval during the pilot.' },
+      { id: id('n'), text: 'Escalation rules matter more than model quality — wrong-confident replies are the main risk.' },
+      { id: id('n'), text: 'Measure cost per ticket alongside deflection, or the win is meaningless.' },
+    ],
+    milestones: [
+      { id: id('m'), text: 'Tool integrations working', progress: 5, due: '2026-10-07', done: true },
+      { id: id('m'), text: 'Sandbox eval passed', progress: 3, due: '2026-10-14', done: false },
+      { id: id('m'), text: 'Human-in-loop pilot live', progress: 1, due: '2026-10-21', done: false },
+      { id: id('m'), text: 'Go / no-go decision', progress: 0, due: '2026-10-30', done: false },
+    ],
+    gantt: [
+      { id: id('g'), name: 'Workflow mapping', type: 'check', cells: [1, 2, 3] },
+      { id: id('g'), name: 'Tool + API integrations', type: 'check', cells: [3, 4, 5, 8, 9] },
+      { id: id('g'), name: 'Integrations done', type: 'diamond', cells: [9] },
+      { id: id('g'), name: 'Sandbox eval runs', type: 'check', cells: [10, 11, 12, 15, 16] },
+      { id: id('g'), name: 'Pilot goes live', type: 'diamond', cells: [17] },
+      { id: id('g'), name: 'Pilot monitoring', type: 'check', cells: [18, 19, 22, 23, 24, 25, 26] },
+      { id: id('g'), name: 'Go / no-go', type: 'diamond', cells: [30] },
+    ],
+    tasks: [
+      { id: id('t'), task: 'Map tier-1 triage workflow', start: '2026-10-01', end: '2026-10-03', prio: 'High', done: true },
+      { id: id('t'), task: 'Build tool integrations', start: '2026-10-05', end: '2026-10-09', prio: 'High', done: false },
+      { id: id('t'), task: 'Define escalation + guardrails', start: '2026-10-07', end: '2026-10-13', prio: 'High', done: false },
+      { id: id('t'), task: 'Sandbox eval on 500 past tickets', start: '2026-10-12', end: '2026-10-16', prio: 'High', done: false },
+      { id: id('t'), task: 'Run pilot with 2 agents', start: '2026-10-19', end: '2026-10-28', prio: 'High', done: false },
+      { id: id('t'), task: 'Deflection + cost analysis', start: '2026-10-26', end: '2026-10-30', prio: 'Medium', done: false },
+    ],
+    dashDate: '2026-10-14',
+    dashStatus: 'ON TRACK',
+    budgetPlanned: 35000,
+    budgetActual: 12500,
+    pending: { decisions: 2, actions: 3, changeRequests: 1 },
+    dashTasks: [
+      { id: id('d'), name: 'Tier-1 workflow mapping', assigned: 'Omar D.', start: '2026-10-01', end: '2026-10-03', status: 'Complete', prio: 'High', comments: '6 ticket categories in scope.' },
+      { id: id('d'), name: 'Helpdesk + CRM integrations', assigned: 'Lena F.', start: '2026-10-05', end: '2026-10-09', status: 'Complete', prio: 'High', comments: 'Read-only scopes for the pilot.' },
+      { id: id('d'), name: 'Agent scaffolding & tools', assigned: 'Lena F.', start: '2026-10-07', end: '2026-10-13', status: 'In Progress', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Escalation & guardrail rules', assigned: 'Omar D.', start: '2026-10-07', end: '2026-10-13', status: 'In Progress', prio: 'High', comments: 'Auto-escalate on refunds and outages.' },
+      { id: id('d'), name: 'Sandbox eval on past tickets', assigned: 'Lena F.', start: '2026-10-12', end: '2026-10-16', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Human review UI', assigned: 'Jae W.', start: '2026-10-12', end: '2026-10-18', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Pilot with 2 support agents', assigned: 'Support Lead', start: '2026-10-19', end: '2026-10-28', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Deflection measurement', assigned: 'Omar D.', start: '2026-10-26', end: '2026-10-30', status: 'Not Started', prio: 'Medium', comments: '' },
+      { id: id('d'), name: 'Cost per ticket analysis', assigned: 'Jae W.', start: '2026-10-26', end: '2026-10-30', status: 'Not Started', prio: 'Medium', comments: 'Needs a decision on how to price tokens.' },
+    ],
+  };
+}
+
+function createAIGovernance() {
+  return {
+    projectName: 'Responsible AI Readiness',
+    objective: 'Stand up a model inventory, risk tiering and review gates so every AI system in production has a named owner and an approved risk assessment.',
+    dueDate: '2026-12-11',
+    reward: 'Clean audit and a much shorter fire-drill next time.',
+    notes: [
+      { id: id('n'), text: 'Shadow AI is the real problem — 7 systems found that nobody had registered.' },
+      { id: id('n'), text: 'Risk tiering must map to the EU AI Act categories to be useful for legal.' },
+      { id: id('n'), text: 'Review gate goes in the existing SDLC checklist, not a separate process nobody follows.' },
+    ],
+    milestones: [
+      { id: id('m'), text: 'Model inventory complete', progress: 4, due: '2026-11-13', done: false },
+      { id: id('m'), text: 'Risk tiering framework approved', progress: 2, due: '2026-11-20', done: false },
+      { id: id('m'), text: 'Review gate live in SDLC', progress: 0, due: '2026-12-04', done: false },
+      { id: id('m'), text: 'High-risk systems assessed', progress: 0, due: '2026-12-11', done: false },
+    ],
+    gantt: [
+      { id: id('g'), name: 'Discovery & inventory', type: 'check', cells: [1, 2, 3, 4, 5, 8, 9] },
+      { id: id('g'), name: 'Inventory signed off', type: 'diamond', cells: [10] },
+      { id: id('g'), name: 'Risk tiering drafting', type: 'check', cells: [10, 11, 12, 15] },
+      { id: id('g'), name: 'Framework approved', type: 'diamond', cells: [16] },
+      { id: id('g'), name: 'Policy & training rollout', type: 'check', cells: [17, 18, 19, 22, 23] },
+      { id: id('g'), name: 'Gate live in SDLC', type: 'diamond', cells: [25] },
+      { id: id('g'), name: 'High-risk assessments', type: 'check', cells: [26, 29, 30] },
+    ],
+    tasks: [
+      { id: id('t'), task: 'Discover all AI systems in use', start: '2026-11-02', end: '2026-11-13', prio: 'High', done: false },
+      { id: id('t'), task: 'Define risk tiers + criteria', start: '2026-11-11', end: '2026-11-20', prio: 'High', done: false },
+      { id: id('t'), task: 'Draft acceptable-use policy', start: '2026-11-16', end: '2026-11-25', prio: 'Medium', done: false },
+      { id: id('t'), task: 'Add review gate to SDLC checklist', start: '2026-11-25', end: '2026-12-04', prio: 'High', done: false },
+      { id: id('t'), task: 'Assess high-risk systems', start: '2026-12-01', end: '2026-12-11', prio: 'High', done: false },
+      { id: id('t'), task: 'Roll out training to engineering', start: '2026-12-02', end: '2026-12-10', prio: 'Low', done: false },
+    ],
+    dashDate: '2026-11-13',
+    dashStatus: 'AT RISK',
+    budgetPlanned: 40000,
+    budgetActual: 9000,
+    pending: { decisions: 4, actions: 8, changeRequests: 1 },
+    dashTasks: [
+      { id: id('d'), name: 'AI system discovery', assigned: 'Hannah G.', start: '2026-11-02', end: '2026-11-13', status: 'In Progress', prio: 'High', comments: '19 found so far, 7 previously unregistered.' },
+      { id: id('d'), name: 'Model inventory register', assigned: 'Hannah G.', start: '2026-11-09', end: '2026-11-16', status: 'In Progress', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Risk tiering framework', assigned: 'Legal', start: '2026-11-11', end: '2026-11-20', status: 'In Progress', prio: 'High', comments: 'Mapping to EU AI Act categories.' },
+      { id: id('d'), name: 'Acceptable-use policy draft', assigned: 'Legal', start: '2026-11-16', end: '2026-11-25', status: 'Not Started', prio: 'Medium', comments: '' },
+      { id: id('d'), name: 'DPIA / data protection review', assigned: 'Security', start: '2026-11-16', end: '2026-11-27', status: 'On Hold', prio: 'High', comments: 'Waiting on the finalised inventory.' },
+      { id: id('d'), name: 'Vendor model assessments', assigned: 'Security', start: '2026-11-18', end: '2026-11-30', status: 'Not Started', prio: 'Medium', comments: '' },
+      { id: id('d'), name: 'Bias testing standard', assigned: 'Ana T.', start: '2026-11-20', end: '2026-12-02', status: 'Not Started', prio: 'Medium', comments: '' },
+      { id: id('d'), name: 'AI incident response playbook', assigned: 'Hannah G.', start: '2026-11-25', end: '2026-12-05', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'SDLC review gate rollout', assigned: 'ML Lead', start: '2026-11-25', end: '2026-12-04', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Audit evidence pack', assigned: 'Hannah G.', start: '2026-12-04', end: '2026-12-11', status: 'Not Started', prio: 'Medium', comments: '' },
+    ],
+  };
+}
+
 export const TEMPLATES = [
-  { key: 'marketing', label: 'Social Media Marketing Campaign', description: 'A 30-day multi-channel launch campaign, from creative production through wrap-up reporting.', build: createMarketingCampaign },
-  { key: 'software', label: 'Software Release Plan', description: 'A feature-freeze-to-ship release cycle with QA, regression testing, and a security review.', build: createSoftwareRelease },
-  { key: 'event', label: 'Event Planning', description: 'Venue, catering, invitations, and day-of logistics for an in-person event.', build: createEventPlanning },
-  { key: 'personal', label: 'Personal Goals Sprint', description: 'A 30-day personal project mixing a study goal with a fitness goal.', build: createPersonalGoals },
-  { key: 'blank', label: 'Blank Project', description: 'Start from an empty sheet — no sample data.', build: createBlankProject },
+  { key: 'marketing', category: 'General', label: 'Social Media Marketing Campaign', description: 'A 30-day multi-channel launch campaign, from creative production through wrap-up reporting.', build: createMarketingCampaign },
+  { key: 'software', category: 'General', label: 'Software Release Plan', description: 'A feature-freeze-to-ship release cycle with QA, regression testing, and a security review.', build: createSoftwareRelease },
+  { key: 'event', category: 'General', label: 'Event Planning', description: 'Venue, catering, invitations, and day-of logistics for an in-person event.', build: createEventPlanning },
+  { key: 'personal', category: 'General', label: 'Personal Goals Sprint', description: 'A 30-day personal project mixing a study goal with a fitness goal.', build: createPersonalGoals },
+
+  { key: 'llm-feature', category: 'AI & Data', label: 'LLM Feature Launch', description: 'Ship an AI feature to GA: prompt iteration, an eval harness, red-teaming, and a staged rollout.', build: createLLMFeatureLaunch },
+  { key: 'rag-assistant', category: 'AI & Data', label: 'RAG Knowledge Assistant', description: 'Doc ingestion, retrieval tuning, citation checks and a support-team pilot for a grounded Q&A assistant.', build: createRagAssistant },
+  { key: 'ml-model', category: 'AI & Data', label: 'ML Model Development', description: 'A predictive model end to end — data pipeline, training, fairness gate, deployment and drift monitoring.', build: createMLModelDevelopment },
+  { key: 'ai-agent', category: 'AI & Data', label: 'AI Agent Automation Pilot', description: 'Pilot an agent on a real workflow with tool integrations, guardrails, human review and a go/no-go.', build: createAgentAutomationPilot },
+  { key: 'ai-governance', category: 'AI & Data', label: 'AI Governance & Readiness', description: 'Model inventory, risk tiering, review gates and assessments for getting AI systems audit-ready.', build: createAIGovernance },
+
+  { key: 'blank', category: 'General', label: 'Blank Project', description: 'Start from an empty sheet — no sample data.', build: createBlankProject },
 ];
 
 export const DEFAULT_TEMPLATE_KEY = 'marketing';

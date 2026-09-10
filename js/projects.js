@@ -61,16 +61,24 @@ export function initProjects({ onProjectChange }) {
     });
   }
 
+  // Grouped by category so the list stays scannable as templates are added.
   function renderTemplateGrid() {
     templateGrid.innerHTML = '';
-    listTemplates().forEach((t, i) => {
-      const inputId = `template-${t.key}`;
-      const input = el('input', { type: 'radio', name: 'template', value: t.key, id: inputId, checked: i === 0 });
-      templateGrid.appendChild(el('label', { class: 'template-card', for: inputId }, [
-        input,
-        el('span', { class: 'template-card__label', text: t.label }),
-        el('span', { class: 'template-card__desc', text: t.description }),
-      ]));
+    const templates = listTemplates();
+    const categories = [...new Set(templates.map((t) => t.category || 'Other'))];
+
+    categories.forEach((category) => {
+      templateGrid.appendChild(el('h4', { class: 'template-group', text: category }));
+      const grid = el('div', { class: 'template-group__grid' });
+      templates.filter((t) => (t.category || 'Other') === category).forEach((t) => {
+        const inputId = `template-${t.key}`;
+        grid.appendChild(el('label', { class: 'template-card', for: inputId }, [
+          el('input', { type: 'radio', name: 'template', value: t.key, id: inputId, checked: t.key === templates[0].key }),
+          el('span', { class: 'template-card__label', text: t.label }),
+          el('span', { class: 'template-card__desc', text: t.description }),
+        ]));
+      });
+      templateGrid.appendChild(grid);
     });
   }
 

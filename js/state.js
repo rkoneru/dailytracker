@@ -156,7 +156,7 @@ function emitProjectsChanged() {
 }
 
 export function listTemplates() {
-  return TEMPLATES.map(({ key, label, description }) => ({ key, label, description }));
+  return TEMPLATES.map(({ key, category, label, description }) => ({ key, category, label, description }));
 }
 
 export function listProjects() {

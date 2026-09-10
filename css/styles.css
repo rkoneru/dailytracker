@@ -1349,11 +1349,21 @@ body { overflow-anchor: none; }
   flex-wrap: wrap;
 }
 
-.template-grid {
+/* No inner scroll region here on purpose — a fixed max-height slices cards
+   through the middle of their text. The modal itself scrolls instead. */
+.template-grid { margin-bottom: 10px; }
+.template-group {
+  margin: 12px 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+.template-group:first-child { margin-top: 0; }
+.template-group__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
-  margin-bottom: 10px;
 }
 .template-card {
   display: flex;

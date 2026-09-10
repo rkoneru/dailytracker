@@ -1,6 +1,26 @@
 const { APP_URL, out, launch } = require('./harness');
 const fs = require('fs');
 
+// The app uses in-page dialogs now, not window.confirm, so a test drives them
+// like any other UI: click the button, then the dialog's own action.
+async function acceptDialog(page) {
+  await page.waitForSelector('.dialog', { timeout: 5000 });
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function fillDialog(page, value) {
+  await page.waitForSelector('.dialog input', { timeout: 5000 });
+  await page.fill('.dialog input', value);
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function toastText(page) {
+  await page.waitForSelector('.toast', { timeout: 5000 });
+  return (await page.textContent('.toast__text')).trim();
+}
+
 (async () => {
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
@@ -79,17 +99,16 @@ const fs = require('fs');
 
   // 6. Restore should ADD projects, not wipe
   await page.setInputFiles('#restore-backup-file', backupPath);
-  page.once('dialog', async (d) => { console.log('restore alert:', d.message()); await d.accept(); });
   await page.waitForTimeout(600);
+  console.log('restore toast:', await toastText(page));
   const projectCount = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('projectPlannerStore_v2')).projects).length);
   console.log('projects after restoring the backup onto itself (should be 2):', projectCount);
 
   // 7. Bad file rejected
   fs.writeFileSync(out('notabackup.json'), JSON.stringify({ hello: 'world' }));
   let alertMsg = null;
-  page.once('dialog', async (d) => { alertMsg = d.message(); await d.accept(); });
   await page.setInputFiles('#restore-backup-file', out('notabackup.json'));
-  await page.waitForTimeout(400);
+  alertMsg = await toastText(page);
   console.log('bad backup alert:', alertMsg);
 
   console.log('errors:', errors.length ? errors.join('\n') : '(none)');

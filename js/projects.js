@@ -3,6 +3,7 @@ import {
   createProject, cloneProject, renameProject, deleteProject, importProjectFromJSON,
 } from './state.js';
 import { readJSONFile } from './export.js';
+import { confirmAction, promptText, toast } from './dialog.js';
 
 function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
@@ -102,7 +103,7 @@ export function initProjects({ onProjectChange }) {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) close(); });
 
-  list.addEventListener('click', (e) => {
+  list.addEventListener('click', async (e) => {
     const item = e.target.closest('[data-id]');
     if (!item) return;
     const id = item.dataset.id;
@@ -118,7 +119,9 @@ export function initProjects({ onProjectChange }) {
       onProjectChange();
     } else if (e.target.closest('[data-action="rename-project"]')) {
       const current = item.querySelector('strong').textContent;
-      const name = window.prompt('Rename project:', current);
+      const name = await promptText({
+        title: 'Rename project', label: 'Project name', value: current, confirmLabel: 'Rename',
+      });
       if (name && name.trim()) {
         renameProject(id, name.trim());
         refreshAll();
@@ -126,10 +129,17 @@ export function initProjects({ onProjectChange }) {
       }
     } else if (e.target.closest('[data-action="delete-project"]')) {
       const name = item.querySelector('strong').textContent;
-      if (window.confirm(`Delete "${name}"? This cannot be undone.`)) {
+      const ok = await confirmAction({
+        title: `Delete "${name}"?`,
+        message: 'Everything in the project goes with it — tasks, milestones, notes and RAID entries.',
+        confirmLabel: 'Delete project',
+        tone: 'danger',
+      });
+      if (ok) {
         deleteProject(id);
         refreshAll();
         onProjectChange();
+        toast(`Deleted "${name}".`);
       }
     }
   });
@@ -154,7 +164,7 @@ export function initProjects({ onProjectChange }) {
       onProjectChange();
       close();
     } catch (err) {
-      window.alert(err.message || 'Could not import that file.');
+      toast(err.message || 'Could not import that file.', 'error');
     } finally {
       importFileInput.value = '';
     }

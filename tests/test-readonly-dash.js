@@ -1,4 +1,24 @@
 const { APP_URL, out, launch } = require('./harness');
+
+// The app uses in-page dialogs now, not window.confirm, so a test drives them
+// like any other UI: click the button, then the dialog's own action.
+async function acceptDialog(page) {
+  await page.waitForSelector('.dialog', { timeout: 5000 });
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function fillDialog(page, value) {
+  await page.waitForSelector('.dialog input', { timeout: 5000 });
+  await page.fill('.dialog input', value);
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function toastText(page) {
+  await page.waitForSelector('.toast', { timeout: 5000 });
+  return (await page.textContent('.toast__text')).trim();
+}
 let pass = 0, fail = 0;
 const eq = (n, got, want) => {
   const g = JSON.stringify(got), w = JSON.stringify(want);
@@ -67,9 +87,9 @@ const eq = (n, got, want) => {
      (await page.locator('#dash-tasks-body tr').first().locator('td').allTextContents())[8], 'note from planner');
 
   console.log('\n--- baseline controls work from the Planner ---');
-  page.once('dialog', d => d.accept());
   await page.click('#btn-clear-baseline');
-  await page.waitForTimeout(400);
+  await acceptDialog(page);
+  await page.waitForTimeout(300);
   eq('planner note cleared', await page.textContent('#planner-baseline-note'), 'No baseline set — set one to start tracking slippage.');
   eq('dashboard note agrees', await page.textContent('#baseline-note'), 'No baseline set — set one to start tracking slippage.');
   await page.click('#btn-set-baseline');

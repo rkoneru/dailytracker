@@ -10,6 +10,7 @@ import {
 } from './dashboard.js';
 import { onProjectDataChanged, notifyProjectDataChanged } from './taskModel.js';
 import { initNav, setActiveNode } from './nav.js';
+import { confirmAction, toast } from './dialog.js';
 import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON, exportBackupJSON, readJSONFile } from './export.js';
 import { initProjects } from './projects.js';
 import { initReports, refreshReport, setReportType } from './reports.js';
@@ -268,8 +269,13 @@ function initSyncPage() {
     }
   });
 
-  document.getElementById('btn-sync-disconnect').addEventListener('click', () => {
-    if (!confirm('Disconnect from this Supabase project? Your projects stay in this browser; they just stop syncing.')) return;
+  document.getElementById('btn-sync-disconnect').addEventListener('click', async () => {
+    const ok = await confirmAction({
+      title: 'Disconnect from Supabase?',
+      message: 'Your projects stay in this browser. They just stop syncing to your other devices.',
+      confirmLabel: 'Disconnect',
+    });
+    if (!ok) return;
     supabase.clearConfig();
     resetBase();
     showSyncMessage('sync-setup-message', 'Disconnected. Everything is still here, local only.', '');
@@ -413,9 +419,9 @@ function initBackup() {
     try {
       const { restored, skipped } = restoreBackup(await readJSONFile(file));
       refreshActiveProjectView();
-      window.alert(`Restored ${restored} project${restored === 1 ? '' : 's'}${skipped > 0 ? ` (${skipped} skipped — not readable)` : ''}.`);
+      toast(`Restored ${restored} project${restored === 1 ? '' : 's'}${skipped > 0 ? ` — ${skipped} skipped, not readable` : ''}.`, 'success');
     } catch (err) {
-      window.alert(err.message || 'Could not restore that file.');
+      toast(err.message || 'Could not restore that file.', 'error');
     } finally {
       fileInput.value = '';
     }
@@ -428,11 +434,17 @@ function initBackup() {
 // ---------- Reset this project ----------
 
 function initResetButton() {
-  document.getElementById('btn-reset').addEventListener('click', () => {
-    const confirmed = window.confirm('Reset this project to its starting sample data? This discards all of your local edits and cannot be undone.');
+  document.getElementById('btn-reset').addEventListener('click', async () => {
+    const confirmed = await confirmAction({
+      title: 'Reset this project?',
+      message: 'Every task, milestone, note and RAID entry in this project is replaced with the starting sample data. This cannot be undone.',
+      confirmLabel: 'Reset project',
+      tone: 'danger',
+    });
     if (!confirmed) return;
     resetActiveProjectToTemplate();
     refreshActiveProjectView();
+    toast('Project reset to its starting data.');
   });
 }
 
@@ -496,7 +508,7 @@ function initExportPanel() {
       await exportAsPNG();
     } catch (err) {
       console.error(err);
-      window.alert('Could not generate the PNG. Check your connection for the first-time library download and try again.');
+      toast('Could not generate the PNG. The image library downloads once on first use — check your connection and try again.', 'error');
     } finally {
       btn.textContent = original;
       btn.disabled = false;

@@ -1,5 +1,25 @@
 const { APP_URL, launch } = require('./harness');
 
+// The app uses in-page dialogs now, not window.confirm, so a test drives them
+// like any other UI: click the button, then the dialog's own action.
+async function acceptDialog(page) {
+  await page.waitForSelector('.dialog', { timeout: 5000 });
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function fillDialog(page, value) {
+  await page.waitForSelector('.dialog input', { timeout: 5000 });
+  await page.fill('.dialog input', value);
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function toastText(page) {
+  await page.waitForSelector('.toast', { timeout: 5000 });
+  return (await page.textContent('.toast__text')).trim();
+}
+
 (async () => {
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
@@ -61,14 +81,14 @@ const { APP_URL, launch } = require('./harness');
   // Rename + delete a project
   await page.click('#btn-projects');
   await page.waitForTimeout(200);
-  page.once('dialog', (d) => d.accept('Renamed Test Event'));
   const cloneItem = page.locator('#project-list li', { hasText: 'Copy' }).first();
   await cloneItem.locator('[data-action="rename-project"]').click();
+  await fillDialog(page, 'Renamed Test Event');
   await page.waitForTimeout(200);
   console.log('Projects after rename:', (await page.locator('#project-list li').allTextContents()).join(' | '));
 
-  page.once('dialog', (d) => d.accept());
   await page.locator('#project-list li', { hasText: 'Renamed Test Event' }).first().locator('[data-action="delete-project"]').click();
+  await acceptDialog(page);
   await page.waitForTimeout(300);
   console.log('Projects after delete:', await page.locator('#project-list li').count());
 

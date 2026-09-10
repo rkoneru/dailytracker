@@ -1,5 +1,25 @@
 const { APP_URL, out, launch } = require('./harness');
 
+// The app uses in-page dialogs now, not window.confirm, so a test drives them
+// like any other UI: click the button, then the dialog's own action.
+async function acceptDialog(page) {
+  await page.waitForSelector('.dialog', { timeout: 5000 });
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function fillDialog(page, value) {
+  await page.waitForSelector('.dialog input', { timeout: 5000 });
+  await page.fill('.dialog input', value);
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function toastText(page) {
+  await page.waitForSelector('.toast', { timeout: 5000 });
+  return (await page.textContent('.toast__text')).trim();
+}
+
 (async () => {
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1500, height: 1200 } });
@@ -33,17 +53,18 @@ const { APP_URL, out, launch } = require('./harness');
   console.log('baseline note now:', await page.locator('#planner-baseline-note').textContent());
 
   // --- Re-baseline resets slip to zero ---
-  page.once('dialog', async (d) => { console.log('rebaseline confirm:', d.message().slice(0, 60) + '...'); await d.accept(); });
   await page.click('#btn-set-baseline');
-  await page.waitForTimeout(500);
+  console.log('rebaseline confirm:', (await page.textContent('.dialog__title')).trim());
+  await acceptDialog(page);
+  await page.waitForTimeout(400);
   const afterRebaseline = await page.locator('#dash-tasks-body .slip-chip').allTextContents();
   console.log('slip chips after re-baseline:', [...new Set(afterRebaseline)].join(', '));
   console.log('baseline note:', await page.locator('#planner-baseline-note').textContent());
 
   // --- Clear baseline ---
-  page.once('dialog', async (d) => { await d.accept(); });
   await page.click('#btn-clear-baseline');
-  await page.waitForTimeout(400);
+  await acceptDialog(page);
+  await page.waitForTimeout(300);
   console.log('note after clear (planner):', await page.locator('#planner-baseline-note').textContent());
   console.log('note after clear (dashboard):', await page.locator('#baseline-note').textContent());
   console.log('slip cells after clear (expect dashes):', [...new Set(await page.locator('#dash-tasks-body [data-role="slip"]').allTextContents())].join(', '));

@@ -1,6 +1,26 @@
 const { APP_URL, out, launch } = require('./harness');
 const fs = require('fs');
 
+// The app uses in-page dialogs now, not window.confirm, so a test drives them
+// like any other UI: click the button, then the dialog's own action.
+async function acceptDialog(page) {
+  await page.waitForSelector('.dialog', { timeout: 5000 });
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function fillDialog(page, value) {
+  await page.waitForSelector('.dialog input', { timeout: 5000 });
+  await page.fill('.dialog input', value);
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function toastText(page) {
+  await page.waitForSelector('.toast', { timeout: 5000 });
+  return (await page.textContent('.toast__text')).trim();
+}
+
 (async () => {
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
@@ -42,9 +62,8 @@ const fs = require('fs');
   // Try importing garbage JSON -> should show an alert and NOT create a project
   fs.writeFileSync(out('bad.json'), JSON.stringify({ foo: 'bar' }));
   let alertMessage = null;
-  page.once('dialog', async (d) => { alertMessage = d.message(); await d.accept(); });
   await page.setInputFiles('#import-project-file', out('bad.json'));
-  await page.waitForTimeout(300);
+  alertMessage = await toastText(page);
   console.log('Alert on bad import:', alertMessage);
   const countAfterBadImport = await page.locator('#project-list li').count();
   console.log('Total projects after bad import attempt (should be unchanged):', countAfterBadImport);

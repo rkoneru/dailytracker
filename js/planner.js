@@ -2,6 +2,7 @@ import { getState, scheduleSave, uid } from './state.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 import { renderGanttChart, parseDate, daysBetween } from './charts.js';
 import { scheduleSummary, setBaseline, clearBaseline, baselineSummaryText } from './schedule.js';
+import { confirmAction, toast } from './dialog.js';
 import {
   PRIORITY_OPTIONS, STATUS_OPTIONS, STATUS_COLORS, durationLabel, newTask,
   notifyProjectDataChanged, TICK_DAYS, tickMarker,
@@ -268,7 +269,7 @@ function bindTicks() {
     if (fillBtn) {
       const task = findById(getState().dashTasks, rowIdOf(fillBtn));
       if (!fillTicksFromDates(task)) {
-        alert('Give this task a start and end date first, and make sure they fall inside the timeline window.');
+        toast('Give this task a start and end date inside the timeline window first.', 'error');
         return;
       }
       commitChange();
@@ -466,25 +467,39 @@ function renderBaselineNote() {
 }
 
 function bindBaseline() {
-  document.getElementById('btn-set-baseline').addEventListener('click', () => {
+  document.getElementById('btn-set-baseline').addEventListener('click', async () => {
     const state = getState();
-    if (scheduleSummary(state).baselined
-      && !window.confirm('Re-baseline this project? Current dates become the new plan, and existing slippage resets to zero.')) return;
+    if (scheduleSummary(state).baselined) {
+      const ok = await confirmAction({
+        title: 'Re-baseline this project?',
+        message: 'Today\u2019s dates become the new plan, and every task\u2019s recorded slippage resets to zero.',
+        confirmLabel: 'Re-baseline',
+      });
+      if (!ok) return;
+    }
     const count = setBaseline(state);
     commitChange();
     renderTasks();
     renderTimeline();
     renderBaselineNote();
-    if (count === 0) window.alert('No tasks have dates yet, so there was nothing to baseline.');
+    if (count === 0) toast('No tasks have dates yet, so there was nothing to baseline.', 'error');
+    else toast(`Baseline set from ${count} task${count === 1 ? '' : 's'}.`, 'success');
   });
 
-  document.getElementById('btn-clear-baseline').addEventListener('click', () => {
-    if (!window.confirm('Clear the baseline? Slippage tracking stops until you set a new one.')) return;
+  document.getElementById('btn-clear-baseline').addEventListener('click', async () => {
+    const ok = await confirmAction({
+      title: 'Clear the baseline?',
+      message: 'Slippage tracking stops until you set a new one. The dates themselves are not changed.',
+      confirmLabel: 'Clear baseline',
+      tone: 'danger',
+    });
+    if (!ok) return;
     clearBaseline(getState());
     commitChange();
     renderTasks();
     renderTimeline();
     renderBaselineNote();
+    toast('Baseline cleared.');
   });
 }
 

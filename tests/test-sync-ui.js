@@ -1,4 +1,24 @@
 const { APP_URL, launch } = require('./harness');
+
+// The app uses in-page dialogs now, not window.confirm, so a test drives them
+// like any other UI: click the button, then the dialog's own action.
+async function acceptDialog(page) {
+  await page.waitForSelector('.dialog', { timeout: 5000 });
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function fillDialog(page, value) {
+  await page.waitForSelector('.dialog input', { timeout: 5000 });
+  await page.fill('.dialog input', value);
+  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
+  await page.waitForTimeout(200);
+}
+
+async function toastText(page) {
+  await page.waitForSelector('.toast', { timeout: 5000 });
+  return (await page.textContent('.toast__text')).trim();
+}
 (async () => {
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1400, height: 1100 } });
@@ -43,8 +63,8 @@ const { APP_URL, launch } = require('./harness');
   await page.screenshot({ path: '../sync-page.png', fullPage: true });
 
   // --- disconnect restores local-only ---
-  page.once('dialog', d => d.accept());
   await page.click('#btn-sync-disconnect');
+  await acceptDialog(page);
   await page.waitForTimeout(300);
   console.log('after disconnect -> pill hidden:', await page.locator('#sync-pill').isHidden(),
               '| signin hidden:', await page.locator('#sync-signin').isHidden());

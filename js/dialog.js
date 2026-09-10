@@ -1,3 +1,5 @@
+import { el } from './dom.js';
+
 // In-page dialogs and toasts, replacing window.alert / confirm / prompt.
 //
 // Native dialogs block the event loop, look wrong in an installed PWA, can be
@@ -13,19 +15,6 @@
 
 const TOAST_MS = 4000;
 let openDialog = null;
-
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  Object.entries(props).forEach(([key, value]) => {
-    if (key === 'class') node.className = value;
-    else if (key === 'text') node.textContent = value;
-    else if (key.startsWith('data-') || key.startsWith('aria-') || key === 'role' || key === 'type') {
-      node.setAttribute(key, value);
-    } else node[key] = value;
-  });
-  children.forEach((child) => node.appendChild(child));
-  return node;
-}
 
 function focusables(root) {
   return [...root.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])')]

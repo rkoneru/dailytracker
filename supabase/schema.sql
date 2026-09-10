@@ -46,6 +46,17 @@ begin
     coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1))
   )
   on conflict (id) do update set email = excluded.email;
+
+  -- Claim anything waiting for this address. Signing up is what turns an
+  -- invitation into access; nothing else has to run.
+  insert into public.project_members (project_id, user_id, role, invited_by)
+  select i.project_id, new.id, i.role, i.invited_by
+  from public.project_invites i
+  where lower(i.email) = lower(new.email)
+  on conflict (project_id, user_id) do nothing;
+
+  delete from public.project_invites where lower(email) = lower(new.email);
+
   return new;
 end;
 $$;
@@ -98,6 +109,32 @@ create table if not exists public.project_members (
 );
 
 create index if not exists project_members_user_idx on public.project_members (user_id);
+
+
+-- ============================================================ invites
+--
+-- project_members references auth.users, so someone can only be made a member
+-- once they have an account. Inviting a person who has not signed up yet
+-- therefore needs somewhere to park the intent: a row here, keyed by email,
+-- which handle_new_user() converts into a real membership the moment they
+-- accept the sign-in link.
+--
+-- The alternative — the admin API that creates users directly — needs the
+-- service role key, which must never reach a browser. This keeps the whole
+-- flow inside what the anon key plus RLS can safely do.
+
+create table if not exists public.project_invites (
+  id         uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  email      text not null,
+  role       public.member_role not null default 'contributor',
+  invited_by uuid references auth.users (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists project_invites_unique
+  on public.project_invites (project_id, lower(email));
+create index if not exists project_invites_email_idx on public.project_invites (lower(email));
 
 -- ============================================================ project_rows
 
@@ -158,6 +195,36 @@ returns boolean language sql stable security definer set search_path = public as
   select public.role_in_project(p_project) is not null;
 $$;
 
+/**
+ * True when the current user and `p_user` can see each other: they share a
+ * project, or one owns a project the other belongs to.
+ *
+ * SECURITY DEFINER because a policy's subquery is itself subject to the
+ * referenced table's RLS — reading project_members from inside the profiles
+ * policy would be filtered by the project_members policy and quietly return
+ * too little. Owners are implicit rather than rows in project_members, which
+ * is why each direction has to be spelled out.
+ */
+create or replace function public.shares_project_with(p_user uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    -- both are members of the same project
+    select 1 from public.project_members mine
+    join public.project_members theirs on theirs.project_id = mine.project_id
+    where mine.user_id = auth.uid() and theirs.user_id = p_user
+  ) or exists (
+    -- I own a project they belong to
+    select 1 from public.projects p
+    join public.project_members m on m.project_id = p.id
+    where p.owner_id = auth.uid() and m.user_id = p_user
+  ) or exists (
+    -- they own a project I belong to
+    select 1 from public.projects p
+    join public.project_members m on m.project_id = p.id
+    where p.owner_id = p_user and m.user_id = auth.uid()
+  );
+$$;
+
 -- Full write access to every row in the project.
 create or replace function public.can_write_project(p_project uuid)
 returns boolean language sql stable security definer set search_path = public as $$
@@ -175,18 +242,7 @@ alter table public.project_rows    enable row level security;
 -- with (so member lists and assignee pickers can show real names).
 drop policy if exists profiles_read on public.profiles;
 create policy profiles_read on public.profiles for select using (
-  id = auth.uid()
-  or exists (
-    select 1
-    from public.project_members mine
-    join public.project_members theirs on theirs.project_id = mine.project_id
-    where mine.user_id = auth.uid() and theirs.user_id = public.profiles.id
-  )
-  or exists (
-    select 1 from public.projects p
-    where p.owner_id = auth.uid()
-      and exists (select 1 from public.project_members m where m.project_id = p.id and m.user_id = public.profiles.id)
-  )
+  id = auth.uid() or public.shares_project_with(id)
 );
 
 drop policy if exists profiles_update_self on public.profiles;
@@ -218,6 +274,20 @@ create policy project_members_read on public.project_members for select
 
 drop policy if exists project_members_write on public.project_members;
 create policy project_members_write on public.project_members for all
+  using (public.project_owner(project_id) = auth.uid())
+  with check (public.project_owner(project_id) = auth.uid());
+
+-- project_invites: only the project's owner sees or manages pending invites.
+-- Invitees cannot read the table — they never need to, since signing up
+-- converts the invite for them.
+alter table public.project_invites enable row level security;
+
+drop policy if exists project_invites_read on public.project_invites;
+create policy project_invites_read on public.project_invites for select
+  using (public.project_owner(project_id) = auth.uid());
+
+drop policy if exists project_invites_write on public.project_invites;
+create policy project_invites_write on public.project_invites for all
   using (public.project_owner(project_id) = auth.uid())
   with check (public.project_owner(project_id) = auth.uid());
 
@@ -257,8 +327,10 @@ grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on public.projects        to authenticated;
 grant select, insert, update, delete on public.project_rows    to authenticated;
 grant select, insert, update, delete on public.project_members to authenticated;
+grant select, insert, update, delete on public.project_invites to authenticated;
 grant select, update                 on public.profiles        to authenticated;
 grant execute on function public.role_in_project(uuid)   to authenticated;
 grant execute on function public.can_read_project(uuid)  to authenticated;
 grant execute on function public.can_write_project(uuid) to authenticated;
 grant execute on function public.project_owner(uuid)     to authenticated;
+grant execute on function public.shares_project_with(uuid) to authenticated;

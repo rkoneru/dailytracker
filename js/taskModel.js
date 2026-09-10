@@ -33,7 +33,7 @@ export function tickMarker(type) {
 /** A blank task, so every page adds rows of exactly the same shape. */
 export function newTask() {
   return {
-    name: '', assigned: '', start: '', end: '', baseStart: '', baseEnd: '',
+    name: '', assigned: '', assigneeUserId: '', start: '', end: '', baseStart: '', baseEnd: '',
     status: 'Not Started', prio: 'Medium', comments: '',
     tickType: 'check', cells: [],
   };

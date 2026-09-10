@@ -122,6 +122,10 @@ export function toWire(project) {
         kind,
         position: index,
         data: rowData,
+        // Promoted out of the jsonb blob into its own column, because this is
+        // the one field the database itself has to read: the contributor
+        // policy compares it against auth.uid().
+        assignee_user_id: row.assigneeUserId || null,
         rev: row._rev || project.updatedAt || 0,
       });
     });
@@ -143,7 +147,12 @@ export function fromWire(projectRow, rows) {
     .slice()
     .sort((a, b) => (a.position || 0) - (b.position || 0))
     .forEach((r) => {
-      project[r.kind].push({ ...r.data, id: r.id, _rev: r.rev || 0 });
+      project[r.kind].push({
+        ...r.data,
+        id: r.id,
+        assigneeUserId: r.assignee_user_id || '',
+        _rev: r.rev || 0,
+      });
     });
 
   return project;

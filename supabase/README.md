@@ -54,18 +54,38 @@ Every device keeps a baseline of what it last agreed with the server, which is
 what lets it tell "I deleted this" apart from "I haven't seen this yet". You
 can reset it by disconnecting and reconnecting; nothing local is lost.
 
-## Roles
+## Inviting people
 
-Set these in the `project_members` table (a UI for this is not built yet):
+**Sync & Team → People on this project**, visible to the project's owner.
+
+Enter an email and pick a role. If that person already has an account they get
+access immediately. If they don't, the invitation waits: signing in with that
+address for the first time converts it into membership. That conversion is a
+database trigger, so it works whether or not anyone has the app open.
 
 | Role | Can do |
 |---|---|
 | `viewer` | Read only |
-| `contributor` | Read everything; update only rows assigned to them |
-| `editor` | Read and write every row; cannot delete the project or manage members |
+| `contributor` | Reads everything; changes only tasks assigned to them |
+| `editor` | Reads and changes everything; cannot delete the project or manage people |
 | `owner` | Everything, including membership |
 
-The project's creator is the owner implicitly and does not need a row here.
+The project's creator is the owner implicitly — there is no `project_members`
+row for them, which is why the schema spells out owner visibility separately.
+
+Ownership cannot be transferred from the UI. It is a `projects.owner_id`
+update, deliberately left out of the dropdown.
+
+## Assigning tasks to people
+
+Once a project has members, the Planner's Assignee column becomes a picker of
+real accounts instead of a text box. Choosing someone stores two things: the
+account id, which is what the `contributor` policy compares against
+`auth.uid()`, and the readable name, so the value still shows correctly
+offline, in an export, and for anyone who never turns sync on.
+
+A name typed before the project was shared, or someone since removed, keeps
+displaying as "(not a member)" rather than being silently dropped.
 
 ## If something goes wrong
 

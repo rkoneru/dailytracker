@@ -5,6 +5,7 @@ import { slipDays, baselineSummaryText } from './schedule.js';
 import {
   STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS, durationLabel,
 } from './taskModel.js';
+import { el } from './dom.js';
 
 const BADGE_COLORS = {
   'ON TRACK': ['#bbf7d0', '#14532d'],
@@ -14,18 +15,6 @@ const BADGE_COLORS = {
 
 function slug(value) {
   return String(value || '').toLowerCase().replace(/\s+/g, '-');
-}
-
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  Object.entries(props).forEach(([key, value]) => {
-    if (key === 'class') node.className = value;
-    else if (key === 'text') node.textContent = value;
-    else if (key.startsWith('data-')) node.setAttribute(key, value);
-    else node[key] = value;
-  });
-  children.forEach((child) => node.appendChild(child));
-  return node;
 }
 
 function findById(list, id) {

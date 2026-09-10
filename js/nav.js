@@ -1,3 +1,5 @@
+import { el } from './dom.js';
+
 // Sidebar navigation, as a real tree.
 //
 // The flat list worked while there were four pages. There are now five, two
@@ -100,19 +102,6 @@ function saveExpanded() {
 }
 
 // ---------- rendering ----------
-
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  Object.entries(props).forEach(([key, value]) => {
-    if (key === 'class') node.className = value;
-    else if (key === 'text') node.textContent = value;
-    else if (key.startsWith('data-') || key.startsWith('aria-') || key === 'role' || key === 'tabindex') {
-      node.setAttribute(key, value);
-    } else node[key] = value;
-  });
-  children.forEach((child) => node.appendChild(child));
-  return node;
-}
 
 function buildRow(node, level) {
   const hasChildren = !!(node.children && node.children.length);

@@ -4,22 +4,12 @@ import { renderGanttChart, parseDate, daysBetween } from './charts.js';
 import { scheduleSummary, setBaseline, clearBaseline, baselineSummaryText } from './schedule.js';
 import { confirmAction, toast } from './dialog.js';
 import { offerUndo } from './trash.js';
+import { getMembers, membersLoaded, onMembersChange } from './members.js';
 import {
   PRIORITY_OPTIONS, STATUS_OPTIONS, STATUS_COLORS, durationLabel, newTask,
   notifyProjectDataChanged, TICK_DAYS, tickMarker,
 } from './taskModel.js';
-
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  Object.entries(props).forEach(([key, value]) => {
-    if (key === 'class') node.className = value;
-    else if (key === 'text') node.textContent = value;
-    else if (key.startsWith('data-')) node.setAttribute(key, value);
-    else node[key] = value;
-  });
-  children.forEach((child) => node.appendChild(child));
-  return node;
-}
+import { el } from './dom.js';
 
 function slug(value) {
   return String(value || '').toLowerCase().replace(/\s+/g, '-');
@@ -341,12 +331,44 @@ function selectCell(options, value, field, classPrefix) {
   return select;
 }
 
+/**
+ * A dropdown of real people once the project is shared, a free-text box until
+ * then. Picking a person stores both: the account id, which is what the
+ * database checks when a contributor tries to edit the row, and the name, so
+ * the value still reads correctly offline, in an export, or for anyone who
+ * never turns sync on.
+ */
+function assigneeCell(t) {
+  const members = getMembers();
+  if (!membersLoaded() || members.length === 0) {
+    return el('input', { class: 'row-input', 'data-field': 'assigned', value: t.assigned || '', placeholder: 'Assignee' });
+  }
+
+  const select = el('select', { class: 'row-input row-select', 'data-field': 'assigneeUserId' });
+  select.appendChild(el('option', { value: '', text: 'Unassigned' }));
+  members.forEach((member) => {
+    select.appendChild(el('option', {
+      value: member.userId,
+      text: member.name + (member.isSelf ? ' (you)' : ''),
+      selected: t.assigneeUserId === member.userId,
+    }));
+  });
+
+  // A name typed before the project was shared, or a person since removed:
+  // keep showing it rather than silently dropping the assignment.
+  if (t.assigned && !members.some((m) => m.userId === t.assigneeUserId)) {
+    const orphan = el('option', { value: '__orphan', text: `${t.assigned} (not a member)`, selected: true });
+    select.appendChild(orphan);
+  }
+  return select;
+}
+
 function renderTasksRow(t, index) {
   return el('tr', { 'data-id': t.id, draggable: true }, [
     dragHandleCell(),
     el('td', { class: 'col-num', text: String(index + 1) }),
     el('td', {}, [el('input', { class: 'row-input', 'data-field': 'name', value: t.name || '', placeholder: 'Task name' })]),
-    el('td', {}, [el('input', { class: 'row-input', 'data-field': 'assigned', value: t.assigned || '', placeholder: 'Assignee' })]),
+    el('td', {}, [assigneeCell(t)]),
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'start', value: t.start || '' })]),
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'end', value: t.end || '' })]),
     el('td', { class: 'col-status' }, [selectCell(STATUS_OPTIONS, t.status, 'status', 'status')]),
@@ -394,8 +416,20 @@ function bindTasks() {
 
   tbody.addEventListener('change', (e) => {
     const field = e.target.dataset.field;
-    if (field !== 'status' && field !== 'prio') return;
     const item = findById(getState().dashTasks, rowIdOf(e.target));
+
+    if (field === 'assigneeUserId') {
+      if (e.target.value === '__orphan') return;
+      const member = getMembers().find((m) => m.userId === e.target.value);
+      item.assigneeUserId = member ? member.userId : '';
+      // The readable name is kept in step, so the value survives export,
+      // offline use, and anyone who never signs in.
+      item.assigned = member ? member.name : '';
+      commitTaskChange({});
+      return;
+    }
+
+    if (field !== 'status' && field !== 'prio') return;
     item[field] = e.target.value;
     e.target.className = `${field}-select ${field}-${slug(e.target.value)}`;
     commitTaskChange({ rerenderTimeline: field === 'status' });
@@ -567,6 +601,8 @@ export function renderPlanner() {
 
 export function initPlanner() {
   renderPlanner();
+  // The assignee column changes shape when membership loads.
+  onMembersChange(() => renderTasks());
   bindMilestones();
   bindTicks();
   bindTasks();

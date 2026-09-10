@@ -4,18 +4,7 @@ import { buildMailtoUrl } from './export.js';
 import { projectTrend, portfolioTrend, portfolioPctTrend } from './history.js';
 import { raidCounts, openItemsByType, raidScore } from './raid.js';
 import { scheduleSummary } from './schedule.js';
-
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  Object.entries(props).forEach(([key, value]) => {
-    if (key === 'class') node.className = value;
-    else if (key === 'text') node.textContent = value;
-    else if (key.startsWith('data-')) node.setAttribute(key, value);
-    else node[key] = value;
-  });
-  children.filter(Boolean).forEach((child) => node.appendChild(child));
-  return node;
-}
+import { el } from './dom.js';
 
 // ---------- Report types ----------
 

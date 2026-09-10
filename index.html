@@ -611,6 +611,42 @@
             <p class="sync-message" id="sync-signin-message" role="status" hidden></p>
           </section>
 
+          <section class="card" id="sync-team" hidden>
+            <div class="card__head"><h2>People on this project</h2></div>
+            <p class="hint" id="team-role-note"></p>
+            <table class="data-table" id="team-table">
+              <thead>
+                <tr>
+                  <th>Person</th>
+                  <th class="col-status">Role</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="team-body"></tbody>
+            </table>
+
+            <div id="team-invite" hidden>
+              <h3 class="team-subhead">Invite someone</h3>
+              <p class="hint">
+                They get access as soon as they sign in with this address. If they
+                have not used the app before, the invitation waits for them.
+              </p>
+              <div class="team-invite-row">
+                <label class="field-label field-label--block" for="invite-email">
+                  Email
+                  <input type="email" class="field-input" id="invite-email" placeholder="teammate@example.com" autocomplete="off">
+                </label>
+                <label class="field-label field-label--block" for="invite-role">
+                  Role
+                  <select class="field-input" id="invite-role"></select>
+                </label>
+                <button type="button" class="btn btn-primary" id="btn-invite">Invite</button>
+              </div>
+              <p class="hint" id="invite-role-help"></p>
+              <p class="sync-message" id="team-message" role="status" hidden></p>
+            </div>
+          </section>
+
           <section class="card" id="sync-account" hidden>
             <div class="card__head"><h2>Sync status</h2></div>
             <dl class="sync-facts">

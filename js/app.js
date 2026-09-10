@@ -10,8 +10,13 @@ import {
 } from './dashboard.js';
 import { onProjectDataChanged, notifyProjectDataChanged } from './taskModel.js';
 import { initNav, setActiveNode } from './nav.js';
+import { el } from './dom.js';
 import { confirmAction, toast } from './dialog.js';
 import { initTrash, renderTrash } from './trash.js';
+import {
+  loadMembers, getMembers, getInvites, invite, setRole, removeMember, cancelInvite,
+  isOwner, myRole, onMembersChange, ROLE_LABELS, ROLE_HELP, ASSIGNABLE_ROLES,
+} from './members.js';
 import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON, exportBackupJSON, readJSONFile } from './export.js';
 import { initProjects } from './projects.js';
 import { initReports, refreshReport, setReportType } from './reports.js';
@@ -319,12 +324,160 @@ function initSyncPage() {
   onSyncStatusChange((status) => {
     renderSyncPill(status);
     if (document.getElementById('page-sync').classList.contains('is-active')) renderSyncPage();
+    // Membership drives the assignee picker on the Planner, not just this
+    // page, so it is loaded on any sync state change rather than on arrival.
+    if (status.state === 'synced' || status.state === 'signed-out') {
+      loadMembers({ force: true }).catch((err) => console.warn('Could not load members.', err));
+    }
   });
 
   // Applying a pull rebuilds every project, so the open page has to re-render.
-  onProjectsChange(refreshActiveProjectView);
+  onProjectsChange(() => {
+    refreshActiveProjectView();
+    loadMembers({ force: true }).catch(() => {});
+  });
 
   initSync();
+}
+
+// ---------- Team ----------
+
+function teamRow(member) {
+  const cells = [
+    el('td', {}, [el('div', { class: 'team-person' }, [
+      el('span', { class: 'team-person__name', text: member.name + (member.isSelf ? ' (you)' : '') }),
+      el('span', { class: 'team-person__email', text: member.email || '' }),
+    ])]),
+  ];
+
+  // Only the owner can change roles, and nobody can change the owner's.
+  if (isOwner() && !member.isOwner) {
+    const select = el('select', { class: 'field-input', 'data-role-for': member.userId });
+    ASSIGNABLE_ROLES.forEach((role) => {
+      select.appendChild(el('option', { value: role, text: ROLE_LABELS[role], selected: member.role === role }));
+    });
+    cells.push(el('td', { class: 'col-status' }, [select]));
+    cells.push(el('td', { class: 'col-action no-print' }, [
+      el('div', { class: 'team-actions' }, [
+        el('button', { type: 'button', class: 'btn btn-small btn-ghost', 'data-remove-member': member.userId, text: 'Remove' }),
+      ]),
+    ]));
+  } else {
+    cells.push(el('td', { class: 'col-status', text: ROLE_LABELS[member.role] || member.role }));
+    cells.push(el('td', { class: 'col-action' }));
+  }
+
+  return el('tr', {}, cells);
+}
+
+function pendingRow(entry) {
+  return el('tr', {}, [
+    el('td', {}, [el('div', { class: 'team-person' }, [
+      el('span', { class: 'team-person__name team-pending', text: entry.email }),
+      el('span', { class: 'team-person__email', text: 'Invited — waiting for them to sign in' }),
+    ])]),
+    el('td', { class: 'col-status', text: ROLE_LABELS[entry.role] || entry.role }),
+    el('td', { class: 'col-action no-print' }, [
+      el('div', { class: 'team-actions' }, [
+        el('button', { type: 'button', class: 'btn btn-small btn-ghost', 'data-cancel-invite': entry.id, text: 'Cancel' }),
+      ]),
+    ]),
+  ]);
+}
+
+function renderTeam() {
+  const section = document.getElementById('sync-team');
+  const members = getMembers();
+  section.hidden = !supabase.getUser() || members.length === 0;
+  if (section.hidden) return;
+
+  const body = document.getElementById('team-body');
+  body.innerHTML = '';
+  members.forEach((member) => body.appendChild(teamRow(member)));
+  getInvites().forEach((entry) => body.appendChild(pendingRow(entry)));
+
+  const role = myRole();
+  document.getElementById('team-role-note').textContent = role
+    ? `You are ${ROLE_LABELS[role]} here. ${ROLE_HELP[role]}`
+    : '';
+
+  // Only the owner can invite, so hiding the form is the honest thing to do
+  // rather than showing one that will be refused.
+  document.getElementById('team-invite').hidden = !isOwner();
+}
+
+function initTeam() {
+  const roleSelect = document.getElementById('invite-role');
+  ASSIGNABLE_ROLES.forEach((role) => {
+    roleSelect.appendChild(el('option', { value: role, text: ROLE_LABELS[role], selected: role === 'contributor' }));
+  });
+  const showRoleHelp = () => {
+    document.getElementById('invite-role-help').textContent = ROLE_HELP[roleSelect.value] || '';
+  };
+  roleSelect.addEventListener('change', showRoleHelp);
+  showRoleHelp();
+
+  document.getElementById('btn-invite').addEventListener('click', async () => {
+    const email = document.getElementById('invite-email').value;
+    showSyncMessage('team-message', 'Inviting…', '');
+    try {
+      const result = await invite(email, roleSelect.value);
+      document.getElementById('invite-email').value = '';
+      showSyncMessage(
+        'team-message',
+        result.status === 'added'
+          ? `${result.email} already has an account and now has access.`
+          : `Invited ${result.email}. They get access when they first sign in with that address.`,
+        'success',
+      );
+    } catch (err) {
+      showSyncMessage('team-message', err.message, 'error');
+    }
+  });
+
+  document.getElementById('team-body').addEventListener('change', async (e) => {
+    const userId = e.target.dataset.roleFor;
+    if (!userId) return;
+    try {
+      await setRole(userId, e.target.value);
+      toast('Role updated.', 'success');
+    } catch (err) {
+      toast(err.message || 'Could not change that role.', 'error');
+    }
+  });
+
+  document.getElementById('team-body').addEventListener('click', async (e) => {
+    const removeId = e.target.dataset.removeMember;
+    if (removeId) {
+      const member = getMembers().find((m) => m.userId === removeId);
+      const ok = await confirmAction({
+        title: `Remove ${member ? member.name : 'this person'}?`,
+        message: 'They lose access to this project immediately. Tasks assigned to them keep the name, but they can no longer edit anything.',
+        confirmLabel: 'Remove',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      try {
+        await removeMember(removeId);
+        toast('Removed from the project.');
+      } catch (err) {
+        toast(err.message || 'Could not remove them.', 'error');
+      }
+      return;
+    }
+
+    const inviteId = e.target.dataset.cancelInvite;
+    if (inviteId) {
+      try {
+        await cancelInvite(inviteId);
+        toast('Invitation cancelled.');
+      } catch (err) {
+        toast(err.message || 'Could not cancel that invitation.', 'error');
+      }
+    }
+  });
+
+  onMembersChange(renderTeam);
 }
 
 // ---------- Keeping every page's view of the same data in step ----------
@@ -552,6 +705,7 @@ function init() {
   initRaid({ onChanged: onRaidChanged });
   initSharedDataSync();
   initTrash({ onRestore: refreshActiveProjectView });
+  initTeam();
   initSyncPage();
 }
 

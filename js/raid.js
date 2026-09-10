@@ -1,6 +1,7 @@
 import { getState, scheduleSave, uid, trashRow } from './state.js';
 import { offerUndo } from './trash.js';
 import { makeSortable, reorderById } from './dragReorder.js';
+import { el } from './dom.js';
 
 export const RAID_TYPES = ['Risk', 'Issue', 'Decision', 'Dependency', 'Assumption'];
 export const RAID_STATUSES = ['Open', 'In Progress', 'Escalated', 'Closed'];
@@ -39,18 +40,6 @@ export function raidCounts(project) {
   RAID_TYPES.forEach((t) => { counts[t] = open.filter((i) => i.type === t).length; });
   counts.critical = open.filter((i) => i.severity === 'Critical').length;
   return counts;
-}
-
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  Object.entries(props).forEach(([key, value]) => {
-    if (key === 'class') node.className = value;
-    else if (key === 'text') node.textContent = value;
-    else if (key.startsWith('data-')) node.setAttribute(key, value);
-    else node[key] = value;
-  });
-  children.filter(Boolean).forEach((child) => node.appendChild(child));
-  return node;
 }
 
 function slug(value) {

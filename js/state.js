@@ -124,6 +124,9 @@ function migrateProject(data) {
     if (t.baseStart === undefined) t.baseStart = '';
     if (t.baseEnd === undefined) t.baseEnd = '';
     // Tick-timeline state, added after the task lists were unified.
+    // The account a task is assigned to, as opposed to the free-text name.
+    // Empty means "not linked to anyone" — the text still shows.
+    if (t.assigneeUserId === undefined) t.assigneeUserId = '';
     if (!Array.isArray(t.cells)) t.cells = [];
     if (t.tickType !== 'diamond') t.tickType = 'check';
   });

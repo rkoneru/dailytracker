@@ -112,7 +112,7 @@ async function pull() {
   // tombstones in the schema are what a delta pull would need later.
   const [projects, rows] = await Promise.all([
     api.select('projects', 'select=id,data,rev,deleted_at'),
-    api.select('project_rows', 'select=id,project_id,kind,position,data,rev,deleted_at'),
+    api.select('project_rows', 'select=id,project_id,kind,position,data,assignee_user_id,rev,deleted_at'),
   ]);
   return { projects: projects || [], rows: rows || [] };
 }
@@ -127,8 +127,16 @@ async function push(result, localById) {
     });
 
   const rowRows = result.pushRows.map(({ projectId, row }) => {
-    const { kind, position, _rev, id, ...data } = row;
-    return { id, project_id: projectId, kind, position, data, rev: _rev || 0 };
+    const { kind, position, _rev, id, assigneeUserId, ...data } = row;
+    return {
+      id,
+      project_id: projectId,
+      kind,
+      position,
+      data,
+      assignee_user_id: assigneeUserId || null,
+      rev: _rev || 0,
+    };
   });
 
   // Tombstones rather than hard deletes: a row that simply vanished is

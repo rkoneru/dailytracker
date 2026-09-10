@@ -5,10 +5,10 @@ import {
 } from './state.js';
 import { initPlanner, renderPlanner, renderPlannerShared } from './planner.js';
 import {
-  initDashboard, renderDashboard, renderDashHeader, renderDashboardShared,
+  initDashboard, renderDashboard, renderDashboardShared,
   renderComputed as refreshDashboardDerived,
 } from './dashboard.js';
-import { onProjectDataChanged } from './taskModel.js';
+import { onProjectDataChanged, notifyProjectDataChanged } from './taskModel.js';
 import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON, exportBackupJSON, readJSONFile } from './export.js';
 import { initProjects } from './projects.js';
 import { initReports, refreshReport } from './reports.js';
@@ -143,22 +143,17 @@ function hydrateTopLevelFields() {
   });
 }
 
+// Every one of these now lives on the Planner only, since the Dashboard
+// became a read-only view. They still feed Dashboard widgets, so an edit has
+// to push through the same change bus the task tables use.
 function bindTopLevelFields() {
   topLevelFieldEls().forEach((el) => {
-    const eventName = el.isContentEditable ? 'input' : 'input';
-    el.addEventListener(eventName, () => {
+    el.addEventListener('input', () => {
       const field = el.dataset.field;
       const value = readFieldValue(el);
       setPath(getState(), field, value);
       scheduleSave();
-
-      // Keep duplicate bindings of the same field in sync (e.g. projectName
-      // is shown on both the Planner header and the Dashboard title).
-      topLevelFieldEls().forEach((other) => {
-        if (other !== el && other.dataset.field === field) writeFieldValue(other, value);
-      });
-
-      if (field === 'dashStatus') renderDashHeader();
+      notifyProjectDataChanged('planner');
     });
   });
 }

@@ -1,11 +1,9 @@
-import { getState, scheduleSave, uid, listProjectsWithProgress, switchProject } from './state.js';
+import { getState, listProjectsWithProgress, switchProject } from './state.js';
 import { parseDate, daysBetween, renderPieChart, renderLegend, renderGanttChart } from './charts.js';
-import { makeSortable, reorderById } from './dragReorder.js';
 import { raidCounts, RAID_TYPES } from './raid.js';
-import { slipDays, scheduleSummary, setBaseline, clearBaseline } from './schedule.js';
+import { slipDays, scheduleSummary, baselineSummaryText } from './schedule.js';
 import {
-  STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS, durationLabel, newTask,
-  notifyProjectDataChanged,
+  STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS, durationLabel,
 } from './taskModel.js';
 
 const BADGE_COLORS = {
@@ -38,16 +36,15 @@ function rowIdOf(target) {
   return target.closest('[data-id]')?.dataset.id;
 }
 
-function dragHandleCell() {
-  return el('td', { class: 'col-drag no-print' }, [
-    el('span', { class: 'drag-handle', 'aria-hidden': 'true', title: 'Drag to reorder' }, [document.createTextNode('⠿')]),
-  ]);
-}
-
 // ---------- Header ----------
 
 export function renderDashHeader() {
   const state = getState();
+  document.getElementById('dash-project-name').textContent = state.projectName || 'Untitled project';
+  document.getElementById('dash-date-value').textContent = state.dashDate
+    ? new Date(`${state.dashDate}T00:00:00`).toLocaleDateString()
+    : '—';
+
   const badge = document.getElementById('dash-status-badge');
   const status = state.dashStatus || 'ON TRACK';
   badge.textContent = status;
@@ -107,8 +104,12 @@ function renderPies() {
 
 // ---------- Budget / pending charts ----------
 
+const MONEY = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+
 function renderBudgetChart() {
   const state = getState();
+  document.getElementById('dash-budget-planned').textContent = MONEY.format(state.budgetPlanned || 0);
+  document.getElementById('dash-budget-actual').textContent = MONEY.format(state.budgetActual || 0);
   const container = document.getElementById('budget-chart');
   container.innerHTML = '';
   const max = Math.max(state.budgetPlanned || 0, state.budgetActual || 0, 1);
@@ -156,41 +157,7 @@ function renderRaidChart() {
 // ---------- Schedule baseline ----------
 
 function renderBaselineNote() {
-  const summary = scheduleSummary(getState());
-  const note = document.getElementById('baseline-note');
-  if (!summary.baselined) {
-    note.textContent = 'No baseline set — set one to start tracking slippage.';
-    return;
-  }
-  const setAt = summary.baselineSetAt ? ` (set ${summary.baselineSetAt})` : '';
-  note.textContent = summary.slipped.length === 0
-    ? `On plan against baseline${setAt}.`
-    : `${summary.slipped.length} task${summary.slipped.length === 1 ? '' : 's'} slipped, worst +${summary.maxSlip}d${setAt}.`;
-}
-
-function bindBaseline(onChanged) {
-  document.getElementById('btn-set-baseline').addEventListener('click', () => {
-    const state = getState();
-    const already = scheduleSummary(state).baselined;
-    if (already && !window.confirm('Re-baseline this project? Current dates become the new plan, and existing slippage resets to zero.')) return;
-    const count = setBaseline(state);
-    scheduleSave();
-    renderDashTasks();
-    renderDashGantt();
-    renderBaselineNote();
-    onChanged();
-    if (count === 0) window.alert('No tasks have dates yet, so there was nothing to baseline.');
-  });
-
-  document.getElementById('btn-clear-baseline').addEventListener('click', () => {
-    if (!window.confirm('Clear the baseline? Slippage tracking stops until you set a new one.')) return;
-    clearBaseline(getState());
-    scheduleSave();
-    renderDashTasks();
-    renderDashGantt();
-    renderBaselineNote();
-    onChanged();
-  });
+  document.getElementById('baseline-note').textContent = baselineSummaryText(getState());
 }
 
 // ---------- Summary tables ----------
@@ -474,18 +441,11 @@ export function renderComputed() {
   renderTeamWorkload();
   renderActiveProjectsList();
   renderRaidChart();
+  renderBudgetChart();
   renderBaselineNote();
 }
 
 // ---------- Dashboard task table ----------
-
-function buildSelect(options, value, dataField, classPrefix) {
-  const select = el('select', { class: `${classPrefix}-select ${classPrefix}-${slug(value)}`, 'data-field': dataField });
-  options.forEach((opt) => {
-    select.appendChild(el('option', { value: opt, text: opt, selected: opt === value }));
-  });
-  return select;
-}
 
 function slipCell(t) {
   const slip = slipDays(t);
@@ -497,21 +457,30 @@ function slipCell(t) {
   ]);
 }
 
-function renderDashTaskRow(t) {
-  const durationCell = el('td', { class: 'col-days', 'data-role': 'duration', text: durationLabel(t.start, t.end) });
+// Read-only: this page reports, the Planner edits. Values are plain text and
+// pills rather than disabled inputs — a greyed-out form reads as "broken",
+// while text reads as "this is a view".
+function readOnlyDate(value) {
+  return el('td', { class: 'col-date', text: value ? new Date(`${value}T00:00:00`).toLocaleDateString() : '—' });
+}
 
-  return el('tr', { 'data-id': t.id, draggable: true }, [
-    dragHandleCell(),
-    el('td', {}, [el('input', { class: 'row-input', 'data-field': 'name', value: t.name || '', placeholder: 'Task name' })]),
-    el('td', {}, [el('input', { class: 'row-input', 'data-field': 'assigned', value: t.assigned || '', placeholder: 'Assignee' })]),
-    el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'start', value: t.start || '' })]),
-    el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'end', value: t.end || '' })]),
-    durationCell,
+function pill(value, kind) {
+  return el('td', { class: `col-${kind}` }, [
+    el('span', { class: `${kind}-select ${kind}-${slug(value)} is-static`, text: value || '—' }),
+  ]);
+}
+
+function renderDashTaskRow(t) {
+  return el('tr', { 'data-id': t.id }, [
+    el('td', { class: 'cell-strong', text: t.name || '(untitled task)' }),
+    el('td', { text: t.assigned || '—' }),
+    readOnlyDate(t.start),
+    readOnlyDate(t.end),
+    el('td', { class: 'col-days', 'data-role': 'duration', text: durationLabel(t.start, t.end) || '—' }),
     slipCell(t),
-    el('td', { class: 'col-status' }, [buildSelect(STATUS_OPTIONS, t.status, 'status', 'status')]),
-    el('td', { class: 'col-prio' }, [buildSelect(PRIORITY_OPTIONS, t.prio, 'prio', 'prio')]),
-    el('td', {}, [el('input', { class: 'row-input', 'data-field': 'comments', value: t.comments || '', placeholder: 'Comments' })]),
-    el('td', { class: 'col-action no-print' }, [el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-dash-task', 'aria-label': 'Delete task', text: '🗑' })]),
+    pill(t.status, 'status'),
+    pill(t.prio, 'prio'),
+    el('td', { class: 'cell-muted', text: t.comments || '' }),
   ]);
 }
 
@@ -562,70 +531,9 @@ function bindDashTaskFilters() {
   });
 }
 
-/** The Planner shows these same rows, so every change has to reach it too. */
-function commitTaskChange() {
-  scheduleSave();
-  notifyProjectDataChanged('dashboard');
-}
-
-function bindDashTasks() {
-  const tbody = document.getElementById('dash-tasks-body');
-
-  tbody.addEventListener('input', (e) => {
-    const field = e.target.dataset.field;
-    if (!field) return;
-    const item = findById(getState().dashTasks, rowIdOf(e.target));
-    item[field] = e.target.value;
-    commitTaskChange();
-
-    if (field === 'start' || field === 'end') {
-      const row = e.target.closest('tr');
-      row.querySelector('[data-role="duration"]').textContent = durationLabel(item.start, item.end);
-      row.replaceChild(slipCell(item), row.querySelector('[data-role="slip"]'));
-      renderDashGantt();
-      renderBaselineNote();
-    }
-  });
-
-  tbody.addEventListener('change', (e) => {
-    const field = e.target.dataset.field;
-    if (field !== 'status' && field !== 'prio') return;
-    const item = findById(getState().dashTasks, rowIdOf(e.target));
-    item[field] = e.target.value;
-    commitTaskChange();
-    e.target.className = `${field}-select ${field}-${slug(e.target.value)}`;
-    renderComputed();
-  });
-
-  tbody.addEventListener('click', (e) => {
-    if (!e.target.closest('[data-action="delete-dash-task"]')) return;
-    const id = rowIdOf(e.target);
-    const state = getState();
-    state.dashTasks = state.dashTasks.filter((t) => t.id !== id);
-    commitTaskChange();
-    renderDashTasks();
-    renderComputed();
-  });
-
-  document.querySelector('#page-dashboard [data-action="add-dash-task"]').addEventListener('click', () => {
-    getState().dashTasks.push({ id: uid(), ...newTask() });
-    commitTaskChange();
-    renderDashTasks();
-    renderComputed();
-  });
-
-  makeSortable(tbody, {
-    onDrop: (draggedId, targetId) => {
-      reorderById(getState().dashTasks, draggedId, targetId);
-      commitTaskChange();
-      renderDashTasks();
-    },
-  });
-}
-
-function bindBudget() {
-  ['budgetPlanned', 'budgetActual'].forEach((field) => {
-    document.querySelector(`#page-dashboard [data-field="${field}"]`).addEventListener('input', renderBudgetChart);
+function bindEditInPlanner() {
+  document.getElementById('btn-edit-in-planner').addEventListener('click', () => {
+    document.getElementById('tab-planner').click();
   });
 }
 
@@ -644,9 +552,7 @@ export function renderDashboard() {
 
 export function initDashboard({ onProjectSwitch: onSwitch } = {}) {
   renderDashboard();
-  bindDashTasks();
-  bindBudget();
-  bindBaseline(() => {});
+  bindEditInPlanner();
   bindActiveProjects({ onSwitch });
   bindDashTaskFilters();
 }

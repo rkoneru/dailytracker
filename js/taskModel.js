@@ -19,11 +19,23 @@ export const STATUS_COLORS = {
 
 export const PRIORITY_COLORS = { High: '#ef4444', Medium: '#f59e0b', Low: '#22c55e' };
 
+// The tick timeline's window, in days. Each task carries the days it is ticked
+// on plus the marker drawn in them, kept separate from start/end so a task
+// worked on in bursts (days 9, 16 and 23) can say so — something a single
+// contiguous date range cannot express.
+export const TICK_DAYS = 30;
+export const TICK_TYPES = ['check', 'diamond'];
+
+export function tickMarker(type) {
+  return type === 'diamond' ? '◆' : '✓';
+}
+
 /** A blank task, so every page adds rows of exactly the same shape. */
 export function newTask() {
   return {
     name: '', assigned: '', start: '', end: '', baseStart: '', baseEnd: '',
     status: 'Not Started', prio: 'Medium', comments: '',
+    tickType: 'check', cells: [],
   };
 }
 

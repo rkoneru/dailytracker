@@ -25,6 +25,15 @@ export function uid() {
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
 
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function earliestStart(data) {
+  const starts = (data.dashTasks || []).map((t) => t.start).filter(Boolean).sort();
+  return starts[0] || '';
+}
+
 function normalisePriority(value) {
   const match = PRIORITIES.find((p) => p.toLowerCase() === String(value || '').trim().toLowerCase());
   return match || 'Medium';
@@ -41,10 +50,9 @@ function normalisePriority(value) {
  * richer row was missing) rather than duplicated, and anything else is
  * appended. Only genuinely blank rows are dropped.
  *
- * Timeline rows carried a name and hand-ticked day cells that were never tied
- * to a date, so there is nothing in them to carry into a date-driven timeline.
- * Any row whose name isn't already a task is still kept as an undated task
- * rather than thrown away.
+ * Timeline rows carried a name, a marker type and hand-ticked day cells. Those
+ * ticks now live on the task itself, so a row whose name matches a task hands
+ * its ticks over, and one that matches nothing is kept as an undated task.
  */
 function foldLegacyTaskLists(data) {
   if (!Array.isArray(data.dashTasks)) data.dashTasks = [];
@@ -60,6 +68,10 @@ function foldLegacyTaskLists(data) {
     if (existing) {
       if (!existing.start && fields.start) existing.start = fields.start;
       if (!existing.end && fields.end) existing.end = fields.end;
+      if (fields.cells && fields.cells.length > 0 && !(existing.cells || []).length) {
+        existing.cells = fields.cells.slice();
+        existing.tickType = fields.tickType || 'check';
+      }
       return;
     }
     const row = {
@@ -73,6 +85,8 @@ function foldLegacyTaskLists(data) {
       status: fields.status || 'Not Started',
       prio: normalisePriority(fields.prio),
       comments: '',
+      tickType: fields.tickType === 'diamond' ? 'diamond' : 'check',
+      cells: Array.isArray(fields.cells) ? fields.cells.slice() : [],
     };
     data.dashTasks.push(row);
     byName.set(key, row);
@@ -87,7 +101,7 @@ function foldLegacyTaskLists(data) {
   (Array.isArray(data.gantt) ? data.gantt : []).forEach((g) => {
     const name = String(g.name || '').trim();
     if (!name) return;
-    adopt(name, {});
+    adopt(name, { cells: Array.isArray(g.cells) ? g.cells : [], tickType: g.type });
   });
 
   delete data.tasks;
@@ -109,11 +123,17 @@ function migrateProject(data) {
   (data.dashTasks || []).forEach((t) => {
     if (t.baseStart === undefined) t.baseStart = '';
     if (t.baseEnd === undefined) t.baseEnd = '';
+    // Tick-timeline state, added after the task lists were unified.
+    if (!Array.isArray(t.cells)) t.cells = [];
+    if (t.tickType !== 'diamond') t.tickType = 'check';
   });
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are
   // never treated as untouched starters — 0 can't equal a real updatedAt.
   if (data.createdAt === undefined) data.createdAt = 0;
+  // Day 1 of the tick timeline. Stored rather than derived, so adding a task
+  // that starts earlier doesn't silently shift what every existing tick means.
+  if (!data.tickStart) data.tickStart = earliestStart(data) || data.dashDate || todayISO();
   return data;
 }
 

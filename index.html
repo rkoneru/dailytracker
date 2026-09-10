@@ -90,6 +90,19 @@
             <label class="field-label">Due date
               <input type="date" class="field-input" data-field="dueDate">
             </label>
+            <label class="field-label">
+              Status date
+              <input type="date" class="field-input" data-field="dashDate">
+            </label>
+            <label class="field-label">
+              Overall status
+              <input type="text" class="field-input" data-field="dashStatus" placeholder="ON TRACK" list="status-presets">
+              <datalist id="status-presets">
+                <option value="ON TRACK"></option>
+                <option value="AT RISK"></option>
+                <option value="OFF TRACK"></option>
+              </datalist>
+            </label>
           </div>
         </header>
 
@@ -121,6 +134,29 @@
 
         <section class="card">
           <div class="card__head">
+            <h2>Tick Timeline</h2>
+            <label class="field-label tick-anchor">
+              Day 1
+              <input type="date" class="field-input" data-field="tickStart" id="tick-start">
+            </label>
+          </div>
+          <p class="hint no-print">Click a day to mark it. Use the ✓/◆ button to switch a row between work and milestone, or ⤓ to fill a row from its start and end dates. Rows follow the task list below.</p>
+          <div class="table-scroll">
+            <table class="data-table tick-table" id="tick-table">
+              <thead>
+                <tr id="tick-head-row">
+                  <th class="col-tickname">Task</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="tick-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="tick-empty" hidden>Add a task below and it appears here.</p>
+        </section>
+
+        <section class="card">
+          <div class="card__head">
             <h2>Timeline</h2>
           </div>
           <p class="hint no-print">Drawn from each task's start and end dates below — add dates to a task and it appears here. Dashed bars show the baseline where one is set.</p>
@@ -147,13 +183,35 @@
                   <th>Assignee</th>
                   <th class="col-date">Start</th>
                   <th class="col-date">End</th>
+                  <th class="col-status">Status</th>
                   <th class="col-prio">Priority</th>
-                  <th class="col-check">Done</th>
+                  <th>Comments</th>
                   <th class="col-action no-print"></th>
                 </tr>
               </thead>
               <tbody id="tasks-body"></tbody>
             </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Budget &amp; Baseline</h2>
+          </div>
+          <div class="planner-fields">
+            <label class="field-label">
+              Budget planned
+              <input type="number" min="0" step="1" class="field-input" data-field="budgetPlanned">
+            </label>
+            <label class="field-label">
+              Budget actual
+              <input type="number" min="0" step="1" class="field-input" data-field="budgetActual">
+            </label>
+          </div>
+          <p class="hint" id="planner-baseline-note"></p>
+          <div class="sync-actions no-print">
+            <button type="button" class="btn btn-small" id="btn-set-baseline">📌 Set Baseline</button>
+            <button type="button" class="btn btn-small btn-ghost" id="btn-clear-baseline">Clear Baseline</button>
           </div>
         </section>
 
@@ -171,16 +229,14 @@
       <div class="print-page">
         <header class="dash-header">
           <div class="dash-header__title">
-            <span class="editable" contenteditable="true" data-field="projectName" data-placeholder="Project name"></span>
+            <span id="dash-project-name">Project</span>
             <span class="dash-header__badge" id="dash-status-badge">ON TRACK</span>
           </div>
           <div class="dash-header__meta">
-            <label class="field-label">Date
-              <input type="date" class="field-input" data-field="dashDate">
-            </label>
-            <label class="field-label">Status
-              <input type="text" class="field-input" data-field="dashStatus" placeholder="ON TRACK">
-            </label>
+            <div class="readonly-fact">
+              <span class="readonly-fact__label">Date</span>
+              <span class="readonly-fact__value" id="dash-date-value">—</span>
+            </div>
             <div class="stat-pill">
               <span class="stat-pill__value" id="dash-pct-complete">0%</span>
               <span class="stat-pill__label">Complete</span>
@@ -293,12 +349,14 @@
           <div class="card">
             <div class="card__head"><h2>Budget</h2></div>
             <div class="budget-fields">
-              <label class="field-label">Planned
-                <input type="number" min="0" step="1" class="field-input" data-field="budgetPlanned">
-              </label>
-              <label class="field-label">Actual
-                <input type="number" min="0" step="1" class="field-input" data-field="budgetActual">
-              </label>
+              <div class="readonly-fact">
+                <span class="readonly-fact__label">Planned</span>
+                <span class="readonly-fact__value" id="dash-budget-planned">—</span>
+              </div>
+              <div class="readonly-fact">
+                <span class="readonly-fact__label">Actual</span>
+                <span class="readonly-fact__value" id="dash-budget-actual">—</span>
+              </div>
             </div>
             <div class="bar-chart bar-chart--h" id="budget-chart"></div>
           </div>
@@ -315,12 +373,9 @@
         <section class="card">
           <div class="card__head">
             <h2>Tasks</h2>
-            <div class="baseline-actions no-print">
-              <button type="button" class="btn btn-small" id="btn-set-baseline">📌 Set Baseline</button>
-              <button type="button" class="btn btn-small" id="btn-clear-baseline">Clear</button>
-              <button type="button" class="btn btn-small" data-action="add-dash-task">+ Add Task</button>
-            </div>
+            <button type="button" class="btn btn-small no-print" id="btn-edit-in-planner">✎ Edit in Planner</button>
           </div>
+          <p class="hint no-print">This page is a read-only view. Edit tasks on the Planner.</p>
           <p class="hint" id="baseline-note"></p>
           <div class="filter-bar no-print">
             <input type="search" class="field-input" id="dash-task-search" placeholder="Search tasks, assignee, comments...">
@@ -343,17 +398,15 @@
             <table class="data-table" id="dash-tasks-table">
               <thead>
                 <tr>
-                  <th class="col-drag no-print"></th>
-                  <th class="col-taskname">Task</th>
-                  <th class="col-assignee">Assignee</th>
+                  <th>Task</th>
+                  <th>Assignee</th>
                   <th class="col-date">Start</th>
                   <th class="col-date">End</th>
                   <th class="col-days">Days</th>
                   <th class="col-slip">Slip</th>
                   <th class="col-status">Status</th>
                   <th class="col-prio">Priority</th>
-                  <th class="col-comments">Comments</th>
-                  <th class="col-action no-print"></th>
+                  <th>Comments</th>
                 </tr>
               </thead>
               <tbody id="dash-tasks-body"></tbody>

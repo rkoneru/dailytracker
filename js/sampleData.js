@@ -1,7 +1,36 @@
+import { TICK_DAYS } from './taskModel.js';
+
 // Starter templates for new projects. Each template is a factory function
 // (not a static object) so every project created from it gets its own
 // fresh row ids — templates get cloned many times over a session as users
 // create/clone projects, and a shared counter keeps every id unique.
+// Every template authors real start/end dates for its tasks, so the tick
+// timeline is seeded from them rather than hand-listing day numbers per
+// template. Ticks are editable afterwards and drift from the dates freely —
+// this only decides what a brand new project opens with.
+const DAY_MS = 86400000;
+
+function seedTicks(project) {
+  const starts = project.dashTasks.map((t) => t.start).filter(Boolean).sort();
+  project.tickStart = starts[0] || project.dashDate || '';
+  if (!project.tickStart) return project;
+
+  const anchor = new Date(`${project.tickStart}T00:00:00`);
+  project.dashTasks.forEach((task) => {
+    const from = task.start ? new Date(`${task.start}T00:00:00`) : null;
+    const to = task.end ? new Date(`${task.end}T00:00:00`) : from;
+    task.tickType = from && to && from.getTime() === to.getTime() ? 'diamond' : 'check';
+    task.cells = [];
+    if (!from || !to) return;
+    const first = Math.round((from - anchor) / DAY_MS) + 1;
+    const last = Math.round((to - anchor) / DAY_MS) + 1;
+    for (let day = Math.max(1, first); day <= Math.min(TICK_DAYS, last); day += 1) {
+      task.cells.push(day);
+    }
+  });
+  return project;
+}
+
 let idCounter = 0;
 const id = (prefix) => `${prefix}${++idCounter}`;
 
@@ -398,18 +427,18 @@ function createAIGovernance() {
 }
 
 export const TEMPLATES = [
-  { key: 'marketing', category: 'General', label: 'Social Media Marketing Campaign', description: 'A 30-day multi-channel launch campaign, from creative production through wrap-up reporting.', build: createMarketingCampaign },
-  { key: 'software', category: 'General', label: 'Software Release Plan', description: 'A feature-freeze-to-ship release cycle with QA, regression testing, and a security review.', build: createSoftwareRelease },
-  { key: 'event', category: 'General', label: 'Event Planning', description: 'Venue, catering, invitations, and day-of logistics for an in-person event.', build: createEventPlanning },
-  { key: 'personal', category: 'General', label: 'Personal Goals Sprint', description: 'A 30-day personal project mixing a study goal with a fitness goal.', build: createPersonalGoals },
+  { key: 'marketing', category: 'General', label: 'Social Media Marketing Campaign', description: 'A 30-day multi-channel launch campaign, from creative production through wrap-up reporting.', build: () => seedTicks(createMarketingCampaign()) },
+  { key: 'software', category: 'General', label: 'Software Release Plan', description: 'A feature-freeze-to-ship release cycle with QA, regression testing, and a security review.', build: () => seedTicks(createSoftwareRelease()) },
+  { key: 'event', category: 'General', label: 'Event Planning', description: 'Venue, catering, invitations, and day-of logistics for an in-person event.', build: () => seedTicks(createEventPlanning()) },
+  { key: 'personal', category: 'General', label: 'Personal Goals Sprint', description: 'A 30-day personal project mixing a study goal with a fitness goal.', build: () => seedTicks(createPersonalGoals()) },
 
-  { key: 'llm-feature', category: 'AI & Data', label: 'LLM Feature Launch', description: 'Ship an AI feature to GA: prompt iteration, an eval harness, red-teaming, and a staged rollout.', build: createLLMFeatureLaunch },
-  { key: 'rag-assistant', category: 'AI & Data', label: 'RAG Knowledge Assistant', description: 'Doc ingestion, retrieval tuning, citation checks and a support-team pilot for a grounded Q&A assistant.', build: createRagAssistant },
-  { key: 'ml-model', category: 'AI & Data', label: 'ML Model Development', description: 'A predictive model end to end — data pipeline, training, fairness gate, deployment and drift monitoring.', build: createMLModelDevelopment },
-  { key: 'ai-agent', category: 'AI & Data', label: 'AI Agent Automation Pilot', description: 'Pilot an agent on a real workflow with tool integrations, guardrails, human review and a go/no-go.', build: createAgentAutomationPilot },
-  { key: 'ai-governance', category: 'AI & Data', label: 'AI Governance & Readiness', description: 'Model inventory, risk tiering, review gates and assessments for getting AI systems audit-ready.', build: createAIGovernance },
+  { key: 'llm-feature', category: 'AI & Data', label: 'LLM Feature Launch', description: 'Ship an AI feature to GA: prompt iteration, an eval harness, red-teaming, and a staged rollout.', build: () => seedTicks(createLLMFeatureLaunch()) },
+  { key: 'rag-assistant', category: 'AI & Data', label: 'RAG Knowledge Assistant', description: 'Doc ingestion, retrieval tuning, citation checks and a support-team pilot for a grounded Q&A assistant.', build: () => seedTicks(createRagAssistant()) },
+  { key: 'ml-model', category: 'AI & Data', label: 'ML Model Development', description: 'A predictive model end to end — data pipeline, training, fairness gate, deployment and drift monitoring.', build: () => seedTicks(createMLModelDevelopment()) },
+  { key: 'ai-agent', category: 'AI & Data', label: 'AI Agent Automation Pilot', description: 'Pilot an agent on a real workflow with tool integrations, guardrails, human review and a go/no-go.', build: () => seedTicks(createAgentAutomationPilot()) },
+  { key: 'ai-governance', category: 'AI & Data', label: 'AI Governance & Readiness', description: 'Model inventory, risk tiering, review gates and assessments for getting AI systems audit-ready.', build: () => seedTicks(createAIGovernance()) },
 
-  { key: 'blank', category: 'General', label: 'Blank Project', description: 'Start from an empty sheet — no sample data.', build: createBlankProject },
+  { key: 'blank', category: 'General', label: 'Blank Project', description: 'Start from an empty sheet — no sample data.', build: () => seedTicks(createBlankProject()) },
 ];
 
 export const DEFAULT_TEMPLATE_KEY = 'marketing';

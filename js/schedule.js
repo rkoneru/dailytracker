@@ -69,3 +69,17 @@ export function clearBaseline(project) {
   });
   project.baselineSetAt = null;
 }
+
+/**
+ * One sentence describing where the project stands against its baseline.
+ * Lives here rather than in a page module because the Planner (which sets the
+ * baseline) and the Dashboard (which reports on it) both show it.
+ */
+export function baselineSummaryText(project) {
+  const summary = scheduleSummary(project);
+  if (!summary.baselined) return 'No baseline set — set one to start tracking slippage.';
+  const setAt = summary.baselineSetAt ? ` (set ${summary.baselineSetAt})` : '';
+  return summary.slipped.length === 0
+    ? `On plan against baseline${setAt}.`
+    : `${summary.slipped.length} task${summary.slipped.length === 1 ? '' : 's'} slipped, worst +${summary.maxSlip}d${setAt}.`;
+}

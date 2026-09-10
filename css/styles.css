@@ -1604,3 +1604,93 @@ body { overflow-anchor: none; }
 .sync-pill.is-offline { color: #b45309; }
 .sync-pill.is-error { color: #b91c1c; }
 .sync-pill.is-signed-out { color: var(--color-text-muted); }
+
+/* ---------- Tick timeline ---------- */
+
+.tick-anchor { flex-direction: row; align-items: center; gap: 8px; }
+.tick-anchor .field-input { min-height: 32px; width: 150px; }
+
+.tick-table th, .tick-table td { padding: 4px 6px; }
+.col-tickname { width: 220px; }
+
+.tick-row-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tick-row-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.tick-type-btn {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  line-height: 1;
+}
+.tick-type-btn:hover { border-color: var(--color-primary); }
+.tick-type-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.tick-day-head {
+  width: 26px;
+  text-align: center !important;
+  font-size: 10px;
+  padding: 4px 0 !important;
+}
+
+.tick-day-cell {
+  width: 26px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--color-primary);
+  font-size: 13px;
+  line-height: 1.4;
+  user-select: none;
+  border-left: 1px solid transparent;
+}
+.tick-day-cell:hover { background: rgba(29, 78, 216, 0.10); }
+.tick-day-cell:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Weekends and month boundaries keep 30 bare numbers legible as a calendar. */
+.tick-day-head.is-weekend, .tick-day-cell.is-weekend { background: rgba(100, 116, 139, 0.07); }
+.tick-day-head.is-month-start, .tick-day-cell.is-month-start { border-left: 1px solid var(--color-border); }
+
+@media print {
+  .tick-day-cell { cursor: default; }
+}
+
+/* ---------- Read-only Dashboard ---------- */
+
+.readonly-fact { display: flex; flex-direction: column; gap: 2px; }
+.readonly-fact__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+}
+.readonly-fact__value { font-size: 15px; font-weight: 600; }
+
+#dash-tasks-body .cell-strong { font-weight: 600; }
+#dash-tasks-body .cell-muted { color: var(--color-text-muted); font-size: 13px; }
+
+/* Status and priority read as the same pills the Planner selects show, minus
+   the affordances that would suggest they can be changed here. */
+.status-select.is-static, .prio-select.is-static {
+  display: inline-block;
+  border: none;
+  padding: 3px 10px;
+  cursor: default;
+  pointer-events: none;
+  appearance: none;
+}
+
+/* Planner field rows */
+.planner-fields { display: flex; flex-wrap: wrap; gap: 16px; }
+.planner-fields .field-label { flex: 1 1 160px; }

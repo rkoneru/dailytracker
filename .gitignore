@@ -1,2 +1,6 @@
-node_modules/
+# Matches a real install and a symlink to one — a trailing slash would only
+# match the directory form.
+node_modules
+
+# Screenshots and scratch files the test runner writes.
 tests/.tmp/

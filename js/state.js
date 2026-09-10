@@ -15,6 +15,11 @@ function clone(obj) {
 }
 
 export function uid() {
+  // crypto.randomUUID needs a secure context, so keep the old generator as a
+  // fallback for plain-http and older browsers.
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
   return Math.random().toString(36).slice(2, 10);
 }
 
@@ -107,6 +112,8 @@ function writeStore() {
     return true;
   } catch (err) {
     console.warn('Failed to save data locally (storage full or unavailable).', err);
+    // The indicator must not keep claiming "Saved" when nothing was written.
+    emitSaveStatus('error');
     return false;
   }
 }
@@ -132,16 +139,14 @@ export function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     getState().updatedAt = Date.now();
-    writeStore();
-    emitSaveStatus('saved');
+    if (writeStore()) emitSaveStatus('saved');
   }, SAVE_DEBOUNCE_MS);
 }
 
 export function saveImmediately() {
   clearTimeout(saveTimer);
   getState().updatedAt = Date.now();
-  writeStore();
-  emitSaveStatus('saved');
+  if (writeStore()) emitSaveStatus('saved');
 }
 
 export function getPath(obj, path) {

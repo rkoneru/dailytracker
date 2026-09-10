@@ -70,7 +70,13 @@ export function renderLegend(listEl, slices, total) {
   slices.forEach((slice) => {
     const li = document.createElement('li');
     const pct = total > 0 ? Math.round((slice.value / total) * 100) : 0;
-    li.innerHTML = `<span class="swatch" style="background:${slice.color}"></span>${slice.label}: ${slice.value} (${pct}%)`;
+
+    const swatch = document.createElement('span');
+    swatch.className = 'swatch';
+    swatch.style.background = slice.color;
+
+    li.appendChild(swatch);
+    li.appendChild(document.createTextNode(`${slice.label}: ${slice.value} (${pct}%)`));
     listEl.appendChild(li);
   });
 }

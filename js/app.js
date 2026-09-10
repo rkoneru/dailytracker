@@ -12,10 +12,55 @@ import { initRaid, renderRaid } from './raid.js';
 
 // ---------- Service worker ----------
 
+// A waiting worker means a new build is cached and ready, but the open tab is
+// still running the old one. Show the same nudge banner the backup reminder
+// uses rather than swapping code out from under the user mid-edit.
+let waitingWorker = null;
+
+function showUpdateNudge(worker) {
+  waitingWorker = worker;
+  const nudge = document.getElementById('update-nudge');
+  if (!nudge || !nudge.hidden) return;
+  document.getElementById('btn-nudge-reload').addEventListener('click', () => {
+    // Activating the waiting worker fires controllerchange, which reloads.
+    if (waitingWorker) waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  });
+  document.getElementById('btn-nudge-update-dismiss').addEventListener('click', () => {
+    nudge.hidden = true;
+  });
+  nudge.hidden = false;
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch((err) => {
+    navigator.serviceWorker.register('sw.js').then((registration) => {
+      // Already waiting when this tab loaded (e.g. a second tab is open).
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        showUpdateNudge(registration.waiting);
+      }
+      registration.addEventListener('updatefound', () => {
+        const installing = registration.installing;
+        if (!installing) return;
+        installing.addEventListener('statechange', () => {
+          // No controller means this is the first-ever install, not an update.
+          if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateNudge(installing);
+          }
+        });
+      });
+    }).catch((err) => {
       console.warn('Service worker registration failed:', err);
+    });
+
+    // The new worker took over after skipWaiting; reload to run its assets.
+    // Skipped on a first-ever install, where clients.claim() also fires this
+    // but there's no older code to swap out.
+    if (!navigator.serviceWorker.controller) return;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      reloading = true;
+      location.reload();
     });
   });
 }
@@ -111,12 +156,19 @@ function bindTopLevelFields() {
 
 // ---------- Save indicator ----------
 
+const SAVE_LABELS = { saving: 'Saving…', saved: 'Saved', error: 'Not saved — storage full' };
+
 function initSaveIndicator() {
   const indicator = document.getElementById('save-indicator');
   onSaveStatusChange((status) => {
-    indicator.textContent = status === 'saving' ? 'Saving…' : 'Saved';
+    indicator.textContent = SAVE_LABELS[status] || SAVE_LABELS.saved;
     indicator.classList.toggle('is-saving', status === 'saving');
     indicator.classList.toggle('is-saved', status === 'saved');
+    indicator.classList.toggle('is-error', status === 'error');
+    // Storage failures are the one save state worth interrupting for.
+    indicator.title = status === 'error'
+      ? "Your changes couldn't be written to this browser's storage. Download a backup and free up space."
+      : '';
   });
 }
 

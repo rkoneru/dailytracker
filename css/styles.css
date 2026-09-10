@@ -223,6 +223,7 @@ button, input, textarea {
 }
 .save-indicator.is-saving { color: var(--color-primary); }
 .save-indicator.is-saved { color: #16a34a; }
+.save-indicator.is-error { color: #b91c1c; font-weight: 600; }
 
 .btn {
   min-height: 40px;
@@ -786,6 +787,11 @@ body { overflow-anchor: none; }
 .backup-nudge__text { flex: 1; min-width: 0; }
 .backup-nudge .btn-small { background: #78350f; color: #fff; }
 .backup-nudge .btn-icon { color: #78350f; }
+
+/* Same banner, informational rather than a warning. */
+.backup-nudge--update { background: #dbeafe; color: #1e3a8a; border-bottom-color: #93c5fd; }
+.backup-nudge--update .btn-small { background: #1e3a8a; }
+.backup-nudge--update .btn-icon { color: #1e3a8a; }
 
 /* ---------- Trend chips ---------- */
 

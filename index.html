@@ -122,21 +122,10 @@
         <section class="card">
           <div class="card__head">
             <h2>Timeline</h2>
-            <button type="button" class="btn btn-small no-print" data-action="add-gantt-row">+ Add Timeline Row</button>
           </div>
-          <p class="hint no-print">Click a day cell to mark it. Use the row's ⇄ button (or right-click the row name) to switch between checkmark and milestone rows.</p>
-          <div class="table-scroll">
-            <table class="data-table gantt-table" id="gantt-table">
-              <thead>
-                <tr id="gantt-head-row">
-                  <th class="col-drag no-print"></th>
-                  <th class="col-ganttname">Task</th>
-                  <th class="col-action no-print"></th>
-                </tr>
-              </thead>
-              <tbody id="gantt-body"></tbody>
-            </table>
-          </div>
+          <p class="hint no-print">Drawn from each task's start and end dates below — add dates to a task and it appears here. Dashed bars show the baseline where one is set.</p>
+          <div class="chart-scroll"><div id="planner-timeline" class="gantt-chart"></div></div>
+          <p class="hint" id="planner-timeline-empty" hidden>No task has both a start and an end date yet.</p>
         </section>
 
         <section class="card">
@@ -144,6 +133,7 @@
             <h2>Tasks</h2>
             <button type="button" class="btn btn-small no-print" data-action="add-task">+ Add Task</button>
           </div>
+          <p class="hint no-print">The same tasks the Dashboard shows. Edits here update the Dashboard, the Timeline above, and every report.</p>
           <div class="filter-bar no-print">
             <input type="search" class="field-input" id="task-search" placeholder="Search tasks...">
           </div>
@@ -154,6 +144,7 @@
                   <th class="col-drag no-print"></th>
                   <th class="col-num">#</th>
                   <th>Task</th>
+                  <th>Assignee</th>
                   <th class="col-date">Start</th>
                   <th class="col-date">End</th>
                   <th class="col-prio">Priority</th>
@@ -259,7 +250,7 @@
           <div class="card__head"><h2>Task Timeline</h2></div>
           <p class="hint">The red line marks today.</p>
           <div class="table-scroll">
-            <div class="gantt-chart" id="dash-gantt"></div>
+            <div class="chart-scroll"><div class="gantt-chart" id="dash-gantt"></div></div>
           </div>
         </section>
 

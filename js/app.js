@@ -3,8 +3,12 @@ import {
   buildBackup, restoreBackup, markBackedUp, getLastBackupAt, dismissBackupNudge, shouldNudgeBackup,
   listProjects, onProjectsChange,
 } from './state.js';
-import { initPlanner, renderPlanner } from './planner.js';
-import { initDashboard, renderDashboard, renderDashHeader, renderComputed as refreshDashboardDerived } from './dashboard.js';
+import { initPlanner, renderPlanner, renderPlannerShared } from './planner.js';
+import {
+  initDashboard, renderDashboard, renderDashHeader, renderDashboardShared,
+  renderComputed as refreshDashboardDerived,
+} from './dashboard.js';
+import { onProjectDataChanged } from './taskModel.js';
 import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON, exportBackupJSON, readJSONFile } from './export.js';
 import { initProjects } from './projects.js';
 import { initReports, refreshReport } from './reports.js';
@@ -306,6 +310,30 @@ function initSyncPage() {
   initSync();
 }
 
+// ---------- Keeping every page's view of the same data in step ----------
+
+/**
+ * Tasks and milestones appear on the Planner, the Dashboard and the reports at
+ * once. Whichever page an edit came from, the others have to catch up
+ * immediately rather than on the next tab switch.
+ *
+ * The originating page is skipped: it has already applied its own targeted
+ * update, and rebuilding the table under the user's cursor would drop focus
+ * mid-keystroke.
+ */
+function initSharedDataSync() {
+  onProjectDataChanged((source) => {
+    if (source !== 'planner') renderPlannerShared();
+    if (source !== 'dashboard') renderDashboardShared();
+    else refreshDashboardDerived();
+
+    // The report spans every project and is rebuilt from scratch, so it is
+    // only worth recomputing while it is actually on screen; opening the tab
+    // refreshes it anyway.
+    if (document.getElementById('page-reports').classList.contains('is-active')) refreshReport();
+  });
+}
+
 // ---------- Full re-render (project switched, cloned, created, imported, or reset) ----------
 
 function refreshActiveProjectView() {
@@ -499,6 +527,7 @@ function init() {
   initProjects({ onProjectChange: refreshActiveProjectView });
   initReports();
   initRaid({ onChanged: onRaidChanged });
+  initSharedDataSync();
   initSyncPage();
 }
 

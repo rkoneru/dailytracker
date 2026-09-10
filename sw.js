@@ -1,5 +1,5 @@
 // Bump this on every release to roll out a fresh cache and drop the old one.
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v12';
 const CACHE_NAME = `project-planner-${CACHE_VERSION}`;
 
 // App shell: everything needed to run fully offline after first load.
@@ -23,6 +23,7 @@ const PRECACHE_URLS = [
   './js/history.js',
   './js/raid.js',
   './js/schedule.js',
+  './js/taskModel.js',
   './js/sync.js',
   './js/syncModel.js',
   './js/syncMerge.js',

@@ -3,18 +3,10 @@ import { parseDate, daysBetween, renderPieChart, renderLegend, renderGanttChart 
 import { makeSortable, reorderById } from './dragReorder.js';
 import { raidCounts, RAID_TYPES } from './raid.js';
 import { slipDays, scheduleSummary, setBaseline, clearBaseline } from './schedule.js';
-
-const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Complete', 'Overdue', 'On Hold'];
-const PRIORITY_OPTIONS = ['High', 'Medium', 'Low'];
-
-const STATUS_COLORS = {
-  'Not Started': '#bfdbfe',
-  'In Progress': '#bbf7d0',
-  Complete: '#16a34a',
-  Overdue: '#f59e0b',
-  'On Hold': '#cbd5e1',
-};
-const PRIORITY_COLORS = { High: '#ef4444', Medium: '#f59e0b', Low: '#22c55e' };
+import {
+  STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS, durationLabel, newTask,
+  notifyProjectDataChanged,
+} from './taskModel.js';
 
 const BADGE_COLORS = {
   'ON TRACK': ['#bbf7d0', '#14532d'],
@@ -487,14 +479,6 @@ export function renderComputed() {
 
 // ---------- Dashboard task table ----------
 
-function durationLabel(start, end) {
-  const s = parseDate(start);
-  const e = parseDate(end);
-  if (!s || !e) return '';
-  const days = daysBetween(s, e) + 1;
-  return days > 0 ? `${days}d` : '';
-}
-
 function buildSelect(options, value, dataField, classPrefix) {
   const select = el('select', { class: `${classPrefix}-select ${classPrefix}-${slug(value)}`, 'data-field': dataField });
   options.forEach((opt) => {
@@ -578,6 +562,12 @@ function bindDashTaskFilters() {
   });
 }
 
+/** The Planner shows these same rows, so every change has to reach it too. */
+function commitTaskChange() {
+  scheduleSave();
+  notifyProjectDataChanged('dashboard');
+}
+
 function bindDashTasks() {
   const tbody = document.getElementById('dash-tasks-body');
 
@@ -586,7 +576,7 @@ function bindDashTasks() {
     if (!field) return;
     const item = findById(getState().dashTasks, rowIdOf(e.target));
     item[field] = e.target.value;
-    scheduleSave();
+    commitTaskChange();
 
     if (field === 'start' || field === 'end') {
       const row = e.target.closest('tr');
@@ -602,7 +592,7 @@ function bindDashTasks() {
     if (field !== 'status' && field !== 'prio') return;
     const item = findById(getState().dashTasks, rowIdOf(e.target));
     item[field] = e.target.value;
-    scheduleSave();
+    commitTaskChange();
     e.target.className = `${field}-select ${field}-${slug(e.target.value)}`;
     renderComputed();
   });
@@ -612,14 +602,14 @@ function bindDashTasks() {
     const id = rowIdOf(e.target);
     const state = getState();
     state.dashTasks = state.dashTasks.filter((t) => t.id !== id);
-    scheduleSave();
+    commitTaskChange();
     renderDashTasks();
     renderComputed();
   });
 
   document.querySelector('#page-dashboard [data-action="add-dash-task"]').addEventListener('click', () => {
-    getState().dashTasks.push({ id: uid(), name: '', assigned: '', start: '', end: '', status: 'Not Started', prio: 'Medium', comments: '' });
-    scheduleSave();
+    getState().dashTasks.push({ id: uid(), ...newTask() });
+    commitTaskChange();
     renderDashTasks();
     renderComputed();
   });
@@ -627,7 +617,7 @@ function bindDashTasks() {
   makeSortable(tbody, {
     onDrop: (draggedId, targetId) => {
       reorderById(getState().dashTasks, draggedId, targetId);
-      scheduleSave();
+      commitTaskChange();
       renderDashTasks();
     },
   });
@@ -637,6 +627,12 @@ function bindBudget() {
   ['budgetPlanned', 'budgetActual'].forEach((field) => {
     document.querySelector(`#page-dashboard [data-field="${field}"]`).addEventListener('input', renderBudgetChart);
   });
+}
+
+/** Re-renders the views the Dashboard shows of shared data. */
+export function renderDashboardShared() {
+  renderDashTasks();
+  renderComputed();
 }
 
 export function renderDashboard() {

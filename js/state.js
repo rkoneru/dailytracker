@@ -23,14 +23,86 @@ export function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+const PRIORITIES = ['High', 'Medium', 'Low'];
+
+function normalisePriority(value) {
+  const match = PRIORITIES.find((p) => p.toLowerCase() === String(value || '').trim().toLowerCase());
+  return match || 'Medium';
+}
+
+/**
+ * The Planner and the Dashboard used to keep separate task lists, plus a third
+ * list of Timeline rows — the same work had to be typed three times, and only
+ * the Dashboard's list reached the reports, charts and baselines. There is one
+ * list now.
+ *
+ * Folding is deliberately non-destructive: a Planner task whose name already
+ * exists in the unified list is merged into it (contributing any dates the
+ * richer row was missing) rather than duplicated, and anything else is
+ * appended. Only genuinely blank rows are dropped.
+ *
+ * Timeline rows carried a name and hand-ticked day cells that were never tied
+ * to a date, so there is nothing in them to carry into a date-driven timeline.
+ * Any row whose name isn't already a task is still kept as an undated task
+ * rather than thrown away.
+ */
+function foldLegacyTaskLists(data) {
+  if (!Array.isArray(data.dashTasks)) data.dashTasks = [];
+  const byName = new Map();
+  data.dashTasks.forEach((t) => {
+    const key = String(t.name || '').trim().toLowerCase();
+    if (key && !byName.has(key)) byName.set(key, t);
+  });
+
+  const adopt = (name, fields) => {
+    const key = name.toLowerCase();
+    const existing = byName.get(key);
+    if (existing) {
+      if (!existing.start && fields.start) existing.start = fields.start;
+      if (!existing.end && fields.end) existing.end = fields.end;
+      return;
+    }
+    const row = {
+      id: uid(),
+      name,
+      assigned: '',
+      start: fields.start || '',
+      end: fields.end || '',
+      baseStart: '',
+      baseEnd: '',
+      status: fields.status || 'Not Started',
+      prio: normalisePriority(fields.prio),
+      comments: '',
+    };
+    data.dashTasks.push(row);
+    byName.set(key, row);
+  };
+
+  (Array.isArray(data.tasks) ? data.tasks : []).forEach((t) => {
+    const name = String(t.task || '').trim();
+    if (!name) return;
+    adopt(name, { start: t.start, end: t.end, prio: t.prio, status: t.done ? 'Complete' : 'Not Started' });
+  });
+
+  (Array.isArray(data.gantt) ? data.gantt : []).forEach((g) => {
+    const name = String(g.name || '').trim();
+    if (!name) return;
+    adopt(name, {});
+  });
+
+  delete data.tasks;
+  delete data.gantt;
+}
+
 // Notes used to be stored as a single newline-delimited string; migrate any
 // data saved in that shape to the current list-of-{id,text} shape.
 // Projects created before the RAID log existed have no raid array.
-function migrateNotes(data) {
+function migrateProject(data) {
   if (typeof data.notes === 'string') {
     data.notes = data.notes.split('\n').filter((line) => line.trim() !== '').map((text) => ({ id: uid(), text }));
   }
   if (!Array.isArray(data.raid)) data.raid = [];
+  foldLegacyTaskLists(data);
   // Schedule baselines: left empty rather than seeded from current dates,
   // so an un-baselined project reads as "no baseline" instead of pretending
   // every task is perfectly on plan.
@@ -76,7 +148,7 @@ function migrateLegacyStore() {
   try {
     const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return null;
-    const data = migrateNotes(JSON.parse(raw));
+    const data = migrateProject(JSON.parse(raw));
     data.id = uid();
     data.updatedAt = Date.now();
     localStorage.removeItem(LEGACY_STORAGE_KEY);
@@ -99,7 +171,7 @@ function getStore() {
   if (saved) {
     // Bring already-saved projects up to the current shape (e.g. projects
     // created before the RAID log existed have no raid array).
-    Object.values(saved.projects || {}).forEach(migrateNotes);
+    Object.values(saved.projects || {}).forEach(migrateProject);
     store = saved;
     return store;
   }
@@ -195,7 +267,7 @@ export function replaceAllProjects(projects) {
   const previousActive = s.activeProjectId;
 
   s.projects = {};
-  projects.forEach((p) => { s.projects[p.id] = migrateNotes(p); });
+  projects.forEach((p) => { s.projects[p.id] = migrateProject(p); });
 
   const remaining = Object.values(s.projects);
   if (remaining.length === 0) {
@@ -297,7 +369,7 @@ export function createProject({ name, templateKey } = {}) {
 }
 
 function regenerateRowIds(project) {
-  ['milestones', 'gantt', 'tasks', 'dashTasks', 'notes'].forEach((key) => {
+  ['milestones', 'dashTasks', 'notes', 'raid'].forEach((key) => {
     (project[key] || []).forEach((item) => { item.id = uid(); });
   });
 }
@@ -345,13 +417,15 @@ export function deleteProject(id) {
   emitProjectsChanged();
 }
 
-const IMPORT_REQUIRED_ARRAYS = ['milestones', 'gantt', 'tasks', 'dashTasks'];
+// Files exported before the task lists were unified still carry `tasks` and
+// `gantt`; they import fine because the fold above absorbs them.
+const IMPORT_REQUIRED_ARRAYS = ['milestones', 'dashTasks'];
 
 export function importProjectFromJSON(rawData, name) {
   if (!rawData || typeof rawData !== 'object' || !IMPORT_REQUIRED_ARRAYS.every((k) => Array.isArray(rawData[k]))) {
     throw new Error("That file doesn't look like a Project Planner export.");
   }
-  const data = migrateNotes(clone(rawData));
+  const data = migrateProject(clone(rawData));
   data.projectName = name || data.projectName || 'Imported project';
   data.id = uid();
   data.updatedAt = Date.now();
@@ -412,7 +486,7 @@ export function restoreBackup(rawData) {
   const s = getStore();
   let lastId = null;
   valid.forEach((raw) => {
-    const data = migrateNotes(clone(raw));
+    const data = migrateProject(clone(raw));
     data.id = uid();
     data.updatedAt = Date.now();
     regenerateRowIds(data);

@@ -1,6 +1,9 @@
 import { getState, scheduleSave, uid } from './state.js';
-import { GANTT_DAYS } from './sampleData.js';
 import { makeSortable, reorderById } from './dragReorder.js';
+import { renderGanttChart, parseDate } from './charts.js';
+import {
+  PRIORITY_OPTIONS, STATUS_COLORS, durationLabel, newTask, notifyProjectDataChanged,
+} from './taskModel.js';
 
 function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
@@ -68,7 +71,7 @@ function bindMilestones() {
     const item = findById(getState().milestones, rowIdOf(e.target));
     if (!item) return;
     item[field] = e.target.value;
-    scheduleSave();
+    commitChange();
   });
 
   tbody.addEventListener('change', (e) => {
@@ -76,7 +79,7 @@ function bindMilestones() {
     const item = findById(getState().milestones, rowIdOf(e.target));
     if (!item) return;
     item.done = e.target.checked;
-    scheduleSave();
+    commitChange();
   });
 
   tbody.addEventListener('click', (e) => {
@@ -85,7 +88,7 @@ function bindMilestones() {
       const item = findById(getState().milestones, rowIdOf(segBtn));
       const seg = Number(segBtn.dataset.seg);
       item.progress = item.progress === seg ? seg - 1 : seg;
-      scheduleSave();
+      commitChange();
       const segments = segBtn.parentElement.children;
       Array.from(segments).forEach((s, i) => s.classList.toggle('is-filled', i < item.progress));
       return;
@@ -94,7 +97,7 @@ function bindMilestones() {
       const id = rowIdOf(e.target);
       const state = getState();
       state.milestones = state.milestones.filter((m) => m.id !== id);
-      scheduleSave();
+      commitChange();
       renderMilestones();
     }
   });
@@ -102,178 +105,100 @@ function bindMilestones() {
   makeSortable(tbody, {
     onDrop: (draggedId, targetId) => {
       reorderById(getState().milestones, draggedId, targetId);
-      scheduleSave();
+      commitChange();
       renderMilestones();
     },
   });
 
   document.querySelector('#page-planner [data-action="add-milestone"]').addEventListener('click', () => {
     getState().milestones.push({ id: uid(), text: '', progress: 0, due: '', done: false });
-    scheduleSave();
+    commitChange();
     renderMilestones();
   });
 }
 
 // ---------- Timeline (mini Gantt) ----------
 
-function marker(type) {
-  return type === 'diamond' ? '◆' : '✓';
-}
+// ---------- Timeline (derived from task dates) ----------
+//
+// This used to be a hand-ticked 30-day grid with its own list of row names,
+// kept separate from both task lists. It is now a view of the one task list:
+// each task is a row, and its bar is drawn from its own start/end dates, so
+// the Timeline can never disagree with the Tasks table below it.
 
-function renderGanttHead() {
-  const row = document.getElementById('gantt-head-row');
-  row.querySelectorAll('.gantt-day-head').forEach((th) => th.remove());
-  const actionTh = row.lastElementChild;
-  for (let day = 1; day <= GANTT_DAYS; day++) {
-    row.insertBefore(el('th', { class: 'gantt-day-head', text: String(day) }), actionTh);
+function renderTimeline() {
+  const container = document.getElementById('planner-timeline');
+  const tasks = getState().dashTasks;
+  const dated = tasks.filter((t) => t.start && t.end);
+
+  const empty = document.getElementById('planner-timeline-empty');
+  empty.hidden = dated.length > 0;
+  if (dated.length === 0) {
+    container.innerHTML = '';
+    return;
   }
-  // .data-table has width:100%, which would otherwise clamp this table to its
-  // scroll container and shrink every day column instead of scrolling.
-  // Pin a min-width sized to the actual day count so overflow-x:auto takes over.
-  const dragColWidth = 28;
-  const nameColWidth = 200;
-  const dayColWidth = 28;
-  const actionColWidth = 44;
-  document.getElementById('gantt-table').style.minWidth = `${dragColWidth + nameColWidth + GANTT_DAYS * dayColWidth + actionColWidth}px`;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  renderGanttChart(container, dated.map((t) => ({
+    label: t.name || 'Untitled task',
+    start: parseDate(t.start),
+    end: parseDate(t.end),
+    baseStart: parseDate(t.baseStart),
+    baseEnd: parseDate(t.baseEnd),
+    color: STATUS_COLORS[t.status] || '#94a3b8',
+    durationLabel: durationLabel(t.start, t.end),
+  })), today);
 }
 
-function renderGanttRow(g) {
-  const nameCell = el('td', { class: 'col-ganttname' }, [
-    el('div', { class: 'gantt-row-name' }, [
-      el('button', { type: 'button', class: 'gantt-type-btn', 'data-action': 'toggle-type', title: 'Toggle checkmark/milestone', text: marker(g.type) }),
-      el('input', { class: 'row-input', 'data-field': 'name', value: g.name || '', placeholder: 'Row name' }),
-    ]),
-  ]);
-
-  const tr = el('tr', { 'data-id': g.id, draggable: true }, [dragHandleCell(), nameCell]);
-  for (let day = 1; day <= GANTT_DAYS; day++) {
-    tr.appendChild(el('td', {
-      class: 'gantt-day-cell',
-      'data-day': String(day),
-      text: g.cells.includes(day) ? marker(g.type) : '',
-    }));
-  }
-  tr.appendChild(el('td', { class: 'col-action no-print' }, [
-    el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-gantt-row', 'aria-label': 'Delete row', text: '🗑' }),
-  ]));
-  return tr;
-}
-
-function renderGanttBody() {
-  const state = getState();
-  const tbody = document.getElementById('gantt-body');
-  tbody.innerHTML = '';
-  state.gantt.forEach((g) => tbody.appendChild(renderGanttRow(g)));
-}
-
-function bindGantt() {
-  renderGanttHead();
-  const tbody = document.getElementById('gantt-body');
-
-  tbody.addEventListener('input', (e) => {
-    if (e.target.dataset.field !== 'name') return;
-    const item = findById(getState().gantt, rowIdOf(e.target));
-    item.name = e.target.value;
-    scheduleSave();
-  });
-
-  tbody.addEventListener('click', (e) => {
-    const dayCell = e.target.closest('.gantt-day-cell');
-    if (dayCell) {
-      const item = findById(getState().gantt, rowIdOf(dayCell));
-      const day = Number(dayCell.dataset.day);
-      const idx = item.cells.indexOf(day);
-      if (idx === -1) {
-        item.cells.push(day);
-        dayCell.textContent = marker(item.type);
-      } else {
-        item.cells.splice(idx, 1);
-        dayCell.textContent = '';
-      }
-      scheduleSave();
-      return;
-    }
-
-    if (e.target.closest('[data-action="toggle-type"]')) {
-      toggleRowType(rowIdOf(e.target));
-      return;
-    }
-
-    if (e.target.closest('[data-action="delete-gantt-row"]')) {
-      const id = rowIdOf(e.target);
-      const state = getState();
-      state.gantt = state.gantt.filter((g) => g.id !== id);
-      scheduleSave();
-      renderGanttBody();
-    }
-  });
-
-  // Right-click as a desktop shortcut for toggling row type; the button covers mobile.
-  tbody.addEventListener('contextmenu', (e) => {
-    const nameArea = e.target.closest('.gantt-row-name');
-    if (!nameArea) return;
-    e.preventDefault();
-    toggleRowType(rowIdOf(e.target));
-  });
-
-  makeSortable(tbody, {
-    onDrop: (draggedId, targetId) => {
-      reorderById(getState().gantt, draggedId, targetId);
-      scheduleSave();
-      renderGanttBody();
-    },
-  });
-
-  document.querySelector('#page-planner [data-action="add-gantt-row"]').addEventListener('click', () => {
-    getState().gantt.push({ id: uid(), name: '', type: 'check', cells: [] });
-    scheduleSave();
-    renderGanttBody();
-  });
-}
-
-function toggleRowType(rowId) {
-  const item = findById(getState().gantt, rowId);
-  item.type = item.type === 'diamond' ? 'check' : 'diamond';
-  scheduleSave();
-  const row = document.querySelector(`#gantt-body tr[data-id="${rowId}"]`);
-  row.querySelector('[data-action="toggle-type"]').textContent = marker(item.type);
-  row.querySelectorAll('.gantt-day-cell').forEach((cell) => {
-    const day = Number(cell.dataset.day);
-    cell.textContent = item.cells.includes(day) ? marker(item.type) : '';
-  });
-}
-
-// ---------- Tasks (Page 1 simple list) ----------
+// ---------- Tasks ----------
+//
+// The same rows the Dashboard's task table edits, shown with the columns that
+// matter while planning. Editing either table changes the one underlying list.
 
 let taskSearchTerm = '';
+
+function priorityCell(t) {
+  const select = el('select', { class: 'row-input row-select', 'data-field': 'prio' });
+  PRIORITY_OPTIONS.forEach((option) => {
+    select.appendChild(el('option', { value: option, text: option, selected: t.prio === option }));
+  });
+  return select;
+}
 
 function renderTasksRow(t, index) {
   return el('tr', { 'data-id': t.id, draggable: true }, [
     dragHandleCell(),
     el('td', { class: 'col-num', text: String(index + 1) }),
-    el('td', {}, [el('input', { class: 'row-input', 'data-field': 'task', value: t.task || '', placeholder: 'Task name' })]),
+    el('td', {}, [el('input', { class: 'row-input', 'data-field': 'name', value: t.name || '', placeholder: 'Task name' })]),
+    el('td', {}, [el('input', { class: 'row-input', 'data-field': 'assigned', value: t.assigned || '', placeholder: 'Assignee' })]),
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'start', value: t.start || '' })]),
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'end', value: t.end || '' })]),
-    el('td', { class: 'col-prio' }, [el('input', { class: 'row-input', 'data-field': 'prio', value: t.prio || '', placeholder: 'Priority' })]),
-    el('td', { class: 'col-check' }, [el('input', { type: 'checkbox', 'data-field': 'done', checked: !!t.done })]),
+    el('td', { class: 'col-prio' }, [priorityCell(t)]),
+    // The Dashboard tracks five statuses; planning only cares whether a task
+    // is finished, so this checkbox is a two-state view of the same field and
+    // leaves a richer status (On Hold, Overdue) alone unless it's ticked.
+    el('td', { class: 'col-check' }, [el('input', {
+      type: 'checkbox', 'data-field': 'done', checked: t.status === 'Complete', title: `Status: ${t.status || 'Not Started'}`,
+    })]),
     el('td', { class: 'col-action no-print' }, [el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-task', 'aria-label': 'Delete task', text: '🗑' })]),
   ]);
 }
 
 function renderTasks() {
-  const state = getState();
   const tbody = document.getElementById('tasks-body');
   tbody.innerHTML = '';
-  state.tasks.forEach((t, i) => tbody.appendChild(renderTasksRow(t, i)));
+  getState().dashTasks.forEach((t, i) => tbody.appendChild(renderTasksRow(t, i)));
   applyTaskFilter();
 }
 
 function applyTaskFilter() {
   const term = taskSearchTerm.trim().toLowerCase();
-  const state = getState();
+  const tasks = getState().dashTasks;
   document.querySelectorAll('#tasks-body tr').forEach((row) => {
-    const item = findById(state.tasks, row.dataset.id);
-    const matches = !term || (item?.task || '').toLowerCase().includes(term);
+    const item = findById(tasks, row.dataset.id);
+    const matches = !term || (item?.name || '').toLowerCase().includes(term);
     row.hidden = !matches;
   });
 }
@@ -284,39 +209,47 @@ function bindTasks() {
   tbody.addEventListener('input', (e) => {
     const field = e.target.dataset.field;
     if (!field || field === 'done') return;
-    const item = findById(getState().tasks, rowIdOf(e.target));
+    const item = findById(getState().dashTasks, rowIdOf(e.target));
     item[field] = e.target.value;
-    scheduleSave();
-    if (field === 'task') applyTaskFilter();
+    commitTaskChange({ rerenderTimeline: field === 'start' || field === 'end' || field === 'name' });
+    if (field === 'name') applyTaskFilter();
   });
 
   tbody.addEventListener('change', (e) => {
-    if (e.target.dataset.field !== 'done') return;
-    const item = findById(getState().tasks, rowIdOf(e.target));
-    item.done = e.target.checked;
-    scheduleSave();
+    const field = e.target.dataset.field;
+    const item = findById(getState().dashTasks, rowIdOf(e.target));
+    if (field === 'done') {
+      // Only overwrite the status when it disagrees with the checkbox, so
+      // unticking a task that was On Hold doesn't silently reset it.
+      item.status = e.target.checked ? 'Complete' : (item.status === 'Complete' ? 'Not Started' : item.status);
+      e.target.title = `Status: ${item.status}`;
+      commitTaskChange({ rerenderTimeline: true });
+    } else if (field === 'prio') {
+      item.prio = e.target.value;
+      commitTaskChange({});
+    }
   });
 
   tbody.addEventListener('click', (e) => {
     if (!e.target.closest('[data-action="delete-task"]')) return;
     const id = rowIdOf(e.target);
     const state = getState();
-    state.tasks = state.tasks.filter((t) => t.id !== id);
-    scheduleSave();
+    state.dashTasks = state.dashTasks.filter((t) => t.id !== id);
+    commitTaskChange({});
     renderTasks();
   });
 
   makeSortable(tbody, {
     onDrop: (draggedId, targetId) => {
-      reorderById(getState().tasks, draggedId, targetId);
-      scheduleSave();
+      reorderById(getState().dashTasks, draggedId, targetId);
+      commitTaskChange({});
       renderTasks();
     },
   });
 
   document.querySelector('#page-planner [data-action="add-task"]').addEventListener('click', () => {
-    getState().tasks.push({ id: uid(), task: '', start: '', end: '', prio: '', done: false });
-    scheduleSave();
+    getState().dashTasks.push({ id: uid(), ...newTask() });
+    commitTaskChange({});
     renderTasks();
   });
 
@@ -326,7 +259,27 @@ function bindTasks() {
   });
 }
 
-// ---------- Notes (bullet list) ----------
+/**
+ * One task list feeds the Dashboard, the reports, the charts and the
+ * baselines, so an edit here has to reach all of them straight away.
+ */
+function commitChange() {
+  scheduleSave();
+  notifyProjectDataChanged('planner');
+}
+
+function commitTaskChange({ rerenderTimeline = true } = {}) {
+  if (rerenderTimeline) renderTimeline();
+  commitChange();
+}
+
+/** Re-renders the views the Planner shows of shared data. */
+export function renderPlannerShared() {
+  renderMilestones();
+  renderTimeline();
+  renderTasks();
+}
+
 
 function renderNoteItem(note) {
   return el('li', { 'data-id': note.id, class: 'notes-list__item', draggable: true }, [
@@ -380,7 +333,7 @@ function bindNotes() {
 
 export function renderPlanner() {
   renderMilestones();
-  renderGanttBody();
+  renderTimeline();
   renderTasks();
   renderNotes();
 }
@@ -388,7 +341,6 @@ export function renderPlanner() {
 export function initPlanner() {
   renderPlanner();
   bindMilestones();
-  bindGantt();
   bindTasks();
   bindNotes();
 }

@@ -11,7 +11,11 @@
 // and stamps `_rev` on the ones whose contents actually moved. The hashes
 // live in their own storage key so they never sync as noise.
 
-export const ROW_KINDS = ['milestones', 'gantt', 'tasks', 'dashTasks', 'notes', 'raid'];
+// The Planner's old `tasks` and `gantt` lists were folded into `dashTasks`.
+// Rows of those kinds may still sit in an already-synced database; they are
+// simply never read or written again, and the schema's CHECK still permits
+// them so an older client on the same account keeps working.
+export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid'];
 
 // Fields the app keeps locally that must never be pushed to the server.
 // `updatedAt` is carried as the wire `rev` column, so it must not also be

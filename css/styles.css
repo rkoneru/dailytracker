@@ -302,6 +302,10 @@ main { padding: 20px 16px 64px; }
 .page.is-active { display: block; }
 
 .card {
+  /* A grid/flex item defaults to min-content width, so a card holding a wide
+     table refused to shrink and pushed the whole page sideways on a phone
+     instead of letting .table-scroll do its job. */
+  min-width: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -702,12 +706,12 @@ li.is-drop-target { box-shadow: inset 0 2px 0 var(--color-primary); }
 
 /* Doubled class on purpose: .stat-cards sets 4 columns further down the
    file, and a single-class selector here would lose on source order. */
-.stat-cards.stat-cards--5 { grid-template-columns: repeat(5, 1fr); }
+.stat-cards.stat-cards--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 1100px) {
-  .stat-cards.stat-cards--5 { grid-template-columns: repeat(3, 1fr); }
+  .stat-cards.stat-cards--5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 700px) {
-  .stat-cards.stat-cards--5 { grid-template-columns: 1fr 1fr; }
+  .stat-cards.stat-cards--5 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
 
 .raid-tile {
@@ -958,6 +962,10 @@ body { overflow-anchor: none; }
 
 /* ---------- Dashboard Gantt ---------- */
 
+/* The chart needs room for its bars to stay readable, so on a narrow screen
+   it scrolls inside this wrapper rather than stretching the whole page. */
+.chart-scroll { overflow-x: auto; }
+
 .gantt-chart {
   min-width: 640px;
   display: flex;
@@ -1160,11 +1168,11 @@ body { overflow-anchor: none; }
 
 .stat-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 @media (max-width: 900px) {
-  .stat-cards { grid-template-columns: 1fr 1fr; }
+  .stat-cards { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
 @media (max-width: 480px) {
   .stat-cards { grid-template-columns: 1fr; }

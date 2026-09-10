@@ -44,7 +44,12 @@ function createMarketingCampaign() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 25000,
     budgetActual: 18500,
-    pending: { decisions: 2, actions: 5, changeRequests: 1 },
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Influencer contracts may slip past launch', owner: 'Priya N.', severity: 'High', likelihood: 'Medium', status: 'Open', due: '2026-09-12', action: 'Prepare organic-only fallback creative.' },
+      { id: id('r'), type: 'Issue', title: 'Tracking pixel not firing on checkout', owner: 'Jordan K.', severity: 'High', likelihood: '', status: 'In Progress', due: '2026-09-11', action: 'Dev ticket raised, fix in this sprint.' },
+      { id: id('r'), type: 'Decision', title: 'Confirm paid/organic budget split', owner: 'Priya N.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-09-15', action: 'Needs week 1 performance data first.' },
+      { id: id('r'), type: 'Dependency', title: 'Legal sign-off on influencer terms', owner: 'Legal', severity: 'High', likelihood: '', status: 'Open', due: '2026-09-10', action: 'Chased 9/8, no response yet.' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Campaign strategy & brief', assigned: 'Priya N.', start: '2026-09-01', end: '2026-09-02', status: 'Complete', prio: 'High', comments: 'Signed off by marketing lead.' },
       { id: id('d'), name: 'Creative asset design', assigned: 'Marcus T.', start: '2026-09-02', end: '2026-09-05', status: 'Complete', prio: 'High', comments: 'All variants approved.' },
@@ -96,7 +101,12 @@ function createSoftwareRelease() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 40000,
     budgetActual: 22000,
-    pending: { decisions: 1, actions: 4, changeRequests: 2 },
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Billing module may miss feature freeze', owner: 'Sam P.', severity: 'High', likelihood: 'Medium', status: 'Open', due: '2026-10-10', action: 'Cut scope to core flows if behind by 10/8.' },
+      { id: id('r'), type: 'Issue', title: 'Staging environment out of date', owner: 'Ravi M.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-10-15', action: 'Blocking DB migration testing.' },
+      { id: id('r'), type: 'Decision', title: 'Target hardware for performance profiling', owner: 'Alex R.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-10-14', action: 'Waiting on infra cost estimate.' },
+      { id: id('r'), type: 'Assumption', title: 'No breaking API changes from platform team', owner: 'Alex R.', severity: 'High', likelihood: '', status: 'Open', due: '2026-10-17', action: 'Confirm at the platform sync.' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Release scope & planning', assigned: 'Alex R.', start: '2026-10-01', end: '2026-10-02', status: 'Complete', prio: 'High', comments: 'Signed off by eng leads.' },
       { id: id('d'), name: 'Billing module — backend', assigned: 'Sam P.', start: '2026-10-02', end: '2026-10-10', status: 'In Progress', prio: 'High', comments: 'On track for feature freeze.' },
@@ -147,7 +157,11 @@ function createEventPlanning() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 18000,
     budgetActual: 6500,
-    pending: { decisions: 3, actions: 6, changeRequests: 0 },
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Final headcount may exceed venue capacity', owner: 'Devon M.', severity: 'High', likelihood: 'Medium', status: 'Open', due: '2026-11-12', action: 'Hold overflow room option until RSVPs close.' },
+      { id: id('r'), type: 'Issue', title: 'AV vendor quote still outstanding', owner: 'Devon M.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-11-08', action: 'Escalate to procurement if not in by 11/8.' },
+      { id: id('r'), type: 'Decision', title: 'Catering menu and dietary options', owner: 'Riya S.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-11-10', action: 'Needs the dietary survey results.' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Venue research & tours', assigned: 'Devon M.', start: '2026-11-01', end: '2026-11-05', status: 'Complete', prio: 'High', comments: 'Went with the lakeside conference center.' },
       { id: id('d'), name: 'Catering vendor selection', assigned: 'Riya S.', start: '2026-11-05', end: '2026-11-08', status: 'In Progress', prio: 'Medium', comments: 'Waiting on final headcount.' },
@@ -195,7 +209,10 @@ function createPersonalGoals() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 400,
     budgetActual: 150,
-    pending: { decisions: 1, actions: 2, changeRequests: 0 },
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Overtraining before race day', owner: 'Me', severity: 'Medium', likelihood: 'Medium', status: 'Open', due: '2026-09-20', action: 'Cap weekly mileage increase at 10%.' },
+      { id: id('r'), type: 'Decision', title: 'Book exam slot before or after the race', owner: 'Me', severity: 'Low', likelihood: '', status: 'Open', due: '2026-09-15', action: '' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Course modules 1-5', assigned: 'Me', start: '2026-09-01', end: '2026-09-12', status: 'Complete', prio: 'High', comments: 'Finished a day early.' },
       { id: id('d'), name: 'Course modules 6-10', assigned: 'Me', start: '2026-09-13', end: '2026-09-20', status: 'In Progress', prio: 'High', comments: 'Networking module is dense — budget extra time.' },
@@ -222,7 +239,7 @@ function createBlankProject() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 0,
     budgetActual: 0,
-    pending: { decisions: 0, actions: 0, changeRequests: 0 },
+    raid: [],
     dashTasks: [],
   };
 }
@@ -265,7 +282,13 @@ function createLLMFeatureLaunch() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 60000,
     budgetActual: 31000,
-    pending: { decisions: 2, actions: 6, changeRequests: 1 },
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Quality bar not met by GA date', owner: 'Nadia R.', severity: 'High', likelihood: 'Medium', status: 'Open', due: '2026-10-08', action: 'Weekly eval review; hold GA if under 85%.' },
+      { id: id('r'), type: 'Risk', title: 'Prompt injection via user-supplied content', owner: 'Priya S.', severity: 'Critical', likelihood: 'Medium', status: 'In Progress', due: '2026-10-08', action: 'Input sanitisation plus red-team coverage.' },
+      { id: id('r'), type: 'Issue', title: 'p95 first-token latency above 800ms target', owner: 'Tom B.', severity: 'High', likelihood: '', status: 'Open', due: '2026-09-30', action: 'Testing prompt caching and a smaller model.' },
+      { id: id('r'), type: 'Decision', title: 'Caching strategy and its cost ceiling', owner: 'Tom B.', severity: 'High', likelihood: '', status: 'Open', due: '2026-09-29', action: 'Two options costed, needs a call.' },
+      { id: id('r'), type: 'Dependency', title: 'Legal sign-off on data retention wording', owner: 'Legal', severity: 'High', likelihood: '', status: 'Open', due: '2026-09-29', action: 'Blocks widening dogfood.' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Quality bar & golden eval set', assigned: 'Nadia R.', start: '2026-09-14', end: '2026-09-18', status: 'Complete', prio: 'High', comments: '250 labelled examples, signed off by product.' },
       { id: id('d'), name: 'Automated eval harness', assigned: 'Tom B.', start: '2026-09-16', end: '2026-09-25', status: 'In Progress', prio: 'High', comments: 'Runs on every prompt change in CI.' },
@@ -318,7 +341,13 @@ function createRagAssistant() {
     dashStatus: 'AT RISK',
     budgetPlanned: 45000,
     budgetActual: 21000,
-    pending: { decisions: 3, actions: 5, changeRequests: 2 },
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Stale docs produce confidently wrong answers', owner: 'Sara K.', severity: 'Critical', likelihood: 'High', status: 'In Progress', due: '2026-10-20', action: 'Owner review of the 12% flagged pages.' },
+      { id: id('r'), type: 'Issue', title: 'Doc owners not responding to cleanup requests', owner: 'Sara K.', severity: 'High', likelihood: '', status: 'Open', due: '2026-10-20', action: 'Escalating to department heads.' },
+      { id: id('r'), type: 'Decision', title: 'Ship with 85% accuracy or delay for 90%', owner: 'Support Lead', severity: 'High', likelihood: '', status: 'Open', due: '2026-10-28', action: 'Pilot feedback should settle it.' },
+      { id: id('r'), type: 'Dependency', title: 'Confluence API access for nightly re-index', owner: 'Dev A.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-10-23', action: 'Ticket with IT raised 10/14.' },
+      { id: id('r'), type: 'Assumption', title: 'Support volume stays flat during the pilot', owner: 'Support Lead', severity: 'Low', likelihood: '', status: 'Open', due: '2026-11-06', action: '' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Source inventory & access', assigned: 'Dev A.', start: '2026-10-05', end: '2026-10-07', status: 'Complete', prio: 'High', comments: '9 sources, 4.2k pages total.' },
       { id: id('d'), name: 'Ingestion & chunking pipeline', assigned: 'Dev A.', start: '2026-10-07', end: '2026-10-14', status: 'Complete', prio: 'High', comments: 'Semantic chunking beat fixed-size.' },
@@ -371,7 +400,12 @@ function createMLModelDevelopment() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 75000,
     budgetActual: 28000,
-    pending: { decisions: 1, actions: 4, changeRequests: 0 },
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Model fails the fairness gate on tenure bands', owner: 'Ana T.', severity: 'High', likelihood: 'Medium', status: 'Open', due: '2026-11-18', action: 'Run fairness check early on the baseline.' },
+      { id: id('r'), type: 'Issue', title: 'Label leakage found in first feature set', owner: 'Iris P.', severity: 'High', likelihood: '', status: 'Closed', due: '2026-11-04', action: 'cancellation_date dropped and rerun.' },
+      { id: id('r'), type: 'Decision', title: 'Precision/recall operating point for launch', owner: 'Ben O.', severity: 'High', likelihood: '', status: 'Open', due: '2026-11-16', action: 'Needs a view from the retention team.' },
+      { id: id('r'), type: 'Assumption', title: 'Historic churn behaviour still holds post-pricing-change', owner: 'Iris P.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-11-12', action: 'Validate on the last two quarters only.' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Training dataset assembly', assigned: 'Iris P.', start: '2026-10-26', end: '2026-10-30', status: 'Complete', prio: 'High', comments: '3 years of history, 1.1M rows.' },
       { id: id('d'), name: 'Feature engineering', assigned: 'Iris P.', start: '2026-10-29', end: '2026-11-06', status: 'In Progress', prio: 'High', comments: 'Dropped 2 leaky features.' },
@@ -424,7 +458,12 @@ function createAgentAutomationPilot() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 35000,
     budgetActual: 12500,
-    pending: { decisions: 2, actions: 3, changeRequests: 1 },
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Agent sends a wrong-confident reply to a customer', owner: 'Omar D.', severity: 'Critical', likelihood: 'Low', status: 'In Progress', due: '2026-10-19', action: 'Human approval on every send during pilot.' },
+      { id: id('r'), type: 'Issue', title: 'CRM sandbox rate limits blocking eval runs', owner: 'Lena F.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-10-16', action: 'Requested a higher quota.' },
+      { id: id('r'), type: 'Decision', title: 'How to price agent tokens per ticket', owner: 'Jae W.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-10-28', action: 'Needed for the go/no-go business case.' },
+      { id: id('r'), type: 'Dependency', title: 'Support team availability for the pilot', owner: 'Support Lead', severity: 'High', likelihood: '', status: 'Open', due: '2026-10-19', action: '2 agents confirmed, needs rota change.' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Tier-1 workflow mapping', assigned: 'Omar D.', start: '2026-10-01', end: '2026-10-03', status: 'Complete', prio: 'High', comments: '6 ticket categories in scope.' },
       { id: id('d'), name: 'Helpdesk + CRM integrations', assigned: 'Lena F.', start: '2026-10-05', end: '2026-10-09', status: 'Complete', prio: 'High', comments: 'Read-only scopes for the pilot.' },
@@ -477,7 +516,13 @@ function createAIGovernance() {
     dashStatus: 'AT RISK',
     budgetPlanned: 40000,
     budgetActual: 9000,
-    pending: { decisions: 4, actions: 8, changeRequests: 1 },
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Shadow AI systems remain undiscovered', owner: 'Hannah G.', severity: 'Critical', likelihood: 'High', status: 'In Progress', due: '2026-11-13', action: 'Network scan plus a department-by-department sweep.' },
+      { id: id('r'), type: 'Issue', title: 'DPIA blocked until inventory is final', owner: 'Security', severity: 'High', likelihood: '', status: 'Open', due: '2026-11-27', action: 'Sequencing agreed; inventory is the critical path.' },
+      { id: id('r'), type: 'Decision', title: 'Which risk tier triggers mandatory external review', owner: 'Legal', severity: 'High', likelihood: '', status: 'Open', due: '2026-11-20', action: 'Draft framework circulated for comment.' },
+      { id: id('r'), type: 'Dependency', title: 'Engineering capacity for the SDLC gate change', owner: 'ML Lead', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-12-04', action: 'Needs a slot in the platform backlog.' },
+      { id: id('r'), type: 'Assumption', title: 'EU AI Act categories map cleanly to our tiers', owner: 'Legal', severity: 'High', likelihood: '', status: 'Open', due: '2026-11-20', action: 'External counsel to confirm.' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'AI system discovery', assigned: 'Hannah G.', start: '2026-11-02', end: '2026-11-13', status: 'In Progress', prio: 'High', comments: '19 found so far, 7 previously unregistered.' },
       { id: id('d'), name: 'Model inventory register', assigned: 'Hannah G.', start: '2026-11-09', end: '2026-11-16', status: 'In Progress', prio: 'High', comments: '' },

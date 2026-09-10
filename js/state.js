@@ -20,10 +20,12 @@ export function uid() {
 
 // Notes used to be stored as a single newline-delimited string; migrate any
 // data saved in that shape to the current list-of-{id,text} shape.
+// Projects created before the RAID log existed have no raid array.
 function migrateNotes(data) {
   if (typeof data.notes === 'string') {
     data.notes = data.notes.split('\n').filter((line) => line.trim() !== '').map((text) => ({ id: uid(), text }));
   }
+  if (!Array.isArray(data.raid)) data.raid = [];
   return data;
 }
 
@@ -75,6 +77,9 @@ function getStore() {
 
   const saved = readStoreFromStorage();
   if (saved) {
+    // Bring already-saved projects up to the current shape (e.g. projects
+    // created before the RAID log existed have no raid array).
+    Object.values(saved.projects || {}).forEach(migrateNotes);
     store = saved;
     return store;
   }

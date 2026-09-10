@@ -2,6 +2,7 @@ import { listFullProjects } from './state.js';
 import { parseDate, daysBetween } from './charts.js';
 import { buildMailtoUrl } from './export.js';
 import { projectTrend, portfolioTrend, portfolioPctTrend } from './history.js';
+import { raidCounts, openItemsByType, raidScore } from './raid.js';
 
 function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
@@ -154,8 +155,10 @@ function computeProject(project, periodStart, periodEnd, today) {
   const rag = ragFor(status, overdue.length);
 
   // One-line headline for the executive table: worst thing first.
+  const criticalRaid = openItemsByType(project, ['Risk', 'Issue']).filter((i) => i.severity === 'Critical');
   let headline;
-  if (overdue.length > 0) headline = `${overdue.length} overdue · ${overdue[0].name || 'untitled task'}`;
+  if (criticalRaid.length > 0) headline = `Critical ${criticalRaid[0].type.toLowerCase()} · ${criticalRaid[0].title || 'untitled'}`;
+  else if (overdue.length > 0) headline = `${overdue.length} overdue · ${overdue[0].name || 'untitled task'}`;
   else if (onHold.length > 0) headline = `${onHold.length} on hold · ${onHold[0].name || 'untitled task'}`;
   else if (upcomingMilestones.length > 0) headline = `Next: ${upcomingMilestones[0].text || 'untitled milestone'}`;
   else headline = 'No blockers';
@@ -182,7 +185,11 @@ function computeProject(project, periodStart, periodEnd, today) {
     budgetPlanned,
     budgetActual,
     burnPct,
-    pending: project.pending || { decisions: 0, actions: 0, changeRequests: 0 },
+    raid: raidCounts(project),
+    openRisks: openItemsByType(project, 'Risk'),
+    openIssues: openItemsByType(project, 'Issue'),
+    openDecisions: openItemsByType(project, 'Decision'),
+    openBlockers: openItemsByType(project, ['Dependency', 'Assumption']),
     headline,
   };
 }
@@ -204,9 +211,10 @@ function computeReport(type, anchor) {
     overdue: projects.reduce((s, p) => s + p.overdue.length, 0),
     inProgress: projects.reduce((s, p) => s + p.inProgress.length, 0),
     milestonesInPeriod: projects.reduce((s, p) => s + p.milestonesInPeriod.length, 0),
-    decisions: projects.reduce((s, p) => s + (p.pending.decisions || 0), 0),
-    actions: projects.reduce((s, p) => s + (p.pending.actions || 0), 0),
-    changeRequests: projects.reduce((s, p) => s + (p.pending.changeRequests || 0), 0),
+    decisions: projects.reduce((s, p) => s + p.openDecisions.length, 0),
+    openRisks: projects.reduce((s, p) => s + p.openRisks.length, 0),
+    openIssues: projects.reduce((s, p) => s + p.openIssues.length, 0),
+    criticalRaid: projects.reduce((s, p) => s + p.raid.critical, 0),
     red: projects.filter((p) => p.rag === 'Red').length,
     amber: projects.filter((p) => p.rag === 'Amber').length,
     green: projects.filter((p) => p.rag === 'Green').length,
@@ -325,6 +333,10 @@ function renderDaily(report, cards, summaryEl) {
       listSection('Due today', taskItems(p.dueInPeriod), 'Nothing due today.'),
       listSection('In progress', taskItems(p.inProgress), 'Nothing in progress.'),
       listSection('Blocked / on hold', taskItems(p.onHold), ''),
+      listSection('Open issues', p.openIssues.slice(0, 5).map((i) => ({
+        label: i.title || '(untitled issue)',
+        meta: `${i.severity} · ${i.owner || 'unowned'}`,
+      })), ''),
       listSection('Overdue', p.overdue.map((t) => ({ label: t.name || '(untitled task)', meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}` })), ''),
     ]));
   });
@@ -354,6 +366,10 @@ function renderWeekly(report, cards, summaryEl) {
     if (p.milestonesInPeriod.length > 0) {
       children.push(listSection('Milestones this week', p.milestonesInPeriod.map((m) => ({ label: m.text || '(untitled milestone)', meta: m.due })), ''));
     }
+    children.push(listSection('Open risks & issues', [...p.openRisks, ...p.openIssues].slice(0, 5).map((i) => ({
+      label: i.title || '(untitled)',
+      meta: `${i.type} · ${i.severity} · ${i.owner || 'unowned'}`,
+    })), ''));
     cards.appendChild(projectCard(p, children));
   });
 }
@@ -363,7 +379,7 @@ function renderSteerCo(report, cards, summaryEl) {
   summaryEl.append(
     statCard('🚦', 'blue', `${s.green}/${s.amber}/${s.red}`, 'Green / Amber / Red'),
     statCard('🎯', 'green', String(s.milestonesInPeriod), 'Milestones This Period'),
-    statCard('🗳', 'amber', String(s.decisions), 'Decisions Pending'),
+    statCard('🗳', 'amber', String(s.decisions), 'Decisions Needed'),
     statCard('💷', 'purple', `${s.burnPct}%`, 'Portfolio Budget Used'),
   );
 
@@ -384,15 +400,26 @@ function renderSteerCo(report, cards, summaryEl) {
         label: m.text || '(untitled milestone)',
         meta: `${m.due || 'no date'} · ${Math.round(((m.progress || 0) / 5) * 100)}%`,
       })), 'All milestones complete.'),
-      listSection('Decisions / actions / change requests', [
-        { label: 'Decisions pending', meta: String(p.pending.decisions || 0) },
-        { label: 'Open actions', meta: String(p.pending.actions || 0) },
-        { label: 'Change requests', meta: String(p.pending.changeRequests || 0) },
-      ], ''),
-      listSection('Key risks', [
+      listSection('Decisions needed', p.openDecisions.map((i) => ({
+        label: i.title || '(untitled decision)',
+        meta: `${i.owner || 'unowned'}${i.due ? ` · by ${i.due}` : ''}`,
+      })), 'No decisions outstanding.'),
+      listSection('Top risks', p.openRisks.slice(0, 5).map((i) => ({
+        label: i.title || '(untitled risk)',
+        meta: `score ${raidScore(i) || '—'} · ${i.severity}/${i.likelihood || '—'} · ${i.owner || 'unowned'}`,
+      })), 'No open risks logged.'),
+      listSection('Open issues', p.openIssues.slice(0, 5).map((i) => ({
+        label: i.title || '(untitled issue)',
+        meta: `${i.severity} · ${i.owner || 'unowned'}${i.due ? ` · due ${i.due}` : ''}`,
+      })), 'No open issues.'),
+      listSection('Dependencies & assumptions', p.openBlockers.slice(0, 5).map((i) => ({
+        label: i.title || '(untitled)',
+        meta: `${i.type} · ${i.owner || 'unowned'}`,
+      })), ''),
+      listSection('Delivery risks (schedule)', [
         ...p.overdue.slice(0, 5).map((t) => ({ label: t.name || '(untitled task)', meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}` })),
         ...p.onHold.map((t) => ({ label: t.name || '(untitled task)', meta: `on hold · ${t.comments || 'no note'}` })),
-      ], 'No overdue or blocked items.'),
+      ], ''),
     ]));
   });
 }
@@ -403,7 +430,7 @@ function renderExecutive(report, cards, summaryEl) {
     statCard('📁', 'blue', String(s.totalProjects), 'Projects'),
     statCard('📈', 'green', `${s.portfolioPct}%`, 'Portfolio Complete', portfolioPctTrend(s.portfolioPct), 'up'),
     statCard('💷', 'amber', `${s.burnPct}%`, `Budget Used · $${s.budgetActual.toLocaleString()} of $${s.budgetPlanned.toLocaleString()}`),
-    statCard('🚦', 'purple', String(s.red + s.amber), 'Needing Attention'),
+    statCard('⚠️', 'purple', String(s.openRisks + s.openIssues), `Open Risks & Issues${s.criticalRaid > 0 ? ` · ${s.criticalRaid} critical` : ''}`),
   );
 
   const table = el('table', { class: 'data-table exec-table' });
@@ -436,14 +463,27 @@ function renderExecutive(report, cards, summaryEl) {
     el('div', { class: 'table-scroll' }, [table]),
   ]));
 
-  const topRisks = report.projects
-    .flatMap((p) => p.overdue.map((t) => ({ ...t, project: p.name })))
-    .sort((a, b) => b.daysLate - a.daysLate)
+  const topRaid = report.projects
+    .flatMap((p) => [...p.openRisks, ...p.openIssues].map((i) => ({ ...i, project: p.name })))
+    .sort((a, b) => (raidScore(b) - raidScore(a)) || (a.severity === 'Critical' ? -1 : 1))
     .slice(0, 6);
 
   cards.appendChild(el('div', { class: 'card' }, [
-    el('div', { class: 'card__head' }, [el('h2', { text: 'Top risks across the portfolio' })]),
-    listSection('', topRisks.map((t) => ({
+    el('div', { class: 'card__head' }, [el('h2', { text: 'Top risks & issues across the portfolio' })]),
+    listSection('', topRaid.map((i) => ({
+      label: `${i.project} — ${i.title || '(untitled)'}`,
+      meta: `${i.type} · ${i.severity}${raidScore(i) ? ` · score ${raidScore(i)}` : ''} · ${i.owner || 'unowned'}`,
+    })), 'Nothing open in any RAID log.'),
+  ]));
+
+  const scheduleRisks = report.projects
+    .flatMap((p) => p.overdue.map((t) => ({ ...t, project: p.name })))
+    .sort((a, b) => b.daysLate - a.daysLate)
+    .slice(0, 5);
+
+  cards.appendChild(el('div', { class: 'card' }, [
+    el('div', { class: 'card__head' }, [el('h2', { text: 'Schedule slippage' })]),
+    listSection('', scheduleRisks.map((t) => ({
       label: `${t.project} — ${t.name || '(untitled task)'}`,
       meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}`,
     })), 'No overdue work anywhere in the portfolio.'),
@@ -473,16 +513,22 @@ function buildReportText(report) {
     });
   } else if (type === 'steerco') {
     lines.push(`${summary.totalProjects} projects · ${summary.green} green / ${summary.amber} amber / ${summary.red} red`);
-    lines.push(`Decisions pending: ${summary.decisions} · Open actions: ${summary.actions} · Change requests: ${summary.changeRequests}`);
+    lines.push(`Open risks: ${summary.openRisks} · Open issues: ${summary.openIssues} · Decisions needed: ${summary.decisions}${summary.criticalRaid > 0 ? ` · ${summary.criticalRaid} critical` : ''}`);
     lines.push('');
     projects.forEach((p) => {
       lines.push(`[${p.rag}] ${p.name} — ${p.pctComplete}% complete${trendText(projectTrend(p.id, 'pctComplete', p.pctComplete))}, milestones ${p.milestonesDone}/${p.milestoneTotal}, budget ${p.burnPct}% used`);
       if (p.upcomingMilestones.length > 0) {
         lines.push(`    Next milestone: ${p.upcomingMilestones[0].text || 'untitled'} (${p.upcomingMilestones[0].due || 'no date'})`);
       }
-      lines.push(`    Decisions ${p.pending.decisions || 0} · Actions ${p.pending.actions || 0} · CRs ${p.pending.changeRequests || 0}`);
+      lines.push(`    Risks ${p.openRisks.length} · Issues ${p.openIssues.length} · Decisions ${p.openDecisions.length}`);
+      if (p.openDecisions.length > 0) {
+        lines.push(`    Decisions needed: ${p.openDecisions.slice(0, 3).map((i) => i.title || 'untitled').join(', ')}`);
+      }
+      if (p.openRisks.length > 0) {
+        lines.push(`    Top risk: ${p.openRisks[0].title || 'untitled'} (score ${raidScore(p.openRisks[0]) || '—'})`);
+      }
       if (p.overdue.length > 0) {
-        lines.push(`    Risks: ${p.overdue.slice(0, 3).map((t) => `${t.name || 'untitled'} (${t.daysLate}d late)`).join(', ')}`);
+        lines.push(`    Schedule: ${p.overdue.slice(0, 3).map((t) => `${t.name || 'untitled'} (${t.daysLate}d late)`).join(', ')}`);
       }
       lines.push('');
     });

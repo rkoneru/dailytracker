@@ -8,6 +8,7 @@ import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON, exportBack
 import { initProjects } from './projects.js';
 import { initReports, refreshReport } from './reports.js';
 import { captureSnapshotIfDue } from './history.js';
+import { initRaid, renderRaid } from './raid.js';
 
 // ---------- Service worker ----------
 
@@ -26,6 +27,7 @@ function initTabs() {
   const tabs = [
     { btn: document.getElementById('tab-dashboard'), page: document.getElementById('page-dashboard'), title: 'Dashboard' },
     { btn: document.getElementById('tab-planner'), page: document.getElementById('page-planner'), title: 'Planner' },
+    { btn: document.getElementById('tab-raid'), page: document.getElementById('page-raid'), title: 'RAID & Issues' },
     { btn: document.getElementById('tab-reports'), page: document.getElementById('page-reports'), title: 'Reports' },
   ];
 
@@ -124,6 +126,14 @@ function refreshActiveProjectView() {
   hydrateTopLevelFields();
   renderPlanner();
   renderDashboard();
+  renderRaid();
+  refreshReport();
+}
+
+// RAID feeds the dashboard summary and every report, so a change on the
+// RAID page has to push through to both.
+function onRaidChanged() {
+  refreshDashboardDerived();
   refreshReport();
 }
 
@@ -302,6 +312,7 @@ function init() {
   initDashboard({ onProjectSwitch: refreshActiveProjectView });
   initProjects({ onProjectChange: refreshActiveProjectView });
   initReports();
+  initRaid({ onChanged: onRaidChanged });
 }
 
 if (document.readyState === 'loading') {

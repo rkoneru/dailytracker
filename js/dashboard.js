@@ -1,6 +1,7 @@
 import { getState, scheduleSave, uid, listProjectsWithProgress, switchProject } from './state.js';
 import { parseDate, daysBetween, renderPieChart, renderLegend, renderGanttChart } from './charts.js';
 import { makeSortable, reorderById } from './dragReorder.js';
+import { raidCounts, RAID_TYPES } from './raid.js';
 
 const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Complete', 'Overdue', 'On Hold'];
 const PRIORITY_OPTIONS = ['High', 'Medium', 'Low'];
@@ -132,15 +133,14 @@ function renderBudgetChart() {
   });
 }
 
-function renderPendingChart() {
-  const state = getState();
-  const container = document.getElementById('pending-chart');
+// Open RAID entries by type. Replaces the old three hand-typed "pending"
+// counters — these are counts of real, owned, dated entries you can click
+// through to on the RAID page.
+function renderRaidChart() {
+  const counts = raidCounts(getState());
+  const container = document.getElementById('raid-chart');
   container.innerHTML = '';
-  const items = [
-    { label: 'Decisions', value: state.pending.decisions || 0 },
-    { label: 'Actions', value: state.pending.actions || 0 },
-    { label: 'Change Requests', value: state.pending.changeRequests || 0 },
-  ];
+  const items = RAID_TYPES.map((type) => ({ label: type, value: counts[type] }));
   const max = Math.max(...items.map((i) => i.value), 1);
 
   items.forEach((item) => {
@@ -151,6 +151,11 @@ function renderPendingChart() {
       el('span', { class: 'bar-col__label', text: item.label }),
     ]));
   });
+
+  const critical = counts.critical;
+  document.getElementById('raid-chart-note').textContent = critical > 0
+    ? `${counts.total} open · ${critical} critical`
+    : `${counts.total} open`;
 }
 
 // ---------- Summary tables ----------
@@ -433,6 +438,7 @@ export function renderComputed() {
   renderUpcomingDeadlines();
   renderTeamWorkload();
   renderActiveProjectsList();
+  renderRaidChart();
 }
 
 // ---------- Dashboard task table ----------
@@ -570,12 +576,9 @@ function bindDashTasks() {
   });
 }
 
-function bindBudgetAndPending() {
+function bindBudget() {
   ['budgetPlanned', 'budgetActual'].forEach((field) => {
     document.querySelector(`#page-dashboard [data-field="${field}"]`).addEventListener('input', renderBudgetChart);
-  });
-  ['pending.decisions', 'pending.actions', 'pending.changeRequests'].forEach((field) => {
-    document.querySelector(`#page-dashboard [data-field="${field}"]`).addEventListener('input', renderPendingChart);
   });
 }
 
@@ -583,13 +586,13 @@ export function renderDashboard() {
   renderDashTasks();
   renderComputed();
   renderBudgetChart();
-  renderPendingChart();
+  renderRaidChart();
 }
 
 export function initDashboard({ onProjectSwitch: onSwitch } = {}) {
   renderDashboard();
   bindDashTasks();
-  bindBudgetAndPending();
+  bindBudget();
   bindActiveProjects({ onSwitch });
   bindDashTaskFilters();
 }

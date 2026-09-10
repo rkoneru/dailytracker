@@ -28,6 +28,9 @@
         <button type="button" class="nav-item" id="tab-planner" role="tab" aria-selected="false" aria-controls="page-planner">
           <span class="nav-item__icon" aria-hidden="true">📝</span> Planner
         </button>
+        <button type="button" class="nav-item" id="tab-raid" role="tab" aria-selected="false" aria-controls="page-raid">
+          <span class="nav-item__icon" aria-hidden="true">⚠️</span> RAID &amp; Issues
+        </button>
         <button type="button" class="nav-item" id="tab-reports" role="tab" aria-selected="false" aria-controls="page-reports">
           <span class="nav-item__icon" aria-hidden="true">📈</span> Reports
         </button>
@@ -299,19 +302,12 @@
             <div class="bar-chart bar-chart--h" id="budget-chart"></div>
           </div>
           <div class="card">
-            <div class="card__head"><h2>Pending Items</h2></div>
-            <div class="pending-fields">
-              <label class="field-label">Decisions
-                <input type="number" min="0" step="1" class="field-input" data-field="pending.decisions">
-              </label>
-              <label class="field-label">Actions
-                <input type="number" min="0" step="1" class="field-input" data-field="pending.actions">
-              </label>
-              <label class="field-label">Change Requests
-                <input type="number" min="0" step="1" class="field-input" data-field="pending.changeRequests">
-              </label>
+            <div class="card__head">
+              <h2>Open RAID Items</h2>
+              <span class="hint" id="raid-chart-note"></span>
             </div>
-            <div class="bar-chart bar-chart--v" id="pending-chart"></div>
+            <p class="hint">Live from the RAID log — open risks, issues, decisions, dependencies and assumptions.</p>
+            <div class="bar-chart bar-chart--v" id="raid-chart"></div>
           </div>
         </section>
 
@@ -371,6 +367,67 @@
               <table class="data-table summary-table" id="priority-summary-table"></table>
             </div>
           </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="page-raid" class="page" role="tabpanel" aria-labelledby="tab-raid">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title">
+            <span>RAID Log &amp; Issue Tracker</span>
+          </div>
+          <p class="hint report-subtitle">
+            Risks, Assumptions, Issues, Dependencies and Decisions for this project.
+            Risks are scored severity × likelihood; everything else is ranked on severity.
+            Open items feed the Dashboard and the SteerCo and Executive reports.
+          </p>
+        </header>
+
+        <section class="stat-cards stat-cards--5" id="raid-summary"></section>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Log</h2>
+            <button type="button" class="btn btn-small no-print" id="btn-add-raid">+ Add Entry</button>
+          </div>
+          <div class="filter-bar no-print">
+            <input type="search" class="field-input" id="raid-search" placeholder="Search title, owner, next step...">
+            <select class="field-input" id="raid-type-filter">
+              <option value="">All types</option>
+              <option>Risk</option>
+              <option>Issue</option>
+              <option>Decision</option>
+              <option>Dependency</option>
+              <option>Assumption</option>
+            </select>
+            <select class="field-input" id="raid-status-filter">
+              <option value="open" selected>Open only</option>
+              <option value="">All statuses</option>
+              <option value="closed">Closed only</option>
+            </select>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="raid-table">
+              <thead>
+                <tr>
+                  <th class="col-drag no-print"></th>
+                  <th class="col-raidtype">Type</th>
+                  <th>Title</th>
+                  <th class="col-assignee">Owner</th>
+                  <th class="col-sev">Severity</th>
+                  <th class="col-sev">Likelihood</th>
+                  <th class="col-score">Score</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-date">Due</th>
+                  <th>Mitigation / next step</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="raid-body"></tbody>
+            </table>
+          </div>
+          <p class="empty-hint" id="raid-empty" hidden>Nothing matches these filters.</p>
         </section>
       </div>
     </section>

@@ -37,6 +37,9 @@
         <button type="button" class="nav-item" id="btn-projects">
           <span class="nav-item__icon" aria-hidden="true">📁</span> Projects
         </button>
+        <button type="button" class="nav-item" id="tab-sync" role="tab" aria-selected="false" aria-controls="page-sync">
+          <span class="nav-item__icon" aria-hidden="true">🔄</span> Sync &amp; Team
+        </button>
         <button type="button" class="nav-item" id="btn-export-panel">
           <span class="nav-item__icon" aria-hidden="true">📤</span> Export / Share
         </button>
@@ -71,6 +74,7 @@
 
         <div class="app-header__actions">
           <span class="save-indicator" id="save-indicator" aria-live="polite">Saved</span>
+          <button type="button" class="sync-pill" id="sync-pill" aria-live="polite" hidden></button>
         </div>
       </header>
 
@@ -499,6 +503,81 @@
         <div id="report-project-cards" class="report-project-cards"></div>
       </div>
     </section>
+
+    <section id="page-sync" class="page" role="tabpanel" aria-labelledby="tab-sync">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Sync &amp; Team</span></div>
+          <p class="hint report-subtitle">
+            This app works entirely offline and keeps your projects in this browser.
+            Connecting a Supabase project adds a copy on a server you own, so the same
+            data reaches your other devices and teammates can be given access.
+          </p>
+        </header>
+
+        <div class="sync-cards">
+          <section class="card" id="sync-setup">
+            <div class="card__head"><h2>1 &middot; Connect a Supabase project</h2></div>
+            <p class="hint">
+              Create a free project at supabase.com, run <code>supabase/schema.sql</code>
+              from this repository in its SQL editor, then paste the project URL and
+              <strong>anon</strong> key from Project Settings &rarr; API. Both are stored in
+              this browser only. The anon key is meant to be public &mdash; row level
+              security is what protects your data.
+            </p>
+            <label class="field-label field-label--block" for="sync-url">
+              Project URL
+              <input type="url" class="field-input" id="sync-url" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off">
+            </label>
+            <label class="field-label field-label--block" for="sync-key">
+              Anon public key
+              <input type="password" class="field-input" id="sync-key" placeholder="eyJhbGciOi&hellip;" autocomplete="off">
+            </label>
+            <div class="sync-actions">
+              <button type="button" class="btn btn-primary" id="btn-sync-connect">Connect</button>
+              <button type="button" class="btn btn-ghost" id="btn-sync-disconnect" hidden>Disconnect</button>
+            </div>
+            <p class="sync-message" id="sync-setup-message" role="status" hidden></p>
+          </section>
+
+          <section class="card" id="sync-signin" hidden>
+            <div class="card__head"><h2>2 &middot; Sign in</h2></div>
+            <p class="hint">
+              We email you a sign-in link &mdash; there is no password to choose or store.
+              Open it on every device you want to keep in sync.
+            </p>
+            <label class="field-label field-label--block" for="sync-email">
+              Email
+              <input type="email" class="field-input" id="sync-email" placeholder="you@example.com" autocomplete="email">
+            </label>
+            <div class="sync-actions">
+              <button type="button" class="btn btn-primary" id="btn-sync-signin">Email me a link</button>
+            </div>
+            <p class="sync-message" id="sync-signin-message" role="status" hidden></p>
+          </section>
+
+          <section class="card" id="sync-account" hidden>
+            <div class="card__head"><h2>Sync status</h2></div>
+            <dl class="sync-facts">
+              <div><dt>Signed in as</dt><dd id="sync-account-email">&mdash;</dd></div>
+              <div><dt>State</dt><dd id="sync-account-state">&mdash;</dd></div>
+              <div><dt>Last synced</dt><dd id="sync-account-last">Never</dd></div>
+              <div><dt>Projects here</dt><dd id="sync-account-count">0</dd></div>
+            </dl>
+            <div class="sync-actions">
+              <button type="button" class="btn btn-primary" id="btn-sync-now">Sync now</button>
+              <button type="button" class="btn btn-ghost" id="btn-sync-signout">Sign out</button>
+            </div>
+            <p class="sync-message" id="sync-account-message" role="status" hidden></p>
+            <p class="hint">
+              Signing out leaves every project in this browser untouched &mdash; it only
+              stops them being sent anywhere.
+            </p>
+          </section>
+        </div>
+      </div>
+    </section>
+
       </main>
     </div>
   </div>

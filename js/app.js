@@ -1,6 +1,7 @@
 import {
   getState, getPath, setPath, scheduleSave, onSaveStatusChange, resetActiveProjectToTemplate,
   buildBackup, restoreBackup, markBackedUp, getLastBackupAt, dismissBackupNudge, shouldNudgeBackup,
+  listProjects, onProjectsChange,
 } from './state.js';
 import { initPlanner, renderPlanner } from './planner.js';
 import { initDashboard, renderDashboard, renderDashHeader, renderComputed as refreshDashboardDerived } from './dashboard.js';
@@ -9,6 +10,8 @@ import { initProjects } from './projects.js';
 import { initReports, refreshReport } from './reports.js';
 import { captureSnapshotIfDue } from './history.js';
 import { initRaid, renderRaid } from './raid.js';
+import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refreshSyncStatus } from './sync.js';
+import * as supabase from './supabase.js';
 
 // ---------- Service worker ----------
 
@@ -74,6 +77,7 @@ function initTabs() {
     { btn: document.getElementById('tab-planner'), page: document.getElementById('page-planner'), title: 'Planner' },
     { btn: document.getElementById('tab-raid'), page: document.getElementById('page-raid'), title: 'RAID & Issues' },
     { btn: document.getElementById('tab-reports'), page: document.getElementById('page-reports'), title: 'Reports' },
+    { btn: document.getElementById('tab-sync'), page: document.getElementById('page-sync'), title: 'Sync & Team' },
   ];
 
   tabs.forEach(({ btn, page, title }) => {
@@ -92,6 +96,7 @@ function initTabs() {
       if (page.id === 'page-dashboard') refreshDashboardDerived();
       // The report spans every project, so recompute whenever it's opened.
       if (page.id === 'page-reports') refreshReport();
+      if (page.id === 'page-sync') renderSyncPage();
     });
   });
 }
@@ -170,6 +175,135 @@ function initSaveIndicator() {
       ? "Your changes couldn't be written to this browser's storage. Download a backup and free up space."
       : '';
   });
+}
+
+// ---------- Sync & Team ----------
+
+const SYNC_PILL_LABELS = {
+  off: '', 'signed-out': 'Not signed in', syncing: 'Syncing…',
+  synced: 'Synced', offline: 'Offline', error: 'Sync failed',
+};
+
+function showSyncMessage(id, text, kind) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.classList.toggle('is-error', kind === 'error');
+  el.classList.toggle('is-success', kind === 'success');
+  el.hidden = !text;
+}
+
+function renderSyncPill(status) {
+  const pill = document.getElementById('sync-pill');
+  const label = SYNC_PILL_LABELS[status.state] || '';
+  // Nothing to show until the user has actually connected a project — this
+  // stays a local-first app for everyone who never opens the Sync page.
+  pill.hidden = status.state === 'off';
+  pill.textContent = label;
+  pill.title = status.state === 'error' ? status.message : 'Open Sync & Team';
+  ['synced', 'syncing', 'offline', 'error', 'signed-out'].forEach((state) => {
+    pill.classList.toggle(`is-${state}`, status.state === state);
+  });
+}
+
+function renderSyncPage() {
+  const status = getSyncStatus();
+  const configured = supabase.isConfigured();
+  const user = supabase.getUser();
+  const config = supabase.getConfig();
+
+  document.getElementById('sync-signin').hidden = !configured || !!user;
+  document.getElementById('sync-account').hidden = !user;
+  document.getElementById('btn-sync-disconnect').hidden = !configured;
+  document.getElementById('btn-sync-connect').textContent = configured ? 'Update connection' : 'Connect';
+
+  if (config) {
+    document.getElementById('sync-url').value = config.url;
+    // The key is already stored; showing a placeholder avoids re-displaying it
+    // while still making it obvious that one is set.
+    document.getElementById('sync-key').placeholder = 'Stored — paste a new key to replace it';
+  }
+
+  if (user) {
+    document.getElementById('sync-account-email').textContent = user.email || '—';
+    document.getElementById('sync-account-state').textContent = SYNC_PILL_LABELS[status.state] || status.state;
+    document.getElementById('sync-account-last').textContent = status.lastSyncedAt
+      ? new Date(status.lastSyncedAt).toLocaleString()
+      : 'Never';
+    document.getElementById('sync-account-count').textContent = String(listProjects().length);
+    showSyncMessage('sync-account-message', status.state === 'error' ? status.message : '', 'error');
+  }
+}
+
+function initSyncPage() {
+  document.getElementById('sync-pill').addEventListener('click', () => {
+    document.getElementById('tab-sync').click();
+  });
+
+  document.getElementById('btn-sync-connect').addEventListener('click', () => {
+    const url = document.getElementById('sync-url').value;
+    const keyField = document.getElementById('sync-key');
+    const existing = supabase.getConfig();
+    const key = keyField.value.trim() || (existing ? existing.anonKey : '');
+    try {
+      supabase.setConfig(url, key);
+      keyField.value = '';
+      showSyncMessage('sync-setup-message', 'Connected. Sign in below to start syncing.', 'success');
+      refreshSyncStatus();
+      renderSyncPage();
+    } catch (err) {
+      showSyncMessage('sync-setup-message', err.message, 'error');
+    }
+  });
+
+  document.getElementById('btn-sync-disconnect').addEventListener('click', () => {
+    if (!confirm('Disconnect from this Supabase project? Your projects stay in this browser; they just stop syncing.')) return;
+    supabase.clearConfig();
+    resetBase();
+    showSyncMessage('sync-setup-message', 'Disconnected. Everything is still here, local only.', '');
+    showSyncMessage('sync-signin-message', '', '');
+    refreshSyncStatus();
+    renderSyncPage();
+  });
+
+  document.getElementById('btn-sync-signin').addEventListener('click', async () => {
+    const email = document.getElementById('sync-email').value.trim();
+    if (!email) { showSyncMessage('sync-signin-message', 'Enter the email to send the link to.', 'error'); return; }
+    showSyncMessage('sync-signin-message', 'Sending…', '');
+    try {
+      await supabase.sendMagicLink(email, location.href.split('#')[0]);
+      showSyncMessage('sync-signin-message', `Check ${email} for a sign-in link, and open it on this device.`, 'success');
+    } catch (err) {
+      showSyncMessage('sync-signin-message', err.message, 'error');
+    }
+  });
+
+  document.getElementById('btn-sync-now').addEventListener('click', async () => {
+    showSyncMessage('sync-account-message', 'Syncing…', '');
+    const status = await syncNow();
+    showSyncMessage(
+      'sync-account-message',
+      status.state === 'error' ? status.message : 'Up to date.',
+      status.state === 'error' ? 'error' : 'success',
+    );
+    renderSyncPage();
+  });
+
+  document.getElementById('btn-sync-signout').addEventListener('click', async () => {
+    await supabase.signOut();
+    resetBase();
+    refreshSyncStatus();
+    renderSyncPage();
+  });
+
+  onSyncStatusChange((status) => {
+    renderSyncPill(status);
+    if (document.getElementById('page-sync').classList.contains('is-active')) renderSyncPage();
+  });
+
+  // Applying a pull rebuilds every project, so the open page has to re-render.
+  onProjectsChange(refreshActiveProjectView);
+
+  initSync();
 }
 
 // ---------- Full re-render (project switched, cloned, created, imported, or reset) ----------
@@ -365,6 +499,7 @@ function init() {
   initProjects({ onProjectChange: refreshActiveProjectView });
   initReports();
   initRaid({ onChanged: onRaidChanged });
+  initSyncPage();
 }
 
 if (document.readyState === 'loading') {

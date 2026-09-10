@@ -39,6 +39,9 @@ function migrateNotes(data) {
     if (t.baseEnd === undefined) t.baseEnd = '';
   });
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
+  // Projects that predate this field have unknown provenance, so they are
+  // never treated as untouched starters — 0 can't equal a real updatedAt.
+  if (data.createdAt === undefined) data.createdAt = 0;
   return data;
 }
 
@@ -51,6 +54,10 @@ function buildProjectFromTemplate(templateKey, name) {
   if (name) data.projectName = name;
   data.id = uid();
   data.updatedAt = Date.now();
+  // Equal to updatedAt means "built but never edited". Sync uses this to tell
+  // a starter project apart from real work, so a second device doesn't upload
+  // its own untouched sample project alongside the one it just pulled down.
+  data.createdAt = data.updatedAt;
   return data;
 }
 
@@ -134,19 +141,73 @@ function emitSaveStatus(status) {
   saveStatusListeners.forEach((fn) => fn(status));
 }
 
+// Sync installs itself here rather than state.js importing it, so the sync
+// modules are only ever loaded when someone actually turns sync on and this
+// file stays free of any network concern.
+let afterSaveHook = null;
+
+export function setAfterSaveHook(fn) {
+  afterSaveHook = fn;
+}
+
+function runAfterSaveHook() {
+  if (!afterSaveHook) return;
+  try {
+    afterSaveHook();
+  } catch (err) {
+    console.warn('Sync hook failed; local data is unaffected.', err);
+  }
+}
+
 export function scheduleSave() {
   emitSaveStatus('saving');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     getState().updatedAt = Date.now();
-    if (writeStore()) emitSaveStatus('saved');
+    if (writeStore()) {
+      emitSaveStatus('saved');
+      runAfterSaveHook();
+    }
   }, SAVE_DEBOUNCE_MS);
 }
 
 export function saveImmediately() {
   clearTimeout(saveTimer);
   getState().updatedAt = Date.now();
-  if (writeStore()) emitSaveStatus('saved');
+  if (writeStore()) {
+    emitSaveStatus('saved');
+    runAfterSaveHook();
+  }
+}
+
+/**
+ * Replaces every project with a merged set from sync. Used only by the sync
+ * engine, which has already reconciled local and remote — this is the point
+ * where the result lands.
+ *
+ * The active project is preserved when it survived the merge; if it was
+ * deleted on another device the most recently updated one takes over, and if
+ * nothing is left a fresh default project is created, matching what
+ * deleteProject() does.
+ */
+export function replaceAllProjects(projects) {
+  const s = getStore();
+  const previousActive = s.activeProjectId;
+
+  s.projects = {};
+  projects.forEach((p) => { s.projects[p.id] = migrateNotes(p); });
+
+  const remaining = Object.values(s.projects);
+  if (remaining.length === 0) {
+    const fresh = buildProjectFromTemplate(DEFAULT_TEMPLATE_KEY);
+    s.projects[fresh.id] = fresh;
+    s.activeProjectId = fresh.id;
+  } else if (!s.projects[previousActive]) {
+    s.activeProjectId = remaining.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0].id;
+  }
+
+  writeStore();
+  emitProjectsChanged();
 }
 
 export function getPath(obj, path) {

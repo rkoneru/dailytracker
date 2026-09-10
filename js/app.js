@@ -9,9 +9,10 @@ import {
   renderComputed as refreshDashboardDerived,
 } from './dashboard.js';
 import { onProjectDataChanged, notifyProjectDataChanged } from './taskModel.js';
+import { initNav, setActiveNode } from './nav.js';
 import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON, exportBackupJSON, readJSONFile } from './export.js';
 import { initProjects } from './projects.js';
-import { initReports, refreshReport } from './reports.js';
+import { initReports, refreshReport, setReportType } from './reports.js';
 import { captureSnapshotIfDue } from './history.js';
 import { initRaid, renderRaid } from './raid.js';
 import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refreshSyncStatus } from './sync.js';
@@ -74,35 +75,45 @@ if ('serviceWorker' in navigator) {
 
 // ---------- Tabs ----------
 
-function initTabs() {
-  const pageTitle = document.getElementById('page-title');
-  const tabs = [
-    { btn: document.getElementById('tab-dashboard'), page: document.getElementById('page-dashboard'), title: 'Dashboard' },
-    { btn: document.getElementById('tab-planner'), page: document.getElementById('page-planner'), title: 'Planner' },
-    { btn: document.getElementById('tab-raid'), page: document.getElementById('page-raid'), title: 'RAID & Issues' },
-    { btn: document.getElementById('tab-reports'), page: document.getElementById('page-reports'), title: 'Reports' },
-    { btn: document.getElementById('tab-sync'), page: document.getElementById('page-sync'), title: 'Sync & Team' },
-  ];
+const PAGE_IDS = ['page-dashboard', 'page-planner', 'page-raid', 'page-reports', 'page-sync'];
 
-  tabs.forEach(({ btn, page, title }) => {
-    btn.addEventListener('click', () => {
-      tabs.forEach(({ btn: b, page: p }) => {
-        const active = p === page;
-        b.classList.toggle('is-active', active);
-        b.setAttribute('aria-selected', String(active));
-        p.classList.toggle('is-active', active);
-      });
-      pageTitle.textContent = title;
-      document.body.classList.remove('sidebar-open');
-      // Milestones (edited on the Planner page) feed the Dashboard's
-      // Milestone Progress / Upcoming Deadlines widgets — recompute on
-      // arrival so they reflect edits made while on the other page.
-      if (page.id === 'page-dashboard') refreshDashboardDerived();
-      // The report spans every project, so recompute whenever it's opened.
-      if (page.id === 'page-reports') refreshReport();
-      if (page.id === 'page-sync') renderSyncPage();
-    });
+function showPage(pageId, title) {
+  PAGE_IDS.forEach((id) => {
+    document.getElementById(id).classList.toggle('is-active', id === pageId);
   });
+  document.getElementById('page-title').textContent = title;
+  document.body.classList.remove('sidebar-open');
+
+  // Milestones (edited on the Planner) feed the Dashboard's Milestone Progress
+  // and Upcoming Deadlines widgets — recompute on arrival so they reflect
+  // edits made while on the other page.
+  if (pageId === 'page-dashboard') refreshDashboardDerived();
+  // The report spans every project, so recompute whenever it's opened.
+  if (pageId === 'page-reports') refreshReport();
+  if (pageId === 'page-sync') renderSyncPage();
+}
+
+function initTabs() {
+  initNav({
+    onActivate: (node) => {
+      // Panel rows keep the ids their own modules already listen on
+      // (btn-projects, btn-export-panel), so the same click opens the panel
+      // without the nav needing to know anything about it.
+      if (node.panel) return;
+
+      showPage(node.page, node.title);
+      setActiveNode(node.id);
+      if (node.report) setReportType(node.report);
+      if (node.section) {
+        // The page has to be visible before it can be scrolled to.
+        requestAnimationFrame(() => {
+          document.getElementById(node.section)
+            .scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    },
+  });
+  setActiveNode('tab-dashboard');
 }
 
 // ---------- Sidebar (mobile toggle) ----------

@@ -21,29 +21,7 @@
         <span>Project Planner</span>
       </div>
 
-      <nav class="sidebar__nav" role="tablist" aria-label="Pages">
-        <button type="button" class="nav-item is-active" id="tab-dashboard" role="tab" aria-selected="true" aria-controls="page-dashboard">
-          <span class="nav-item__icon" aria-hidden="true">📊</span> Dashboard
-        </button>
-        <button type="button" class="nav-item" id="tab-planner" role="tab" aria-selected="false" aria-controls="page-planner">
-          <span class="nav-item__icon" aria-hidden="true">📝</span> Planner
-        </button>
-        <button type="button" class="nav-item" id="tab-raid" role="tab" aria-selected="false" aria-controls="page-raid">
-          <span class="nav-item__icon" aria-hidden="true">⚠️</span> RAID &amp; Issues
-        </button>
-        <button type="button" class="nav-item" id="tab-reports" role="tab" aria-selected="false" aria-controls="page-reports">
-          <span class="nav-item__icon" aria-hidden="true">📈</span> Reports
-        </button>
-        <button type="button" class="nav-item" id="btn-projects">
-          <span class="nav-item__icon" aria-hidden="true">📁</span> Projects
-        </button>
-        <button type="button" class="nav-item" id="tab-sync" role="tab" aria-selected="false" aria-controls="page-sync">
-          <span class="nav-item__icon" aria-hidden="true">🔄</span> Sync &amp; Team
-        </button>
-        <button type="button" class="nav-item" id="btn-export-panel">
-          <span class="nav-item__icon" aria-hidden="true">📤</span> Export / Share
-        </button>
-      </nav>
+      <nav class="sidebar__nav" id="sidebar-nav" aria-label="Sections"></nav>
 
       <div class="sidebar__footer">
         <button type="button" class="btn btn-primary btn-install-sidebar" id="btn-install" hidden>⬇ Install App</button>
@@ -106,7 +84,7 @@
           </div>
         </header>
 
-        <section class="card">
+        <section class="card" id="sec-milestones">
           <div class="card__head">
             <h2>Milestones</h2>
             <button type="button" class="btn btn-small no-print" data-action="add-milestone">+ Add Milestone</button>
@@ -132,7 +110,7 @@
           </label>
         </section>
 
-        <section class="card">
+        <section class="card" id="sec-ticks">
           <div class="card__head">
             <h2>Tick Timeline</h2>
             <label class="field-label tick-anchor">
@@ -155,7 +133,7 @@
           <p class="hint" id="tick-empty" hidden>Add a task below and it appears here.</p>
         </section>
 
-        <section class="card">
+        <section class="card" id="sec-timeline">
           <div class="card__head">
             <h2>Timeline</h2>
           </div>
@@ -164,7 +142,7 @@
           <p class="hint" id="planner-timeline-empty" hidden>No task has both a start and an end date yet.</p>
         </section>
 
-        <section class="card">
+        <section class="card" id="sec-tasks">
           <div class="card__head">
             <h2>Tasks</h2>
             <button type="button" class="btn btn-small no-print" data-action="add-task">+ Add Task</button>
@@ -194,7 +172,7 @@
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="sec-budget">
           <div class="card__head">
             <h2>Budget &amp; Baseline</h2>
           </div>
@@ -215,7 +193,7 @@
           </div>
         </section>
 
-        <section class="card">
+        <section class="card" id="sec-notes">
           <div class="card__head">
             <h2>Notes</h2>
             <button type="button" class="btn btn-small no-print" data-action="add-note">+ Add Note</button>

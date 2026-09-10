@@ -605,6 +605,11 @@ function renderReport() {
   return report;
 }
 
+/** Lets the sidebar jump straight to one report type. */
+export function setReportType(type) {
+  setType(type);
+}
+
 function setType(type) {
   currentType = type;
   document.querySelectorAll('.report-type-btn').forEach((btn) => {

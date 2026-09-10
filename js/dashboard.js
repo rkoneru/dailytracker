@@ -1,7 +1,7 @@
 import { getState, listProjectsWithProgress, switchProject } from './state.js';
 import { parseDate, daysBetween, renderPieChart, renderLegend, renderGanttChart } from './charts.js';
 import { raidCounts, RAID_TYPES } from './raid.js';
-import { slipDays, scheduleSummary, baselineSummaryText } from './schedule.js';
+import { slipDays, baselineSummaryText } from './schedule.js';
 import {
   STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS, durationLabel,
 } from './taskModel.js';
@@ -30,10 +30,6 @@ function el(tag, props = {}, children = []) {
 
 function findById(list, id) {
   return list.find((item) => item.id === id);
-}
-
-function rowIdOf(target) {
-  return target.closest('[data-id]')?.dataset.id;
 }
 
 // ---------- Header ----------

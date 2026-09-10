@@ -1,0 +1,15 @@
+{
+  "name": "project-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An offline-first project planning PWA. No build step — the repository is the deployable.",
+  "scripts": {
+    "start": "python3 -m http.server 8765",
+    "test": "node tests/run.js",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^9.15.0",
+    "playwright": "^1.49.0"
+  }
+}

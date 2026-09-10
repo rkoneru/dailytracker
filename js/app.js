@@ -11,6 +11,7 @@ import {
 import { onProjectDataChanged, notifyProjectDataChanged } from './taskModel.js';
 import { initNav, setActiveNode } from './nav.js';
 import { confirmAction, toast } from './dialog.js';
+import { initTrash, renderTrash } from './trash.js';
 import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON, exportBackupJSON, readJSONFile } from './export.js';
 import { initProjects } from './projects.js';
 import { initReports, refreshReport, setReportType } from './reports.js';
@@ -76,7 +77,7 @@ if ('serviceWorker' in navigator) {
 
 // ---------- Tabs ----------
 
-const PAGE_IDS = ['page-dashboard', 'page-planner', 'page-raid', 'page-reports', 'page-sync'];
+const PAGE_IDS = ['page-dashboard', 'page-planner', 'page-raid', 'page-reports', 'page-sync', 'page-trash'];
 
 function showPage(pageId, title) {
   PAGE_IDS.forEach((id) => {
@@ -92,6 +93,7 @@ function showPage(pageId, title) {
   // The report spans every project, so recompute whenever it's opened.
   if (pageId === 'page-reports') refreshReport();
   if (pageId === 'page-sync') renderSyncPage();
+  if (pageId === 'page-trash') renderTrash();
 }
 
 function initTabs() {
@@ -549,6 +551,7 @@ function init() {
   initReports();
   initRaid({ onChanged: onRaidChanged });
   initSharedDataSync();
+  initTrash({ onRestore: refreshActiveProjectView });
   initSyncPage();
 }
 

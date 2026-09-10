@@ -1,4 +1,5 @@
-import { getState, scheduleSave, uid } from './state.js';
+import { getState, scheduleSave, uid, trashRow } from './state.js';
+import { offerUndo } from './trash.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 
 export const RAID_TYPES = ['Risk', 'Issue', 'Decision', 'Dependency', 'Assumption'];
@@ -205,11 +206,11 @@ function bindTable(onChanged) {
   tbody.addEventListener('click', (e) => {
     if (!e.target.closest('[data-action="delete-raid"]')) return;
     const id = rowIdOf(e.target);
-    const state = getState();
-    state.raid = state.raid.filter((i) => i.id !== id);
+    const entry = trashRow('raid', id);
     scheduleSave();
     renderRaid();
     onChanged();
+    if (entry) offerUndo(entry);
   });
 
   makeSortable(tbody, {

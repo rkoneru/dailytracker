@@ -1,8 +1,9 @@
-import { getState, scheduleSave, uid } from './state.js';
+import { getState, scheduleSave, uid, trashRow } from './state.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 import { renderGanttChart, parseDate, daysBetween } from './charts.js';
 import { scheduleSummary, setBaseline, clearBaseline, baselineSummaryText } from './schedule.js';
 import { confirmAction, toast } from './dialog.js';
+import { offerUndo } from './trash.js';
 import {
   PRIORITY_OPTIONS, STATUS_OPTIONS, STATUS_COLORS, durationLabel, newTask,
   notifyProjectDataChanged, TICK_DAYS, tickMarker,
@@ -102,10 +103,10 @@ function bindMilestones() {
     }
     if (e.target.closest('[data-action="delete-milestone"]')) {
       const id = rowIdOf(e.target);
-      const state = getState();
-      state.milestones = state.milestones.filter((m) => m.id !== id);
+      const entry = trashRow('milestones', id);
       commitChange();
       renderMilestones();
+      if (entry) offerUndo(entry);
     }
   });
 
@@ -403,11 +404,11 @@ function bindTasks() {
   tbody.addEventListener('click', (e) => {
     if (!e.target.closest('[data-action="delete-task"]')) return;
     const id = rowIdOf(e.target);
-    const state = getState();
-    state.dashTasks = state.dashTasks.filter((t) => t.id !== id);
+    const entry = trashRow('dashTasks', id);
     commitTaskChange({});
     renderTasks();
     renderTicks();
+    if (entry) offerUndo(entry);
   });
 
   makeSortable(tbody, {
@@ -533,10 +534,10 @@ function bindNotes() {
   list.addEventListener('click', (e) => {
     if (!e.target.closest('[data-action="delete-note"]')) return;
     const id = rowIdOf(e.target);
-    const state = getState();
-    state.notes = state.notes.filter((n) => n.id !== id);
+    const entry = trashRow('notes', id);
     scheduleSave();
     renderNotes();
+    if (entry) offerUndo(entry);
   });
 
   makeSortable(list, {

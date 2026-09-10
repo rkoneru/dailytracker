@@ -63,6 +63,7 @@ export const NAV_TREE = [
     children: [
       { id: 'btn-projects', label: 'Projects', icon: '📁', panel: 'projects' },
       { id: 'tab-sync', label: 'Sync & Team', icon: '🔄', page: 'page-sync', title: 'Sync & Team' },
+      { id: 'tab-trash', label: 'Trash', icon: '🗑', page: 'page-trash', title: 'Trash', badge: 'trash-count' },
       { id: 'btn-export-panel', label: 'Export / Share', icon: '📤', panel: 'export' },
     ],
   },
@@ -139,6 +140,7 @@ function buildRow(node, level) {
   }));
   if (node.icon) row.appendChild(el('span', { class: 'nav-row__icon', 'aria-hidden': 'true', text: node.icon }));
   row.appendChild(el('span', { class: 'nav-row__label', text: node.label }));
+  if (node.badge) row.appendChild(el('span', { id: node.badge, class: 'nav-row__badge', hidden: true }));
 
   row._node = node;
   return row;

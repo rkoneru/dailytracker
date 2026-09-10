@@ -526,6 +526,39 @@
       </div>
     </section>
 
+    <section id="page-trash" class="page" role="region" aria-label="Trash">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Trash</span></div>
+          <p class="hint report-subtitle">
+            Deleted tasks, milestones, notes, RAID entries and projects wait here so a
+            mistake is recoverable. Trash is kept in this browser only &mdash; it is not
+            synced to your other devices.
+          </p>
+        </header>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Recently deleted</h2>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-empty-trash">Empty Trash</button>
+          </div>
+          <p class="hint" id="trash-empty" hidden>Nothing has been deleted. Anything you delete shows up here.</p>
+          <div class="table-scroll">
+            <table class="data-table" id="trash-table" hidden>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="col-date">Deleted</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="trash-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <section id="page-sync" class="page" role="region" aria-label="Sync and team">
       <div class="print-page">
         <header class="dash-header">

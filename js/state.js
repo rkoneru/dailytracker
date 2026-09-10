@@ -179,9 +179,148 @@ function migrateLegacyStore() {
   }
 }
 
+// ---------- Trash ----------
+//
+// Deleting used to splice the row out and that was that. Sync made an
+// irreversible delete materially worse: it propagates to every signed-in
+// device on the next push, before you have noticed.
+//
+// Deleted things move here instead of vanishing. Holding them in one
+// store-level list rather than marking rows `deletedAt` in place is
+// deliberate: every render path in the app iterates the live arrays, so this
+// way none of them need to learn to skip deleted rows, and there is no chance
+// of a forgotten filter leaking a deleted task into a report.
+//
+// Trash is local. A delete still syncs (the row leaves the collection, so the
+// merge tombstones it), and restoring re-adds it — but the trash list itself
+// is this browser's safety net, not shared state.
+
+const TRASH_LIMIT = 50;
+
+// Its own listener set rather than reusing onProjectsChange: deleting one row
+// should update the Trash page and the nav count, not force every page to
+// re-render the whole project.
+const trashListeners = new Set();
+
+export function onTrashChange(listener) {
+  trashListeners.add(listener);
+  return () => trashListeners.delete(listener);
+}
+
+function emitTrashChanged() {
+  trashListeners.forEach((fn) => fn());
+}
+
+const TRASH_LABELS = {
+  milestones: 'Milestone',
+  dashTasks: 'Task',
+  notes: 'Note',
+  raid: 'RAID entry',
+  project: 'Project',
+};
+
+function trashLabelFor(kind, row) {
+  if (kind === 'project') return row.projectName || 'Untitled project';
+  return row.name || row.text || row.title || `(untitled ${TRASH_LABELS[kind].toLowerCase()})`;
+}
+
+function pushTrash(entry) {
+  const s = getStore();
+  if (!Array.isArray(s.trash)) s.trash = [];
+  s.trash.unshift(entry);
+  // Bounded so a long session cannot grow the store without limit. Oldest go
+  // first, which is also the order someone would expect to lose them in.
+  if (s.trash.length > TRASH_LIMIT) s.trash.length = TRASH_LIMIT;
+  emitTrashChanged();
+  return entry;
+}
+
+/**
+ * Moves one row out of a project collection and into the trash.
+ * Returns the trash entry, or null when the row was already gone.
+ */
+export function trashRow(collection, id) {
+  const project = getState();
+  const list = project[collection] || [];
+  const index = list.findIndex((row) => row.id === id);
+  if (index === -1) return null;
+
+  const [row] = list.splice(index, 1);
+  const entry = pushTrash({
+    id: uid(),
+    kind: collection,
+    label: trashLabelFor(collection, row),
+    typeLabel: TRASH_LABELS[collection] || 'Item',
+    projectId: project.id,
+    projectName: project.projectName || 'Untitled project',
+    position: index,
+    deletedAt: Date.now(),
+    data: clone(row),
+  });
+  saveImmediately();
+  return entry;
+}
+
+/** Puts a trashed row or project back where it came from. */
+export function restoreFromTrash(entryId) {
+  const s = getStore();
+  const index = (s.trash || []).findIndex((e) => e.id === entryId);
+  if (index === -1) return null;
+  const [entry] = s.trash.splice(index, 1);
+
+  if (entry.kind === 'project') {
+    const project = migrateProject(clone(entry.data));
+    project.updatedAt = Date.now();
+    s.projects[project.id] = project;
+    s.activeProjectId = project.id;
+  } else {
+    const project = s.projects[entry.projectId];
+    // The project it belonged to may itself have been deleted since.
+    if (!project) return null;
+    if (!Array.isArray(project[entry.kind])) project[entry.kind] = [];
+    const list = project[entry.kind];
+    const row = clone(entry.data);
+    list.splice(Math.min(entry.position ?? list.length, list.length), 0, row);
+    project.updatedAt = Date.now();
+    s.activeProjectId = entry.projectId;
+  }
+
+  saveImmediately();
+  emitTrashChanged();
+  emitProjectsChanged();
+  return entry;
+}
+
+export function purgeTrashEntry(entryId) {
+  const s = getStore();
+  const index = (s.trash || []).findIndex((e) => e.id === entryId);
+  if (index === -1) return false;
+  s.trash.splice(index, 1);
+  saveImmediately();
+  emitTrashChanged();
+  return true;
+}
+
+export function emptyTrash() {
+  const s = getStore();
+  const count = (s.trash || []).length;
+  s.trash = [];
+  saveImmediately();
+  emitTrashChanged();
+  return count;
+}
+
+export function listTrash() {
+  return (getStore().trash || []).slice();
+}
+
+export function trashCount() {
+  return (getStore().trash || []).length;
+}
+
 function createDefaultStore() {
   const project = buildProjectFromTemplate(DEFAULT_TEMPLATE_KEY);
-  return { activeProjectId: project.id, projects: { [project.id]: project } };
+  return { activeProjectId: project.id, projects: { [project.id]: project }, trash: [] };
 }
 
 function getStore() {
@@ -192,6 +331,7 @@ function getStore() {
     // Bring already-saved projects up to the current shape (e.g. projects
     // created before the RAID log existed have no raid array).
     Object.values(saved.projects || {}).forEach(migrateProject);
+    if (!Array.isArray(saved.trash)) saved.trash = [];
     store = saved;
     return store;
   }
@@ -422,7 +562,19 @@ export function renameProject(id, name) {
 
 export function deleteProject(id) {
   const s = getStore();
-  if (!s.projects[id]) return;
+  const project = s.projects[id];
+  if (!project) return;
+
+  pushTrash({
+    id: uid(),
+    kind: 'project',
+    label: project.projectName || 'Untitled project',
+    typeLabel: 'Project',
+    projectId: id,
+    projectName: project.projectName || 'Untitled project',
+    deletedAt: Date.now(),
+    data: clone(project),
+  });
   delete s.projects[id];
 
   const remaining = Object.values(s.projects);

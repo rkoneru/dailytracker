@@ -101,9 +101,12 @@ function initTabs() {
       // without the nav needing to know anything about it.
       if (node.panel) return;
 
+      // Select the report type first, without drawing: showPage refreshes the
+      // report itself, so rendering here too would compute it twice and flash
+      // the previous type.
+      if (node.report) setReportType(node.report, { render: false });
       showPage(node.page, node.title);
       setActiveNode(node.id);
-      if (node.report) setReportType(node.report);
       if (node.section) {
         // The page has to be visible before it can be scrolled to.
         requestAnimationFrame(() => {

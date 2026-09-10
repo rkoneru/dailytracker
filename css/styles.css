@@ -165,6 +165,10 @@ button, input, textarea {
 
 /* ---------- Top header (within content area) ---------- */
 
+/* Sections the sidebar jumps to must clear the sticky header, or the heading
+   you navigated to ends up hidden underneath it. */
+.page .card[id] { scroll-margin-top: 72px; }
+
 .app-header {
   position: sticky;
   top: 0;
@@ -1706,7 +1710,9 @@ body { overflow-anchor: none; }
   letter-spacing: 0.06em;
   color: var(--color-text-muted);
 }
-.nav-row--group:first-child { margin-top: 0; }
+/* Only the very first group sits flush; each .nav-row is the first child of
+   its own <li>, so :first-child would match every one of them. */
+.nav-tree > li:first-child > .nav-row--group { margin-top: 0; }
 
 /* Leaves are a page's own sections, so they read as secondary. */
 .nav-row--leaf { min-height: 32px; font-weight: 500; font-size: 13px; color: var(--color-text-muted); }

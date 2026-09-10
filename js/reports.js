@@ -605,18 +605,28 @@ function renderReport() {
   return report;
 }
 
-/** Lets the sidebar jump straight to one report type. */
-export function setReportType(type) {
-  setType(type);
+/**
+ * Lets the sidebar jump straight to one report type.
+ * `render: false` selects the type without drawing, for callers that are
+ * about to render anyway — otherwise opening a report from the nav computes
+ * the whole thing twice and flashes the previous type on the way.
+ */
+export function setReportType(type, { render = true } = {}) {
+  if (render) setType(type);
+  else selectType(type);
 }
 
-function setType(type) {
+function selectType(type) {
   currentType = type;
   document.querySelectorAll('.report-type-btn').forEach((btn) => {
     const active = btn.dataset.report === type;
     btn.classList.toggle('is-active', active);
     btn.setAttribute('aria-pressed', String(active));
   });
+}
+
+function setType(type) {
+  selectType(type);
   renderReport();
 }
 

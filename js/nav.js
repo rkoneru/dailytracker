@@ -124,7 +124,13 @@ function buildRow(node, level) {
     tabindex: '-1',
     'aria-level': String(level),
   });
-  if (hasChildren) row.setAttribute('aria-expanded', String(expanded.has(node.id)));
+  if (hasChildren) {
+    row.setAttribute('aria-expanded', String(expanded.has(node.id)));
+    // The child list is a sibling in the DOM, not a descendant, so the
+    // treeitem has to claim it explicitly — otherwise aria-expanded refers to
+    // nothing and assistive tech sees a flat list of items.
+    row.setAttribute('aria-owns', `${node.id}-group`);
+  }
 
   row.appendChild(el('span', {
     class: `nav-twisty${hasChildren ? '' : ' is-empty'}`,
@@ -145,7 +151,7 @@ function buildBranch(node, level, list) {
   list.push(row);
 
   if (node.children && node.children.length) {
-    const group = el('ul', { role: 'group', class: 'nav-group' });
+    const group = el('ul', { id: `${node.id}-group`, role: 'group', class: 'nav-group' });
     group.hidden = !expanded.has(node.id);
     node.children.forEach((child) => group.appendChild(buildBranch(child, level + 1, list)));
     li.appendChild(group);
@@ -168,9 +174,17 @@ function visibleRows() {
   return rows.filter((row) => row.offsetParent !== null || !row.closest('[hidden]'));
 }
 
+/**
+ * Exactly one row is tabbable at a time. Whoever holds focus keeps it — an
+ * expand or collapse mid-keyboard-navigation must not hand the tab stop back
+ * to the active row and lose the user's place.
+ */
 function refreshTabStops() {
   const visible = visibleRows();
-  const current = visible.find((row) => row.classList.contains('is-active')) || visible[0];
+  const focused = rows.find((row) => row === document.activeElement);
+  const current = focused
+    || visible.find((row) => row.classList.contains('is-active'))
+    || visible[0];
   rows.forEach((row) => row.setAttribute('tabindex', row === current ? '0' : '-1'));
 }
 
@@ -270,7 +284,14 @@ function onKeyDown(e) {
     case 'Home': focusRow(visible[0]); break;
     case 'End': focusRow(visible[visible.length - 1]); break;
     case 'Enter':
-    case ' ': activate(row); break;
+    case ' ':
+      // Panel rows are opened by listeners their own modules put on these ids,
+      // which only fire on click. These used to be <button>s, where the
+      // browser synthesised that click for us; a div[role=treeitem] doesn't,
+      // so without this the panels are mouse-only.
+      if (row._node.panel) row.click();
+      else activate(row);
+      break;
     default: return;
   }
   e.preventDefault();

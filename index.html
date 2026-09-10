@@ -314,8 +314,13 @@
         <section class="card">
           <div class="card__head">
             <h2>Tasks</h2>
-            <button type="button" class="btn btn-small no-print" data-action="add-dash-task">+ Add Task</button>
+            <div class="baseline-actions no-print">
+              <button type="button" class="btn btn-small" id="btn-set-baseline">📌 Set Baseline</button>
+              <button type="button" class="btn btn-small" id="btn-clear-baseline">Clear</button>
+              <button type="button" class="btn btn-small" data-action="add-dash-task">+ Add Task</button>
+            </div>
           </div>
+          <p class="hint" id="baseline-note"></p>
           <div class="filter-bar no-print">
             <input type="search" class="field-input" id="dash-task-search" placeholder="Search tasks, assignee, comments...">
             <select class="field-input" id="dash-status-filter">
@@ -343,6 +348,7 @@
                   <th class="col-date">Start</th>
                   <th class="col-date">End</th>
                   <th class="col-days">Days</th>
+                  <th class="col-slip">Slip</th>
                   <th class="col-status">Status</th>
                   <th class="col-prio">Priority</th>
                   <th class="col-comments">Comments</th>

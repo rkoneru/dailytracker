@@ -89,8 +89,10 @@ export function renderGanttChart(container, items, today = null) {
     return;
   }
 
-  const minStart = new Date(Math.min(...valid.map((i) => i.start.getTime())));
-  const maxEnd = new Date(Math.max(...valid.map((i) => i.end.getTime())));
+  const allStarts = valid.flatMap((i) => [i.start.getTime(), ...(i.baseStart ? [i.baseStart.getTime()] : [])]);
+  const allEnds = valid.flatMap((i) => [i.end.getTime(), ...(i.baseEnd ? [i.baseEnd.getTime()] : [])]);
+  const minStart = new Date(Math.min(...allStarts));
+  const maxEnd = new Date(Math.max(...allEnds));
   const totalDays = Math.max(1, daysBetween(minStart, maxEnd));
   // Small padding so bars starting/ending at the edges aren't flush with the track.
   const padDays = Math.max(1, Math.round(totalDays * 0.03));
@@ -101,6 +103,14 @@ export function renderGanttChart(container, items, today = null) {
   const fmt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   ruler.innerHTML = `<span>${fmt(minStart)}</span><span>${fmt(maxEnd)}</span>`;
   container.appendChild(ruler);
+
+  if (valid.some((i) => i.baseStart && i.baseEnd)) {
+    const legend = document.createElement('div');
+    legend.className = 'gantt-chart__legend';
+    legend.innerHTML = '<span class="gantt-legend__actual"></span>Actual'
+      + '<span class="gantt-legend__baseline"></span>Baseline';
+    container.appendChild(legend);
+  }
 
   let todayLeftPct = null;
   if (today) {
@@ -134,6 +144,19 @@ export function renderGanttChart(container, items, today = null) {
     bar.style.background = item.color;
     bar.textContent = item.durationLabel || '';
     bar.title = `${item.label}: ${item.start.toLocaleDateString()} – ${item.end.toLocaleDateString()}`;
+
+    // Baseline sits as a thin bar under the actual one, so a slipped task
+    // reads as "was here, now here" at a glance.
+    if (item.baseStart && item.baseEnd) {
+      const baseOffset = daysBetween(minStart, item.baseStart) + padDays;
+      const baseDuration = Math.max(1, daysBetween(item.baseStart, item.baseEnd) + 1);
+      const baseBar = document.createElement('div');
+      baseBar.className = 'gantt-chart__baseline';
+      baseBar.style.left = `${(baseOffset / spanDays) * 100}%`;
+      baseBar.style.width = `${(baseDuration / spanDays) * 100}%`;
+      baseBar.title = `Baseline: ${item.baseStart.toLocaleDateString()} – ${item.baseEnd.toLocaleDateString()}`;
+      track.appendChild(baseBar);
+    }
 
     track.appendChild(bar);
     if (todayLeftPct !== null) {

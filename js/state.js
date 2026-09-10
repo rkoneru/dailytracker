@@ -26,6 +26,14 @@ function migrateNotes(data) {
     data.notes = data.notes.split('\n').filter((line) => line.trim() !== '').map((text) => ({ id: uid(), text }));
   }
   if (!Array.isArray(data.raid)) data.raid = [];
+  // Schedule baselines: left empty rather than seeded from current dates,
+  // so an un-baselined project reads as "no baseline" instead of pretending
+  // every task is perfectly on plan.
+  (data.dashTasks || []).forEach((t) => {
+    if (t.baseStart === undefined) t.baseStart = '';
+    if (t.baseEnd === undefined) t.baseEnd = '';
+  });
+  if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   return data;
 }
 

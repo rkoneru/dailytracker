@@ -3,6 +3,7 @@ import { parseDate, daysBetween } from './charts.js';
 import { buildMailtoUrl } from './export.js';
 import { projectTrend, portfolioTrend, portfolioPctTrend } from './history.js';
 import { raidCounts, openItemsByType, raidScore } from './raid.js';
+import { scheduleSummary } from './schedule.js';
 
 function el(tag, props = {}, children = []) {
   const node = document.createElement(tag);
@@ -186,6 +187,7 @@ function computeProject(project, periodStart, periodEnd, today) {
     budgetActual,
     burnPct,
     raid: raidCounts(project),
+    schedule: scheduleSummary(project),
     openRisks: openItemsByType(project, 'Risk'),
     openIssues: openItemsByType(project, 'Issue'),
     openDecisions: openItemsByType(project, 'Decision'),
@@ -215,6 +217,8 @@ function computeReport(type, anchor) {
     openRisks: projects.reduce((s, p) => s + p.openRisks.length, 0),
     openIssues: projects.reduce((s, p) => s + p.openIssues.length, 0),
     criticalRaid: projects.reduce((s, p) => s + p.raid.critical, 0),
+    slippedTasks: projects.reduce((s, p) => s + p.schedule.slipped.length, 0),
+    worstSlip: projects.reduce((m, p) => Math.max(m, p.schedule.maxSlip), 0),
     red: projects.filter((p) => p.rag === 'Red').length,
     amber: projects.filter((p) => p.rag === 'Amber').length,
     green: projects.filter((p) => p.rag === 'Green').length,
@@ -378,7 +382,7 @@ function renderSteerCo(report, cards, summaryEl) {
   const s = report.summary;
   summaryEl.append(
     statCard('🚦', 'blue', `${s.green}/${s.amber}/${s.red}`, 'Green / Amber / Red'),
-    statCard('🎯', 'green', String(s.milestonesInPeriod), 'Milestones This Period'),
+    statCard('📉', 'green', s.worstSlip > 0 ? `+${s.worstSlip}d` : 'On plan', `Worst Slip · ${s.slippedTasks} task${s.slippedTasks === 1 ? '' : 's'}`),
     statCard('🗳', 'amber', String(s.decisions), 'Decisions Needed'),
     statCard('💷', 'purple', `${s.burnPct}%`, 'Portfolio Budget Used'),
   );
@@ -394,6 +398,9 @@ function renderSteerCo(report, cards, summaryEl) {
         statBox(`${p.milestonesDone}/${p.milestoneTotal}`, 'Milestones done', projectTrend(p.id, 'milestonesDone', p.milestonesDone), 'up'),
         statBox(String(p.completedInPeriod.length), 'Delivered this period'),
         statBox(`${p.burnPct}%`, `Budget used · ${varianceLabel}`, projectTrend(p.id, 'budgetActual', p.budgetActual), null),
+        statBox(p.schedule.baselined ? (p.schedule.maxSlip > 0 ? `+${p.schedule.maxSlip}d` : 'On plan') : '—',
+          p.schedule.baselined ? `Worst slip · ${p.schedule.slipped.length} task${p.schedule.slipped.length === 1 ? '' : 's'}` : 'No baseline set',
+          projectTrend(p.id, 'maxSlip', p.schedule.maxSlip), 'down'),
         statBox(p.dueDate || '—', 'Target date'),
       ]),
       listSection('Milestone outlook', p.upcomingMilestones.map((m) => ({
@@ -416,6 +423,10 @@ function renderSteerCo(report, cards, summaryEl) {
         label: i.title || '(untitled)',
         meta: `${i.type} · ${i.owner || 'unowned'}`,
       })), ''),
+      listSection('Schedule variance vs baseline', p.schedule.slipped.slice(0, 5).map((t) => ({
+        label: t.name || '(untitled task)',
+        meta: `+${t.slip}d · planned ${t.baseEnd} → now ${t.end}`,
+      })), p.schedule.baselined ? 'Every task is on or ahead of its baseline.' : 'No baseline set for this project.'),
       listSection('Delivery risks (schedule)', [
         ...p.overdue.slice(0, 5).map((t) => ({ label: t.name || '(untitled task)', meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}` })),
         ...p.onHold.map((t) => ({ label: t.name || '(untitled task)', meta: `on hold · ${t.comments || 'no note'}` })),
@@ -440,6 +451,7 @@ function renderExecutive(report, cards, summaryEl) {
       el('th', { class: 'exec-table__rag', text: 'RAG' }),
       el('th', { class: 'exec-table__num', text: 'Complete' }),
       el('th', { class: 'exec-table__num', text: 'Target' }),
+      el('th', { class: 'exec-table__num', text: 'Slip' }),
       el('th', { class: 'exec-table__num', text: 'Budget' }),
       el('th', { text: 'Headline' }),
     ]),
@@ -452,6 +464,11 @@ function renderExecutive(report, cards, summaryEl) {
       el('td', { class: 'exec-table__rag' }, [ragBadge(p.rag)]),
       el('td', { class: 'exec-table__num', text: `${p.pctComplete}%` }),
       el('td', { class: 'exec-table__num', text: p.dueDate || '—' }),
+      el('td', { class: 'exec-table__num' }, [
+        p.schedule.baselined
+          ? el('span', { class: `slip-chip ${p.schedule.maxSlip > 0 ? 'slip--late' : 'slip--onplan'}`, text: p.schedule.maxSlip > 0 ? `+${p.schedule.maxSlip}d` : 'On plan' })
+          : el('span', { text: '—' }),
+      ]),
       el('td', { class: 'exec-table__num', text: `${p.burnPct}%` }),
       el('td', { text: p.headline }),
     ]));
@@ -508,7 +525,7 @@ function buildReportText(report) {
     lines.push(`RAG: ${summary.green} green, ${summary.amber} amber, ${summary.red} red`);
     lines.push('');
     projects.forEach((p) => {
-      lines.push(`[${p.rag}] ${p.name} — ${p.pctComplete}% complete${trendText(projectTrend(p.id, 'pctComplete', p.pctComplete))}, budget ${p.burnPct}% used${p.dueDate ? `, target ${p.dueDate}` : ''}`);
+      lines.push(`[${p.rag}] ${p.name} — ${p.pctComplete}% complete${trendText(projectTrend(p.id, 'pctComplete', p.pctComplete))}, budget ${p.burnPct}% used${p.dueDate ? `, target ${p.dueDate}` : ''}${p.schedule.maxSlip > 0 ? `, +${p.schedule.maxSlip}d slip` : ''}`);
       lines.push(`    ${p.headline}`);
     });
   } else if (type === 'steerco') {
@@ -521,6 +538,9 @@ function buildReportText(report) {
         lines.push(`    Next milestone: ${p.upcomingMilestones[0].text || 'untitled'} (${p.upcomingMilestones[0].due || 'no date'})`);
       }
       lines.push(`    Risks ${p.openRisks.length} · Issues ${p.openIssues.length} · Decisions ${p.openDecisions.length}`);
+      if (p.schedule.baselined && p.schedule.slipped.length > 0) {
+        lines.push(`    Schedule: ${p.schedule.slipped.length} slipped vs baseline, worst +${p.schedule.maxSlip}d (${p.schedule.slipped[0].name || 'untitled'})`);
+      }
       if (p.openDecisions.length > 0) {
         lines.push(`    Decisions needed: ${p.openDecisions.slice(0, 3).map((i) => i.title || 'untitled').join(', ')}`);
       }

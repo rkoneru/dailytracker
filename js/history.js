@@ -1,5 +1,6 @@
 import { listFullProjects } from './state.js';
 import { parseDate } from './charts.js';
+import { scheduleSummary } from './schedule.js';
 
 // Weekly snapshots of a handful of numbers per project, kept in their own
 // localStorage key so history never bloats the main project store. A
@@ -73,6 +74,8 @@ function metricsFor(project, today) {
     milestonesDone: milestones.filter((m) => (m.progress || 0) >= 5).length,
     budgetPlanned: project.budgetPlanned || 0,
     budgetActual: project.budgetActual || 0,
+    maxSlip: scheduleSummary(project).maxSlip,
+    slippedTasks: scheduleSummary(project).slipped.length,
   };
 }
 

@@ -36,8 +36,8 @@ const AI_TEMPLATES = ['llm-feature', 'rag-assistant', 'ml-model', 'ai-agent', 'a
     const ganttRows = await page.locator('#dash-gantt .gantt-chart__row').count();
     const deadlines = await page.locator('#upcoming-deadlines li').count();
     const team = await page.locator('#team-workload-list li').count();
-    const kanban = (await page.locator('.kanban-summary__col-count').allTextContents()).join('/');
-    console.log(`[${key}] "${name}" · ${pct} complete · ${dashRows} tasks · gantt ${ganttRows} rows · ${deadlines} deadlines · ${team} people · kanban ${kanban}`);
+    const kpis = (await page.locator('#page-dashboard .kpi__value').allTextContents()).join('/');
+    console.log(`[${key}] "${name}" · ${pct} complete · ${dashRows} tasks · gantt ${ganttRows} rows · ${deadlines} deadlines · ${team} people · kpis ${kpis}`);
   }
 
   // Reports should roll all of them up

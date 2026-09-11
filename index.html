@@ -212,8 +212,8 @@
           </div>
           <div class="dash-header__meta">
             <div class="readonly-fact">
-              <span class="readonly-fact__label">Date</span>
-              <span class="readonly-fact__value" id="dash-date-value">—</span>
+              <span class="readonly-fact__label">Status date</span>
+              <span class="readonly-fact__value" id="dash-date-value">&mdash;</span>
             </div>
             <div class="stat-pill">
               <span class="stat-pill__value" id="dash-pct-complete">0%</span>
@@ -222,136 +222,111 @@
           </div>
         </header>
 
-        <section class="stat-cards">
-          <div class="stat-card">
-            <div class="stat-card__icon stat-card__icon--blue" aria-hidden="true">📁</div>
-            <div class="stat-card__body">
-              <span class="stat-card__value" id="stat-active-projects">0</span>
-              <span class="stat-card__label">Active Projects</span>
-            </div>
+        <!-- The four numbers worth interrupting someone for. Each answers a
+             question a PM actually asks, and each carries a tone, so the row
+             reads as a state rather than as four decorated numbers. -->
+        <section class="kpi-row" aria-label="At a glance">
+          <div class="kpi" id="kpi-progress">
+            <span class="kpi__label">Progress</span>
+            <span class="kpi__value" id="kpi-progress-value">0%</span>
+            <span class="kpi__sub" id="kpi-progress-sub">No tasks yet</span>
           </div>
-          <div class="stat-card">
-            <div class="stat-card__icon stat-card__icon--green" aria-hidden="true">✅</div>
-            <div class="stat-card__body">
-              <span class="stat-card__value" id="stat-tasks-completed">0</span>
-              <span class="stat-card__label">Tasks Completed</span>
-              <span class="stat-card__sub" id="stat-tasks-completed-sub"></span>
-            </div>
+          <div class="kpi" id="kpi-overdue">
+            <span class="kpi__label">Overdue</span>
+            <span class="kpi__value" id="kpi-overdue-value">0</span>
+            <span class="kpi__sub" id="kpi-overdue-sub">Nothing past its end date</span>
           </div>
-          <div class="stat-card">
-            <div class="stat-card__icon stat-card__icon--amber" aria-hidden="true">⏳</div>
-            <div class="stat-card__body">
-              <span class="stat-card__value" id="stat-pending-tasks">0</span>
-              <span class="stat-card__label">Pending Tasks</span>
-            </div>
+          <div class="kpi" id="kpi-slip">
+            <span class="kpi__label">Worst slip</span>
+            <span class="kpi__value" id="kpi-slip-value">&mdash;</span>
+            <span class="kpi__sub" id="kpi-slip-sub">No baseline set</span>
           </div>
-          <div class="stat-card">
-            <div class="stat-card__icon stat-card__icon--purple" aria-hidden="true">👥</div>
-            <div class="stat-card__body">
-              <span class="stat-card__value" id="stat-team-workload">0%</span>
-              <span class="stat-card__label">Team Workload</span>
-              <span class="stat-card__sub" id="stat-team-workload-sub">Average completion</span>
-            </div>
+          <div class="kpi" id="kpi-raid">
+            <span class="kpi__label">Open RAID</span>
+            <span class="kpi__value" id="kpi-raid-value">0</span>
+            <span class="kpi__sub" id="kpi-raid-sub">Nothing open</span>
           </div>
         </section>
 
-        <section class="chart-grid chart-grid--3">
-          <div class="card">
-            <div class="card__head"><h2>Milestone Progress</h2></div>
-            <div class="mini-progress">
-              <span class="mini-progress__pct" id="milestone-progress-pct">0%</span>
-              <div class="bar-row__track"><div class="bar-row__fill" id="milestone-progress-bar" style="background:var(--color-primary)"></div></div>
-            </div>
-            <ul class="mini-stat-list" id="milestone-progress-breakdown"></ul>
-          </div>
-
-          <div class="card">
-            <div class="card__head"><h2>Kanban Summary</h2></div>
-            <div class="kanban-summary" id="kanban-summary"></div>
-            <p class="kanban-summary__total">
-              <span id="kanban-total-tasks">0</span> total tasks · <span id="kanban-completion-rate">0%</span> complete
-            </p>
-          </div>
-
-          <div class="card">
-            <div class="card__head"><h2>Weekly Workload</h2></div>
-            <p class="hint">Scheduled task-days for the next 7 days.</p>
-            <div class="bar-chart bar-chart--v bar-chart--week" id="weekly-workload-chart"></div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card__head"><h2>Task Timeline</h2></div>
-          <p class="hint">The red line marks today.</p>
-          <div class="table-scroll">
-            <div class="chart-scroll"><div class="gantt-chart" id="dash-gantt"></div></div>
-          </div>
-        </section>
-
-        <section class="chart-grid">
-          <div class="card">
-            <div class="card__head"><h2>Task Status</h2></div>
-            <div class="chart-with-legend">
-              <div class="pie-holder" id="status-pie"></div>
-              <ul class="legend" id="status-legend"></ul>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card__head"><h2>Task Priority</h2></div>
-            <div class="chart-with-legend">
-              <div class="pie-holder" id="priority-pie"></div>
-              <ul class="legend" id="priority-legend"></ul>
-            </div>
-          </div>
-        </section>
-
-        <section class="chart-grid chart-grid--3">
+        <!-- What needs attention, before anything else on the page. -->
+        <div class="dash-row dash-row--2">
           <div class="card">
             <div class="card__head"><h2>Upcoming Deadlines</h2></div>
             <ul class="deadline-list" id="upcoming-deadlines"></ul>
-          </div>
-          <div class="card">
-            <div class="card__head"><h2>Team Workload</h2></div>
-            <ul class="team-list" id="team-workload-list"></ul>
-          </div>
-          <div class="card">
-            <div class="card__head">
-              <h2>Active Projects</h2>
-              <button type="button" class="btn btn-small no-print" id="btn-view-all-projects">View All</button>
-            </div>
-            <ul class="active-projects-list" id="active-projects-list"></ul>
-          </div>
-        </section>
-
-        <section class="chart-grid">
-          <div class="card">
-            <div class="card__head"><h2>Budget</h2></div>
-            <div class="budget-fields">
-              <div class="readonly-fact">
-                <span class="readonly-fact__label">Planned</span>
-                <span class="readonly-fact__value" id="dash-budget-planned">—</span>
-              </div>
-              <div class="readonly-fact">
-                <span class="readonly-fact__label">Actual</span>
-                <span class="readonly-fact__value" id="dash-budget-actual">—</span>
-              </div>
-            </div>
-            <div class="bar-chart bar-chart--h" id="budget-chart"></div>
           </div>
           <div class="card">
             <div class="card__head">
               <h2>Open RAID Items</h2>
               <span class="hint" id="raid-chart-note"></span>
             </div>
-            <p class="hint">Live from the RAID log — open risks, issues, decisions, dependencies and assumptions.</p>
             <div class="bar-chart bar-chart--v" id="raid-chart"></div>
           </div>
+        </div>
+
+        <section class="card card--feature">
+          <div class="card__head"><h2>Task Timeline</h2></div>
+          <p class="hint">The red line marks today. Dashed bars show the baseline where one is set.</p>
+          <div class="chart-scroll"><div class="gantt-chart" id="dash-gantt"></div></div>
         </section>
 
-        <section class="card">
+        <!-- One representation of each breakdown. Status used to appear three
+             times on this page (pie, Kanban buckets, summary table) and
+             priority twice; the duplicates are gone. -->
+        <div class="dash-row dash-row--3">
+          <div class="card">
+            <div class="card__head"><h2>Milestones</h2></div>
+            <div class="mini-progress">
+              <span class="mini-progress__pct" id="milestone-progress-pct">0%</span>
+              <div class="bar-row__track"><div class="bar-row__fill" id="milestone-progress-bar" style="background:var(--color-primary)"></div></div>
+            </div>
+            <ul class="mini-stat-list" id="milestone-progress-breakdown"></ul>
+          </div>
+          <div class="card">
+            <div class="card__head"><h2>Task Status</h2></div>
+            <div class="pie-row">
+              <div class="pie-holder" id="status-pie"></div>
+              <ul class="legend" id="status-legend"></ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__head"><h2>Task Priority</h2></div>
+            <div class="pie-row">
+              <div class="pie-holder" id="priority-pie"></div>
+              <ul class="legend" id="priority-legend"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-row dash-row--3">
+          <div class="card">
+            <div class="card__head"><h2>Team Workload</h2></div>
+            <ul class="team-list" id="team-workload-list"></ul>
+          </div>
+          <div class="card">
+            <div class="card__head"><h2>Weekly Workload</h2></div>
+            <p class="hint">Scheduled task-days for the next 7 days.</p>
+            <div class="bar-chart bar-chart--v bar-chart--week" id="weekly-workload-chart"></div>
+          </div>
+          <div class="card">
+            <div class="card__head"><h2>Budget</h2></div>
+            <div class="budget-fields">
+              <div class="readonly-fact">
+                <span class="readonly-fact__label">Planned</span>
+                <span class="readonly-fact__value" id="dash-budget-planned">&mdash;</span>
+              </div>
+              <div class="readonly-fact">
+                <span class="readonly-fact__label">Actual</span>
+                <span class="readonly-fact__value" id="dash-budget-actual">&mdash;</span>
+              </div>
+            </div>
+            <div class="bar-chart bar-chart--h" id="budget-chart"></div>
+          </div>
+        </div>
+
+        <section class="card card--feature">
           <div class="card__head">
             <h2>Tasks</h2>
-            <button type="button" class="btn btn-small no-print" id="btn-edit-in-planner">✎ Edit in Planner</button>
+            <button type="button" class="btn btn-small no-print" id="btn-edit-in-planner">&#9998; Edit in Planner</button>
           </div>
           <p class="hint no-print">This page is a read-only view. Edit tasks on the Planner.</p>
           <p class="hint" id="baseline-note"></p>
@@ -392,19 +367,14 @@
           </div>
         </section>
 
-        <section class="chart-grid">
-          <div class="card">
-            <div class="card__head"><h2>Status Summary</h2></div>
-            <div class="table-scroll">
-              <table class="data-table summary-table" id="status-summary-table"></table>
-            </div>
+        <!-- Cross-project context sits last: it is the only thing here that
+             is not about the project you are looking at. -->
+        <section class="card card--quiet">
+          <div class="card__head">
+            <h2>Other projects</h2>
+            <button type="button" class="btn btn-small no-print" id="btn-view-all-projects">View All</button>
           </div>
-          <div class="card">
-            <div class="card__head"><h2>Priority Summary</h2></div>
-            <div class="table-scroll">
-              <table class="data-table summary-table" id="priority-summary-table"></table>
-            </div>
-          </div>
+          <ul class="active-projects-list" id="active-projects-list"></ul>
         </section>
       </div>
     </section>

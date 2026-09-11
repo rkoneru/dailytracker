@@ -1877,3 +1877,99 @@ body { overflow-anchor: none; }
 @media (max-width: 620px) {
   .team-invite-row { grid-template-columns: 1fr; }
 }
+
+/* ---------- Dashboard layout ---------- */
+
+/* align-items: start is the fix for most of the dead space the old layout
+   had: grid items stretch to the tallest sibling by default, so a short
+   Milestones card was padded out to match a tall Deadlines list next to it. */
+.dash-row {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+.dash-row--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dash-row--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+@media (max-width: 1000px) {
+  .dash-row--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .dash-row--2, .dash-row--3 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Border, fill and shadow say "separate object", so spending them evenly on
+   fourteen cards flattened the hierarchy. Three weights now: the two surfaces
+   you actually work in, the ordinary cards, and the cross-project footnote. */
+.card--feature {
+  margin-bottom: 16px;
+  border-color: var(--color-border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 12px 28px -18px rgba(15, 23, 42, .35);
+}
+.card--quiet {
+  background: transparent;
+  box-shadow: none;
+  border-style: dashed;
+}
+
+/* ---------- KPI row ---------- */
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .kpi-row { grid-template-columns: minmax(0, 1fr); } }
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  /* A left stripe carries the state, so the tile itself stays quiet and the
+     row can be scanned by colour without four saturated blocks shouting. */
+  border-left: 4px solid var(--color-border);
+}
+
+.kpi__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+.kpi__value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.kpi__sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpi.is-good { border-left-color: #16a34a; }
+.kpi.is-warn { border-left-color: #d97706; }
+.kpi.is-bad  { border-left-color: #dc2626; }
+.kpi.is-idle { border-left-color: var(--color-border); }
+.kpi.is-bad .kpi__value  { color: #b91c1c; }
+.kpi.is-warn .kpi__value { color: #b45309; }
+
+/* Pie and legend side by side reads in half the height of stacked. */
+.pie-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pie-row .legend { flex: 1; min-width: 140px; }
+
+/* The RAID and weekly bars sit in a fixed 160px well that was mostly empty at
+   the small counts a single project produces. */
+#raid-chart.bar-chart--v { height: 110px; padding-top: 12px; }
+#weekly-workload-chart.bar-chart--week { height: 120px; padding-top: 12px; }

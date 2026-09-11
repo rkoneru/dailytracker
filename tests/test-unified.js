@@ -96,10 +96,9 @@ const eq = (n, got, want) => {
 
   console.log('\n--- % complete stays consistent across pages ---');
   const stats = await page.evaluate(() => {
-    const cards = [...document.querySelectorAll('#page-dashboard .stat-card')].map(c => c.textContent.replace(/\s+/g, ' ').trim());
-    return cards;
+    return [...document.querySelectorAll('#page-dashboard .kpi')].map(c => c.textContent.replace(/\s+/g, ' ').trim());
   });
-  console.log('   stat cards:', stats.join(' | '));
+  console.log('   KPI tiles:', stats.join(' | '));
 
   console.log('\n--- reload persists the unified list ---');
   await page.reload({ waitUntil: 'networkidle' });

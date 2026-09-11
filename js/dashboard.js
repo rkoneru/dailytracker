@@ -1,7 +1,7 @@
 import { getState, listProjectsWithProgress, switchProject } from './state.js';
 import { parseDate, daysBetween, renderPieChart, renderLegend, renderGanttChart } from './charts.js';
 import { raidCounts, RAID_TYPES } from './raid.js';
-import { slipDays, baselineSummaryText } from './schedule.js';
+import { slipDays, scheduleSummary, baselineSummaryText } from './schedule.js';
 import {
   STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS, durationLabel,
 } from './taskModel.js';
@@ -147,35 +147,6 @@ function renderBaselineNote() {
 
 // ---------- Summary tables ----------
 
-function renderSummaryTable(tableEl, options, counterField) {
-  const state = getState();
-  const total = state.dashTasks.length;
-  tableEl.innerHTML = '';
-
-  const thead = el('tr', {}, [el('th', { text: 'Value' }), el('th', { text: 'Count' }), el('th', { text: '%' })]);
-  tableEl.appendChild(el('thead', {}, [thead]));
-
-  const tbody = el('tbody');
-  options.forEach((opt) => {
-    const count = state.dashTasks.filter((t) => t[counterField] === opt).length;
-    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-    tbody.appendChild(el('tr', {}, [el('td', { text: opt }), el('td', { text: String(count) }), el('td', { text: `${pct}%` })]));
-  });
-  tableEl.appendChild(tbody);
-
-  const tfoot = el('tr', {}, [
-    el('td', { class: 'total-row', text: 'Total' }),
-    el('td', { class: 'total-row', text: String(total) }),
-    el('td', { class: 'total-row', text: '100%' }),
-  ]);
-  tableEl.appendChild(el('tfoot', {}, [tfoot]));
-}
-
-function renderSummaries() {
-  renderSummaryTable(document.getElementById('status-summary-table'), STATUS_OPTIONS, 'status');
-  renderSummaryTable(document.getElementById('priority-summary-table'), PRIORITY_OPTIONS, 'prio');
-}
-
 // ---------- Team workload (shared by the stat card and the Team Workload list) ----------
 
 function computeTeamWorkload() {
@@ -202,19 +173,63 @@ function initials(name) {
 
 // ---------- Stat cards ----------
 
-function renderStatCards() {
+/**
+ * The four numbers at the top. These replaced "Active Projects / Tasks
+ * Completed / Pending Tasks / Team Workload", which between them answered no
+ * question anyone opens a dashboard to ask — "1 active project" on a
+ * single-project view being the clearest example.
+ *
+ * Each tile carries a tone, so the row reads as a state at a glance rather
+ * than as four decorated numbers.
+ */
+function renderKpis() {
   const state = getState();
-  const total = state.dashTasks.length;
-  const complete = state.dashTasks.filter((t) => t.status === 'Complete').length;
-  const pending = total - complete;
+  const tasks = state.dashTasks;
+  const total = tasks.length;
+  const complete = tasks.filter((t) => t.status === 'Complete').length;
   const pct = total > 0 ? Math.round((complete / total) * 100) : 0;
-  const { avgPct } = computeTeamWorkload();
 
-  document.getElementById('stat-active-projects').textContent = String(listProjectsWithProgress().length);
-  document.getElementById('stat-tasks-completed').textContent = String(complete);
-  document.getElementById('stat-tasks-completed-sub').textContent = total > 0 ? `${pct}% of ${total} tasks` : 'No tasks yet';
-  document.getElementById('stat-pending-tasks').textContent = String(pending);
-  document.getElementById('stat-team-workload').textContent = `${avgPct}%`;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const overdue = tasks.filter((t) => {
+    if (t.status === 'Complete') return false;
+    const end = parseDate(t.end);
+    return end && end < today;
+  });
+
+  const schedule = scheduleSummary(state);
+  const raid = raidCounts(state);
+
+  const setTile = (id, value, sub, tone) => {
+    document.getElementById(`${id}-value`).textContent = value;
+    document.getElementById(`${id}-sub`).textContent = sub;
+    const tile = document.getElementById(id);
+    ['is-good', 'is-warn', 'is-bad', 'is-idle'].forEach((cls) => tile.classList.remove(cls));
+    tile.classList.add(tone);
+  };
+
+  setTile('kpi-progress', `${pct}%`,
+    total > 0 ? `${complete} of ${total} tasks done` : 'No tasks yet',
+    total === 0 ? 'is-idle' : 'is-good');
+
+  setTile('kpi-overdue', String(overdue.length),
+    overdue.length === 0
+      ? 'Nothing past its end date'
+      : overdue.slice(0, 2).map((t) => t.name || 'Untitled').join(', '),
+    overdue.length === 0 ? 'is-good' : 'is-bad');
+
+  if (!schedule.baselined) {
+    setTile('kpi-slip', '—', 'No baseline set', 'is-idle');
+  } else if (schedule.slipped.length === 0) {
+    setTile('kpi-slip', 'On plan', 'Nothing has slipped', 'is-good');
+  } else {
+    setTile('kpi-slip', `+${schedule.maxSlip}d`,
+      `${schedule.slipped.length} task${schedule.slipped.length === 1 ? '' : 's'} behind baseline`, 'is-warn');
+  }
+
+  setTile('kpi-raid', String(raid.total),
+    raid.total === 0 ? 'Nothing open' : raid.critical > 0 ? `${raid.critical} critical` : 'None critical',
+    raid.total === 0 ? 'is-good' : raid.critical > 0 ? 'is-bad' : 'is-warn');
 }
 
 // ---------- Milestone (sprint) progress ----------
@@ -241,33 +256,6 @@ function renderMilestoneProgress() {
 }
 
 // ---------- Kanban summary ----------
-
-const KANBAN_COLUMNS = [
-  { label: 'To Do', statuses: ['Not Started'] },
-  { label: 'In Progress', statuses: ['In Progress'] },
-  { label: 'Review', statuses: ['On Hold', 'Overdue'] },
-  { label: 'Done', statuses: ['Complete'] },
-];
-
-function renderKanbanSummary() {
-  const state = getState();
-  const total = state.dashTasks.length;
-  const container = document.getElementById('kanban-summary');
-  container.innerHTML = '';
-
-  KANBAN_COLUMNS.forEach((col) => {
-    const count = state.dashTasks.filter((t) => col.statuses.includes(t.status)).length;
-    container.appendChild(el('div', { class: 'kanban-summary__col' }, [
-      el('span', { class: 'kanban-summary__col-count', text: String(count) }),
-      el('span', { class: 'kanban-summary__col-label', text: col.label }),
-    ]));
-  });
-
-  const complete = state.dashTasks.filter((t) => t.status === 'Complete').length;
-  const pct = total > 0 ? Math.round((complete / total) * 100) : 0;
-  document.getElementById('kanban-total-tasks').textContent = String(total);
-  document.getElementById('kanban-completion-rate').textContent = `${pct}%`;
-}
 
 // ---------- Weekly workload ----------
 
@@ -382,8 +370,16 @@ function renderActiveProjectsList() {
   const list = document.getElementById('active-projects-list');
   list.innerHTML = '';
 
-  listProjectsWithProgress().forEach((p) => {
-    const item = el('li', { class: p.isActive ? 'is-current' : '' }, [
+  // The card is headed "Other projects", so the one you are looking at does
+  // not belong in it — it was the whole rest of the page.
+  const others = listProjectsWithProgress().filter((p) => !p.isActive);
+  if (others.length === 0) {
+    list.appendChild(el('p', { class: 'empty-hint', text: 'This is your only project.' }));
+    return;
+  }
+
+  others.forEach((p) => {
+    const item = el('li', {}, [
       el('div', { class: 'active-projects-list__info' }, [
         el('span', { class: 'active-projects-list__name', text: p.name }),
         el('span', { class: 'active-projects-list__meta', text: p.dueDate ? `Due ${p.dueDate}` : 'No due date' }),
@@ -391,14 +387,12 @@ function renderActiveProjectsList() {
       ]),
       el('span', { class: 'active-projects-list__pct', text: `${p.pctComplete}%` }),
     ]);
-    if (!p.isActive) {
-      item.addEventListener('click', () => {
-        switchProject(p.id);
-        const label = document.getElementById('active-project-label');
-        if (label) label.textContent = p.name;
-        onProjectSwitch();
-      });
-    }
+    item.addEventListener('click', () => {
+      switchProject(p.id);
+      const label = document.getElementById('active-project-label');
+      if (label) label.textContent = p.name;
+      onProjectSwitch();
+    });
     list.appendChild(item);
   });
 }
@@ -417,10 +411,8 @@ export function renderComputed() {
   renderDashHeader();
   renderDashGantt();
   renderPies();
-  renderSummaries();
-  renderStatCards();
+  renderKpis();
   renderMilestoneProgress();
-  renderKanbanSummary();
   renderWeeklyWorkload();
   renderUpcomingDeadlines();
   renderTeamWorkload();

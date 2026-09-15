@@ -21,7 +21,20 @@
         <span>Project Planner</span>
       </div>
 
+      <!-- Who is looking. Filters the nav below to the pages that role uses;
+           the toggle inside the panel puts everything back. -->
+      <div class="role-picker">
+        <label class="role-picker__label" for="role-select">I'm working as</label>
+        <select class="field-input role-picker__select" id="role-select"></select>
+        <p class="role-picker__blurb" id="role-blurb"></p>
+        <label class="role-picker__toggle">
+          <input type="checkbox" id="role-show-all">
+          <span>Show every page</span>
+        </label>
+      </div>
+
       <nav class="sidebar__nav" id="sidebar-nav" aria-label="Sections"></nav>
+      <p class="nav-filter-note" id="nav-filter-note" hidden></p>
 
       <div class="sidebar__footer">
         <button type="button" class="btn btn-primary btn-install-sidebar" id="btn-install" hidden>⬇ Install App</button>
@@ -89,6 +102,10 @@
             <h2>Milestones</h2>
             <button type="button" class="btn btn-small no-print" data-action="add-milestone">+ Add Milestone</button>
           </div>
+          <p class="hint no-print">
+            A date you are steering to. Point one at a deliverable when it marks that deliverable
+            landing, and the Dashboard will list it once rather than twice.
+          </p>
           <div class="table-scroll">
             <table class="data-table" id="milestones-table">
               <thead>
@@ -98,6 +115,7 @@
                   <th>Milestone</th>
                   <th class="col-progress">Progress</th>
                   <th class="col-date">Due</th>
+                  <th class="col-deliverable">Delivers</th>
                   <th class="col-check">Done</th>
                   <th class="col-action no-print"></th>
                 </tr>
@@ -273,7 +291,7 @@
             <ul class="legend-key" id="tasks-legend"></ul>
           </section>
           <section class="card card--quiet">
-            <div class="card__head"><h2>Quick notes</h2></div>
+            <div class="card__head"><h2>What to look at first</h2></div>
             <p class="hint" id="tasks-quick-note"></p>
           </section>
         </div>
@@ -393,73 +411,86 @@
       </div>
     </section>
 
-    <!-- The PMP side of a services engagement. Every table on this page is a
-         register built by js/register.js from js/registerDefs.js, so the
-         markup here is the page frame and nothing else. -->
-    <section id="page-delivery" class="page" role="region" aria-label="Delivery">
+    <!-- What was agreed and what has changed since. The engagement lead's
+         page: everything on it is commercial. -->
+    <section id="page-scope" class="page" role="region" aria-label="Scope and contract">
       <div class="print-page">
         <header class="dash-header">
-          <div class="dash-header__title">
-            <span>Delivery</span>
-          </div>
+          <div class="dash-header__title"><span>Scope &amp; Contract</span></div>
           <p class="hint report-subtitle">
-            Who is doing the work, what the client receives, and what has to be agreed along the way.
-            The Planner holds the schedule; this holds the engagement around it.
+            What was agreed, what the client receives, and what has changed since.
+            The Planner holds the schedule; this holds the agreement it is measured against.
           </p>
         </header>
 
-        <section class="kpi-row" aria-label="Delivery health">
-          <div class="kpi" id="del-count-roster">
-            <span class="kpi__label">Team</span>
-            <span class="kpi__value">0</span>
+        <section class="kpi-row" aria-label="Scope health">
+          <div class="kpi" id="scope-count-deliverables">
+            <span class="kpi__label">Deliverables accepted</span>
+            <span class="kpi__value">0/0</span>
             <span class="kpi__sub">&mdash;</span>
           </div>
-          <div class="kpi" id="del-count-deliverables">
-            <span class="kpi__label">Deliverables</span>
-            <span class="kpi__value">0</span>
-            <span class="kpi__sub">&mdash;</span>
-          </div>
-          <div class="kpi" id="del-count-dependencies">
-            <span class="kpi__label">Dependencies at risk</span>
-            <span class="kpi__value">0</span>
-            <span class="kpi__sub">&mdash;</span>
-          </div>
-          <div class="kpi" id="del-count-changes">
-            <span class="kpi__label">Changes pending</span>
+          <div class="kpi" id="scope-count-changes">
+            <span class="kpi__label">Changes awaiting a decision</span>
             <span class="kpi__value">0</span>
             <span class="kpi__sub">&mdash;</span>
           </div>
         </section>
 
         <section class="card" id="sec-charter">
-          <div class="card__head"><h2>Project Charter</h2></div>
+          <div class="card__head"><h2>Charter</h2></div>
           <p class="hint">
             The agreement everything else is measured against. Assumptions and open risks are tracked
-            as items on the RAID log rather than restated here.
+            as items on Risks &amp; Issues rather than restated here.
           </p>
           <div class="charter-grid" id="charter-fields"></div>
         </section>
 
-        <div id="delivery-registers"></div>
+        <div id="scope-registers"></div>
       </div>
     </section>
 
-    <!-- The ITIL side: what happens to the thing once it is live. -->
-    <section id="page-service" class="page" role="region" aria-label="Service management">
+    <!-- Who is on it, who decides, and who needs telling. Also the lead's. -->
+    <section id="page-people" class="page" role="region" aria-label="People and stakeholders">
       <div class="print-page">
         <header class="dash-header">
-          <div class="dash-header__title">
-            <span>Service Management</span>
-          </div>
+          <div class="dash-header__title"><span>People &amp; Stakeholders</span></div>
           <p class="hint report-subtitle">
-            What the service promises, whether it is fit to hand over, and how it is changed,
-            released and improved once it is running.
+            The roster is the one list of names in the app &mdash; every owner field elsewhere offers it.
+            Accounts and who may edit what are on Sync &amp; Team.
+          </p>
+        </header>
+
+        <section class="kpi-row" aria-label="Team health">
+          <div class="kpi" id="people-count-roster">
+            <span class="kpi__label">On the team</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="people-count-raci">
+            <span class="kpi__label">Activities with an owner</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+        </section>
+
+        <div id="people-registers"></div>
+      </div>
+    </section>
+
+    <!-- Running the thing once it is live: developers, testers, service managers. -->
+    <section id="page-service" class="page" role="region" aria-label="Service and support">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Service &amp; Support</span></div>
+          <p class="hint report-subtitle">
+            What the service promises, whether it is fit to hand over, and how it is
+            released, changed and supported once it is running.
           </p>
         </header>
 
         <section class="kpi-row" aria-label="Service health">
           <div class="kpi" id="svc-count-sla">
-            <span class="kpi__label">SLA breaches</span>
+            <span class="kpi__label">Service levels breached</span>
             <span class="kpi__value">0</span>
             <span class="kpi__sub">&mdash;</span>
           </div>
@@ -474,7 +505,7 @@
             <span class="kpi__sub">&mdash;</span>
           </div>
           <div class="kpi" id="svc-count-kedb">
-            <span class="kpi__label">Known errors</span>
+            <span class="kpi__label">Known issues open</span>
             <span class="kpi__value">0</span>
             <span class="kpi__sub">&mdash;</span>
           </div>
@@ -484,17 +515,46 @@
       </div>
     </section>
 
-    <section id="page-raid" class="page" role="region" aria-label="RAID and issues">
+    <!-- What should be different next time. Everyone's page. -->
+    <section id="page-improve" class="page" role="region" aria-label="Improvement and lessons">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Improvement &amp; Lessons</span></div>
+          <p class="hint report-subtitle">
+            Two registers, one question. Improvements look forward and lessons look back &mdash;
+            they sit together so the same thought is not written into both.
+          </p>
+        </header>
+
+        <section class="kpi-row" aria-label="Improvement health">
+          <div class="kpi" id="improve-count-open">
+            <span class="kpi__label">Improvements underway</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="improve-count-lessons">
+            <span class="kpi__label">Lessons captured</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+        </section>
+
+        <div id="improve-registers"></div>
+      </div>
+    </section>
+
+    <section id="page-raid" class="page" role="region" aria-label="Risks issues and dependencies">
       <div class="print-page">
         <header class="dash-header">
           <div class="dash-header__title">
-            <span>RAID Log &amp; Issue Tracker</span>
+            <span>Risks, Issues &amp; Dependencies</span>
           </div>
           <p class="hint report-subtitle">
-            Risks, Assumptions, Issues, Dependencies and Decisions for this project.
-            Risks are scored severity × likelihood; everything else is ranked on severity.
-            Open items feed the Dashboard and the SteerCo and Executive reports.
-            Dependencies have their own register on the Delivery page, where direction and party can be recorded.
+            Everything that is in the way, in one place. The RAID log holds risks, issues,
+            decisions and assumptions &mdash; risks scored severity × likelihood, the rest ranked
+            on severity. Dependencies are below it, because what you are waiting on someone
+            else for is the other half of the same question. Open items feed the Dashboard
+            and the SteerCo and Executive reports.
           </p>
         </header>
 
@@ -512,7 +572,6 @@
               <option>Risk</option>
               <option>Issue</option>
               <option>Decision</option>
-              <option>Dependency</option>
               <option>Assumption</option>
             </select>
             <select class="field-input" id="raid-status-filter">
@@ -543,6 +602,8 @@
           </div>
           <p class="empty-hint" id="raid-empty" hidden>Nothing matches these filters.</p>
         </section>
+
+        <div id="blocker-registers"></div>
       </div>
     </section>
 
@@ -688,7 +749,12 @@
           </section>
 
           <section class="card" id="sync-team" hidden>
-            <div class="card__head"><h2>People on this project</h2></div>
+            <div class="card__head"><h2>Accounts &amp; Access</h2></div>
+            <p class="hint">
+              Who can sign in and what they may change. Who is <em>on</em> the engagement &mdash;
+              their project role, organisation and allocation &mdash; is the Team Roster on
+              People &amp; Stakeholders. This list is accounts; that one is people.
+            </p>
             <p class="hint" id="team-role-note"></p>
             <table class="data-table" id="team-table">
               <thead>

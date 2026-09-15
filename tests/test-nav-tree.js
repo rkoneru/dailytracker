@@ -23,10 +23,12 @@ const eq = (n, got, want) => {
   console.log('\n--- structure ---');
   eq('one tree', await page.locator('[role="tree"]').count(), 1);
   eq('every row is a treeitem', await page.locator('.nav-row').count(), await page.locator('[role="treeitem"]').count());
-  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 8);
+  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 12);
+  // The default role is the engagement lead, who sees all of it.
   eq('groups open, pages closed at first run', await visibleLabels(),
-     ['Workspace', 'Dashboard', 'Tasks', 'Planner', 'RAID & Issues',
-      'Engagement', 'Delivery', 'Service Management',
+     ['My Work', 'Dashboard', 'Tasks', 'Plan',
+      'Delivery', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons',
+      'Engagement', 'Scope & Contract', 'People & Stakeholders',
       'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Trash', 'Export / Share']);
   eq('aria-level is set', await page.getAttribute('#tab-dashboard', 'aria-level'), '2');
   eq('leaf level is deeper', await page.getAttribute('#nav-ticks', 'aria-level'), '3');
@@ -42,14 +44,14 @@ const eq = (n, got, want) => {
   console.log('\n--- clicking a page navigates and marks it current ---');
   await page.click('#tab-raid .nav-row__label');
   await page.waitForTimeout(300);
-  eq('navigated to RAID', await page.textContent('#page-title'), 'RAID & Issues');
+  eq('navigated to RAID', await page.textContent('#page-title'), 'Risks, Issues & Dependencies');
   eq('row marked current', await page.getAttribute('#tab-raid', 'aria-current'), 'page');
   eq('only one current row', await page.locator('.nav-row.is-active').count(), 1);
 
   console.log('\n--- a section leaf opens its page and scrolls there ---');
   await page.click('#nav-budget');
   await page.waitForTimeout(700);
-  eq('landed on the Planner', await page.textContent('#page-title'), 'Planner');
+  eq('landed on the Plan', await page.textContent('#page-title'), 'Plan');
   eq('budget section is in view', await page.evaluate(() => {
     const r = document.getElementById('sec-budget').getBoundingClientRect();
     return r.top > -200 && r.top < window.innerHeight;
@@ -82,7 +84,7 @@ const eq = (n, got, want) => {
   await page.waitForTimeout(300);
 
   console.log('\n--- keyboard: WAI-ARIA tree pattern ---');
-  await page.focus('#group-workspace');
+  await page.focus('#group-work');
   const focused = () => page.evaluate(() => document.activeElement.id);
   await page.keyboard.press('ArrowDown');
   eq('ArrowDown moves to first child', await focused(), 'tab-dashboard');
@@ -102,7 +104,7 @@ const eq = (n, got, want) => {
   await page.keyboard.press('End');
   eq('End goes to the last visible row', await focused(), 'btn-export-panel');
   await page.keyboard.press('Home');
-  eq('Home goes to the first', await focused(), 'group-workspace');
+  eq('Home goes to the first', await focused(), 'group-work');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(300);
@@ -161,7 +163,7 @@ const eq = (n, got, want) => {
   // 2. Every group heading gets its separation, not just the first.
   const groupMargins = await page.$$eval('.nav-row--group',
     els => els.map(e => getComputedStyle(e).marginTop));
-  eq('only the first group sits flush', groupMargins, ['0px', '10px', '10px', '10px']);
+  eq('only the first group sits flush', groupMargins, ['0px', '10px', '10px', '10px', '10px']);
 
   // 3. A jumped-to section must clear the sticky header.
   // The Planner subtree may be collapsed at this point, so open it first.
@@ -192,7 +194,7 @@ const eq = (n, got, want) => {
 
   // 6. Pages are regions now, not orphaned tabpanels.
   eq('no stale tabpanel roles', await page.locator('[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 9);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 11);
 
   // 7. Opening a report from the nav renders it once, not twice.
   await page.click('#tab-dashboard'); await page.waitForTimeout(300);

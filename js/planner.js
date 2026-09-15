@@ -6,6 +6,7 @@ import { confirmAction, toast } from './dialog.js';
 import { offerUndo } from './trash.js';
 import { notifyProjectDataChanged, TICK_DAYS, tickMarker } from './taskModel.js';
 import { el } from './dom.js';
+import { refFor } from './register.js';
 
 function findById(list, id) {
   return list.find((item) => item.id === id);
@@ -22,6 +23,27 @@ function dragHandleCell() {
 }
 
 // ---------- Milestones ----------
+
+/**
+ * A milestone and a deliverable are close cousins — a date you steer to, and
+ * the thing that lands on it — so the same name was being typed into both
+ * lists. Linking them keeps each list doing its own job and lets the Dashboard
+ * show the pair once instead of twice.
+ */
+function deliverableSelect(milestone) {
+  const select = el('select', {
+    class: 'row-select', 'data-field': 'deliverableId', 'aria-label': 'Deliverable this milestone marks',
+  });
+  select.appendChild(el('option', { value: '', text: '—', selected: !milestone.deliverableId }));
+  (getState().deliverables || []).forEach((d, i) => {
+    select.appendChild(el('option', {
+      value: d.id,
+      text: `${refFor('D', i)} ${d.name || '(untitled)'}`,
+      selected: d.id === milestone.deliverableId,
+    }));
+  });
+  return select;
+}
 
 function renderMilestones() {
   const state = getState();
@@ -45,6 +67,7 @@ function renderMilestones() {
       el('td', {}, [el('input', { class: 'row-input', 'data-field': 'text', value: m.text || '', placeholder: 'Milestone name' })]),
       el('td', { class: 'col-progress' }, [segments]),
       el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'due', value: m.due || '' })]),
+      el('td', { class: 'col-deliverable' }, [deliverableSelect(m)]),
       el('td', { class: 'col-check' }, [el('input', { type: 'checkbox', 'data-field': 'done', checked: !!m.done })]),
       el('td', { class: 'col-action no-print' }, [el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-milestone', 'aria-label': 'Delete milestone', text: '🗑' })]),
     ]);
@@ -65,10 +88,12 @@ function bindMilestones() {
   });
 
   tbody.addEventListener('change', (e) => {
-    if (e.target.dataset.field !== 'done') return;
+    const field = e.target.dataset.field;
+    if (field !== 'done' && field !== 'deliverableId') return;
     const item = findById(getState().milestones, rowIdOf(e.target));
     if (!item) return;
-    item.done = e.target.checked;
+    if (field === 'done') item.done = e.target.checked;
+    else item.deliverableId = e.target.value;
     commitChange();
   });
 

@@ -176,6 +176,11 @@ function migrateProject(data) {
     if (!Array.isArray(t.cells)) t.cells = [];
     if (t.tickType !== 'diamond') t.tickType = 'check';
   });
+  // A milestone can name the deliverable it marks, so the Dashboard shows the
+  // pair once. Empty means "this milestone is just a date".
+  (data.milestones || []).forEach((m) => {
+    if (m.deliverableId === undefined) m.deliverableId = '';
+  });
   migrateRegisters(data);
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are

@@ -2,11 +2,13 @@ import { getState, scheduleSave, uid, trashRow } from './state.js';
 import { offerUndo } from './trash.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 import { el } from './dom.js';
+import { mountRegisters, renderAll } from './register.js';
+import { BLOCKER_REGISTERS } from './registerDefs.js';
 
-// Dependencies used to be a RAID type. They now have a register of their own on
-// the Delivery page that records direction, party and needed-by — things a RAID
-// row has nowhere to put — so tracking them in both places would be two answers
-// to one question. Existing RAID dependencies are carried across on load.
+// Dependencies used to be a RAID type. They now have a register of their own,
+// directly below this log, recording direction, party and needed-by — things a
+// RAID row has nowhere to put. Tracking them in both places would be two
+// answers to one question, so existing RAID dependencies move across on load.
 export const RAID_TYPES = ['Risk', 'Issue', 'Decision', 'Assumption'];
 export const RAID_STATUSES = ['Open', 'In Progress', 'Escalated', 'Closed'];
 export const SEVERITIES = ['Critical', 'High', 'Medium', 'Low'];
@@ -152,6 +154,7 @@ function renderSummary() {
 }
 
 export function renderRaid() {
+  renderAll(BLOCKER_REGISTERS);
   const state = getState();
   const tbody = document.getElementById('raid-body');
   tbody.innerHTML = '';
@@ -264,4 +267,9 @@ export function initRaid({ onChanged } = {}) {
   renderRaid();
   bindTable(notify);
   bindControls(notify);
+  // Dependencies sit under the RAID log rather than on a commercial page:
+  // "what is in our way" is one question, and a dependency is the half of the
+  // answer that belongs to someone else. They were a RAID type until the
+  // register gave them direction, party and needed-by.
+  mountRegisters('blocker-registers', BLOCKER_REGISTERS, () => notify());
 }

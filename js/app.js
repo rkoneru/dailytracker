@@ -23,8 +23,10 @@ import { initProjects } from './projects.js';
 import { initReports, refreshReport, setReportType } from './reports.js';
 import { captureSnapshotIfDue } from './history.js';
 import { initRaid, renderRaid } from './raid.js';
-import { initDelivery, renderDelivery } from './delivery.js';
+import { initEngagement, renderEngagement } from './engagement.js';
 import { initService, renderService } from './service.js';
+import { initRolePicker } from './rolePicker.js';
+import { getRole, seedRoleFromMembership } from './roles.js';
 import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refreshSyncStatus } from './sync.js';
 import * as supabase from './supabase.js';
 
@@ -86,7 +88,8 @@ if ('serviceWorker' in navigator) {
 // ---------- Tabs ----------
 
 const PAGE_IDS = ['page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
-  'page-delivery', 'page-service', 'page-reports', 'page-sync', 'page-trash'];
+  'page-scope', 'page-people', 'page-service', 'page-improve',
+  'page-reports', 'page-sync', 'page-trash'];
 
 function showPage(pageId, title) {
   PAGE_IDS.forEach((id) => {
@@ -104,10 +107,11 @@ function showPage(pageId, title) {
   if (pageId === 'page-sync') renderSyncPage();
   if (pageId === 'page-trash') renderTrash();
   if (pageId === 'page-tasks') renderTasksPage();
-  // Both register pages read the roster, and the roster is edited on one of
-  // them, so each arrival re-reads rather than trusting the last render.
-  if (pageId === 'page-delivery') renderDelivery();
-  if (pageId === 'page-service') renderService();
+  // Every register page offers the roster in its owner fields, and the roster
+  // is edited on one of them, so each arrival re-reads rather than trusting
+  // whatever the last render left behind.
+  if (pageId === 'page-scope' || pageId === 'page-people') renderEngagement();
+  if (pageId === 'page-service' || pageId === 'page-improve') renderService();
 }
 
 function initTabs() {
@@ -410,6 +414,12 @@ function renderTeam() {
     ? `You are ${ROLE_LABELS[role]} here. ${ROLE_HELP[role]}`
     : '';
 
+  // What the account may write is a different question from what the person
+  // does all day, but an owner is almost always the one running the
+  // engagement — so membership seeds the sidebar's role the first time, and
+  // never overrides a choice someone made for themselves.
+  if (role) seedRoleFromMembership(role);
+
   // Only the owner can invite, so hiding the form is the honest thing to do
   // rather than showing one that will be refused.
   document.getElementById('team-invite').hidden = !isOwner();
@@ -521,7 +531,7 @@ function refreshActiveProjectView() {
   renderPlanner();
   renderDashboard();
   renderRaid();
-  renderDelivery();
+  renderEngagement();
   renderService();
   refreshReport();
 }
@@ -715,13 +725,18 @@ function init() {
   initProjects({ onProjectChange: refreshActiveProjectView });
   initReports();
   initRaid({ onChanged: onRaidChanged });
-  initDelivery();
+  initEngagement();
   initService();
   initSharedDataSync();
   initTasks();
   initTrash({ onRestore: refreshActiveProjectView });
   initTeam();
   initSyncPage();
+  initRolePicker();
+  // Roles differ on where they would have clicked first — a scrum master opens
+  // the board, a service manager opens service levels — so first paint lands
+  // on the role's own page rather than always on the Dashboard.
+  document.getElementById(getRole().home)?.click();
 }
 
 if (document.readyState === 'loading') {

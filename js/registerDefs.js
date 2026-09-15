@@ -1,10 +1,15 @@
-// What each register on the Delivery and Service Management pages contains.
+// What each register in the app contains.
 //
 // Data only: js/register.js turns one of these into an editable table. Keeping
 // the declarations apart from the engine means adding a register is a dozen
 // lines here rather than a new module, and it keeps the vocabulary — the exact
 // PMP and ITIL status words — in one readable place instead of scattered
 // through render code.
+//
+// Titles lead with what the thing is and put the discipline's own term in
+// brackets, so a tester finds the go-live checklist without knowing it is
+// called Service Acceptance Criteria, and a service manager still recognises
+// it when they do.
 //
 // `key` is the collection on the project object (and so the sync row kind);
 // `id` is the DOM id stem, which also becomes `sec-<id>` for the nav to jump to.
@@ -16,7 +21,7 @@ const TSHIRT = ['S', 'M', 'L', 'XL'];
 
 // ---------- Project charter ----------
 //
-// The one part of the Delivery page that is not a list. A charter is a single
+// The one part of Scope & Contract that is not a list. A charter is a single
 // statement of what the engagement is, so it is fields, not rows.
 
 export const CHARTER_FIELDS = [
@@ -29,7 +34,7 @@ export const CHARTER_FIELDS = [
   { field: 'charterConstraints', label: 'Constraints', long: true, placeholder: 'Fixed dates, budget ceilings, mandated technology, contractual terms.' },
 ];
 
-// ---------- Delivery (PMP) ----------
+// ---------- Registers ----------
 
 export const ROSTER = {
   key: 'roster',
@@ -37,7 +42,7 @@ export const ROSTER = {
   title: 'Team Roster',
   rowLabel: 'person',
   addLabel: '+ Add Person',
-  blurb: 'Who is on the engagement, in what role, and for how much of their time. Names here are offered wherever the app asks who owns something.',
+  blurb: 'Who is on the engagement, in what role, and for how much of their time. Names here are offered wherever the app asks who owns something. Sign-in accounts and who may edit what are separate, on Sync & Team.',
   emptyText: 'No one on the roster yet. Add the people working on this engagement.',
   searchFields: ['name', 'role', 'org'],
   searchPlaceholder: 'Search name, role or organisation…',
@@ -57,7 +62,7 @@ export const ROSTER = {
 export const RACI = {
   key: 'raci',
   id: 'raci',
-  title: 'Roles & Responsibilities (RACI)',
+  title: 'Who Does What (RACI)',
   rowLabel: 'activity',
   addLabel: '+ Add Activity',
   blurb: 'One accountable person per row — that is the whole point of the A. Names offer the roster but are free text, because a row is often owned by a team or an outside party.',
@@ -102,7 +107,7 @@ export const DELIVERABLES = {
 export const DEPENDENCIES = {
   key: 'dependencies',
   id: 'dependencies',
-  title: 'Dependency Register',
+  title: 'Dependencies',
   rowLabel: 'dependency',
   addLabel: '+ Add Dependency',
   refPrefix: 'DEP',
@@ -127,7 +132,7 @@ export const DEPENDENCIES = {
 export const STAKEHOLDERS = {
   key: 'stakeholders',
   id: 'stakeholders',
-  title: 'Stakeholder Register',
+  title: 'Stakeholders',
   rowLabel: 'stakeholder',
   addLabel: '+ Add Stakeholder',
   blurb: 'Influence against interest is what decides how much of your week someone gets. Attitude is recorded separately because a high-influence sceptic is the person to spend it on.',
@@ -171,11 +176,11 @@ export const COMMS = {
 export const CHANGE_REQUESTS = {
   key: 'changeRequests',
   id: 'change-requests',
-  title: 'Change Requests',
+  title: 'Change Requests (Scope, Time, Cost)',
   rowLabel: 'change request',
   addLabel: '+ Add Change Request',
   refPrefix: 'CR',
-  blurb: 'Changes to this engagement’s scope, schedule or cost. Changes to a live service are a different thing with a different approval path — those belong on Service Management under Change Enablement.',
+  blurb: 'Changes to what was agreed: scope, timeline or money. A change to how the live service runs is a different thing with a different approval path — that is Change Control, on Service & Support.',
   emptyText: 'No change requests raised yet.',
   searchFields: ['title', 'raisedBy', 'scopeImpact'],
   searchPlaceholder: 'Search title or requester…',
@@ -217,16 +222,14 @@ export const LESSONS = {
   newRow: () => ({ date: '', phase: 'Execution', category: 'Scope', what: '', impact: '', recommendation: '', owner: '', status: 'New' }),
 };
 
-export const DELIVERY_REGISTERS = [
-  ROSTER, RACI, DELIVERABLES, DEPENDENCIES, STAKEHOLDERS, COMMS, CHANGE_REQUESTS, LESSONS,
-];
 
-// ---------- Service Management (ITIL) ----------
+
+
 
 export const SERVICE_LEVELS = {
   key: 'serviceLevels',
   id: 'service-levels',
-  title: 'Service Levels',
+  title: 'Service Levels (SLA / OLA)',
   rowLabel: 'service level',
   addLabel: '+ Add Target',
   blurb: 'SLAs face the customer, OLAs face internal teams, and underpinning contracts face suppliers. An SLA you cannot meet because the OLA behind it is weaker is the classic way this goes wrong, so all three sit in one table.',
@@ -249,7 +252,7 @@ export const SERVICE_LEVELS = {
 export const SAC = {
   key: 'sac',
   id: 'sac',
-  title: 'Service Acceptance Criteria',
+  title: 'Go-Live Checklist (Service Acceptance)',
   rowLabel: 'criterion',
   addLabel: '+ Add Criterion',
   refPrefix: 'SAC',
@@ -272,7 +275,7 @@ export const SAC = {
 export const RELEASES = {
   key: 'releases',
   id: 'releases',
-  title: 'Release & Deployment Plan',
+  title: 'Releases & Deployments',
   rowLabel: 'release',
   addLabel: '+ Add Release',
   blurb: 'What goes where, when, and how you get back if it goes badly. A release with no rollback plan is not a plan.',
@@ -295,11 +298,11 @@ export const RELEASES = {
 export const CHANGES = {
   key: 'changes',
   id: 'changes',
-  title: 'Change Enablement',
+  title: 'Change Control (CAB)',
   rowLabel: 'change',
   addLabel: '+ Add Change',
   refPrefix: 'CHG',
-  blurb: 'Changes to the live service. Standard changes are pre-authorised and skip the CAB; normal changes go to it; emergency changes are approved after the fact and reviewed. Commercial changes to the engagement belong on Delivery under Change Requests.',
+  blurb: 'Changes to the live service. Standard changes are pre-authorised and skip the CAB; normal changes go to it; emergency changes are approved after the fact and reviewed. A change to what was agreed with the client is a Change Request, on Scope & Contract.',
   emptyText: 'No changes raised yet.',
   searchFields: ['title', 'implementer'],
   searchPlaceholder: 'Search change or implementer…',
@@ -319,7 +322,7 @@ export const CHANGES = {
 export const CSI = {
   key: 'csi',
   id: 'csi',
-  title: 'Continual Improvement Register',
+  title: 'Improvements (CSI)',
   rowLabel: 'improvement',
   addLabel: '+ Add Improvement',
   blurb: 'Improvement ideas with a benefit and an effort against them, so the small wins are visible next to the large ones rather than being lost behind them.',
@@ -342,7 +345,7 @@ export const CSI = {
 export const KNOWN_ERRORS = {
   key: 'knownErrors',
   id: 'known-errors',
-  title: 'Known Errors (KEDB)',
+  title: 'Known Issues & Workarounds (KEDB)',
   rowLabel: 'known error',
   addLabel: '+ Add Known Error',
   refPrefix: 'KE',
@@ -363,11 +366,36 @@ export const KNOWN_ERRORS = {
   newRow: () => ({ symptom: '', service: '', cause: '', workaround: '', fix: '', status: 'Known Error', owner: '' }),
 };
 
-export const SERVICE_REGISTERS = [
-  SERVICE_LEVELS, SAC, RELEASES, CHANGES, CSI, KNOWN_ERRORS,
-];
+// ---------- Which page each register lives on ----------
+//
+// Grouped by who needs them rather than by which body of practice they came
+// from. A tester and a service manager both want the go-live checklist and the
+// known errors; neither opens a stakeholder map. Splitting PMP from ITIL made
+// two piles that no single role reads end to end.
 
-export const ALL_REGISTERS = [...DELIVERY_REGISTERS, ...SERVICE_REGISTERS];
+/** Commercial: what was agreed, and what has changed since. Leads only. */
+export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS];
+
+/** Relationships: who is on it, who decides, who needs telling. Leads only. */
+export const PEOPLE_REGISTERS = [ROSTER, RACI, STAKEHOLDERS, COMMS];
+
+/** Blockers, alongside the RAID log — the other half of "what is in our way". */
+export const BLOCKER_REGISTERS = [DEPENDENCIES];
+
+/** Running the thing once it is live: developers, testers, service managers. */
+export const SERVICE_REGISTERS = [SERVICE_LEVELS, SAC, RELEASES, CHANGES, KNOWN_ERRORS];
+
+/**
+ * What should change next time. CSI looks forward and a lesson looks back, so
+ * they stay two registers — but they answer the same question, and having them
+ * on one page is what stops people writing the same thing into both.
+ */
+export const IMPROVE_REGISTERS = [CSI, LESSONS];
+
+export const ALL_REGISTERS = [
+  ...SCOPE_REGISTERS, ...PEOPLE_REGISTERS, ...BLOCKER_REGISTERS,
+  ...SERVICE_REGISTERS, ...IMPROVE_REGISTERS,
+];
 
 /** Every collection these pages own, for migrations, sync and cloning. */
 export const REGISTER_KEYS = ALL_REGISTERS.map((r) => r.key);

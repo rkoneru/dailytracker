@@ -46,6 +46,10 @@ function seedTicks(project) {
 let idCounter = 0;
 const id = (prefix) => `${prefix}${++idCounter}`;
 
+// The one pair in the sample data that references each other: the launch
+// milestone marks the campaign going live, so the Dashboard lists them once.
+const LIVE_CAMPAIGN_ID = 'sample-deliverable-live-campaign';
+
 function createMarketingCampaign() {
   return {
     projectName: 'Social Media Marketing Campaign',
@@ -59,7 +63,7 @@ function createMarketingCampaign() {
     ],
     milestones: [
       { id: id('m'), text: 'Creative assets approved', progress: 5, due: '2026-09-05', done: true },
-      { id: id('m'), text: 'Campaign launch', progress: 3, due: '2026-09-08', done: false },
+      { id: id('m'), text: 'Campaign launch', progress: 3, due: '2026-09-08', done: false, deliverableId: LIVE_CAMPAIGN_ID },
       { id: id('m'), text: 'Mid-campaign performance review', progress: 1, due: '2026-09-18', done: false },
       { id: id('m'), text: 'Campaign wrap + report', progress: 0, due: '2026-09-30', done: false },
     ],
@@ -89,7 +93,7 @@ function createMarketingCampaign() {
     deliverables: [
       { id: id('dl'), name: 'Campaign brief', type: 'Document', owner: 'Priya N.', due: '2026-09-02', acceptance: 'Objectives, audience, channels and budget agreed in writing by the marketing lead.', status: 'Accepted', signedOffBy: 'Marcus T.', signOffDate: '2026-09-02' },
       { id: id('dl'), name: 'Creative asset pack', type: 'Document', owner: 'Marcus T.', due: '2026-09-05', acceptance: 'All six formats delivered at spec, brand-checked, with source files.', status: 'Accepted', signedOffBy: 'Priya N.', signOffDate: '2026-09-05' },
-      { id: id('dl'), name: 'Live campaign across Meta and TikTok', type: 'Service', owner: 'Jordan K.', due: '2026-09-08', acceptance: 'Both channels live, tracking verified end to end, daily spend within 10% of plan.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
+      { id: LIVE_CAMPAIGN_ID, name: 'Live campaign across Meta and TikTok', type: 'Service', owner: 'Jordan K.', due: '2026-09-08', acceptance: 'Both channels live, tracking verified end to end, daily spend within 10% of plan.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Campaign wrap report', type: 'Report', owner: 'Priya N.', due: '2026-09-30', acceptance: 'Reach, CTR, cost per visit and spend against plan, with recommendations.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
     ],
     stakeholders: [
@@ -153,7 +157,7 @@ function createSoftwareRelease() {
       { id: id('r'), type: 'Assumption', title: 'No breaking API changes from platform team', owner: 'Alex R.', severity: 'High', likelihood: '', status: 'Open', due: '2026-10-17', action: 'Confirm at the platform sync.' },
     ],
     // A release is the one template that ends in something operations has to
-    // run, so it is the one that fills in the Service Management page.
+    // run, so it is the one that fills in Service & Support.
     roster: [
       { id: id('p'), name: 'Alex R.', role: 'Release Manager', org: 'Engineering', email: 'alex@example.com', allocation: 60, start: '2026-10-01', end: '2026-10-30', status: 'Active' },
       { id: id('p'), name: 'Sam P.', role: 'Backend Engineer', org: 'Engineering', email: 'sam@example.com', allocation: 100, start: '2026-10-01', end: '2026-10-30', status: 'Active' },

@@ -1,14 +1,17 @@
-// The Service Management page: the ITIL side, for work that ends in a service
-// somebody has to run rather than a project that simply finishes.
+// Service & Support, plus Improvement & Lessons.
 //
-// Delivery is about the engagement — team, scope, deliverables, change to the
-// contract. This is about the service — what it promises, whether it is fit to
-// be handed to operations, what is being released, what is being changed, what
-// is known to be broken, and what could be better.
+// This is the half of the app a developer, a tester or a service manager
+// actually opens: what the service promises, whether it is fit to hand over,
+// what is being released, what is being changed, what is known to be broken —
+// and, on its own page, what should be different next time.
+//
+// Improvement and lessons sit together on purpose. CSI looks forward and a
+// lesson looks back, so they stay two registers, but they answer the same
+// question and keeping them apart is how the same sentence ends up in both.
 
 import { getState } from './state.js';
 import { mountRegisters, renderAll, renderRosterOptions } from './register.js';
-import { SERVICE_REGISTERS } from './registerDefs.js';
+import { SERVICE_REGISTERS, IMPROVE_REGISTERS } from './registerDefs.js';
 import { notifyProjectDataChanged } from './taskModel.js';
 
 const COUNTERS = [
@@ -85,6 +88,34 @@ const COUNTERS = [
       return open.some((k) => !(k.workaround || '').trim()) ? 'is-bad' : 'is-warn';
     },
   },
+  {
+    id: 'improve-count-open',
+    value: (s) => (s.csi || []).filter((c) => c.status === 'Approved' || c.status === 'In Progress').length,
+    sub: (s) => {
+      const list = s.csi || [];
+      if (list.length === 0) return 'Nothing proposed yet';
+      const quick = list.filter((c) => c.effort === 'S' && c.status !== 'Done' && c.status !== 'Rejected').length;
+      return quick > 0 ? `${quick} small enough to just do` : `${list.filter((c) => c.status === 'Done').length} done so far`;
+    },
+    tone: (s) => ((s.csi || []).length === 0 ? 'is-idle' : 'is-good'),
+  },
+  {
+    id: 'improve-count-lessons',
+    value: (s) => (s.lessons || []).length,
+    sub: (s) => {
+      const list = s.lessons || [];
+      if (list.length === 0) return 'Nothing captured yet';
+      // A lesson nobody acted on is a lesson nobody learned, so the count that
+      // matters is how many are still sitting at New.
+      const idle = list.filter((l) => l.status === 'New').length;
+      return idle > 0 ? `${idle} not acted on yet` : 'All agreed or applied';
+    },
+    tone: (s) => {
+      const list = s.lessons || [];
+      if (list.length === 0) return 'is-idle';
+      return list.some((l) => l.status === 'New') ? 'is-warn' : 'is-good';
+    },
+  },
 ];
 
 function renderCounters() {
@@ -100,16 +131,18 @@ function renderCounters() {
 }
 
 export function renderService() {
-  renderAll(SERVICE_REGISTERS);
+  renderAll([...SERVICE_REGISTERS, ...IMPROVE_REGISTERS]);
   renderRosterOptions();
   renderCounters();
 }
 
 export function initService() {
-  mountRegisters('service-registers', SERVICE_REGISTERS, (def) => {
+  const onChanged = (def) => {
     renderCounters();
     notifyProjectDataChanged(`service:${def.id}`);
-  });
+  };
+  mountRegisters('service-registers', SERVICE_REGISTERS, onChanged);
+  mountRegisters('improve-registers', IMPROVE_REGISTERS, onChanged);
   renderRosterOptions();
   renderCounters();
 }

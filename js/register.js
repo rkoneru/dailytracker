@@ -1,5 +1,4 @@
-// One engine behind every register on the Delivery and Service Management
-// pages.
+// One engine behind every register in the app.
 //
 // PMP and ITIL both want a pile of small registers — roster, deliverables,
 // dependencies, stakeholders, service levels, known errors — and every one of

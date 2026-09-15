@@ -20,9 +20,10 @@ who can read and write what, and a trigger that mirrors new signups into
 `profiles`. Re-running it later is safe, and is how you pick up changes: the
 script widens constraints in place rather than assuming a fresh database.
 
-If you set this up before the Delivery and Service Management pages existed,
-re-run it now. Those pages store their registers as ordinary synced rows, and
-the old schema only permitted the four row kinds that existed at the time — a
+If you set this up before the register pages existed — Scope & Contract,
+People & Stakeholders, Service & Support, Improvement & Lessons — re-run it
+now. Those pages store their registers as ordinary synced rows, and the old
+schema only permitted the four row kinds that existed at the time, so a
 database that has not been updated will reject them.
 
 ## 3. Connect the app

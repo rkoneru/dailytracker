@@ -2245,3 +2245,49 @@ button.kpi:hover::after, button.kpi:focus-visible::after { opacity: 1; }
 @media (max-width: 700px) {
   .charter-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- Role picker ---------- */
+
+/* The nav is filtered, so the control that filters it sits directly above the
+   nav rather than in settings: the cause is next to the effect. */
+.role-picker {
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.role-picker__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--color-text-muted);
+}
+.role-picker__select { width: 100%; font-weight: 600; }
+.role-picker__blurb {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+.role-picker__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.role-picker__toggle input { margin: 0; cursor: pointer; }
+
+/* Says what the filter is holding back, so an absent page reads as hidden
+   rather than as a feature that does not exist. */
+.nav-filter-note {
+  margin: 0;
+  padding: 6px 14px 12px;
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+.col-deliverable { width: 190px; }

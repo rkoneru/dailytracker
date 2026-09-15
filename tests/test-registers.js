@@ -1,4 +1,5 @@
-// The Delivery (PMP) and Service Management (ITIL) pages.
+// The four register pages: Scope & Contract, People & Stakeholders,
+// Service & Support, and Improvement & Lessons.
 //
 // Fourteen registers share one engine, so most of what is worth testing is
 // tested once: if add, edit, delete, reorder, search and persistence work on
@@ -23,23 +24,46 @@ const { eq, done } = createChecks();
 
   const state = () => page.evaluate(async () => (await import('/js/state.js')).getState());
 
-  console.log('\n--- both pages exist and carry the registers they should ---');
-  await page.click('#tab-delivery');
+  console.log('\n--- registers are grouped by who needs them, not by which standard they came from ---');
+  await page.click('#tab-scope');
   await page.waitForTimeout(600);
-  eq('delivery registers', await page.$$eval('#page-delivery .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Project Charter', 'Team Roster', 'Roles & Responsibilities (RACI)', 'Deliverables',
-      'Dependency Register', 'Stakeholder Register', 'Communications Plan',
-      'Change Requests', 'Lessons Learned']);
+  eq('scope & contract', await page.$$eval('#page-scope .card__head h2', (e) => e.map((x) => x.textContent)),
+     ['Charter', 'Deliverables', 'Change Requests (Scope, Time, Cost)']);
+
+  await page.click('#tab-people');
+  await page.waitForTimeout(600);
+  eq('people & stakeholders', await page.$$eval('#page-people .card__head h2', (e) => e.map((x) => x.textContent)),
+     ['Team Roster', 'Who Does What (RACI)', 'Stakeholders', 'Communications Plan']);
 
   await page.click('#tab-service');
   await page.waitForTimeout(600);
-  eq('service registers', await page.$$eval('#page-service .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Service Levels', 'Service Acceptance Criteria', 'Release & Deployment Plan',
-      'Change Enablement', 'Continual Improvement Register', 'Known Errors (KEDB)']);
+  eq('service & support', await page.$$eval('#page-service .card__head h2', (e) => e.map((x) => x.textContent)),
+     ['Service Levels (SLA / OLA)', 'Go-Live Checklist (Service Acceptance)',
+      'Releases & Deployments', 'Change Control (CAB)', 'Known Issues & Workarounds (KEDB)']);
+
+  await page.click('#tab-improve');
+  await page.waitForTimeout(600);
+  eq('improvement & lessons', await page.$$eval('#page-improve .card__head h2', (e) => e.map((x) => x.textContent)),
+     ['Improvements (CSI)', 'Lessons Learned']);
+
+  // Dependencies sit under the RAID log: "what is in our way" is one question.
+  await page.click('#tab-raid');
+  await page.waitForTimeout(600);
+  eq('blockers live together', await page.$$eval('#page-raid .card__head h2', (e) => e.map((x) => x.textContent)),
+     ['Log', 'Dependencies']);
+
+  // Titles lead with what the thing is and keep the discipline's term in
+  // brackets, so a tester finds the go-live checklist without knowing it is
+  // called Service Acceptance Criteria.
+  eq('plain names carry the formal one',
+     await page.$$eval('#page-service .card__head h2, #page-improve .card__head h2',
+       (e) => e.map((x) => x.textContent).filter((t) => /\(/.test(t)).length), 5);
 
   console.log('\n--- the vocabulary is the PMP/ITIL one, not a generic one ---');
   // The default template is a marketing campaign, so these registers start
   // empty — one row each is enough to read the options they offer.
+  await page.click('#tab-service');
+  await page.waitForTimeout(500);
   await page.click('#sec-service-levels [data-action="add-row"]');
   await page.click('#sec-changes [data-action="add-row"]');
   await page.waitForTimeout(400);
@@ -54,7 +78,7 @@ const { eq, done } = createChecks();
      ['Not required', 'Pending', 'Approved', 'Rejected', 'Deferred']);
 
   console.log('\n--- one engine: add, edit, reload, delete on a representative register ---');
-  await page.click('#tab-delivery');
+  await page.click('#tab-people');
   await page.waitForTimeout(500);
   const before = await page.locator('#stakeholders-body tr').count();
   await page.click('#sec-stakeholders [data-action="add-row"]');
@@ -72,7 +96,7 @@ const { eq, done } = createChecks();
 
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(900);
-  await page.click('#tab-delivery');
+  await page.click('#tab-people');
   await page.waitForTimeout(500);
   eq('the edit survived a reload',
      await page.inputValue('#stakeholders-body tr:last-child [data-field="name"]'), 'Renata Vance');
@@ -92,8 +116,8 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(400);
   eq('only matching roster rows show', await page.locator('#roster-body tr:not([hidden])').count(), 1);
   eq('the register next to it is untouched',
-     await page.locator('#deliverables-body tr:not([hidden])').count(),
-     await page.locator('#deliverables-body tr').count());
+     await page.locator('#stakeholders-body tr:not([hidden])').count(),
+     await page.locator('#stakeholders-body tr').count());
   await page.fill('#roster-search', 'zzzz');
   await page.waitForTimeout(400);
   eq('a search with no hits says so', await page.textContent('#roster-empty'), 'Nothing matches that search.');
@@ -101,13 +125,19 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(400);
 
   console.log('\n--- refs are per-register and stable-looking ---');
+  await page.click('#tab-scope');
+  await page.waitForTimeout(500);
   eq('deliverables count from D-01',
      await page.$$eval('#deliverables-body .col-ref', (e) => e.map((x) => x.textContent)),
      ['D-01', 'D-02', 'D-03', 'D-04']);
+  await page.click('#tab-raid');
+  await page.waitForTimeout(500);
   eq('dependencies use their own prefix',
      await page.textContent('#dependencies-body tr:first-child .col-ref'), 'DEP-01');
 
   console.log('\n--- the roster is the one list of names, offered everywhere ---');
+  await page.click('#tab-people');
+  await page.waitForTimeout(500);
   eq('datalist is the roster',
      await page.$$eval('#roster-names option', (e) => e.map((x) => x.value)),
      ['Priya N.', 'Marcus T.', 'Jordan K.', 'Legal']);
@@ -126,7 +156,7 @@ const { eq, done } = createChecks();
      ['Risk', 'Issue', 'Decision', 'Assumption']);
   eq('no RAID row is still a dependency',
      (await state()).raid.some((r) => r.type === 'Dependency'), false);
-  eq('the RAID dependency arrived in the register',
+  eq('the RAID dependency arrived in the register just below the log',
      await page.inputValue('#dependencies-body tr:first-child [data-field="description"]'),
      'Legal sign-off on influencer terms');
   eq('and its severity became a dependency status',
@@ -142,23 +172,30 @@ const { eq, done } = createChecks();
     };
   }, id);
 
-  eq('deliverables counter reads accepted over total', (await tile('del-count-deliverables')).value, '2/4');
+  await page.click('#tab-scope');
+  await page.waitForTimeout(500);
+  eq('deliverables counter reads accepted over total', (await tile('scope-count-deliverables')).value, '2/4');
   await page.selectOption('#deliverables-body tr:nth-child(3) [data-field="status"]', 'Accepted');
   await page.waitForTimeout(500);
-  eq('and follows an edit', (await tile('del-count-deliverables')).value, '3/4');
+  eq('and follows an edit', (await tile('scope-count-deliverables')).value, '3/4');
 
-  // An unowned acceptance criterion is the thing this counter is for.
+  // A deliverable with no acceptance criteria is the thing this counter is for.
   await page.fill('#deliverables-body tr:nth-child(4) [data-field="acceptance"]', '');
   await page.waitForTimeout(500);
-  const missing = await tile('del-count-deliverables');
+  const missing = await tile('scope-count-deliverables');
   eq('a deliverable with no acceptance criteria is called out', missing.sub, '1 with no acceptance criteria');
   eq('and reads as a warning', missing.tone, 'is-warn');
 
-  const deps = await tile('del-count-dependencies');
-  eq('an at-risk dependency reads as bad', deps.tone, 'is-bad');
-  await page.selectOption('#dependencies-body tr:first-child [data-field="status"]', 'Met');
+  await page.click('#tab-people');
   await page.waitForTimeout(500);
-  eq('and clears once it is met', (await tile('del-count-dependencies')).sub, 'All met');
+  const raci = await tile('people-count-raci');
+  eq('every RACI row has someone accountable', raci.sub, 'Every activity has an owner');
+  eq('so it reads as good', raci.tone, 'is-good');
+  await page.fill('#raci-body tr:first-child [data-field="accountable"]', '');
+  await page.waitForTimeout(500);
+  const orphan = await tile('people-count-raci');
+  eq('emptying the A is called out', orphan.sub, '1 with nobody accountable');
+  eq('and reads as a warning', orphan.tone, 'is-warn');
 
   console.log('\n--- the ITIL counters answer go-live questions ---');
   await page.click('#btn-projects');
@@ -200,27 +237,27 @@ const { eq, done } = createChecks();
   });
 
   console.log('\n--- the charter is fields, and they persist ---');
-  await page.click('#tab-delivery');
+  await page.click('#tab-scope');
   await page.waitForTimeout(600);
   eq('every charter field is rendered', await page.locator('#charter-fields .charter-field').count(), 7);
   await page.fill('#charter-fields [data-field="charterScopeOut"]', 'Anything outside the UK market.');
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(900);
-  await page.click('#tab-delivery');
+  await page.click('#tab-scope');
   await page.waitForTimeout(500);
   eq('and survives a reload',
      await page.inputValue('#charter-fields [data-field="charterScopeOut"]'), 'Anything outside the UK market.');
 
   console.log('\n--- nav reaches every register ---');
   // The tree remembers what was open, so toggle only if it is currently shut.
-  if (await page.getAttribute('#tab-delivery', 'aria-expanded') === 'false') {
-    await page.click('#tab-delivery .nav-twisty');
+  if (await page.getAttribute('#tab-improve', 'aria-expanded') === 'false') {
+    await page.click('#tab-improve .nav-twisty');
     await page.waitForTimeout(300);
   }
   await page.click('#nav-lessons .nav-row__label');
   await page.waitForTimeout(500);
-  eq('a section leaf opens its page', await page.textContent('#page-title'), 'Delivery');
+  eq('a section leaf opens its page', await page.textContent('#page-title'), 'Improvement & Lessons');
   // The jump is a smooth scroll, so wait for it to land rather than guessing.
   const onScreen = await page.waitForFunction(() => {
     const r = document.getElementById('sec-lessons').getBoundingClientRect();

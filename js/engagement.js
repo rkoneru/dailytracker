@@ -1,18 +1,18 @@
-// The Delivery page: the PMP side of running a services engagement.
+// The two Engagement pages: the commercial and relationship side of a services
+// engagement, which is the engagement lead's job rather than the whole team's.
 //
-// The Planner answers "what are we doing and when". This answers the questions
-// a client or an auditor asks instead: who is on the team, who decides what,
-// what exactly are we handing over, what are we waiting on, who cares about
-// the outcome, how do we keep them told, what changed, and what did we learn.
+// Scope & Contract  — what was agreed, what we hand over, what has changed.
+// People & Stakeholders — who is on it, who decides, who needs telling.
 //
-// Every table here is a register driven by js/registerDefs.js. The only
-// bespoke part is the charter, because a charter is one statement about the
-// engagement rather than a list of rows.
+// The Planner answers "what are we doing and when". These answer the questions
+// a client or an auditor asks instead. Every table is a register driven by
+// js/registerDefs.js; the only bespoke part is the charter, because a charter
+// is one statement about the engagement rather than a list of rows.
 
 import { getState, scheduleSave } from './state.js';
 import { el } from './dom.js';
 import { mountRegisters, renderAll, renderRosterOptions } from './register.js';
-import { DELIVERY_REGISTERS, CHARTER_FIELDS } from './registerDefs.js';
+import { SCOPE_REGISTERS, PEOPLE_REGISTERS, CHARTER_FIELDS } from './registerDefs.js';
 import { notifyProjectDataChanged } from './taskModel.js';
 
 // ---------- Charter ----------
@@ -60,19 +60,7 @@ function bindCharter() {
 
 const COUNTERS = [
   {
-    id: 'del-count-roster',
-    label: 'On the team',
-    value: (s) => (s.roster || []).filter((p) => p.status !== 'Rolled off').length,
-    sub: (s) => {
-      const list = s.roster || [];
-      if (list.length === 0) return 'No one on the roster yet';
-      const unassigned = list.filter((p) => !(p.role || '').trim()).length;
-      return unassigned > 0 ? `${unassigned} with no role set` : 'All have a role';
-    },
-  },
-  {
-    id: 'del-count-deliverables',
-    label: 'Deliverables accepted',
+    id: 'scope-count-deliverables',
     value: (s) => `${(s.deliverables || []).filter((d) => d.status === 'Accepted').length}/${(s.deliverables || []).length}`,
     sub: (s) => {
       const list = s.deliverables || [];
@@ -87,23 +75,7 @@ const COUNTERS = [
     },
   },
   {
-    id: 'del-count-dependencies',
-    label: 'Dependencies at risk',
-    value: (s) => (s.dependencies || []).filter((d) => d.status === 'At Risk' || d.status === 'Missed').length,
-    sub: (s) => {
-      const list = s.dependencies || [];
-      if (list.length === 0) return 'Nothing logged yet';
-      const open = list.filter((d) => d.status !== 'Met').length;
-      return open === 0 ? 'All met' : `${open} still open`;
-    },
-    tone: (s) => {
-      const bad = (s.dependencies || []).filter((d) => d.status === 'At Risk' || d.status === 'Missed').length;
-      return bad > 0 ? 'is-bad' : (s.dependencies || []).length > 0 ? 'is-good' : 'is-idle';
-    },
-  },
-  {
-    id: 'del-count-changes',
-    label: 'Changes awaiting a decision',
+    id: 'scope-count-changes',
     value: (s) => (s.changeRequests || []).filter((c) => c.status === 'Submitted' || c.status === 'Under Review').length,
     sub: (s) => {
       const list = s.changeRequests || [];
@@ -116,8 +88,38 @@ const COUNTERS = [
     tone: (s) => ((s.changeRequests || []).some((c) => c.status === 'Submitted' || c.status === 'Under Review')
       ? 'is-warn' : 'is-idle'),
   },
+  {
+    id: 'people-count-roster',
+    value: (s) => (s.roster || []).filter((p) => p.status !== 'Rolled off').length,
+    sub: (s) => {
+      const list = s.roster || [];
+      if (list.length === 0) return 'No one on the roster yet';
+      const unassigned = list.filter((p) => !(p.role || '').trim()).length;
+      return unassigned > 0 ? `${unassigned} with no role set` : 'All have a role';
+    },
+  },
+  {
+    id: 'people-count-raci',
+    value: (s) => (s.raci || []).filter((r) => (r.accountable || '').trim()).length,
+    sub: (s) => {
+      const list = s.raci || [];
+      if (list.length === 0) return 'Nothing mapped yet';
+      const orphan = list.filter((r) => !(r.accountable || '').trim()).length;
+      return orphan > 0 ? `${orphan} with nobody accountable` : 'Every activity has an owner';
+    },
+    tone: (s) => {
+      const list = s.raci || [];
+      if (list.length === 0) return 'is-idle';
+      return list.some((r) => !(r.accountable || '').trim()) ? 'is-warn' : 'is-good';
+    },
+  },
 ];
 
+/**
+ * Numbers only these pages can answer, each about whether the paperwork that
+ * holds a services engagement together is actually in place — not task counts,
+ * which the Tasks screen owns.
+ */
 /**
  * Four numbers only this page can answer, each about whether the paperwork
  * that holds a services engagement together is actually in place — not task
@@ -135,24 +137,26 @@ function renderCounters() {
   });
 }
 
-// ---------- Page ----------
+// ---------- Pages ----------
 
-export function renderDelivery() {
+export function renderEngagement() {
   renderCharter();
-  renderAll(DELIVERY_REGISTERS);
+  renderAll([...SCOPE_REGISTERS, ...PEOPLE_REGISTERS]);
   renderRosterOptions();
   renderCounters();
 }
 
-export function initDelivery() {
+export function initEngagement() {
   renderCharter();
   bindCharter();
-  mountRegisters('delivery-registers', DELIVERY_REGISTERS, (def) => {
+  const onChanged = (def) => {
     renderCounters();
-    // The roster and the dependency register both feed things other pages
-    // show, so an edit here has to reach them the same way a task edit does.
-    notifyProjectDataChanged(`delivery:${def.id}`);
-  });
+    // Deliverable dates reach the Dashboard and the roster feeds every owner
+    // field in the app, so an edit here has to travel like a task edit does.
+    notifyProjectDataChanged(`engagement:${def.id}`);
+  };
+  mountRegisters('scope-registers', SCOPE_REGISTERS, onChanged);
+  mountRegisters('people-registers', PEOPLE_REGISTERS, onChanged);
   renderRosterOptions();
   renderCounters();
 }

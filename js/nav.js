@@ -1,6 +1,7 @@
 import { el } from './dom.js';
+import { roleShows, getRole, isShowingEverything } from './roles.js';
 
-// Sidebar navigation, as a real tree.
+// Sidebar navigation, as a real tree, filtered to the role that is looking.
 //
 // The flat list worked while there were four pages. There are now five, two
 // side panels, and a Planner long enough that its own sections are worth
@@ -18,25 +19,65 @@ const EXPANDED_KEY = 'projectPlannerNavExpanded_v1';
 // (tab-planner, btn-projects…) are preserved and existing wiring keeps working.
 export const NAV_TREE = [
   {
-    id: 'group-workspace',
-    label: 'Workspace',
+    id: 'group-work',
+    label: 'My Work',
     children: [
       { id: 'tab-dashboard', label: 'Dashboard', icon: '📊', page: 'page-dashboard', title: 'Dashboard' },
       { id: 'tab-tasks', label: 'Tasks', icon: '✅', page: 'page-tasks', title: 'Tasks' },
       {
         id: 'tab-planner',
-        label: 'Planner',
+        label: 'Plan',
         icon: '📝',
         page: 'page-planner',
-        title: 'Planner',
+        title: 'Plan',
         children: [
-          { id: 'nav-milestones', label: 'Milestones', page: 'page-planner', title: 'Planner', section: 'sec-milestones' },
-          { id: 'nav-ticks', label: 'Tick Timeline', page: 'page-planner', title: 'Planner', section: 'sec-ticks' },
-          { id: 'nav-budget', label: 'Budget & Baseline', page: 'page-planner', title: 'Planner', section: 'sec-budget' },
-          { id: 'nav-notes', label: 'Notes', page: 'page-planner', title: 'Planner', section: 'sec-notes' },
+          { id: 'nav-milestones', label: 'Milestones', page: 'page-planner', title: 'Plan', section: 'sec-milestones' },
+          { id: 'nav-ticks', label: 'Tick Timeline', page: 'page-planner', title: 'Plan', section: 'sec-ticks' },
+          { id: 'nav-budget', label: 'Budget & Baseline', page: 'page-planner', title: 'Plan', section: 'sec-budget' },
+          { id: 'nav-notes', label: 'Notes', page: 'page-planner', title: 'Plan', section: 'sec-notes' },
         ],
       },
-      { id: 'tab-raid', label: 'RAID & Issues', icon: '⚠️', page: 'page-raid', title: 'RAID & Issues' },
+    ],
+  },
+  {
+    id: 'group-delivery',
+    label: 'Delivery',
+    children: [
+      {
+        id: 'tab-raid',
+        label: 'Risks & Issues',
+        icon: '⚠️',
+        page: 'page-raid',
+        title: 'Risks, Issues & Dependencies',
+        children: [
+          { id: 'nav-dependencies', label: 'Dependencies', page: 'page-raid', title: 'Risks, Issues & Dependencies', section: 'sec-dependencies' },
+        ],
+      },
+      {
+        id: 'tab-service',
+        label: 'Service & Support',
+        icon: '🛠',
+        page: 'page-service',
+        title: 'Service & Support',
+        children: [
+          { id: 'nav-service-levels', label: 'Service Levels', page: 'page-service', title: 'Service & Support', section: 'sec-service-levels' },
+          { id: 'nav-sac', label: 'Go-Live Checklist', page: 'page-service', title: 'Service & Support', section: 'sec-sac' },
+          { id: 'nav-releases', label: 'Releases', page: 'page-service', title: 'Service & Support', section: 'sec-releases' },
+          { id: 'nav-changes', label: 'Change Control', page: 'page-service', title: 'Service & Support', section: 'sec-changes' },
+          { id: 'nav-known-errors', label: 'Known Issues', page: 'page-service', title: 'Service & Support', section: 'sec-known-errors' },
+        ],
+      },
+      {
+        id: 'tab-improve',
+        label: 'Improvement & Lessons',
+        icon: '💡',
+        page: 'page-improve',
+        title: 'Improvement & Lessons',
+        children: [
+          { id: 'nav-csi', label: 'Improvements', page: 'page-improve', title: 'Improvement & Lessons', section: 'sec-csi' },
+          { id: 'nav-lessons', label: 'Lessons Learned', page: 'page-improve', title: 'Improvement & Lessons', section: 'sec-lessons' },
+        ],
+      },
     ],
   },
   {
@@ -44,36 +85,28 @@ export const NAV_TREE = [
     label: 'Engagement',
     children: [
       {
-        id: 'tab-delivery',
-        label: 'Delivery',
+        id: 'tab-scope',
+        label: 'Scope & Contract',
         icon: '🤝',
-        page: 'page-delivery',
-        title: 'Delivery',
+        page: 'page-scope',
+        title: 'Scope & Contract',
         children: [
-          { id: 'nav-charter', label: 'Project Charter', page: 'page-delivery', title: 'Delivery', section: 'sec-charter' },
-          { id: 'nav-roster', label: 'Team Roster', page: 'page-delivery', title: 'Delivery', section: 'sec-roster' },
-          { id: 'nav-raci', label: 'RACI', page: 'page-delivery', title: 'Delivery', section: 'sec-raci' },
-          { id: 'nav-deliverables', label: 'Deliverables', page: 'page-delivery', title: 'Delivery', section: 'sec-deliverables' },
-          { id: 'nav-dependencies', label: 'Dependencies', page: 'page-delivery', title: 'Delivery', section: 'sec-dependencies' },
-          { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-delivery', title: 'Delivery', section: 'sec-stakeholders' },
-          { id: 'nav-comms', label: 'Communications', page: 'page-delivery', title: 'Delivery', section: 'sec-comms' },
-          { id: 'nav-change-requests', label: 'Change Requests', page: 'page-delivery', title: 'Delivery', section: 'sec-change-requests' },
-          { id: 'nav-lessons', label: 'Lessons Learned', page: 'page-delivery', title: 'Delivery', section: 'sec-lessons' },
+          { id: 'nav-charter', label: 'Charter', page: 'page-scope', title: 'Scope & Contract', section: 'sec-charter' },
+          { id: 'nav-deliverables', label: 'Deliverables', page: 'page-scope', title: 'Scope & Contract', section: 'sec-deliverables' },
+          { id: 'nav-change-requests', label: 'Change Requests', page: 'page-scope', title: 'Scope & Contract', section: 'sec-change-requests' },
         ],
       },
       {
-        id: 'tab-service',
-        label: 'Service Management',
-        icon: '🛠',
-        page: 'page-service',
-        title: 'Service Management',
+        id: 'tab-people',
+        label: 'People & Stakeholders',
+        icon: '👥',
+        page: 'page-people',
+        title: 'People & Stakeholders',
         children: [
-          { id: 'nav-service-levels', label: 'Service Levels', page: 'page-service', title: 'Service Management', section: 'sec-service-levels' },
-          { id: 'nav-sac', label: 'Acceptance Criteria', page: 'page-service', title: 'Service Management', section: 'sec-sac' },
-          { id: 'nav-releases', label: 'Release & Deployment', page: 'page-service', title: 'Service Management', section: 'sec-releases' },
-          { id: 'nav-changes', label: 'Change Enablement', page: 'page-service', title: 'Service Management', section: 'sec-changes' },
-          { id: 'nav-csi', label: 'Continual Improvement', page: 'page-service', title: 'Service Management', section: 'sec-csi' },
-          { id: 'nav-known-errors', label: 'Known Errors', page: 'page-service', title: 'Service Management', section: 'sec-known-errors' },
+          { id: 'nav-roster', label: 'Team Roster', page: 'page-people', title: 'People & Stakeholders', section: 'sec-roster' },
+          { id: 'nav-raci', label: 'Who Does What', page: 'page-people', title: 'People & Stakeholders', section: 'sec-raci' },
+          { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-people', title: 'People & Stakeholders', section: 'sec-stakeholders' },
+          { id: 'nav-comms', label: 'Communications', page: 'page-people', title: 'People & Stakeholders', section: 'sec-comms' },
         ],
       },
     ],
@@ -142,7 +175,7 @@ function saveExpanded() {
 // ---------- rendering ----------
 
 function buildRow(node, level) {
-  const hasChildren = !!(node.children && node.children.length);
+  const hasChildren = (node.children || []).some(visible);
   const isGroup = !node.page && !node.panel;
 
   const row = el('div', {
@@ -173,30 +206,71 @@ function buildRow(node, level) {
   return row;
 }
 
+/**
+ * A destination survives the role filter if the role names it. A group has no
+ * page of its own, so it survives on behalf of its children — which is why a
+ * role only ever has to list the pages it wants, never the groups.
+ *
+ * Sections within a page are never filtered: if you can reach the page you can
+ * reach all of it, and hiding half a page's own contents would be confusing
+ * rather than simplifying.
+ */
+function visible(node) {
+  const isDestination = !!(node.page || node.panel);
+  if (isDestination) return roleShows(node.id);
+  return (node.children || []).some(visible);
+}
+
 function buildBranch(node, level, list) {
   const li = el('li', { role: 'none' });
   const row = buildRow(node, level);
   li.appendChild(row);
   list.push(row);
 
-  if (node.children && node.children.length) {
+  const children = (node.children || []).filter(visible);
+  if (children.length) {
     const group = el('ul', { id: `${node.id}-group`, role: 'group', class: 'nav-group' });
     group.hidden = !expanded.has(node.id);
-    node.children.forEach((child) => group.appendChild(buildBranch(child, level + 1, list)));
+    children.forEach((child) => group.appendChild(buildBranch(child, level + 1, list)));
     li.appendChild(group);
   }
   return li;
 }
 
-function render() {
+/**
+ * The one line that tells you the nav is filtered. Without it, a page that is
+ * simply absent reads as a missing feature rather than a hidden one.
+ */
+function renderFilterNote() {
+  const note = document.getElementById('nav-filter-note');
+  if (!note) return;
+  const hidden = [];
+  const walk = (node) => {
+    if (node.page || node.panel) { if (!roleShows(node.id)) hidden.push(node.label); return; }
+    (node.children || []).forEach(walk);
+  };
+  NAV_TREE.forEach(walk);
+
+  if (isShowingEverything() || hidden.length === 0) {
+    note.hidden = true;
+    return;
+  }
+  note.hidden = false;
+  note.textContent = `${hidden.length} more ${hidden.length === 1 ? 'page' : 'pages'} hidden for ${getRole().label}`;
+}
+
+export function renderNav() {
   const nav = document.getElementById('sidebar-nav');
   nav.innerHTML = '';
   rows = [];
   const tree = el('ul', { role: 'tree', class: 'nav-tree', 'aria-label': 'Sections' });
-  NAV_TREE.forEach((node) => tree.appendChild(buildBranch(node, 1, rows)));
+  NAV_TREE.filter(visible).forEach((node) => tree.appendChild(buildBranch(node, 1, rows)));
   nav.appendChild(tree);
+  renderFilterNote();
   refreshTabStops();
 }
+
+const render = renderNav;
 
 /** Rows inside a collapsed parent are skipped by the keyboard and by tabbing. */
 function visibleRows() {

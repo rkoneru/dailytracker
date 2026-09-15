@@ -232,11 +232,19 @@ function renderWeeklyWorkload() {
  * coming up, then anything in flight with no date on it. This used to be two
  * cards — "Upcoming Deadlines" and a "Tasks" jump list — which meant an
  * overdue task was reported twice on the same screen.
+ *
+ * It draws from tasks, milestones and deliverables, which is three lists that
+ * each own a different idea of "due". Where a milestone names a deliverable,
+ * the pair appears once.
  */
 function renderUpcomingDeadlines() {
   const state = getState();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // A milestone that marks a deliverable is the same event twice, so the
+  // deliverable is folded into its milestone rather than listed beside it.
+  const claimed = new Set(state.milestones.map((m) => m.deliverableId).filter(Boolean));
 
   const dated = [
     ...state.dashTasks
@@ -244,7 +252,15 @@ function renderUpcomingDeadlines() {
       .map((t) => ({ label: t.name || '(untitled task)', date: parseDate(t.end), kind: 'Task', who: t.assigned })),
     ...state.milestones
       .filter((m) => m.progress < 5 && m.due)
-      .map((m) => ({ label: m.text || '(untitled milestone)', date: parseDate(m.due), kind: 'Milestone', who: '' })),
+      .map((m) => ({
+        label: m.text || '(untitled milestone)',
+        date: parseDate(m.due),
+        kind: m.deliverableId ? 'Milestone · deliverable' : 'Milestone',
+        who: '',
+      })),
+    ...(state.deliverables || [])
+      .filter((d) => d.due && d.status !== 'Accepted' && !claimed.has(d.id))
+      .map((d) => ({ label: d.name || '(untitled deliverable)', date: parseDate(d.due), kind: 'Deliverable', who: d.owner })),
   ].filter((i) => i.date).sort((a, b) => a.date - b.date);
 
   // Work that is underway but undated is invisible on a deadline list, so it
@@ -282,7 +298,10 @@ function renderUpcomingDeadlines() {
       .filter(Boolean).join(' · ');
 
     list.appendChild(el('li', {}, [
-      el('span', { class: 'deadline-list__dot', style: `background:${item.kind === 'Milestone' ? '#a855f7' : 'var(--color-primary)'}` }),
+      el('span', {
+        class: 'deadline-list__dot',
+        style: `background:${item.kind.startsWith('Milestone') ? '#a855f7' : item.kind === 'Deliverable' ? '#0891b2' : 'var(--color-primary)'}`,
+      }),
       el('div', { class: 'deadline-list__info' }, [
         el('span', { class: 'deadline-list__title', text: item.label }),
         el('span', { class: 'deadline-list__meta', text: meta }),

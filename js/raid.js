@@ -3,7 +3,11 @@ import { offerUndo } from './trash.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 import { el } from './dom.js';
 
-export const RAID_TYPES = ['Risk', 'Issue', 'Decision', 'Dependency', 'Assumption'];
+// Dependencies used to be a RAID type. They now have a register of their own on
+// the Delivery page that records direction, party and needed-by — things a RAID
+// row has nowhere to put — so tracking them in both places would be two answers
+// to one question. Existing RAID dependencies are carried across on load.
+export const RAID_TYPES = ['Risk', 'Issue', 'Decision', 'Assumption'];
 export const RAID_STATUSES = ['Open', 'In Progress', 'Escalated', 'Closed'];
 export const SEVERITIES = ['Critical', 'High', 'Medium', 'Low'];
 export const LIKELIHOODS = ['High', 'Medium', 'Low'];
@@ -127,10 +131,9 @@ function renderSummary() {
   const container = document.getElementById('raid-summary');
   container.innerHTML = '';
 
-  const tones = { Risk: 'amber', Issue: 'purple', Decision: 'blue', Dependency: 'green', Assumption: 'blue' };
-  const icons = { Risk: '⚠️', Issue: '🐞', Decision: '🗳', Dependency: '🔗', Assumption: '💭' };
-  // "Dependencys" — plurals here need a lookup, not a trailing s.
-  const plurals = { Risk: 'Risks', Issue: 'Issues', Decision: 'Decisions', Dependency: 'Dependencies', Assumption: 'Assumptions' };
+  const tones = { Risk: 'amber', Issue: 'purple', Decision: 'blue', Assumption: 'blue' };
+  const icons = { Risk: '⚠️', Issue: '🐞', Decision: '🗳', Assumption: '💭' };
+  const plurals = { Risk: 'Risks', Issue: 'Issues', Decision: 'Decisions', Assumption: 'Assumptions' };
 
   RAID_TYPES.forEach((type) => {
     container.appendChild(el('button', {

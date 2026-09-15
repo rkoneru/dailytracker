@@ -40,6 +40,45 @@ export const NAV_TREE = [
     ],
   },
   {
+    id: 'group-engagement',
+    label: 'Engagement',
+    children: [
+      {
+        id: 'tab-delivery',
+        label: 'Delivery',
+        icon: '🤝',
+        page: 'page-delivery',
+        title: 'Delivery',
+        children: [
+          { id: 'nav-charter', label: 'Project Charter', page: 'page-delivery', title: 'Delivery', section: 'sec-charter' },
+          { id: 'nav-roster', label: 'Team Roster', page: 'page-delivery', title: 'Delivery', section: 'sec-roster' },
+          { id: 'nav-raci', label: 'RACI', page: 'page-delivery', title: 'Delivery', section: 'sec-raci' },
+          { id: 'nav-deliverables', label: 'Deliverables', page: 'page-delivery', title: 'Delivery', section: 'sec-deliverables' },
+          { id: 'nav-dependencies', label: 'Dependencies', page: 'page-delivery', title: 'Delivery', section: 'sec-dependencies' },
+          { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-delivery', title: 'Delivery', section: 'sec-stakeholders' },
+          { id: 'nav-comms', label: 'Communications', page: 'page-delivery', title: 'Delivery', section: 'sec-comms' },
+          { id: 'nav-change-requests', label: 'Change Requests', page: 'page-delivery', title: 'Delivery', section: 'sec-change-requests' },
+          { id: 'nav-lessons', label: 'Lessons Learned', page: 'page-delivery', title: 'Delivery', section: 'sec-lessons' },
+        ],
+      },
+      {
+        id: 'tab-service',
+        label: 'Service Management',
+        icon: '🛠',
+        page: 'page-service',
+        title: 'Service Management',
+        children: [
+          { id: 'nav-service-levels', label: 'Service Levels', page: 'page-service', title: 'Service Management', section: 'sec-service-levels' },
+          { id: 'nav-sac', label: 'Acceptance Criteria', page: 'page-service', title: 'Service Management', section: 'sec-sac' },
+          { id: 'nav-releases', label: 'Release & Deployment', page: 'page-service', title: 'Service Management', section: 'sec-releases' },
+          { id: 'nav-changes', label: 'Change Enablement', page: 'page-service', title: 'Service Management', section: 'sec-changes' },
+          { id: 'nav-csi', label: 'Continual Improvement', page: 'page-service', title: 'Service Management', section: 'sec-csi' },
+          { id: 'nav-known-errors', label: 'Known Errors', page: 'page-service', title: 'Service Management', section: 'sec-known-errors' },
+        ],
+      },
+    ],
+  },
+  {
     id: 'group-reporting',
     label: 'Reporting',
     children: [

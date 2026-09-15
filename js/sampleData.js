@@ -74,6 +74,42 @@ function createMarketingCampaign() {
       { id: id('r'), type: 'Decision', title: 'Confirm paid/organic budget split', owner: 'Priya N.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-09-15', action: 'Needs week 1 performance data first.' },
       { id: id('r'), type: 'Dependency', title: 'Legal sign-off on influencer terms', owner: 'Legal', severity: 'High', likelihood: '', status: 'Open', due: '2026-09-10', action: 'Chased 9/8, no response yet.' },
     ],
+    roster: [
+      { id: id('p'), name: 'Priya N.', role: 'Campaign Lead', org: 'In-house', email: 'priya@example.com', allocation: 80, start: '2026-09-01', end: '2026-09-30', status: 'Active' },
+      { id: id('p'), name: 'Marcus T.', role: 'Creative Director', org: 'In-house', email: 'marcus@example.com', allocation: 50, start: '2026-09-01', end: '2026-09-23', status: 'Active' },
+      { id: id('p'), name: 'Jordan K.', role: 'Paid Media Manager', org: 'Northside Agency', email: 'jordan@northside.example', allocation: 60, start: '2026-09-03', end: '2026-09-30', status: 'Active' },
+      { id: id('p'), name: 'Legal', role: 'Contract review', org: 'In-house', email: '', allocation: 10, start: '2026-09-04', end: '', status: 'Part time' },
+    ],
+    raci: [
+      { id: id('ra'), activity: 'Campaign strategy & brief', responsible: 'Priya N.', accountable: 'Priya N.', consulted: 'Marcus T.', informed: 'Jordan K.' },
+      { id: id('ra'), activity: 'Creative sign-off', responsible: 'Marcus T.', accountable: 'Priya N.', consulted: 'Legal', informed: 'Jordan K.' },
+      { id: id('ra'), activity: 'Ad spend allocation', responsible: 'Jordan K.', accountable: 'Priya N.', consulted: '', informed: 'Marcus T.' },
+      { id: id('ra'), activity: 'Influencer contracting', responsible: 'Priya N.', accountable: 'Legal', consulted: 'Marcus T.', informed: '' },
+    ],
+    deliverables: [
+      { id: id('dl'), name: 'Campaign brief', type: 'Document', owner: 'Priya N.', due: '2026-09-02', acceptance: 'Objectives, audience, channels and budget agreed in writing by the marketing lead.', status: 'Accepted', signedOffBy: 'Marcus T.', signOffDate: '2026-09-02' },
+      { id: id('dl'), name: 'Creative asset pack', type: 'Document', owner: 'Marcus T.', due: '2026-09-05', acceptance: 'All six formats delivered at spec, brand-checked, with source files.', status: 'Accepted', signedOffBy: 'Priya N.', signOffDate: '2026-09-05' },
+      { id: id('dl'), name: 'Live campaign across Meta and TikTok', type: 'Service', owner: 'Jordan K.', due: '2026-09-08', acceptance: 'Both channels live, tracking verified end to end, daily spend within 10% of plan.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
+      { id: id('dl'), name: 'Campaign wrap report', type: 'Report', owner: 'Priya N.', due: '2026-09-30', acceptance: 'Reach, CTR, cost per visit and spend against plan, with recommendations.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
+    ],
+    stakeholders: [
+      { id: id('sh'), name: 'Dana Ruiz', org: 'In-house', role: 'CMO', influence: 'High', interest: 'High', attitude: 'Champion', approach: 'Weekly one-page summary, escalate spend changes above 10%.', owner: 'Priya N.' },
+      { id: id('sh'), name: 'Sam Whitfield', org: 'In-house', role: 'Head of Finance', influence: 'High', interest: 'Medium', attitude: 'Sceptic', approach: 'Monthly spend-versus-budget view. Pre-brief before any change request.', owner: 'Priya N.' },
+      { id: id('sh'), name: 'Northside Agency', org: 'Northside Agency', role: 'Media buying partner', influence: 'Medium', interest: 'High', attitude: 'Supporter', approach: 'Standing Tuesday call, shared performance dashboard.', owner: 'Jordan K.' },
+    ],
+    comms: [
+      { id: id('cm'), audience: 'CMO + marketing leadership', purpose: 'Progress, spend and any decision needed', channel: 'Report', frequency: 'Weekly', owner: 'Priya N.', format: 'One page, Friday, from the Weekly report.' },
+      { id: id('cm'), audience: 'Campaign team', purpose: 'Unblock the week', channel: 'Meeting', frequency: 'Weekly', owner: 'Priya N.', format: '30 minutes Monday, standing agenda.' },
+      { id: id('cm'), audience: 'Finance', purpose: 'Spend against budget', channel: 'Email', frequency: 'Monthly', owner: 'Jordan K.', format: 'Spend export plus commentary.' },
+    ],
+    changeRequests: [
+      { id: id('cr'), title: 'Add TikTok as a third channel', raisedBy: 'Dana Ruiz', raised: '2026-09-04', scopeImpact: 'One more channel to set up, monitor and report on.', scheduleImpact: 2, costImpact: 4000, status: 'Approved', decidedBy: 'Dana Ruiz', decided: '2026-09-06' },
+      { id: id('cr'), title: 'Extend campaign by two weeks', raisedBy: 'Priya N.', raised: '2026-09-12', scopeImpact: 'Runs to mid-October; needs a second creative refresh.', scheduleImpact: 14, costImpact: 6000, status: 'Under Review', decidedBy: '', decided: '' },
+    ],
+    lessons: [
+      { id: id('ls'), date: '2026-09-06', phase: 'Execution', category: 'Supplier', what: 'Influencer contracts went to legal without a template, so each one was reviewed from scratch.', impact: 'Four days of avoidable delay, and the contracts are still the critical path.', recommendation: 'Agree a standard influencer contract with legal before the next campaign starts.', owner: 'Priya N.', status: 'Agreed' },
+      { id: id('ls'), date: '2026-09-08', phase: 'Planning', category: 'Quality', what: 'The tracking pixel was set up after the ad account rather than as part of it.', impact: 'Launch went live with unverified attribution for two days.', recommendation: 'Make verified tracking part of the ad-account deliverable, not a follow-on task.', owner: 'Jordan K.', status: 'New' },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Campaign strategy & brief', assigned: 'Priya N.', start: '2026-09-01', end: '2026-09-02', baseStart: '2026-09-01', baseEnd: '2026-09-02', status: 'Complete', prio: 'High', comments: 'Signed off by marketing lead.' },
       { id: id('d'), name: 'Creative asset design', assigned: 'Marcus T.', start: '2026-09-02', end: '2026-09-05', baseStart: '2026-09-02', baseEnd: '2026-09-05', status: 'Complete', prio: 'High', comments: 'All variants approved.' },
@@ -115,6 +151,53 @@ function createSoftwareRelease() {
       { id: id('r'), type: 'Issue', title: 'Staging environment out of date', owner: 'Ravi M.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-10-15', action: 'Blocking DB migration testing.' },
       { id: id('r'), type: 'Decision', title: 'Target hardware for performance profiling', owner: 'Alex R.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-10-14', action: 'Waiting on infra cost estimate.' },
       { id: id('r'), type: 'Assumption', title: 'No breaking API changes from platform team', owner: 'Alex R.', severity: 'High', likelihood: '', status: 'Open', due: '2026-10-17', action: 'Confirm at the platform sync.' },
+    ],
+    // A release is the one template that ends in something operations has to
+    // run, so it is the one that fills in the Service Management page.
+    roster: [
+      { id: id('p'), name: 'Alex R.', role: 'Release Manager', org: 'Engineering', email: 'alex@example.com', allocation: 60, start: '2026-10-01', end: '2026-10-30', status: 'Active' },
+      { id: id('p'), name: 'Sam P.', role: 'Backend Engineer', org: 'Engineering', email: 'sam@example.com', allocation: 100, start: '2026-10-01', end: '2026-10-30', status: 'Active' },
+      { id: id('p'), name: 'Priya D.', role: 'QA Lead', org: 'Engineering', email: 'priya.d@example.com', allocation: 80, start: '2026-10-05', end: '2026-10-30', status: 'Active' },
+      { id: id('p'), name: 'Jordan L.', role: 'Security & Docs', org: 'Platform', email: 'jordan.l@example.com', allocation: 40, start: '2026-10-08', end: '2026-10-27', status: 'Active' },
+    ],
+    deliverables: [
+      { id: id('dl'), name: 'Billing module v2.5', type: 'Software', owner: 'Sam P.', due: '2026-10-12', acceptance: 'All acceptance tests green, no open P1 or P2 defects, migration rehearsed on staging.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
+      { id: id('dl'), name: 'Security review report', type: 'Report', owner: 'Jordan L.', due: '2026-10-14', acceptance: 'No unresolved high findings; each medium has an owner and a date.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
+      { id: id('dl'), name: 'Release notes and runbook', type: 'Document', owner: 'Jordan L.', due: '2026-10-27', acceptance: 'Support can follow the runbook end to end without asking engineering.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
+    ],
+    serviceLevels: [
+      { id: id('sl'), service: 'Billing API', metric: 'Availability', agreement: 'SLA', target: '99.9%', actual: '99.94%', period: 'Monthly', status: 'Met', owner: 'Alex R.' },
+      { id: id('sl'), service: 'Billing API', metric: 'P95 response time', agreement: 'SLA', target: '400ms', actual: '512ms', period: 'Monthly', status: 'Breached', owner: 'Sam P.' },
+      { id: id('sl'), service: 'Support desk', metric: 'P1 first response', agreement: 'SLA', target: '30 min', actual: '24 min', period: 'Monthly', status: 'Met', owner: 'Support Lead' },
+      { id: id('sl'), service: 'Platform team', metric: 'Staging refresh turnaround', agreement: 'OLA', target: '2 working days', actual: '4 working days', period: 'Monthly', status: 'At Risk', owner: 'Jordan L.' },
+      { id: id('sl'), service: 'Payment provider', metric: 'Settlement file delivery', agreement: 'Underpinning contract', target: 'By 06:00 daily', actual: 'By 06:00 daily', period: 'Daily', status: 'Met', owner: 'Alex R.' },
+    ],
+    sac: [
+      { id: id('sa'), criterion: 'Runbook covers start, stop, backup and restore', category: 'Documentation', owner: 'Jordan L.', evidence: 'Runbook v0.9 in the wiki', status: 'In Progress', verified: '' },
+      { id: id('sa'), criterion: 'Monitoring and alerting cover the billing endpoints', category: 'Operational', owner: 'Alex R.', evidence: 'Dashboard + 4 alert rules', status: 'Met', verified: '2026-10-09' },
+      { id: id('sa'), criterion: 'Support team trained on the new flows', category: 'Support', owner: 'Priya D.', evidence: '', status: 'Not Started', verified: '' },
+      { id: id('sa'), criterion: 'Penetration test findings closed or accepted', category: 'Security', owner: 'Jordan L.', evidence: '', status: 'Not Started', verified: '' },
+      { id: id('sa'), criterion: 'Rollback rehearsed on staging', category: 'Operational', owner: 'Sam P.', evidence: 'Rehearsal 2026-10-11, 12 min to restore', status: 'Met', verified: '2026-10-11' },
+    ],
+    releases: [
+      { id: id('rl'), name: 'v2.5.0-rc1', type: 'Minor', environment: 'UAT', windowStart: '2026-10-16', windowEnd: '2026-10-16', owner: 'Alex R.', status: 'Deployed', rollback: 'Redeploy v2.4.3 from the release bucket; no schema change in rc1.' },
+      { id: id('rl'), name: 'v2.5.0', type: 'Major', environment: 'Production', windowStart: '2026-10-29', windowEnd: '2026-10-30', owner: 'Alex R.', status: 'Planned', rollback: 'Restore pre-migration snapshot, redeploy v2.4.3. Rehearsed 2026-10-11, 12 min.' },
+      { id: id('rl'), name: 'v2.4.4 hotfix', type: 'Patch', environment: 'Production', windowStart: '2026-10-08', windowEnd: '2026-10-08', owner: 'Sam P.', status: 'Deployed', rollback: 'Revert the single commit and redeploy.' },
+    ],
+    changes: [
+      { id: id('ch'), title: 'Billing schema migration for v2.5', type: 'Normal', risk: 'High', cab: 'Pending', scheduled: '2026-10-29', implementer: 'Sam P.', status: 'Assessed' },
+      { id: id('ch'), title: 'Raise API gateway rate limit for billing', type: 'Standard', risk: 'Low', cab: 'Not required', scheduled: '2026-10-20', implementer: 'Alex R.', status: 'Scheduled' },
+      { id: id('ch'), title: 'Emergency patch for settlement file parser', type: 'Emergency', risk: 'Medium', cab: 'Approved', scheduled: '2026-10-08', implementer: 'Sam P.', status: 'Implemented' },
+    ],
+    csi: [
+      { id: id('ci'), opportunity: 'Automate the staging refresh', source: 'Retrospective', benefit: 'Cuts the OLA breach that is holding up the DB migration work; saves ~2 days per release.', effort: 'M', priority: 'High', owner: 'Jordan L.', target: '2026-11-15', status: 'Approved' },
+      { id: id('ci'), opportunity: 'Add response-time budget to the CI pipeline', source: 'Metric', benefit: 'Catches P95 regressions before release rather than in production.', effort: 'S', priority: 'High', owner: 'Sam P.', target: '2026-11-01', status: 'Proposed' },
+      { id: id('ci'), opportunity: 'Self-service invoice reissue for support', source: 'Customer feedback', benefit: 'Removes about 30 engineering escalations a month.', effort: 'L', priority: 'Medium', owner: 'Priya D.', target: '2027-01-31', status: 'Proposed' },
+    ],
+    knownErrors: [
+      { id: id('ke'), symptom: 'Invoice PDF renders totals without currency symbol for non-EUR accounts', service: 'Billing API', cause: 'Locale is read from the server, not the account.', workaround: 'Support reissues the invoice with the account locale forced; see runbook step 7.', fix: 'Scheduled in v2.5.0.', status: 'Fix Scheduled', owner: 'Sam P.' },
+      { id: id('ke'), symptom: 'Settlement import silently skips rows with a trailing tab', service: 'Billing API', cause: 'Parser trims spaces but not tabs.', workaround: 'Re-run the import with the cleaned file from the ops share.', fix: 'Patched in v2.4.4.', status: 'Resolved', owner: 'Sam P.' },
+      { id: id('ke'), symptom: 'Dunning emails send twice if a retry lands within 60 seconds', service: 'Billing API', cause: 'Idempotency key not applied to the retry path.', workaround: '', fix: '', status: 'Known Error', owner: 'Alex R.' },
     ],
     dashTasks: [
       { id: id('d'), name: 'Release scope & planning', assigned: 'Alex R.', start: '2026-10-01', end: '2026-10-02', baseStart: '2026-10-01', baseEnd: '2026-10-02', status: 'Complete', prio: 'High', comments: 'Signed off by eng leads.' },

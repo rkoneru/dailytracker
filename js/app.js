@@ -23,6 +23,8 @@ import { initProjects } from './projects.js';
 import { initReports, refreshReport, setReportType } from './reports.js';
 import { captureSnapshotIfDue } from './history.js';
 import { initRaid, renderRaid } from './raid.js';
+import { initDelivery, renderDelivery } from './delivery.js';
+import { initService, renderService } from './service.js';
 import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refreshSyncStatus } from './sync.js';
 import * as supabase from './supabase.js';
 
@@ -83,7 +85,8 @@ if ('serviceWorker' in navigator) {
 
 // ---------- Tabs ----------
 
-const PAGE_IDS = ['page-dashboard', 'page-tasks', 'page-planner', 'page-raid', 'page-reports', 'page-sync', 'page-trash'];
+const PAGE_IDS = ['page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
+  'page-delivery', 'page-service', 'page-reports', 'page-sync', 'page-trash'];
 
 function showPage(pageId, title) {
   PAGE_IDS.forEach((id) => {
@@ -101,6 +104,10 @@ function showPage(pageId, title) {
   if (pageId === 'page-sync') renderSyncPage();
   if (pageId === 'page-trash') renderTrash();
   if (pageId === 'page-tasks') renderTasksPage();
+  // Both register pages read the roster, and the roster is edited on one of
+  // them, so each arrival re-reads rather than trusting the last render.
+  if (pageId === 'page-delivery') renderDelivery();
+  if (pageId === 'page-service') renderService();
 }
 
 function initTabs() {
@@ -514,6 +521,8 @@ function refreshActiveProjectView() {
   renderPlanner();
   renderDashboard();
   renderRaid();
+  renderDelivery();
+  renderService();
   refreshReport();
 }
 
@@ -706,6 +715,8 @@ function init() {
   initProjects({ onProjectChange: refreshActiveProjectView });
   initReports();
   initRaid({ onChanged: onRaidChanged });
+  initDelivery();
+  initService();
   initSharedDataSync();
   initTasks();
   initTrash({ onRestore: refreshActiveProjectView });

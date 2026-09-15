@@ -1,4 +1,5 @@
 import { TEMPLATES, DEFAULT_TEMPLATE_KEY } from './sampleData.js';
+import { REGISTER_KEYS, CHARTER_FIELDS } from './registerDefs.js';
 
 const STORAGE_KEY = 'projectPlannerStore_v2';
 const LEGACY_STORAGE_KEY = 'projectPlannerData_v1';
@@ -108,6 +109,46 @@ function foldLegacyTaskLists(data) {
   delete data.gantt;
 }
 
+/**
+ * The PMP and ITIL registers, added after every existing project was created,
+ * so each one starts as an empty list rather than undefined.
+ *
+ * Dependencies are the one migration with anything to move. RAID carried a
+ * 'Dependency' type, and the dependency register now owns that idea properly —
+ * direction, party, needed-by. Two homes for one thing is exactly what we spent
+ * last week removing, so RAID dependencies are carried across rather than
+ * left to rot beside their replacement.
+ */
+function migrateRegisters(data) {
+  REGISTER_KEYS.forEach((key) => {
+    if (!Array.isArray(data[key])) data[key] = [];
+  });
+  CHARTER_FIELDS.forEach(({ field }) => {
+    if (data[field] === undefined) data[field] = '';
+  });
+
+  const raidDeps = (data.raid || []).filter((r) => r.type === 'Dependency');
+  if (raidDeps.length > 0) {
+    raidDeps.forEach((r) => {
+      data.dependencies.push({
+        id: uid(),
+        description: r.title || '',
+        direction: 'We depend on them',
+        party: r.owner || '',
+        type: 'Internal',
+        neededBy: r.due || '',
+        owner: r.owner || '',
+        // A RAID dependency that was closed has been met; anything still open
+        // that was scored Critical or High was already being worried about.
+        status: r.status === 'Closed' ? 'Met'
+          : (r.severity === 'Critical' || r.severity === 'High') ? 'At Risk' : 'Open',
+        impact: r.action || '',
+      });
+    });
+    data.raid = data.raid.filter((r) => r.type !== 'Dependency');
+  }
+}
+
 // Notes used to be stored as a single newline-delimited string; migrate any
 // data saved in that shape to the current list-of-{id,text} shape.
 // Projects created before the RAID log existed have no raid array.
@@ -135,6 +176,7 @@ function migrateProject(data) {
     if (!Array.isArray(t.cells)) t.cells = [];
     if (t.tickType !== 'diamond') t.tickType = 'check';
   });
+  migrateRegisters(data);
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are
   // never treated as untouched starters — 0 can't equal a real updatedAt.
@@ -150,7 +192,11 @@ function findTemplate(key) {
 }
 
 function buildProjectFromTemplate(templateKey, name) {
-  const data = findTemplate(templateKey).build();
+  // A template states only what makes it distinctive. Everything else — the
+  // register collections, the charter fields, the baseline defaults — comes
+  // from the same migration that brings a saved project up to date, so a
+  // freshly built project can never be a shape older than a restored one.
+  const data = migrateProject(findTemplate(templateKey).build());
   if (name) data.projectName = name;
   data.id = uid();
   data.updatedAt = Date.now();
@@ -224,12 +270,32 @@ const TRASH_LABELS = {
   dashTasks: 'Task',
   notes: 'Note',
   raid: 'RAID entry',
+  roster: 'Team member',
+  raci: 'RACI activity',
+  deliverables: 'Deliverable',
+  dependencies: 'Dependency',
+  stakeholders: 'Stakeholder',
+  comms: 'Communication',
+  changeRequests: 'Change request',
+  lessons: 'Lesson',
+  serviceLevels: 'Service level',
+  sac: 'Acceptance criterion',
+  releases: 'Release',
+  changes: 'Change',
+  csi: 'Improvement',
+  knownErrors: 'Known error',
   project: 'Project',
 };
 
+// The field that names a row differs by collection — a deliverable has a
+// `name`, a dependency a `description`, a known error a `symptom`.
+const TRASH_NAME_FIELDS = ['name', 'text', 'title', 'activity', 'description', 'audience',
+  'opportunity', 'symptom', 'criterion', 'service', 'what'];
+
 function trashLabelFor(kind, row) {
   if (kind === 'project') return row.projectName || 'Untitled project';
-  return row.name || row.text || row.title || `(untitled ${TRASH_LABELS[kind].toLowerCase()})`;
+  const named = TRASH_NAME_FIELDS.map((f) => row[f]).find((v) => typeof v === 'string' && v.trim());
+  return named || `(untitled ${(TRASH_LABELS[kind] || 'row').toLowerCase()})`;
 }
 
 function pushTrash(entry) {
@@ -537,7 +603,7 @@ export function createProject({ name, templateKey } = {}) {
 }
 
 function regenerateRowIds(project) {
-  ['milestones', 'dashTasks', 'notes', 'raid'].forEach((key) => {
+  ['milestones', 'dashTasks', 'notes', 'raid', ...REGISTER_KEYS].forEach((key) => {
     (project[key] || []).forEach((item) => { item.id = uid(); });
   });
 }

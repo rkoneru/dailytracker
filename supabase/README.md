@@ -15,9 +15,15 @@ tier is enough: this app stores a few KB per project.
 ## 2. Run the schema
 
 Open **SQL Editor → New query**, paste all of [`schema.sql`](./schema.sql), and
-run it. It creates four tables, the row level security policies that enforce
+run it. It creates five tables, the row level security policies that enforce
 who can read and write what, and a trigger that mirrors new signups into
-`profiles`. Re-running it later is safe.
+`profiles`. Re-running it later is safe, and is how you pick up changes: the
+script widens constraints in place rather than assuming a fresh database.
+
+If you set this up before the Delivery and Service Management pages existed,
+re-run it now. Those pages store their registers as ordinary synced rows, and
+the old schema only permitted the four row kinds that existed at the time — a
+database that has not been updated will reject them.
 
 ## 3. Connect the app
 

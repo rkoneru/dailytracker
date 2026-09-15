@@ -685,12 +685,12 @@ li.is-drop-target { box-shadow: inset 0 2px 0 var(--color-primary); }
 
 /* Doubled class on purpose: .stat-cards sets 4 columns further down the
    file, and a single-class selector here would lose on source order. */
-.stat-cards.stat-cards--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.stat-cards.stat-cards--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1100px) {
-  .stat-cards.stat-cards--5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stat-cards.stat-cards--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 700px) {
-  .stat-cards.stat-cards--5 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .stat-cards.stat-cards--4 { grid-template-columns: minmax(0, 1fr); }
 }
 
 .raid-tile {
@@ -2170,3 +2170,78 @@ button.kpi::after {
 }
 button.kpi { position: relative; }
 button.kpi:hover::after, button.kpi:focus-visible::after { opacity: 1; }
+
+/* ---------- Registers (Delivery + Service Management) ---------- */
+
+/* Fourteen tables share one set of rules, because they are one component with
+   different columns. Widths are per-column classes rather than nth-child, so
+   reordering a register's columns in registerDefs.js can't silently shift the
+   sizing of the one next to it. */
+.register-table { min-width: 100%; }
+.register-table th { white-space: nowrap; }
+.register-cell { min-width: 120px; }
+.register-cell.col-wide { min-width: 200px; }
+.register-cell.col-email { min-width: 180px; }
+.register-cell.col-num { width: 92px; }
+.register-cell.col-num .row-input { text-align: right; }
+
+.row-select {
+  min-height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  padding: 0 8px;
+  font-weight: 600;
+  font-size: 13px;
+  width: 100%;
+  min-width: 118px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.row-select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* One tone scale across every register, keyed on the value rather than on the
+   column, so "At Risk" reads the same whether it is a dependency, an SLA or a
+   change. Anything unlisted falls through to the neutral select above. */
+.tone-high, .tone-breached, .tone-rejected, .tone-missed, .tone-failed,
+.tone-blocker, .tone-emergency, .tone-rolled-off, .tone-known-error {
+  background: #fee2e2; color: #7f1d1d;
+}
+.tone-at-risk, .tone-medium, .tone-under-review, .tone-submitted, .tone-pending,
+.tone-in-review, .tone-sceptic, .tone-deferred, .tone-in-progress,
+.tone-workaround-available, .tone-fix-scheduled, .tone-onboarding {
+  background: #fef3c7; color: #78350f;
+}
+.tone-met, .tone-accepted, .tone-approved, .tone-committed, .tone-active,
+.tone-champion, .tone-done, .tone-resolved, .tone-applied, .tone-deployed,
+.tone-reviewed, .tone-closed, .tone-implemented {
+  background: #dcfce7; color: #14532d;
+}
+.tone-low, .tone-supporter, .tone-standard, .tone-sla, .tone-agreed,
+.tone-authorised, .tone-scheduled, .tone-part-time, .tone-waived {
+  background: #dbeafe; color: #1e3a8a;
+}
+.tone-s, .tone-m, .tone-l, .tone-xl { background: #ede9fe; color: #4c1d95; }
+
+/* The charter is fields, not rows: one statement about the engagement. */
+.charter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.charter-field { display: flex; flex-direction: column; gap: 4px; }
+.charter-field--wide { grid-column: 1 / -1; }
+.charter-field__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.charter-field__input { width: 100%; font-family: inherit; resize: vertical; }
+
+@media (max-width: 700px) {
+  .charter-grid { grid-template-columns: minmax(0, 1fr); }
+}

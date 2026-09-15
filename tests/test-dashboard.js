@@ -50,7 +50,10 @@ const { eq, done } = createChecks();
   eq('and reads as a warning', schedule.tone, 'is-warn');
 
   const risk = await tile('kpi-risk');
-  eq('risk counts open RAID items', risk.value, '4');
+  // Three, not four: dependencies left the RAID log for their own register on
+  // the Delivery page, so the sample project's one RAID dependency is no
+  // longer counted here.
+  eq('risk counts open RAID items', risk.value, '3');
   eq('and links to the RAID log', risk.goto, 'tab-raid');
 
   const budget = await tile('kpi-budget');

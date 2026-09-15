@@ -141,7 +141,12 @@ create index if not exists project_invites_email_idx on public.project_invites (
 create table if not exists public.project_rows (
   id                uuid primary key,
   project_id        uuid not null references public.projects (id) on delete cascade,
-  kind              text not null check (kind in ('milestones', 'gantt', 'tasks', 'dashTasks', 'notes', 'raid')),
+  -- `kind` was an enumerated list until the PMP and ITIL registers arrived and
+  -- turned it into fourteen more names. Enumerating them in SQL means a
+  -- database migration every time the app grows a register, for a constraint
+  -- that only ever restated what the client already sends, so the check now
+  -- just refuses junk. The set of kinds lives in js/syncModel.js.
+  kind              text not null check (kind <> '' and length(kind) <= 64),
   position          integer not null default 0,
   data              jsonb not null default '{}'::jsonb,
   assignee_user_id  uuid references auth.users (id) on delete set null,
@@ -149,6 +154,13 @@ create table if not exists public.project_rows (
   deleted_at        timestamptz,
   updated_at        timestamptz not null default now()
 );
+
+-- A database created before the registers existed still carries the old
+-- enumerated check, and `create table if not exists` above will not touch it.
+-- Dropping and re-adding is safe to re-run.
+alter table public.project_rows drop constraint if exists project_rows_kind_check;
+alter table public.project_rows add constraint project_rows_kind_check
+  check (kind <> '' and length(kind) <= 64);
 
 create index if not exists project_rows_project_idx on public.project_rows (project_id, kind);
 create index if not exists project_rows_updated_idx on public.project_rows (updated_at);

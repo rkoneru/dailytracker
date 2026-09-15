@@ -1,7 +1,7 @@
 // Shape conversion between the app's project object and the wire shape the
 // sync tables use, plus the change detection that drives it.
 //
-// The app stores a project as one object with six embedded row collections.
+// The app stores a project as one object with its row collections embedded.
 // The server stores it as one `projects` row (the scalar fields) plus N
 // `project_rows` rows, so two people editing different tasks don't collide.
 //
@@ -11,11 +11,17 @@
 // and stamps `_rev` on the ones whose contents actually moved. The hashes
 // live in their own storage key so they never sync as noise.
 
+import { REGISTER_KEYS } from './registerDefs.js';
+
 // The Planner's old `tasks` and `gantt` lists were folded into `dashTasks`.
 // Rows of those kinds may still sit in an already-synced database; they are
 // simply never read or written again, and the schema's CHECK still permits
 // them so an older client on the same account keeps working.
-export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid'];
+//
+// The PMP and ITIL registers are ordinary row kinds too, so they merge, sync
+// and resolve conflicts through exactly the same path as tasks — nothing in
+// the merge or the wire format knows what a register is.
+export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', ...REGISTER_KEYS];
 
 // Fields the app keeps locally that must never be pushed to the server.
 // `updatedAt` is carried as the wire `rev` column, so it must not also be

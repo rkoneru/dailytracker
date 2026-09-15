@@ -23,9 +23,11 @@ const eq = (n, got, want) => {
   console.log('\n--- structure ---');
   eq('one tree', await page.locator('[role="tree"]').count(), 1);
   eq('every row is a treeitem', await page.locator('.nav-row').count(), await page.locator('[role="treeitem"]').count());
-  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 5);
+  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 8);
   eq('groups open, pages closed at first run', await visibleLabels(),
-     ['Workspace', 'Dashboard', 'Tasks', 'Planner', 'RAID & Issues', 'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Trash', 'Export / Share']);
+     ['Workspace', 'Dashboard', 'Tasks', 'Planner', 'RAID & Issues',
+      'Engagement', 'Delivery', 'Service Management',
+      'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Trash', 'Export / Share']);
   eq('aria-level is set', await page.getAttribute('#tab-dashboard', 'aria-level'), '2');
   eq('leaf level is deeper', await page.getAttribute('#nav-ticks', 'aria-level'), '3');
 
@@ -159,7 +161,7 @@ const eq = (n, got, want) => {
   // 2. Every group heading gets its separation, not just the first.
   const groupMargins = await page.$$eval('.nav-row--group',
     els => els.map(e => getComputedStyle(e).marginTop));
-  eq('only the first group sits flush', groupMargins, ['0px', '10px', '10px']);
+  eq('only the first group sits flush', groupMargins, ['0px', '10px', '10px', '10px']);
 
   // 3. A jumped-to section must clear the sticky header.
   // The Planner subtree may be collapsed at this point, so open it first.
@@ -190,7 +192,7 @@ const eq = (n, got, want) => {
 
   // 6. Pages are regions now, not orphaned tabpanels.
   eq('no stale tabpanel roles', await page.locator('[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 7);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 9);
 
   // 7. Opening a report from the nav renders it once, not twice.
   await page.click('#tab-dashboard'); await page.waitForTimeout(300);

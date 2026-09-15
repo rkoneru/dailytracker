@@ -180,10 +180,26 @@ function computeProject(project, periodStart, periodEnd, today) {
     openRisks: openItemsByType(project, 'Risk'),
     openIssues: openItemsByType(project, 'Issue'),
     openDecisions: openItemsByType(project, 'Decision'),
-    openBlockers: openItemsByType(project, ['Dependency', 'Assumption']),
+    // Dependencies moved off the RAID log to their own register, so a SteerCo
+    // pack has to read both: unvalidated assumptions from RAID, and the
+    // dependencies that are actually at risk of being missed.
+    openBlockers: [
+      ...(project.dependencies || [])
+        .filter((d) => d.status === 'At Risk' || d.status === 'Missed' || d.status === 'Open')
+        .sort((a, b) => DEP_ORDER.indexOf(a.status) - DEP_ORDER.indexOf(b.status))
+        .map((d) => ({
+          title: d.description,
+          type: `Dependency · ${d.status}`,
+          owner: d.owner || d.party,
+        })),
+      ...openItemsByType(project, 'Assumption'),
+    ],
     headline,
   };
 }
+
+// Worst first: a missed dependency outranks one merely at risk.
+const DEP_ORDER = ['Missed', 'At Risk', 'Open'];
 
 function computeReport(type, anchor) {
   const { start, end, label } = periodFor(type, anchor);

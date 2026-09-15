@@ -56,11 +56,22 @@ const dashNames = (d) => d.page.evaluate(async () => (await import('/js/state.js
   await sync(laptop);
   let dump = await (await fetch(`${API}/__dump`)).json();
   eq('server has 1 project', dump.projects.length, 1);
-  // 9 tasks + 4 milestones + 3 notes + 4 RAID entries, one row each.
-  eq('server has every row of the project', dump.rows.length, 20);
+  // One row per item across every collection the project carries. Counted from
+  // the client's own state rather than hardcoded, so adding a register to the
+  // sample project doesn't turn this into a number nobody can check.
+  const expectedRows = await laptop.page.evaluate(async () => {
+    const { getState } = await import('/js/state.js');
+    const { ROW_KINDS } = await import('/js/syncModel.js');
+    const s = getState();
+    return ROW_KINDS.reduce((n, k) => n + (s[k] || []).length, 0);
+  });
+  eq('server has every row of the project', dump.rows.length, expectedRows);
   eq('project name uploaded', dump.projects[0].data.projectName, 'Social Media Marketing Campaign');
+  // Registers are ordinary row kinds, so the PMP ones the sample project fills
+  // in upload beside the tasks with no special handling.
   eq('rows carry their kind', [...new Set(dump.rows.map(r => r.kind))].sort(),
-     ['dashTasks', 'milestones', 'notes', 'raid']);
+     ['changeRequests', 'comms', 'dashTasks', 'deliverables', 'dependencies',
+      'lessons', 'milestones', 'notes', 'raci', 'raid', 'roster', 'stakeholders']);
   eq('no updatedAt duplicated into the blob', 'updatedAt' in dump.projects[0].data, false);
 
   console.log('\n--- phone: fresh device pulls it down ---');

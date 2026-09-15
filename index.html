@@ -393,6 +393,97 @@
       </div>
     </section>
 
+    <!-- The PMP side of a services engagement. Every table on this page is a
+         register built by js/register.js from js/registerDefs.js, so the
+         markup here is the page frame and nothing else. -->
+    <section id="page-delivery" class="page" role="region" aria-label="Delivery">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title">
+            <span>Delivery</span>
+          </div>
+          <p class="hint report-subtitle">
+            Who is doing the work, what the client receives, and what has to be agreed along the way.
+            The Planner holds the schedule; this holds the engagement around it.
+          </p>
+        </header>
+
+        <section class="kpi-row" aria-label="Delivery health">
+          <div class="kpi" id="del-count-roster">
+            <span class="kpi__label">Team</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="del-count-deliverables">
+            <span class="kpi__label">Deliverables</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="del-count-dependencies">
+            <span class="kpi__label">Dependencies at risk</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="del-count-changes">
+            <span class="kpi__label">Changes pending</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+        </section>
+
+        <section class="card" id="sec-charter">
+          <div class="card__head"><h2>Project Charter</h2></div>
+          <p class="hint">
+            The agreement everything else is measured against. Assumptions and open risks are tracked
+            as items on the RAID log rather than restated here.
+          </p>
+          <div class="charter-grid" id="charter-fields"></div>
+        </section>
+
+        <div id="delivery-registers"></div>
+      </div>
+    </section>
+
+    <!-- The ITIL side: what happens to the thing once it is live. -->
+    <section id="page-service" class="page" role="region" aria-label="Service management">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title">
+            <span>Service Management</span>
+          </div>
+          <p class="hint report-subtitle">
+            What the service promises, whether it is fit to hand over, and how it is changed,
+            released and improved once it is running.
+          </p>
+        </header>
+
+        <section class="kpi-row" aria-label="Service health">
+          <div class="kpi" id="svc-count-sla">
+            <span class="kpi__label">SLA breaches</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="svc-count-sac">
+            <span class="kpi__label">Go-live readiness</span>
+            <span class="kpi__value">0/0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="svc-count-changes">
+            <span class="kpi__label">Awaiting CAB</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="svc-count-kedb">
+            <span class="kpi__label">Known errors</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+        </section>
+
+        <div id="service-registers"></div>
+      </div>
+    </section>
+
     <section id="page-raid" class="page" role="region" aria-label="RAID and issues">
       <div class="print-page">
         <header class="dash-header">
@@ -403,10 +494,11 @@
             Risks, Assumptions, Issues, Dependencies and Decisions for this project.
             Risks are scored severity × likelihood; everything else is ranked on severity.
             Open items feed the Dashboard and the SteerCo and Executive reports.
+            Dependencies have their own register on the Delivery page, where direction and party can be recorded.
           </p>
         </header>
 
-        <section class="stat-cards stat-cards--5" id="raid-summary"></section>
+        <section class="stat-cards stat-cards--4" id="raid-summary"></section>
 
         <section class="card">
           <div class="card__head">
@@ -748,5 +840,8 @@
   </div>
 
   <script type="module" src="js/app.js"></script>
+<!-- Every register's owner field offers the Delivery roster, so the list is
+     published once here rather than rebuilt per table. -->
+<datalist id="roster-names"></datalist>
 </body>
 </html>

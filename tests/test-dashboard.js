@@ -19,50 +19,70 @@ const { eq, done } = createChecks();
       value: node.querySelector('.kpi__value').textContent,
       sub: node.querySelector('.kpi__sub').textContent,
       tone: ['is-good', 'is-warn', 'is-bad', 'is-idle'].find((c) => node.classList.contains(c)),
+      goto: node.dataset.goto,
     };
   }, id);
 
-  console.log('\n--- each breakdown appears exactly once ---');
-  eq('one status pie', await page.locator('#status-pie').count(), 1);
-  eq('no status summary table', await page.locator('#status-summary-table').count(), 0);
-  eq('no priority summary table', await page.locator('#priority-summary-table').count(), 0);
+  console.log('\n--- the Dashboard reports, it does not repeat other pages ---');
+  // Task counts, the status/priority split and the RAID breakdown all have a
+  // page that owns them. None of them is duplicated here.
+  eq('no status pie', await page.locator('#status-pie').count(), 0);
+  eq('no priority pie', await page.locator('#priority-pie').count(), 0);
+  eq('no RAID bar chart', await page.locator('#raid-chart').count(), 0);
+  eq('no task table', await page.locator('#dash-tasks-body').count(), 0);
   eq('no kanban buckets', await page.locator('.kanban-summary').count(), 0);
+  eq('one list of work that wants looking at',
+     await page.locator('#page-dashboard .deadline-list').count(), 1);
 
-  console.log('\n--- the KPI row answers the questions worth asking ---');
+  console.log('\n--- the KPI row is project health, and each tile is a way in ---');
   eq('labels', await page.$$eval('#page-dashboard .kpi__label', (els) => els.map((e) => e.textContent)),
-     ['Progress', 'Overdue', 'Worst slip', 'Open RAID']);
+     ['Status', 'Schedule', 'Risk', 'Budget']);
 
-  const progress = await tile('kpi-progress');
-  eq('progress shows the fraction', progress.sub, '2 of 9 tasks done');
+  const status = await tile('kpi-status');
+  eq('status is the one the Planner set', status.value, 'ON TRACK');
+  eq('and carries its date', status.sub, 'as at 2026-09-08');
+  eq('and reads as good', status.tone, 'is-good');
+  eq('and links to the page that sets it', status.goto, 'tab-planner');
 
-  const overdue = await tile('kpi-overdue');
-  eq('overdue counts them', overdue.value, '2');
-  eq('and names them', overdue.sub.includes('Ad account'), true);
-  eq('and reads as bad', overdue.tone, 'is-bad');
+  const schedule = await tile('kpi-schedule');
+  eq('schedule reports the worst slip', schedule.value, '+7d');
+  eq('with how many are behind', schedule.sub, '2 tasks behind baseline');
+  eq('and reads as a warning', schedule.tone, 'is-warn');
 
-  const slip = await tile('kpi-slip');
-  eq('slip reports the worst', slip.value, '+7d');
-  eq('with how many are behind', slip.sub, '2 tasks behind baseline');
-  eq('and reads as a warning', slip.tone, 'is-warn');
+  const risk = await tile('kpi-risk');
+  eq('risk counts open RAID items', risk.value, '4');
+  eq('and links to the RAID log', risk.goto, 'tab-raid');
 
-  const raid = await tile('kpi-raid');
-  eq('raid counts open items', raid.value, '4');
+  const budget = await tile('kpi-budget');
+  eq('budget reports the burn', budget.value, '74%');
+  eq('and spells it out', budget.sub, '18,500 of 25,000');
+
+  console.log('\n--- the tiles actually navigate ---');
+  await page.click('#kpi-risk');
+  await page.waitForTimeout(400);
+  eq('the Risk tile opens the RAID log',
+     await page.evaluate(() => document.querySelector('.page.is-active').id), 'page-raid');
+  await page.click('#tab-dashboard');
+  await page.waitForTimeout(400);
 
   console.log('\n--- tone tracks the data, it is not decoration ---');
   await page.click('#tab-planner');
   await page.waitForTimeout(400);
-  // Clear the baseline: the slip tile has nothing to measure against.
   await page.click('#btn-clear-baseline');
   await page.waitForSelector('.dialog');
   await page.click('.dialog .btn-danger');
   await page.waitForTimeout(500);
   await page.click('#tab-dashboard');
   await page.waitForTimeout(500);
-  const noBaseline = await tile('kpi-slip');
+  const noBaseline = await tile('kpi-schedule');
   eq('no baseline reads as idle, not good', noBaseline.tone, 'is-idle');
   eq('and says so', noBaseline.sub, 'No baseline set');
 
-  // Mark every overdue task complete: the overdue tile should go quiet.
+  console.log('\n--- the attention list follows the task list ---');
+  const overdueBefore = await page.$$eval('#upcoming-deadlines .deadline-list__when--soon',
+    (els) => els.map((e) => e.textContent));
+  eq('overdue work is called out', overdueBefore.some((t) => t.includes('overdue')), true);
+
   await page.click('#tab-tasks');
   await page.waitForTimeout(500);
   const rows = await page.locator('#tracker-body tr').count();
@@ -72,10 +92,12 @@ const { eq, done } = createChecks();
   }
   await page.click('#tab-dashboard');
   await page.waitForTimeout(600);
-  const clear = await tile('kpi-overdue');
-  eq('nothing overdue once everything is done', clear.value, '0');
-  eq('and it reads as good', clear.tone, 'is-good');
-  eq('progress reached 100%', (await tile('kpi-progress')).value, '100%');
+  // Milestones have their own due dates and are not finished by finishing
+  // tasks, so what should go quiet is the task half of the list.
+  eq('no task is left wanting attention',
+     (await page.$$eval('#upcoming-deadlines .deadline-list__meta', (els) => els.map((e) => e.textContent)))
+       .some((t) => t.startsWith('Task')), false);
+  eq('and the headline percentage agrees', await page.textContent('#dash-pct-complete'), '100%');
 
   console.log('\n--- other projects means other ---');
   eq('the current project is not listed as an "other" project',
@@ -93,13 +115,12 @@ const { eq, done } = createChecks();
      listed.includes(await page.textContent('#dash-project-name')), false);
 
   console.log('\n--- layout ---');
-  const gaps = await page.evaluate(() => {
-    // Cards in a row should size to their own content, not stretch to the
-    // tallest sibling — that stretching was most of the old dead space.
-    const row = document.querySelectorAll('.dash-row--3')[0];
-    return [...row.children].map((c) => Math.round(c.getBoundingClientRect().height));
-  });
-  eq('cards in a row have their own heights', new Set(gaps).size > 1, true);
+  // Cards in a row should size to their own content, not stretch to the
+  // tallest sibling — that stretching was most of the old dead space.
+  eq('cards in a row size to their own content', await page.evaluate(() => {
+    const row = document.querySelector('.dash-row--2');
+    return getComputedStyle(row).alignItems;
+  }), 'start');
 
   eq('no page overflow at phone width', await page.evaluate(async () => {
     window.resizeTo(400, 900);

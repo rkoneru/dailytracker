@@ -18,23 +18,25 @@ const eq = (n, got, want) => {
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(700);
 
-  // Tasks are edited on the Tasks screen; the Planner is the read-only view
-  // of the same list, and the Dashboard summarises it.
+  // Tasks are edited on the Tasks screen. The Planner's tick grid and the
+  // Dashboard's Gantt are read-only views of that same list, each showing it
+  // in a way the others do not.
   const trackerNames = () => page.$$eval('#tracker-body tr [data-field="name"]', els => els.map(e => e.value));
-  const plannerNames = () => page.$$eval('#tasks-body tr td:nth-child(2)', els => els.map(e => e.textContent));
+  const plannerNames = () => page.$$eval('#tick-body tr .tick-row-label', els => els.map(e => e.textContent));
+  const ganttNames = () => page.$$eval('#dash-gantt .gantt-chart__label', els => els.map(e => e.textContent));
 
   console.log('\n--- one list behind every view ---');
   await page.click('#tab-tasks'); await page.waitForTimeout(400);
   const t0 = await trackerNames();
   await page.click('#tab-planner'); await page.waitForTimeout(400);
-  eq('tracker and planner show the same tasks', await plannerNames(), t0);
+  eq('tracker and the planner tick grid show the same tasks', await plannerNames(), t0);
   eq('and it is the one task set', t0[0], 'Campaign strategy & brief');
 
   console.log('\n--- a tracker edit reaches the other views while they are hidden ---');
   await page.click('#tab-tasks'); await page.waitForTimeout(250);
   await page.locator('#tracker-body tr').first().locator('[data-field="name"]').fill('RENAMED IN PLANNER');
   await page.waitForTimeout(400);
-  eq('planner view updated', (await plannerNames())[0], 'RENAMED IN PLANNER');
+  eq('planner tick grid updated', (await plannerNames())[0], 'RENAMED IN PLANNER');
   eq('dashboard gantt updated too',
      await page.$eval('#dash-gantt .gantt-chart__label', e => e.textContent), 'RENAMED IN PLANNER');
 
@@ -60,24 +62,26 @@ const eq = (n, got, want) => {
   eq('planner row gone too', (await plannerNames()).length, before - 1);
   eq('planner no longer lists it', (await plannerNames()).includes('ADDED ON PLANNER'), false);
 
-  console.log('\n--- status is one field, edited on the Tasks screen ---');
-  const plannerStatusCell = () => page.$eval('#tasks-body tr td:nth-child(7)', e => e.textContent);
+  console.log('\n--- status is one field, and the board is its other view ---');
+  const boardColumn = (name) => page.$eval(
+    `#priority-board [data-column="${name}"]`, e => e.textContent);
   eq('first task starts Complete', await page.inputValue('#tracker-body tr:first-child [data-field="status"]'), 'Complete');
+  eq('so the board files it under Completed', (await boardColumn('Complete')).includes('RENAMED IN PLANNER'), true);
   await page.selectOption('#tracker-body tr:first-child [data-field="status"]', 'On Hold');
   await page.waitForTimeout(300);
-  eq('planner status followed', await plannerStatusCell(), 'On Hold');
+  eq('board column followed', (await boardColumn('On Hold')).includes('RENAMED IN PLANNER'), true);
   await page.selectOption('#tracker-body tr:first-child [data-field="status"]', 'Complete');
   await page.waitForTimeout(300);
-  eq('and back again', await plannerStatusCell(), 'Complete');
+  eq('and back again', (await boardColumn('Complete')).includes('RENAMED IN PLANNER'), true);
 
-  console.log('\n--- Timeline derives from dates ---');
-  const barsBefore = await page.locator('#planner-timeline .gantt-chart__row').count();
-  eq('planner timeline drew bars', barsBefore > 0, true);
+  console.log('\n--- the one timeline derives from the dates ---');
+  await page.click('#tab-dashboard'); await page.waitForTimeout(400);
+  eq('the dashboard gantt drew bars', (await ganttNames()).length > 0, true);
+  await page.click('#tab-tasks'); await page.waitForTimeout(300);
   await page.locator('#tracker-body tr').first().locator('[data-field="end"]').fill('2026-12-31');
   await page.waitForTimeout(400);
-  const label = await page.$eval('#planner-timeline .gantt-chart__bar', e => e.title);
-  eq('timeline bar picked up the new end date', label.includes('12/31/2026'), true);
-  eq('dashboard gantt agrees',
+  await page.click('#tab-dashboard'); await page.waitForTimeout(400);
+  eq('the gantt picked up the new end date',
      (await page.$eval('#dash-gantt .gantt-chart__bar', e => e.title)).includes('12/31/2026'), true);
 
   console.log('\n--- milestones reach the Dashboard live ---');

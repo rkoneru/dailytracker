@@ -78,7 +78,6 @@ const { eq, done } = createChecks();
   }), 0);
 
   // Errors persist, because they usually need acting on.
-  await page.click('#tick-body tr:first-child [data-action="fill-from-dates"]').catch(() => {});
   await page.evaluate(async () => {
     const { toast } = await import('/js/dialog.js');
     toast('Something went wrong', 'error');

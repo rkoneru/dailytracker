@@ -1,19 +1,11 @@
 import { getState, scheduleSave, uid, trashRow } from './state.js';
 import { makeSortable, reorderById } from './dragReorder.js';
-import { renderGanttChart, parseDate } from './charts.js';
-import { slipDays, scheduleSummary, setBaseline, clearBaseline, baselineSummaryText } from './schedule.js';
+import { parseDate } from './charts.js';
+import { scheduleSummary, setBaseline, clearBaseline, baselineSummaryText } from './schedule.js';
 import { confirmAction, toast } from './dialog.js';
 import { offerUndo } from './trash.js';
-import { onMembersChange } from './members.js';
-import {
-  STATUS_COLORS, durationLabel, notifyProjectDataChanged,
-  TICK_DAYS, tickMarker, clampProgress, taskRef,
-} from './taskModel.js';
+import { notifyProjectDataChanged, TICK_DAYS, tickMarker } from './taskModel.js';
 import { el } from './dom.js';
-
-function slug(value) {
-  return String(value || '').toLowerCase().replace(/\s+/g, '-');
-}
 
 function findById(list, id) {
   return list.find((item) => item.id === id);
@@ -203,110 +195,8 @@ function renderTicks() {
 }
 
 
-// ---------- Timeline (derived from task dates) ----------
-//
-// This used to be a hand-ticked 30-day grid with its own list of row names,
-// kept separate from both task lists. It is now a view of the one task list:
-// each task is a row, and its bar is drawn from its own start/end dates, so
-// the Timeline can never disagree with the Tasks table below it.
-
-function renderTimeline() {
-  const container = document.getElementById('planner-timeline');
-  const tasks = getState().dashTasks;
-  const dated = tasks.filter((t) => t.start && t.end);
-
-  const empty = document.getElementById('planner-timeline-empty');
-  empty.hidden = dated.length > 0;
-  if (dated.length === 0) {
-    container.innerHTML = '';
-    return;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  renderGanttChart(container, dated.map((t) => ({
-    label: t.name || 'Untitled task',
-    start: parseDate(t.start),
-    end: parseDate(t.end),
-    baseStart: parseDate(t.baseStart),
-    baseEnd: parseDate(t.baseEnd),
-    color: STATUS_COLORS[t.status] || '#94a3b8',
-    durationLabel: durationLabel(t.start, t.end),
-  })), today);
-}
-
-// ---------- Tasks ----------
-//
-// The same rows the Dashboard's task table edits, shown with the columns that
-// matter while planning. Editing either table changes the one underlying list.
-
-let taskSearchTerm = '';
-
-/**
- * Slip against the baseline. It used to live in the Dashboard's task table;
- * when that table became a link, this went with it — so it belongs here, on
- * the page that shows the schedule.
- */
-function slipCell(t) {
-  const slip = slipDays(t);
-  if (slip === null) {
-    return el('td', { class: 'col-slip', 'data-role': 'slip', text: '—', title: 'No baseline set for this task' });
-  }
-  const label = slip > 0 ? `+${slip}d` : slip < 0 ? `${slip}d` : 'On plan';
-  const tone = slip > 0 ? 'slip--late' : slip < 0 ? 'slip--early' : 'slip--onplan';
-  return el('td', { class: 'col-slip', 'data-role': 'slip', title: `Baseline ${t.baseStart || '—'} → ${t.baseEnd || '—'}` }, [
-    el('span', { class: `slip-chip ${tone}`, text: label }),
-  ]);
-}
-
-function renderTasksRow(t, index) {
-  // Read-only: the Tasks screen owns editing. Plain text rather than disabled
-  // inputs, because a greyed-out form reads as broken while text reads as a
-  // view of something maintained elsewhere.
-  const pct = clampProgress(t.progress);
-  return el('tr', { 'data-id': t.id }, [
-    el('td', { class: 'col-ref', text: taskRef(index) }),
-    el('td', { class: 'cell-strong', text: t.name || '(untitled task)' }),
-    el('td', { text: t.assigned || '—' }),
-    el('td', { class: 'col-date', text: t.start ? new Date(`${t.start}T00:00:00`).toLocaleDateString() : '—' }),
-    el('td', { class: 'col-date', text: t.end ? new Date(`${t.end}T00:00:00`).toLocaleDateString() : '—' }),
-    el('td', { class: 'col-prio' }, [el('span', { class: `prio-select prio-${slug(t.prio)} is-static`, text: t.prio || '—' })]),
-    el('td', { class: 'col-status' }, [el('span', { class: `status-select status-${slug(t.status)} is-static`, text: t.status || '—' })]),
-    slipCell(t),
-    el('td', { class: 'col-progress' }, [
-      el('div', { class: 'progress-cell' }, [
-        el('div', { class: 'progress-bar' }, [
-          el('div', { class: `progress-bar__fill ${t.status === 'Complete' ? 'is-done' : ''}`, style: `width:${pct}%` }),
-        ]),
-        el('span', { class: 'progress-static', text: `${pct}%` }),
-      ]),
-    ]),
-  ]);
-}
-
-function renderTasks() {
-  const tbody = document.getElementById('tasks-body');
-  tbody.innerHTML = '';
-  getState().dashTasks.forEach((t, i) => tbody.appendChild(renderTasksRow(t, i)));
-  applyTaskFilter();
-}
-
-function applyTaskFilter() {
-  const term = taskSearchTerm.trim().toLowerCase();
-  const tasks = getState().dashTasks;
-  document.querySelectorAll('#tasks-body tr').forEach((row) => {
-    const item = findById(tasks, row.dataset.id);
-    const matches = !term || (item?.name || '').toLowerCase().includes(term);
-    row.hidden = !matches;
-  });
-}
-
-function bindTasks() {
-  document.getElementById('task-search').addEventListener('input', (e) => {
-    taskSearchTerm = e.target.value;
-    applyTaskFilter();
-  });
+/** The Planner shows tasks; the Tracker is where they are changed. */
+function bindOpenTasks() {
   document.querySelector('#page-planner [data-action="open-tasks"]').addEventListener('click', () => {
     document.getElementById('tab-tasks').click();
   });
@@ -325,8 +215,6 @@ function commitChange() {
 export function renderPlannerShared() {
   renderMilestones();
   renderTicks();
-  renderTimeline();
-  renderTasks();
   renderBaselineNote();
 }
 
@@ -354,8 +242,6 @@ function bindBaseline() {
     }
     const count = setBaseline(state);
     commitChange();
-    renderTasks();
-    renderTimeline();
     renderBaselineNote();
     if (count === 0) toast('No tasks have dates yet, so there was nothing to baseline.', 'error');
     else toast(`Baseline set from ${count} task${count === 1 ? '' : 's'}.`, 'success');
@@ -371,8 +257,6 @@ function bindBaseline() {
     if (!ok) return;
     clearBaseline(getState());
     commitChange();
-    renderTasks();
-    renderTimeline();
     renderBaselineNote();
     toast('Baseline cleared.');
   });
@@ -433,18 +317,14 @@ function bindNotes() {
 export function renderPlanner() {
   renderMilestones();
   renderTicks();
-  renderTimeline();
-  renderTasks();
   renderBaselineNote();
   renderNotes();
 }
 
 export function initPlanner() {
   renderPlanner();
-  // The assignee column changes shape when membership loads.
-  onMembersChange(() => renderTasks());
   bindMilestones();
-  bindTasks();
+  bindOpenTasks();
   bindBaseline();
   bindNotes();
 }

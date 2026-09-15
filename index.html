@@ -114,8 +114,9 @@
           <div class="card__head">
             <h2>Tick Timeline</h2>
             <span class="hint">Day 1 &middot; <span id="tick-start-label">&mdash;</span></span>
+            <button type="button" class="btn btn-small btn-primary no-print" data-action="open-tasks">Open Task Tracker &rarr;</button>
           </div>
-          <p class="hint">A read-only view of the task list. Marks come from each task's dates.</p>
+          <p class="hint">A read-only view of the task list. Marks come from each task's dates. Tasks are added and edited on the Task Tracker; the Dashboard draws the same dates as a Gantt.</p>
           <div class="table-scroll">
             <table class="data-table tick-table" id="tick-table">
               <thead>
@@ -127,44 +128,6 @@
             </table>
           </div>
           <p class="hint" id="tick-empty" hidden>Add a task below and it appears here.</p>
-        </section>
-
-        <section class="card" id="sec-timeline">
-          <div class="card__head">
-            <h2>Timeline</h2>
-          </div>
-          <p class="hint no-print">Drawn from each task's start and end dates below — add dates to a task and it appears here. Dashed bars show the baseline where one is set.</p>
-          <div class="chart-scroll"><div id="planner-timeline" class="gantt-chart"></div></div>
-          <p class="hint" id="planner-timeline-empty" hidden>No task has both a start and an end date yet.</p>
-        </section>
-
-        <section class="card" id="sec-tasks">
-          <div class="card__head">
-            <h2>Tasks</h2>
-            <button type="button" class="btn btn-small btn-primary no-print" data-action="open-tasks">Open Task Tracker &rarr;</button>
-          </div>
-          <p class="hint no-print">A read-only view. Tasks are added and edited on the Task Tracker.</p>
-          <div class="filter-bar no-print">
-            <input type="search" class="field-input" id="task-search" placeholder="Search tasks...">
-          </div>
-          <div class="table-scroll">
-            <table class="data-table" id="tasks-table">
-              <thead>
-                <tr>
-                  <th class="col-ref">ID</th>
-                  <th>Task</th>
-                  <th>Owner</th>
-                  <th class="col-date">Start</th>
-                  <th class="col-date">End</th>
-                  <th class="col-prio">Priority</th>
-                  <th class="col-status">Status</th>
-                  <th class="col-slip">Slip</th>
-                  <th class="col-progress">Progress</th>
-                </tr>
-              </thead>
-              <tbody id="tasks-body"></tbody>
-            </table>
-          </div>
         </section>
 
         <section class="card" id="sec-budget">
@@ -284,6 +247,7 @@
                   <th class="col-status">Status</th>
                   <th class="col-date">Start</th>
                   <th class="col-date">Due date</th>
+                  <th class="col-slip">Slip</th>
                   <th class="col-progress">Progress</th>
                   <th>Comments</th>
                   <th class="col-action no-print"></th>
@@ -321,13 +285,8 @@
         <header class="dash-header">
           <div class="dash-header__title">
             <span id="dash-project-name">Project</span>
-            <span class="dash-header__badge" id="dash-status-badge">ON TRACK</span>
           </div>
           <div class="dash-header__meta">
-            <div class="readonly-fact">
-              <span class="readonly-fact__label">Status date</span>
-              <span class="readonly-fact__value" id="dash-date-value">&mdash;</span>
-            </div>
             <div class="stat-pill">
               <span class="stat-pill__value" id="dash-pct-complete">0%</span>
               <span class="stat-pill__label">Complete</span>
@@ -335,46 +294,46 @@
           </div>
         </header>
 
-        <!-- The four numbers worth interrupting someone for. Each answers a
-             question a PM actually asks, and each carries a tone, so the row
-             reads as a state rather than as four decorated numbers. -->
-        <section class="kpi-row" aria-label="At a glance">
-          <div class="kpi" id="kpi-progress">
-            <span class="kpi__label">Progress</span>
-            <span class="kpi__value" id="kpi-progress-value">0%</span>
-            <span class="kpi__sub" id="kpi-progress-sub">No tasks yet</span>
-          </div>
-          <div class="kpi" id="kpi-overdue">
-            <span class="kpi__label">Overdue</span>
-            <span class="kpi__value" id="kpi-overdue-value">0</span>
-            <span class="kpi__sub" id="kpi-overdue-sub">Nothing past its end date</span>
-          </div>
-          <div class="kpi" id="kpi-slip">
-            <span class="kpi__label">Worst slip</span>
-            <span class="kpi__value" id="kpi-slip-value">&mdash;</span>
-            <span class="kpi__sub" id="kpi-slip-sub">No baseline set</span>
-          </div>
-          <div class="kpi" id="kpi-raid">
-            <span class="kpi__label">Open RAID</span>
-            <span class="kpi__value" id="kpi-raid-value">0</span>
-            <span class="kpi__sub" id="kpi-raid-sub">Nothing open</span>
-          </div>
+        <!-- Project health, at the altitude only this page works at. These
+             used to be task counts, which the Tasks screen already owns and
+             shows in more detail — two pages answering the same question with
+             the same numbers. Each tile now links to whichever page owns the
+             thing it summarises. -->
+        <section class="kpi-row" aria-label="Project health">
+          <button type="button" class="kpi" id="kpi-status" data-goto="tab-planner">
+            <span class="kpi__label">Status</span>
+            <span class="kpi__value" id="kpi-status-value">&mdash;</span>
+            <span class="kpi__sub" id="kpi-status-sub">Set on the Planner</span>
+          </button>
+          <button type="button" class="kpi" id="kpi-schedule" data-goto="tab-planner">
+            <span class="kpi__label">Schedule</span>
+            <span class="kpi__value" id="kpi-schedule-value">&mdash;</span>
+            <span class="kpi__sub" id="kpi-schedule-sub">No baseline set</span>
+          </button>
+          <button type="button" class="kpi" id="kpi-risk" data-goto="tab-raid">
+            <span class="kpi__label">Risk</span>
+            <span class="kpi__value" id="kpi-risk-value">0</span>
+            <span class="kpi__sub" id="kpi-risk-sub">Nothing open</span>
+          </button>
+          <button type="button" class="kpi" id="kpi-budget" data-goto="tab-planner">
+            <span class="kpi__label">Budget</span>
+            <span class="kpi__value" id="kpi-budget-value">&mdash;</span>
+            <span class="kpi__sub" id="kpi-budget-sub">Not set</span>
+          </button>
         </section>
 
-        <!-- What needs attention, before anything else on the page. -->
-        <div class="dash-row dash-row--2">
-          <div class="card">
-            <div class="card__head"><h2>Upcoming Deadlines</h2></div>
-            <ul class="deadline-list" id="upcoming-deadlines"></ul>
+        <!-- What needs attention, before anything else on the page. Overdue
+             and upcoming work in one list: an overdue task used to show here
+             and again in a second "Tasks" card further down. -->
+        <section class="card card--feature">
+          <div class="card__head">
+            <h2>Needs Attention</h2>
+            <button type="button" class="btn btn-primary no-print" id="btn-open-tasks">Open Task Tracker &rarr;</button>
           </div>
-          <div class="card">
-            <div class="card__head">
-              <h2>Open RAID Items</h2>
-              <span class="hint" id="raid-chart-note"></span>
-            </div>
-            <div class="bar-chart bar-chart--v" id="raid-chart"></div>
-          </div>
-        </div>
+          <ul class="deadline-list" id="upcoming-deadlines"></ul>
+          <p class="hint" id="baseline-note"></p>
+        </section>
+
 
         <section class="card card--feature">
           <div class="card__head"><h2>Task Timeline</h2></div>
@@ -382,10 +341,10 @@
           <div class="chart-scroll"><div class="gantt-chart" id="dash-gantt"></div></div>
         </section>
 
-        <!-- One representation of each breakdown. Status used to appear three
-             times on this page (pie, Kanban buckets, summary table) and
-             priority twice; the duplicates are gone. -->
-        <div class="dash-row dash-row--3">
+        <!-- Rollups no other page carries: progress by milestone, and who is
+             carrying what. The status and priority splits live on the Priority
+             Board, so they are not repeated here. -->
+        <div class="dash-row dash-row--2">
           <div class="card">
             <div class="card__head"><h2>Milestones</h2></div>
             <div class="mini-progress">
@@ -395,26 +354,12 @@
             <ul class="mini-stat-list" id="milestone-progress-breakdown"></ul>
           </div>
           <div class="card">
-            <div class="card__head"><h2>Task Status</h2></div>
-            <div class="pie-row">
-              <div class="pie-holder" id="status-pie"></div>
-              <ul class="legend" id="status-legend"></ul>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card__head"><h2>Task Priority</h2></div>
-            <div class="pie-row">
-              <div class="pie-holder" id="priority-pie"></div>
-              <ul class="legend" id="priority-legend"></ul>
-            </div>
-          </div>
-        </div>
-
-        <div class="dash-row dash-row--3">
-          <div class="card">
             <div class="card__head"><h2>Team Workload</h2></div>
             <ul class="team-list" id="team-workload-list"></ul>
           </div>
+        </div>
+
+        <div class="dash-row dash-row--2">
           <div class="card">
             <div class="card__head"><h2>Weekly Workload</h2></div>
             <p class="hint">Scheduled task-days for the next 7 days.</p>
@@ -435,15 +380,6 @@
             <div class="bar-chart bar-chart--h" id="budget-chart"></div>
           </div>
         </div>
-
-        <section class="card card--feature">
-          <div class="card__head">
-            <h2>Tasks</h2>
-            <button type="button" class="btn btn-primary no-print" id="btn-open-tasks">Open Task Tracker &rarr;</button>
-          </div>
-          <p class="hint" id="baseline-note"></p>
-          <ul class="task-jump" id="task-jump"></ul>
-        </section>
 
         <!-- Cross-project context sits last: it is the only thing here that
              is not about the project you are looking at. -->

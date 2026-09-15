@@ -51,12 +51,10 @@ const { APP_URL, out, launch } = require('./harness');
   const filledCount = await page.locator('#milestones-body tr:first-child .progress-segment.is-filled').count();
   console.log('Filled segments after clicking 3rd:', filledCount);
 
-  // The hand-ticked 30-day grid was replaced by a Timeline derived from each
-  // task's start/end dates, so there are no day cells to toggle any more.
-  const timelineRows = await page.locator('#planner-timeline .gantt-chart__row').count();
-  const firstBar = await page.locator('#planner-timeline .gantt-chart__bar').first().getAttribute('title');
-  console.log('Planner timeline rows:', timelineRows);
-  console.log('First timeline bar:', firstBar);
+  // The hand-ticked 30-day grid is a read-only view of the task list, and the
+  // Gantt it used to sit beside now lives only on the Dashboard.
+  console.log('Planner tick rows:', await page.locator('#tick-body tr').count());
+  console.log('Planner has no second gantt:', (await page.locator('#planner-timeline').count()) === 0);
 
   // Test project name sync between pages
   await page.locator('#page-planner h1.editable').click();

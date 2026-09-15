@@ -27,7 +27,7 @@ const { eq, done } = createChecks();
   // Start and Comments are beyond the reference layout, kept because the
   // Planner is read-only now and nothing else edits them.
   eq('tracker columns', await page.$$eval('#tracker-table thead th', (els) => els.map((e) => e.textContent).filter(Boolean)),
-     ['ID', 'Task', 'Owner', 'Priority', 'Status', 'Start', 'Due date', 'Progress', 'Comments']);
+     ['ID', 'Task', 'Owner', 'Priority', 'Status', 'Start', 'Due date', 'Slip', 'Progress', 'Comments']);
   eq('five board columns', await page.$$eval('.board-col__label', (els) => els.map((e) => e.textContent)),
      ['High Priority', 'Medium Priority', 'Low Priority', 'On Hold', 'Completed']);
   eq('ids are stable refs', (await page.$$eval('#tracker-body .col-ref', (els) => els.map((e) => e.textContent))).slice(0, 3),
@@ -120,10 +120,13 @@ const { eq, done } = createChecks();
   console.log('\n--- the Planner shows the same tasks, read-only ---');
   await page.click('#tab-planner');
   await page.waitForTimeout(600);
-  eq('no task inputs on the Planner', await page.locator('#tasks-body input, #tasks-body select').count(), 0);
-  eq('no tick controls either', await page.locator('#tick-body button, #tick-body input').count(), 0);
-  eq('but it shows the edit made on the Tasks screen',
-     (await page.textContent('#tasks-body')).includes('RENAMED ON TRACKER'), true);
+  // The Planner's copy of the task table and its Gantt were the Tracker and
+  // the Dashboard's timeline redrawn; the tick grid is the view only it has.
+  eq('no second task table', await page.locator('#tasks-body').count(), 0);
+  eq('no second gantt', await page.locator('#planner-timeline').count(), 0);
+  eq('no tick controls', await page.locator('#tick-body button, #tick-body input').count(), 0);
+  eq('but the tick grid shows the edit made on the Tasks screen',
+     (await page.textContent('#tick-body')).includes('RENAMED ON TRACKER'), true);
   eq('and offers a way to the tracker', await page.locator('#page-planner [data-action="open-tasks"]').count(), 1);
 
   console.log('\n--- Planner keeps what only it edits ---');
@@ -142,7 +145,7 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(600);
   eq('no task table', await page.locator('#dash-tasks-body').count(), 0);
   eq('no task inputs at all', await page.locator('#page-dashboard input[data-field], #page-dashboard select[data-field]').count(), 0);
-  eq('a jump list stands in', await page.locator('#task-jump li').count() > 0, true);
+  eq('one attention list stands in', await page.locator('#upcoming-deadlines li').count() > 0, true);
   await page.click('#btn-open-tasks');
   await page.waitForTimeout(500);
   eq('the button opens the Tasks screen', await page.textContent('#page-title'), 'Tasks');

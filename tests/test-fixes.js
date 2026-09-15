@@ -12,22 +12,24 @@ const { APP_URL, out, launch } = require('./harness');
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(600);
 
-  // --- Fix 1: legend built from real DOM nodes, no innerHTML interpolation ---
-  const legend = await page.evaluate(() => {
-    const li = document.querySelector('#status-legend li');
-    const sw = li.querySelector('span.swatch');
-    return { text: li.textContent, swatchTag: sw && sw.tagName, bg: sw && sw.style.background, childNodes: li.childNodes.length };
-  });
-  console.log('legend row:', JSON.stringify(legend));
-
-  const escaped = await page.evaluate(async () => {
-    const { renderLegend } = await import('./js/charts.js');
-    const ul = document.createElement('ul');
-    renderLegend(ul, [{ label: '<img src=x onerror=alert(1)>Hostile', value: 2, color: 'red;"></span><script>bad()</script>' }], 2);
-    return { html: ul.innerHTML, scripts: ul.querySelectorAll('script,img').length, text: ul.textContent };
-  });
-  console.log('hostile label injected elements (expect 0):', escaped.scripts);
-  console.log('hostile rendered html:', escaped.html);
+  // --- Fix 1: user text is rendered as text, never interpolated into markup ---
+  // The pie legend this originally guarded is gone (the Priority Board owns
+  // the status split now), so the check follows the same hostile string into
+  // the surfaces that do render task names.
+  const hostile = '<img src=x onerror=alert(1)>Hostile';
+  await page.click('#tab-tasks');
+  await page.waitForTimeout(400);
+  await page.locator('#tracker-body tr').first().locator('[data-field="name"]').fill(hostile);
+  await page.waitForTimeout(500);
+  await page.click('#tab-dashboard');
+  await page.waitForTimeout(500);
+  const injected = await page.evaluate(() => ({
+    gantt: document.querySelectorAll('#dash-gantt img, #dash-gantt script').length,
+    deadlines: document.querySelectorAll('#upcoming-deadlines img, #upcoming-deadlines script').length,
+    label: document.querySelector('#dash-gantt .gantt-chart__label').textContent,
+  }));
+  console.log('injected elements (expect 0/0):', injected.gantt, '/', injected.deadlines);
+  console.log('hostile name rendered as text:', JSON.stringify(injected.label));
 
   // --- Fix 4: uid() is a uuid in a secure-ish context ---
   const ids = await page.evaluate(async () => {

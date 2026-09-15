@@ -66,11 +66,14 @@ const { APP_URL, out, launch } = require('./harness');
   await page.waitForTimeout(250);
   console.log('rows after add:', await page.locator('#raid-body tr').count());
 
-  // --- Dashboard RAID chart is live ---
+  // --- The Dashboard's Risk tile is the RAID page's number, live ---
+  // The old bar chart here duplicated the five stat cards on the RAID page,
+  // so the Dashboard keeps the total and links across for the breakdown.
   await page.click('#tab-dashboard');
   await page.waitForTimeout(300);
-  console.log('dashboard RAID bars:', (await page.locator('#raid-chart .bar-col__value').allTextContents()).join('/'));
-  console.log('dashboard RAID note:', await page.locator('#raid-chart-note').textContent());
+  console.log('dashboard risk tile:', await page.locator('#kpi-risk-value').textContent(),
+              '/', await page.locator('#kpi-risk-sub').textContent());
+  console.log('no RAID chart on the dashboard:', (await page.locator('#raid-chart').count()) === 0);
 
   // --- Reports pull from RAID ---
   await page.click('#tab-reports');

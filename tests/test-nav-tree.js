@@ -27,7 +27,7 @@ const eq = (n, got, want) => {
   eq('groups open, pages closed at first run', await visibleLabels(),
      ['Workspace', 'Dashboard', 'Tasks', 'Planner', 'RAID & Issues', 'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Trash', 'Export / Share']);
   eq('aria-level is set', await page.getAttribute('#tab-dashboard', 'aria-level'), '2');
-  eq('leaf level is deeper', await page.getAttribute('#nav-tasks', 'aria-level'), '3');
+  eq('leaf level is deeper', await page.getAttribute('#nav-ticks', 'aria-level'), '3');
 
   console.log('\n--- twisty expands without navigating ---');
   eq('planner starts collapsed', await page.getAttribute('#tab-planner', 'aria-expanded'), 'false');

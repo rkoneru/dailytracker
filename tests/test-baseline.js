@@ -22,24 +22,22 @@ async function acceptDialog(page) {
 
   // --- Baseline shipped with the template ---
   console.log('baseline note:', await page.locator('#baseline-note').textContent());
-  const slips = await page.locator('#tasks-body .slip-chip').allTextContents();
+  await page.click('#tab-tasks'); await page.waitForTimeout(400);
+  const slips = await page.locator('#tracker-body .slip-chip').allTextContents();
+  await page.click('#tab-dashboard'); await page.waitForTimeout(400);
   console.log('slip chips:', slips.join(', '));
   console.log('baseline bars on gantt:', await page.locator('#dash-gantt .gantt-chart__baseline').count());
   console.log('dashboard gantt legend present:', await page.locator('#dash-gantt .gantt-chart__legend').isVisible());
-  // The Planner's Timeline is now the same chart over the same tasks.
-  console.log('planner timeline baseline bars:', await page.locator('#planner-timeline .gantt-chart__baseline').count());
   await page.screenshot({ path: out('baseline-gantt.png'), fullPage: true });
 
   // --- Moving an end date increases slip live ---
-  await page.click('#tab-planner'); await page.waitForTimeout(400);
-  const dashRow = page.locator('#tasks-body tr').nth(2);
-  const before = await dashRow.locator('.slip-chip').textContent();
   await page.click('#tab-tasks'); await page.waitForTimeout(400);
-  await page.locator('#tracker-body tr').nth(2).locator('input[data-field="end"]').fill('2026-09-20');
-  await page.waitForTimeout(400);
+  const trackerRow = page.locator('#tracker-body tr').nth(2);
+  const before = await trackerRow.locator('.slip-chip').textContent();
+  await trackerRow.locator('input[data-field="end"]').fill('2026-09-20');
+  await page.waitForTimeout(600);
+  const after = await trackerRow.locator('.slip-chip').textContent();
   await page.click('#tab-planner'); await page.waitForTimeout(400);
-  await page.waitForTimeout(400);
-  const after = await dashRow.locator('.slip-chip').textContent();
   console.log(`slip after pushing end date out: ${before} -> ${after}`);
   console.log('baseline note now:', await page.locator('#planner-baseline-note').textContent());
 
@@ -48,7 +46,9 @@ async function acceptDialog(page) {
   console.log('rebaseline confirm:', (await page.textContent('.dialog__title')).trim());
   await acceptDialog(page);
   await page.waitForTimeout(400);
-  const afterRebaseline = await page.locator('#tasks-body .slip-chip').allTextContents();
+  await page.click('#tab-tasks'); await page.waitForTimeout(400);
+  const afterRebaseline = await page.locator('#tracker-body .slip-chip').allTextContents();
+  await page.click('#tab-planner'); await page.waitForTimeout(400);
   console.log('slip chips after re-baseline:', [...new Set(afterRebaseline)].join(', '));
   console.log('baseline note:', await page.locator('#planner-baseline-note').textContent());
 
@@ -58,7 +58,9 @@ async function acceptDialog(page) {
   await page.waitForTimeout(300);
   console.log('note after clear (planner):', await page.locator('#planner-baseline-note').textContent());
   console.log('note after clear (dashboard):', await page.locator('#baseline-note').textContent());
-  console.log('slip cells after clear (expect dashes):', [...new Set(await page.locator('#tasks-body [data-role="slip"]').allTextContents())].join(', '));
+  await page.click('#tab-tasks'); await page.waitForTimeout(400);
+  console.log('slip cells after clear (expect dashes):', [...new Set(await page.locator('#tracker-body [data-role="slip"]').allTextContents())].join(', '));
+  await page.click('#tab-dashboard'); await page.waitForTimeout(400);
   console.log('baseline bars after clear:', await page.locator('#dash-gantt .gantt-chart__baseline').count());
 
   // --- Reports pick up slippage (use a fresh project that still has its baseline) ---

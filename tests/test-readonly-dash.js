@@ -34,7 +34,7 @@ const acceptDialog = async (page) => {
 
   console.log('\n--- but it still reports ---');
   eq('project name shown', await page.textContent('#dash-project-name'), 'Social Media Marketing Campaign');
-  eq('status badge shown', await page.textContent('#dash-status-badge'), 'ON TRACK');
+  eq('status shown on its tile', await page.textContent('#kpi-status-value'), 'ON TRACK');
   eq('budget shown', await page.textContent('#dash-budget-planned'), '25,000');
   eq('it links to the Tasks screen instead of carrying the table',
      await page.locator('#btn-open-tasks').isVisible(), true);
@@ -45,11 +45,11 @@ const acceptDialog = async (page) => {
 
   await page.locator('#page-planner [data-field="dashStatus"]').fill('AT RISK');
   await page.waitForTimeout(400);
-  eq('status badge followed', await page.textContent('#dash-status-badge'), 'AT RISK');
+  eq('status tile followed', await page.textContent('#kpi-status-value'), 'AT RISK');
 
   await page.locator('#page-planner [data-field="dashDate"]').fill('2026-09-25');
   await page.waitForTimeout(400);
-  eq('status date followed', await page.textContent('#dash-date-value'), '9/25/2026');
+  eq('status date followed', await page.textContent('#kpi-status-sub'), 'as at 2026-09-25');
 
   await page.locator('#page-planner [data-field="budgetPlanned"]').fill('40000');
   await page.waitForTimeout(400);
@@ -67,25 +67,29 @@ const acceptDialog = async (page) => {
      'No baseline set — set one to start tracking slippage.');
   eq('dashboard note agrees', await page.textContent('#baseline-note'),
      'No baseline set — set one to start tracking slippage.');
-  eq('and the slip column says so too',
-     [...new Set(await page.$$eval('#tasks-body [data-role="slip"]', (els) => els.map((e) => e.textContent)))], ['—']);
+  await page.click('#tab-tasks');
+  await page.waitForTimeout(400);
+  eq('and the slip column on the Tracker says so too',
+     [...new Set(await page.$$eval('#tracker-body [data-role="slip"]', (els) => els.map((e) => e.textContent)))], ['—']);
+  await page.click('#tab-planner');
+  await page.waitForTimeout(400);
 
   await page.click('#btn-set-baseline');
   await page.waitForTimeout(500);
   eq('re-baselined to on plan', (await page.textContent('#planner-baseline-note')).startsWith('On plan against baseline'), true);
-  eq('slip chips reset',
-     [...new Set(await page.$$eval('#tasks-body .slip-chip', (els) => els.map((e) => e.textContent)))], ['On plan']);
-
-  console.log('\n--- a date change on the Tasks screen shows up as slip on the Planner ---');
   await page.click('#tab-tasks');
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(400);
+  eq('slip chips reset',
+     [...new Set(await page.$$eval('#tracker-body .slip-chip', (els) => els.map((e) => e.textContent)))], ['On plan']);
+
+  console.log('\n--- a date change on the Tasks screen shows up as slip everywhere ---');
   await page.locator('#tracker-body tr').nth(2).locator('input[data-field="end"]').fill('2026-12-20');
   await page.waitForTimeout(500);
+  eq('the slipped task is flagged in its own row',
+     (await page.$$eval('#tracker-body .slip-chip', (els) => els.map((e) => e.textContent))).some((t) => t.startsWith('+')), true);
   await page.click('#tab-planner');
   await page.waitForTimeout(500);
-  eq('the slipped task is flagged on the Planner',
-     (await page.$$eval('#tasks-body .slip-chip', (els) => els.map((e) => e.textContent))).some((t) => t.startsWith('+')), true);
-  eq('and the note counts it', (await page.textContent('#planner-baseline-note')).includes('slipped'), true);
+  eq('and the Planner note counts it', (await page.textContent('#planner-baseline-note')).includes('slipped'), true);
 
   console.log('\n--- the tick timeline is a read-only view now ---');
   const ticked = () => page.locator('#tick-body tr:first-child .tick-day-cell').evaluateAll(

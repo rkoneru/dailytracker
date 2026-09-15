@@ -1,34 +1,24 @@
+// The Dashboard reports; it does not edit, and it does not repeat another
+// page. Task counts and the status/priority split live on the Tasks screen,
+// the RAID breakdown on the RAID page, and the editable plan on the Planner —
+// each health tile here is a summary of one of those, and a link to it.
+
 import { getState, listProjectsWithProgress, switchProject } from './state.js';
-import { parseDate, daysBetween, renderPieChart, renderLegend, renderGanttChart } from './charts.js';
-import { raidCounts, RAID_TYPES } from './raid.js';
+import { parseDate, daysBetween, renderGanttChart } from './charts.js';
+import { raidCounts } from './raid.js';
 import { scheduleSummary, baselineSummaryText } from './schedule.js';
-import {
-  STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS,
-} from './taskModel.js';
+import { STATUS_COLORS } from './taskModel.js';
 import { el } from './dom.js';
 
-const BADGE_COLORS = {
-  'ON TRACK': ['#bbf7d0', '#14532d'],
-  'AT RISK': ['#fde68a', '#78350f'],
-  'OFF TRACK': ['#fecaca', '#7f1d1d'],
-};
+const MONEY = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 // ---------- Header ----------
 
 export function renderDashHeader() {
   const state = getState();
   document.getElementById('dash-project-name').textContent = state.projectName || 'Untitled project';
-  document.getElementById('dash-date-value').textContent = state.dashDate
-    ? new Date(`${state.dashDate}T00:00:00`).toLocaleDateString()
-    : '—';
-
-  const badge = document.getElementById('dash-status-badge');
-  const status = state.dashStatus || 'ON TRACK';
-  badge.textContent = status;
-  const [bg, fg] = BADGE_COLORS[status.toUpperCase()] || ['#e2e8f0', '#334155'];
-  badge.style.background = bg;
-  badge.style.color = fg;
-
+  // The status and its date used to sit here as well as in the Status tile
+  // below — the same two values twice, a few inches apart. The tile keeps them.
   const total = state.dashTasks.length;
   const complete = state.dashTasks.filter((t) => t.status === 'Complete').length;
   const pct = total > 0 ? Math.round((complete / total) * 100) : 0;
@@ -58,30 +48,7 @@ function renderDashGantt() {
 
 // ---------- Pies ----------
 
-function renderPies() {
-  const state = getState();
-  const total = state.dashTasks.length;
-
-  const statusSlices = STATUS_OPTIONS.map((s) => ({
-    label: s,
-    value: state.dashTasks.filter((t) => t.status === s).length,
-    color: STATUS_COLORS[s],
-  }));
-  renderPieChart(document.getElementById('status-pie'), statusSlices);
-  renderLegend(document.getElementById('status-legend'), statusSlices, total);
-
-  const prioSlices = PRIORITY_OPTIONS.map((p) => ({
-    label: p,
-    value: state.dashTasks.filter((t) => t.prio === p).length,
-    color: PRIORITY_COLORS[p],
-  }));
-  renderPieChart(document.getElementById('priority-pie'), prioSlices);
-  renderLegend(document.getElementById('priority-legend'), prioSlices, total);
-}
-
 // ---------- Budget / pending charts ----------
-
-const MONEY = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 function renderBudgetChart() {
   const state = getState();
@@ -109,28 +76,6 @@ function renderBudgetChart() {
 // Open RAID entries by type. Replaces the old three hand-typed "pending"
 // counters — these are counts of real, owned, dated entries you can click
 // through to on the RAID page.
-function renderRaidChart() {
-  const counts = raidCounts(getState());
-  const container = document.getElementById('raid-chart');
-  container.innerHTML = '';
-  const items = RAID_TYPES.map((type) => ({ label: type, value: counts[type] }));
-  const max = Math.max(...items.map((i) => i.value), 1);
-
-  items.forEach((item) => {
-    const heightPct = Math.max(2, (item.value / max) * 100);
-    container.appendChild(el('div', { class: 'bar-col' }, [
-      el('span', { class: 'bar-col__value', text: String(item.value) }),
-      el('div', { class: 'bar-col__bar', style: `height:${heightPct}%` }),
-      el('span', { class: 'bar-col__label', text: item.label }),
-    ]));
-  });
-
-  const critical = counts.critical;
-  document.getElementById('raid-chart-note').textContent = critical > 0
-    ? `${counts.total} open · ${critical} critical`
-    : `${counts.total} open`;
-}
-
 // ---------- Schedule baseline ----------
 
 function renderBaselineNote() {
@@ -166,29 +111,15 @@ function initials(name) {
 // ---------- Stat cards ----------
 
 /**
- * The four numbers at the top. These replaced "Active Projects / Tasks
- * Completed / Pending Tasks / Team Workload", which between them answered no
- * question anyone opens a dashboard to ask — "1 active project" on a
- * single-project view being the clearest example.
+ * Project health, which is the altitude this page works at.
  *
- * Each tile carries a tone, so the row reads as a state at a glance rather
- * than as four decorated numbers.
+ * These were task counts until the Tasks screen arrived; it owns those and
+ * shows them in more detail, so repeating them here meant two pages answering
+ * the same question with the same numbers. Each tile now summarises something
+ * a different page owns, and clicking it goes there.
  */
 function renderKpis() {
   const state = getState();
-  const tasks = state.dashTasks;
-  const total = tasks.length;
-  const complete = tasks.filter((t) => t.status === 'Complete').length;
-  const pct = total > 0 ? Math.round((complete / total) * 100) : 0;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const overdue = tasks.filter((t) => {
-    if (t.status === 'Complete') return false;
-    const end = parseDate(t.end);
-    return end && end < today;
-  });
-
   const schedule = scheduleSummary(state);
   const raid = raidCounts(state);
 
@@ -200,28 +131,41 @@ function renderKpis() {
     tile.classList.add(tone);
   };
 
-  setTile('kpi-progress', `${pct}%`,
-    total > 0 ? `${complete} of ${total} tasks done` : 'No tasks yet',
-    total === 0 ? 'is-idle' : 'is-good');
-
-  setTile('kpi-overdue', String(overdue.length),
-    overdue.length === 0
-      ? 'Nothing past its end date'
-      : overdue.slice(0, 2).map((t) => t.name || 'Untitled').join(', '),
-    overdue.length === 0 ? 'is-good' : 'is-bad');
+  const status = (state.dashStatus || '').trim().toUpperCase();
+  const statusTone = { 'ON TRACK': 'is-good', 'AT RISK': 'is-warn', 'OFF TRACK': 'is-bad' }[status] || 'is-idle';
+  setTile('kpi-status', status || 'Not set',
+    status ? `as at ${state.dashDate || 'no date'}` : 'Set it on the Planner', statusTone);
 
   if (!schedule.baselined) {
-    setTile('kpi-slip', '—', 'No baseline set', 'is-idle');
+    setTile('kpi-schedule', '—', 'No baseline set', 'is-idle');
   } else if (schedule.slipped.length === 0) {
-    setTile('kpi-slip', 'On plan', 'Nothing has slipped', 'is-good');
+    setTile('kpi-schedule', 'On plan', 'Nothing has slipped', 'is-good');
   } else {
-    setTile('kpi-slip', `+${schedule.maxSlip}d`,
+    setTile('kpi-schedule', `+${schedule.maxSlip}d`,
       `${schedule.slipped.length} task${schedule.slipped.length === 1 ? '' : 's'} behind baseline`, 'is-warn');
   }
 
-  setTile('kpi-raid', String(raid.total),
+  setTile('kpi-risk', String(raid.total),
     raid.total === 0 ? 'Nothing open' : raid.critical > 0 ? `${raid.critical} critical` : 'None critical',
     raid.total === 0 ? 'is-good' : raid.critical > 0 ? 'is-bad' : 'is-warn');
+
+  const planned = state.budgetPlanned || 0;
+  const actual = state.budgetActual || 0;
+  if (planned <= 0) {
+    setTile('kpi-budget', '—', 'Not set', 'is-idle');
+  } else {
+    const used = Math.round((actual / planned) * 100);
+    setTile('kpi-budget', `${used}%`,
+      `${MONEY.format(actual)} of ${MONEY.format(planned)}`,
+      used > 100 ? 'is-bad' : used > 90 ? 'is-warn' : 'is-good');
+  }
+}
+
+/** Each health tile is a way into the page that owns what it summarises. */
+function bindKpiLinks() {
+  document.querySelectorAll('#page-dashboard .kpi[data-goto]').forEach((tile) => {
+    tile.addEventListener('click', () => document.getElementById(tile.dataset.goto).click());
+  });
 }
 
 // ---------- Milestone (sprint) progress ----------
@@ -281,51 +225,76 @@ function renderWeeklyWorkload() {
   });
 }
 
-// ---------- Upcoming deadlines ----------
+// ---------- Needs attention ----------
 
+/**
+ * The one list of work that wants looking at: overdue first, then what is
+ * coming up, then anything in flight with no date on it. This used to be two
+ * cards — "Upcoming Deadlines" and a "Tasks" jump list — which meant an
+ * overdue task was reported twice on the same screen.
+ */
 function renderUpcomingDeadlines() {
   const state = getState();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const taskItems = state.dashTasks
-    .filter((t) => t.status !== 'Complete' && t.end)
-    .map((t) => ({ label: t.name || '(untitled task)', date: parseDate(t.end), kind: 'Task' }));
-  const milestoneItems = state.milestones
-    .filter((m) => m.progress < 5 && m.due)
-    .map((m) => ({ label: m.text || '(untitled milestone)', date: parseDate(m.due), kind: 'Milestone' }));
+  const dated = [
+    ...state.dashTasks
+      .filter((t) => t.status !== 'Complete' && t.end)
+      .map((t) => ({ label: t.name || '(untitled task)', date: parseDate(t.end), kind: 'Task', who: t.assigned })),
+    ...state.milestones
+      .filter((m) => m.progress < 5 && m.due)
+      .map((m) => ({ label: m.text || '(untitled milestone)', date: parseDate(m.due), kind: 'Milestone', who: '' })),
+  ].filter((i) => i.date).sort((a, b) => a.date - b.date);
 
-  const items = [...taskItems, ...milestoneItems]
-    .filter((i) => i.date)
-    .sort((a, b) => a.date - b.date)
-    .slice(0, 6);
+  // Work that is underway but undated is invisible on a deadline list, so it
+  // trails the dated items rather than being dropped.
+  const undated = state.dashTasks
+    .filter((t) => t.status === 'In Progress' && !t.end)
+    .map((t) => ({ label: t.name || '(untitled task)', date: null, kind: 'Task', who: t.assigned }));
+
+  const items = [...dated, ...undated].slice(0, 6);
 
   const list = document.getElementById('upcoming-deadlines');
   list.innerHTML = '';
 
   if (items.length === 0) {
-    list.appendChild(el('p', { class: 'empty-hint', text: 'Nothing due — you\'re all caught up.' }));
+    const tasks = state.dashTasks.length;
+    list.appendChild(el('p', {
+      class: 'empty-hint',
+      text: tasks === 0 ? 'No tasks yet. Open the Task Tracker to add some.' : 'Nothing due — you\'re all caught up.',
+    }));
     return;
   }
 
   items.forEach((item) => {
-    const daysAway = daysBetween(today, item.date);
-    let whenLabel;
-    let whenClass = 'deadline-list__when--ok';
-    if (daysAway < 0) { whenLabel = `${Math.abs(daysAway)}d overdue`; whenClass = 'deadline-list__when--soon'; }
-    else if (daysAway === 0) { whenLabel = 'Today'; whenClass = 'deadline-list__when--soon'; }
-    else if (daysAway <= 3) { whenLabel = `in ${daysAway}d`; whenClass = 'deadline-list__when--soon'; }
-    else { whenLabel = `in ${daysAway}d`; }
+    const daysAway = item.date ? daysBetween(today, item.date) : null;
+    let whenLabel = 'No due date';
+    let whenClass = 'deadline-list__when--idle';
+    if (daysAway !== null) {
+      if (daysAway < 0) { whenLabel = `${Math.abs(daysAway)}d overdue`; whenClass = 'deadline-list__when--soon'; }
+      else if (daysAway === 0) { whenLabel = 'Today'; whenClass = 'deadline-list__when--soon'; }
+      else if (daysAway <= 3) { whenLabel = `in ${daysAway}d`; whenClass = 'deadline-list__when--soon'; }
+      else { whenLabel = `in ${daysAway}d`; whenClass = 'deadline-list__when--ok'; }
+    }
+
+    const meta = [item.kind, item.who, item.date ? item.date.toLocaleDateString() : '']
+      .filter(Boolean).join(' · ');
 
     list.appendChild(el('li', {}, [
       el('span', { class: 'deadline-list__dot', style: `background:${item.kind === 'Milestone' ? '#a855f7' : 'var(--color-primary)'}` }),
       el('div', { class: 'deadline-list__info' }, [
         el('span', { class: 'deadline-list__title', text: item.label }),
-        el('span', { class: 'deadline-list__meta', text: `${item.kind} · ${item.date.toLocaleDateString()}` }),
+        el('span', { class: 'deadline-list__meta', text: meta }),
       ]),
       el('span', { class: `deadline-list__when ${whenClass}`, text: whenLabel }),
     ]));
   });
+
+  const hidden = dated.length + undated.length - items.length;
+  if (hidden > 0) {
+    list.appendChild(el('li', { class: 'deadline-list__more', text: `and ${hidden} more` }));
+  }
 }
 
 // ---------- Team workload list ----------
@@ -402,65 +371,14 @@ function bindActiveProjects({ onSwitch }) {
 export function renderComputed() {
   renderDashHeader();
   renderDashGantt();
-  renderPies();
   renderKpis();
   renderMilestoneProgress();
   renderWeeklyWorkload();
   renderUpcomingDeadlines();
   renderTeamWorkload();
   renderActiveProjectsList();
-  renderRaidChart();
   renderBudgetChart();
   renderBaselineNote();
-  renderTaskJump();
-}
-
-// ---------- Dashboard task table ----------
-
-/**
- * The Dashboard no longer carries the task table — the Tasks screen owns it.
- * What stays is a short list of what needs looking at, each row a way in.
- */
-function renderTaskJump() {
-  const list = document.getElementById('task-jump');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tasks = getState().dashTasks;
-
-  const late = tasks.filter((t) => {
-    if (t.status === 'Complete') return false;
-    const end = parseDate(t.end);
-    return end && end < today;
-  });
-  const active = tasks.filter((t) => t.status === 'In Progress');
-  const shown = [...late, ...active.filter((t) => !late.includes(t))].slice(0, 5);
-
-  list.innerHTML = '';
-  if (tasks.length === 0) {
-    list.appendChild(el('li', { class: 'task-jump__empty', text: 'No tasks yet. Open the Task Tracker to add some.' }));
-    return;
-  }
-  if (shown.length === 0) {
-    list.appendChild(el('li', { class: 'task-jump__empty', text: `Nothing overdue or in flight across ${tasks.length} tasks.` }));
-    return;
-  }
-
-  shown.forEach((task) => {
-    const isLate = late.includes(task);
-    list.appendChild(el('li', { class: 'task-jump__item' }, [
-      el('span', { class: `task-jump__dot ${isLate ? 'is-late' : ''}` }),
-      el('span', { class: 'task-jump__name', text: task.name || '(untitled task)' }),
-      el('span', { class: 'task-jump__meta', text: task.assigned || 'Unassigned' }),
-      el('span', { class: `task-jump__state ${isLate ? 'is-late' : ''}`, text: isLate ? 'Overdue' : 'In progress' }),
-    ]));
-  });
-
-  if (late.length + active.length > shown.length) {
-    list.appendChild(el('li', {
-      class: 'task-jump__empty',
-      text: `and ${late.length + active.length - shown.length} more`,
-    }));
-  }
 }
 
 function bindOpenTasks() {
@@ -477,11 +395,11 @@ export function renderDashboardShared() {
 export function renderDashboard() {
   renderComputed();
   renderBudgetChart();
-  renderRaidChart();
 }
 
 export function initDashboard({ onProjectSwitch: onSwitch } = {}) {
   renderDashboard();
   bindOpenTasks();
+  bindKpiLinks();
   bindActiveProjects({ onSwitch });
 }

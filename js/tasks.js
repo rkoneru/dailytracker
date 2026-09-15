@@ -13,6 +13,7 @@ import {
   newTask, notifyProjectDataChanged, progressForStatus, clampProgress, taskRef,
 } from './taskModel.js';
 import { getMembers, membersLoaded } from './members.js';
+import { slipDays } from './schedule.js';
 import { offerUndo } from './trash.js';
 
 // The board's columns. Priority is the primary split, with two extra columns for
@@ -139,6 +140,24 @@ function progressCell(task) {
   ]);
 }
 
+/**
+ * Slip against the baseline: read-only, because it is derived from the dates
+ * two columns to the left and the baseline the Planner sets. It lived on the
+ * Planner's copy of this table, which is the only thing that table said that
+ * this one did not.
+ */
+function slipCell(task) {
+  const slip = slipDays(task);
+  if (slip === null) {
+    return el('td', { class: 'col-slip', 'data-role': 'slip', text: '\u2014', title: 'No baseline set for this task' });
+  }
+  const label = slip > 0 ? `+${slip}d` : slip < 0 ? `${slip}d` : 'On plan';
+  const tone = slip > 0 ? 'slip--late' : slip < 0 ? 'slip--early' : 'slip--onplan';
+  return el('td', { class: 'col-slip', 'data-role': 'slip', title: `Baseline ${task.baseStart || '\u2014'} \u2192 ${task.baseEnd || '\u2014'}` }, [
+    el('span', { class: `slip-chip ${tone}`, text: label }),
+  ]);
+}
+
 function trackerRow(task, index, today) {
   const late = isOverdue(task, today);
   return el('tr', { 'data-id': task.id, draggable: true, class: late ? 'is-late' : '' }, [
@@ -155,6 +174,7 @@ function trackerRow(task, index, today) {
     // them permanently uneditable, and the Timeline needs a start date.
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'start', value: task.start || '' })]),
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'end', value: task.end || '' })]),
+    slipCell(task),
     progressCell(task),
     el('td', {}, [el('input', { class: 'row-input', 'data-field': 'comments', value: task.comments || '', placeholder: 'Comments' })]),
     el('td', { class: 'col-action no-print' }, [
@@ -300,6 +320,12 @@ function bindTracker() {
     }
 
     task[field] = e.target.value;
+    // Slip is derived from the dates, so it has to follow them; rebuilding the
+    // row instead would take focus off the date input mid-edit.
+    if (field === 'start' || field === 'end') {
+      const row = e.target.closest('tr');
+      row.replaceChild(slipCell(task), row.querySelector('[data-role="slip"]'));
+    }
     commit({ rerenderBoard: field === 'name' || field === 'end' || field === 'start' });
   });
 

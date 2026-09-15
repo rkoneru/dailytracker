@@ -437,10 +437,9 @@ textarea.field-input { padding: 8px 10px; resize: vertical; }
 /* table-layout:fixed makes these two dense tables honor column widths
    exactly (auto layout redistributes width based on content, which
    squeezes text columns unpredictably when many fixed-width columns
-   compete for space). min-width comes from JS (gantt) / above (dash tasks)
-   sized to the actual column count, so overflow-x:auto on .table-scroll
-   takes over on narrow viewports instead of columns shrinking. */
-#dash-tasks-table { min-width: 1278px; table-layout: fixed; }
+   compete for space). min-width comes from JS, sized to the actual column
+   count, so overflow-x:auto on .table-scroll takes over on narrow viewports
+   instead of columns shrinking. */
 #gantt-table { table-layout: fixed; }
 
 .row-input {
@@ -1050,6 +1049,8 @@ body { overflow-anchor: none; }
 }
 .deadline-list__when--soon { background: #fecaca; color: #7f1d1d; }
 .deadline-list__when--ok { background: var(--color-bg); color: var(--color-text-muted); }
+.deadline-list__when--idle { background: transparent; color: var(--color-text-muted); font-style: italic; }
+.deadline-list__more { padding: 8px 4px; font-size: 13px; color: var(--color-text-muted); }
 .empty-hint { color: var(--color-text-muted); font-size: 13px; margin: 0; }
 
 .team-list li {
@@ -1234,56 +1235,6 @@ body { overflow-anchor: none; }
 }
 .mini-stat-list li strong { color: var(--color-text); font-weight: 700; }
 
-.kanban-summary {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.kanban-summary__col {
-  border-radius: 8px;
-  padding: 10px;
-  background: var(--color-bg);
-}
-.kanban-summary__col-count { font-size: 20px; font-weight: 800; display: block; }
-.kanban-summary__col-label { font-size: 12px; color: var(--color-text-muted); }
-.kanban-summary__total {
-  margin: 0;
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-.kanban-summary__total span { font-weight: 700; color: var(--color-text); }
-
-.chart-with-legend {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-.pie-holder svg { display: block; }
-
-.legend {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  flex: 1;
-  min-width: 140px;
-}
-.legend li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.legend .swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  flex: none;
-}
 
 /* ---------- Budget / pending bar charts ---------- */
 
@@ -1965,13 +1916,8 @@ body { overflow-anchor: none; }
 .kpi.is-bad .kpi__value  { color: #b91c1c; }
 .kpi.is-warn .kpi__value { color: #b45309; }
 
-/* Pie and legend side by side reads in half the height of stacked. */
-.pie-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.pie-row .legend { flex: 1; min-width: 140px; }
-
-/* The RAID and weekly bars sit in a fixed 160px well that was mostly empty at
-   the small counts a single project produces. */
-#raid-chart.bar-chart--v { height: 110px; padding-top: 12px; }
+/* The weekly bars sat in a fixed 160px well that was mostly empty at the small
+   counts a single project produces. */
 #weekly-workload-chart.bar-chart--week { height: 120px; padding-top: 12px; }
 
 /* ---------- Tasks screen ---------- */
@@ -2202,21 +2148,25 @@ body { overflow-anchor: none; }
 .tick-type-mark { flex: none; width: 18px; text-align: center; color: var(--color-text-muted); }
 
 /* Dashboard task jump-list, which replaced the task table */
-.task-jump { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-.task-jump__item {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--color-rule, var(--color-border));
-  font-size: 14px;
+
+/* Health tiles are links to whichever page owns what they summarise. */
+button.kpi {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
 }
-.task-jump__item:last-child { border-bottom: none; }
-.task-jump__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); }
-.task-jump__dot.is-late { background: #dc2626; }
-.task-jump__name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.task-jump__meta { font-size: 12px; color: var(--color-text-muted); }
-.task-jump__state { font-size: 11px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .03em; }
-.task-jump__state.is-late { color: #b91c1c; }
-.task-jump__empty { padding: 8px 4px; font-size: 13px; color: var(--color-text-muted); }
+button.kpi:hover { border-color: var(--color-primary); }
+button.kpi:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+button.kpi::after {
+  content: '→';
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+button.kpi { position: relative; }
+button.kpi:hover::after, button.kpi:focus-visible::after { opacity: 1; }

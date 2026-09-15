@@ -32,8 +32,6 @@ export const NAV_TREE = [
         children: [
           { id: 'nav-milestones', label: 'Milestones', page: 'page-planner', title: 'Planner', section: 'sec-milestones' },
           { id: 'nav-ticks', label: 'Tick Timeline', page: 'page-planner', title: 'Planner', section: 'sec-ticks' },
-          { id: 'nav-timeline', label: 'Timeline', page: 'page-planner', title: 'Planner', section: 'sec-timeline' },
-          { id: 'nav-tasks', label: 'Tasks', page: 'page-planner', title: 'Planner', section: 'sec-tasks' },
           { id: 'nav-budget', label: 'Budget & Baseline', page: 'page-planner', title: 'Planner', section: 'sec-budget' },
           { id: 'nav-notes', label: 'Notes', page: 'page-planner', title: 'Planner', section: 'sec-notes' },
         ],

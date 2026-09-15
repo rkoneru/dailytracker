@@ -29,8 +29,8 @@ const { APP_URL, out, launch } = require('./harness');
 
   // Edit a dash task status and check pie/gantt/summary update
   // Status is edited on the Planner now; the Dashboard only reports it.
-  await page.click('#tab-planner'); await page.waitForTimeout(250);
-  await page.selectOption('#tasks-body tr:nth-child(3) select.status-select', 'Complete');
+  await page.click('#tab-tasks'); await page.waitForTimeout(400);
+  await page.selectOption('#tracker-body tr:nth-child(3) select.status-select', 'Complete');
   await page.waitForTimeout(300);
   await page.click('#tab-dashboard'); await page.waitForTimeout(250);
   await page.waitForTimeout(300);

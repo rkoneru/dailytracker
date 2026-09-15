@@ -25,7 +25,7 @@ const eq = (n, got, want) => {
   eq('every row is a treeitem', await page.locator('.nav-row').count(), await page.locator('[role="treeitem"]').count());
   eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 5);
   eq('groups open, pages closed at first run', await visibleLabels(),
-     ['Workspace', 'Dashboard', 'Planner', 'RAID & Issues', 'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Trash', 'Export / Share']);
+     ['Workspace', 'Dashboard', 'Tasks', 'Planner', 'RAID & Issues', 'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Trash', 'Export / Share']);
   eq('aria-level is set', await page.getAttribute('#tab-dashboard', 'aria-level'), '2');
   eq('leaf level is deeper', await page.getAttribute('#nav-tasks', 'aria-level'), '3');
 
@@ -85,7 +85,9 @@ const eq = (n, got, want) => {
   await page.keyboard.press('ArrowDown');
   eq('ArrowDown moves to first child', await focused(), 'tab-dashboard');
   await page.keyboard.press('ArrowDown');
-  eq('ArrowDown again', await focused(), 'tab-planner');
+  eq('ArrowDown again', await focused(), 'tab-tasks');
+  await page.keyboard.press('ArrowDown');
+  eq('and again reaches the Planner', await focused(), 'tab-planner');
   await page.keyboard.press('ArrowRight');
   await page.waitForTimeout(150);
   eq('ArrowRight on an open node steps into it', await focused(), 'nav-milestones');
@@ -124,10 +126,10 @@ const eq = (n, got, want) => {
   console.log('\n--- navigating from elsewhere still updates the tree ---');
   await page.click('#group-manage'); await page.waitForTimeout(200);
   await page.click('#tab-dashboard'); await page.waitForTimeout(300);
-  await page.click('#btn-edit-in-planner');
+  await page.click('#btn-open-tasks');
   await page.waitForTimeout(400);
-  eq('Edit in Planner moved the page', await page.textContent('#page-title'), 'Planner');
-  eq('and the tree followed', await page.getAttribute('#tab-planner', 'aria-current'), 'page');
+  eq('the Dashboard link moved the page', await page.textContent('#page-title'), 'Tasks');
+  eq('and the tree followed', await page.getAttribute('#tab-tasks', 'aria-current'), 'page');
 
   console.log('\n--- narrow viewport ---');
   await page.setViewportSize({ width: 400, height: 900 });
@@ -160,6 +162,9 @@ const eq = (n, got, want) => {
   eq('only the first group sits flush', groupMargins, ['0px', '10px', '10px']);
 
   // 3. A jumped-to section must clear the sticky header.
+  // The Planner subtree may be collapsed at this point, so open it first.
+  await page.click('#tab-planner .nav-twisty').catch(() => {});
+  await page.waitForTimeout(250);
   await page.click('#nav-notes');
   await page.waitForTimeout(800);
   const clearance = await page.evaluate(() => {
@@ -185,7 +190,7 @@ const eq = (n, got, want) => {
 
   // 6. Pages are regions now, not orphaned tabpanels.
   eq('no stale tabpanel roles', await page.locator('[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 6);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 7);
 
   // 7. Opening a report from the nav renders it once, not twice.
   await page.click('#tab-dashboard'); await page.waitForTimeout(300);

@@ -19,15 +19,15 @@ const acceptDialog = async (page) => {
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
 
-  const taskNames = () => page.$$eval('#tasks-body [data-field="name"]', (els) => els.map((e) => e.value));
+  const taskNames = () => page.$$eval('#tracker-body [data-field="name"]', (els) => els.map((e) => e.value));
   const trashRows = () => page.$$eval('#trash-body tr .trash-item__label', (els) => els.map((e) => e.textContent));
 
   console.log('\n--- deleting a task moves it to Trash, not oblivion ---');
-  await page.click('#tab-planner');
+  await page.click('#tab-tasks');
   await page.waitForTimeout(400);
   const before = await taskNames();
   const victim = before[2];
-  await page.locator('#tasks-body tr').nth(2).locator('[data-action="delete-task"]').click();
+  await page.locator('#tracker-body tr').nth(2).locator('[data-action="delete-task-row"]').click();
   await page.waitForTimeout(400);
   eq('row gone from the table', (await taskNames()).includes(victim), false);
   eq('a toast named it', (await page.textContent('.toast__text')).includes(victim), true);
@@ -44,8 +44,11 @@ const acceptDialog = async (page) => {
   eq('badge cleared', await page.locator('#trash-count').isHidden(), true);
 
   console.log('\n--- the Trash page lists what was deleted ---');
-  await page.locator('#tasks-body tr').nth(0).locator('[data-action="delete-task"]').click();
+  await page.locator('#tracker-body tr').nth(0).locator('[data-action="delete-task-row"]').click();
   await page.waitForTimeout(300);
+  // Milestones and notes are still deleted from the Planner — only tasks moved.
+  await page.click('#tab-planner');
+  await page.waitForTimeout(400);
   await page.locator('#milestones-body tr').nth(0).locator('[data-action="delete-milestone"]').click();
   await page.waitForTimeout(300);
   await page.locator('#notes-list li').nth(0).locator('[data-action="delete-note"]').click();
@@ -128,9 +131,9 @@ const acceptDialog = async (page) => {
   eq('empty button disabled when nothing to empty', await page.locator('#btn-empty-trash').isDisabled(), true);
 
   console.log('\n--- trash survives a reload, and is capped ---');
-  await page.click('#tab-planner');
+  await page.click('#tab-tasks');
   await page.waitForTimeout(400);
-  await page.locator('#tasks-body tr').nth(0).locator('[data-action="delete-task"]').click();
+  await page.locator('#tracker-body tr').nth(0).locator('[data-action="delete-task-row"]').click();
   await page.waitForTimeout(400);
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(800);

@@ -1,13 +1,13 @@
 import { getState, scheduleSave, uid, trashRow } from './state.js';
 import { makeSortable, reorderById } from './dragReorder.js';
-import { renderGanttChart, parseDate, daysBetween } from './charts.js';
-import { scheduleSummary, setBaseline, clearBaseline, baselineSummaryText } from './schedule.js';
+import { renderGanttChart, parseDate } from './charts.js';
+import { slipDays, scheduleSummary, setBaseline, clearBaseline, baselineSummaryText } from './schedule.js';
 import { confirmAction, toast } from './dialog.js';
 import { offerUndo } from './trash.js';
-import { getMembers, membersLoaded, onMembersChange } from './members.js';
+import { onMembersChange } from './members.js';
 import {
-  PRIORITY_OPTIONS, STATUS_OPTIONS, STATUS_COLORS, durationLabel, newTask,
-  notifyProjectDataChanged, TICK_DAYS, tickMarker,
+  STATUS_COLORS, durationLabel, notifyProjectDataChanged,
+  TICK_DAYS, tickMarker, clampProgress, taskRef,
 } from './taskModel.js';
 import { el } from './dom.js';
 
@@ -164,10 +164,7 @@ function renderTickHead() {
 function renderTickRow(task) {
   const nameCell = el('td', { class: 'col-tickname' }, [
     el('div', { class: 'tick-row-name' }, [
-      el('button', {
-        type: 'button', class: 'tick-type-btn', 'data-action': 'toggle-tick-type',
-        title: 'Switch between work (✓) and milestone (◆)', text: tickMarker(task.tickType),
-      }),
+      el('span', { class: 'tick-type-mark', 'aria-hidden': 'true', text: tickMarker(task.tickType) }),
       el('span', { class: 'tick-row-label', text: task.name || 'Untitled task', title: task.name || '' }),
     ]),
   ]);
@@ -177,10 +174,8 @@ function renderTickRow(task) {
   for (let day = 1; day <= TICK_DAYS; day += 1) {
     const date = tickDayDate(day);
     const td = el('td', {
-      class: 'tick-day-cell',
+      class: 'tick-day-cell is-static',
       'data-day': String(day),
-      role: 'button',
-      tabindex: '0',
       text: cells.includes(day) ? tickMarker(task.tickType) : '',
     });
     if (date) {
@@ -192,96 +187,21 @@ function renderTickRow(task) {
     tr.appendChild(td);
   }
 
-  tr.appendChild(el('td', { class: 'col-action no-print' }, [
-    el('button', {
-      type: 'button', class: 'icon-btn', 'data-action': 'fill-from-dates',
-      'aria-label': 'Fill ticks from this task\'s dates', title: 'Fill from start/end dates', text: '⤓',
-    }),
-  ]));
   return tr;
 }
 
 function renderTicks() {
   const tasks = getState().dashTasks;
   const tbody = document.getElementById('tick-body');
-  document.getElementById('tick-start').value = getState().tickStart || '';
+  const anchorLabel = document.getElementById('tick-start-label');
+  const anchor = tickAnchor();
+  if (anchorLabel) anchorLabel.textContent = anchor ? anchor.toLocaleDateString() : '—';
   document.getElementById('tick-empty').hidden = tasks.length > 0;
   renderTickHead();
   tbody.innerHTML = '';
   tasks.forEach((task) => tbody.appendChild(renderTickRow(task)));
 }
 
-/** Ticks every day the task's own start/end range covers, inside the window. */
-function fillTicksFromDates(task) {
-  const anchor = tickAnchor();
-  const start = parseDate(task.start);
-  const end = parseDate(task.end) || start;
-  if (!anchor || !start || !end) return false;
-
-  const first = daysBetween(anchor, start) + 1;
-  const last = daysBetween(anchor, end) + 1;
-  const cells = [];
-  for (let day = Math.max(1, first); day <= Math.min(TICK_DAYS, last); day += 1) cells.push(day);
-  task.cells = cells;
-  task.tickType = start.getTime() === end.getTime() ? 'diamond' : 'check';
-  return true;
-}
-
-function bindTicks() {
-  const tbody = document.getElementById('tick-body');
-
-  const toggleCell = (cell) => {
-    const task = findById(getState().dashTasks, rowIdOf(cell));
-    if (!task) return;
-    const day = Number(cell.dataset.day);
-    if (!Array.isArray(task.cells)) task.cells = [];
-    const index = task.cells.indexOf(day);
-    if (index === -1) task.cells.push(day);
-    else task.cells.splice(index, 1);
-    task.cells.sort((a, b) => a - b);
-    cell.textContent = index === -1 ? tickMarker(task.tickType) : '';
-    commitChange();
-  };
-
-  tbody.addEventListener('click', (e) => {
-    const cell = e.target.closest('.tick-day-cell');
-    if (cell) { toggleCell(cell); return; }
-
-    const typeBtn = e.target.closest('[data-action="toggle-tick-type"]');
-    if (typeBtn) {
-      const task = findById(getState().dashTasks, rowIdOf(typeBtn));
-      task.tickType = task.tickType === 'diamond' ? 'check' : 'diamond';
-      commitChange();
-      renderTicks();
-      return;
-    }
-
-    const fillBtn = e.target.closest('[data-action="fill-from-dates"]');
-    if (fillBtn) {
-      const task = findById(getState().dashTasks, rowIdOf(fillBtn));
-      if (!fillTicksFromDates(task)) {
-        toast('Give this task a start and end date inside the timeline window first.', 'error');
-        return;
-      }
-      commitChange();
-      renderTicks();
-    }
-  });
-
-  // Cells are focusable, so they have to answer the keyboard too.
-  tbody.addEventListener('keydown', (e) => {
-    const cell = e.target.closest('.tick-day-cell');
-    if (!cell || (e.key !== 'Enter' && e.key !== ' ')) return;
-    e.preventDefault();
-    toggleCell(cell);
-  });
-
-  document.getElementById('tick-start').addEventListener('change', (e) => {
-    getState().tickStart = e.target.value;
-    commitChange();
-    renderTicks();
-  });
-}
 
 // ---------- Timeline (derived from task dates) ----------
 //
@@ -323,58 +243,45 @@ function renderTimeline() {
 
 let taskSearchTerm = '';
 
-function selectCell(options, value, field, classPrefix) {
-  const select = el('select', { class: `${classPrefix}-select ${classPrefix}-${slug(value)}`, 'data-field': field });
-  options.forEach((option) => {
-    select.appendChild(el('option', { value: option, text: option, selected: option === value }));
-  });
-  return select;
-}
-
 /**
- * A dropdown of real people once the project is shared, a free-text box until
- * then. Picking a person stores both: the account id, which is what the
- * database checks when a contributor tries to edit the row, and the name, so
- * the value still reads correctly offline, in an export, or for anyone who
- * never turns sync on.
+ * Slip against the baseline. It used to live in the Dashboard's task table;
+ * when that table became a link, this went with it — so it belongs here, on
+ * the page that shows the schedule.
  */
-function assigneeCell(t) {
-  const members = getMembers();
-  if (!membersLoaded() || members.length === 0) {
-    return el('input', { class: 'row-input', 'data-field': 'assigned', value: t.assigned || '', placeholder: 'Assignee' });
+function slipCell(t) {
+  const slip = slipDays(t);
+  if (slip === null) {
+    return el('td', { class: 'col-slip', 'data-role': 'slip', text: '—', title: 'No baseline set for this task' });
   }
-
-  const select = el('select', { class: 'row-input row-select', 'data-field': 'assigneeUserId' });
-  select.appendChild(el('option', { value: '', text: 'Unassigned' }));
-  members.forEach((member) => {
-    select.appendChild(el('option', {
-      value: member.userId,
-      text: member.name + (member.isSelf ? ' (you)' : ''),
-      selected: t.assigneeUserId === member.userId,
-    }));
-  });
-
-  // A name typed before the project was shared, or a person since removed:
-  // keep showing it rather than silently dropping the assignment.
-  if (t.assigned && !members.some((m) => m.userId === t.assigneeUserId)) {
-    const orphan = el('option', { value: '__orphan', text: `${t.assigned} (not a member)`, selected: true });
-    select.appendChild(orphan);
-  }
-  return select;
+  const label = slip > 0 ? `+${slip}d` : slip < 0 ? `${slip}d` : 'On plan';
+  const tone = slip > 0 ? 'slip--late' : slip < 0 ? 'slip--early' : 'slip--onplan';
+  return el('td', { class: 'col-slip', 'data-role': 'slip', title: `Baseline ${t.baseStart || '—'} → ${t.baseEnd || '—'}` }, [
+    el('span', { class: `slip-chip ${tone}`, text: label }),
+  ]);
 }
 
 function renderTasksRow(t, index) {
-  return el('tr', { 'data-id': t.id, draggable: true }, [
-    dragHandleCell(),
-    el('td', { class: 'col-num', text: String(index + 1) }),
-    el('td', {}, [el('input', { class: 'row-input', 'data-field': 'name', value: t.name || '', placeholder: 'Task name' })]),
-    el('td', {}, [assigneeCell(t)]),
-    el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'start', value: t.start || '' })]),
-    el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'end', value: t.end || '' })]),
-    el('td', { class: 'col-status' }, [selectCell(STATUS_OPTIONS, t.status, 'status', 'status')]),
-    el('td', { class: 'col-prio' }, [selectCell(PRIORITY_OPTIONS, t.prio, 'prio', 'prio')]),
-    el('td', {}, [el('input', { class: 'row-input', 'data-field': 'comments', value: t.comments || '', placeholder: 'Comments' })]),
-    el('td', { class: 'col-action no-print' }, [el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-task', 'aria-label': 'Delete task', text: '🗑' })]),
+  // Read-only: the Tasks screen owns editing. Plain text rather than disabled
+  // inputs, because a greyed-out form reads as broken while text reads as a
+  // view of something maintained elsewhere.
+  const pct = clampProgress(t.progress);
+  return el('tr', { 'data-id': t.id }, [
+    el('td', { class: 'col-ref', text: taskRef(index) }),
+    el('td', { class: 'cell-strong', text: t.name || '(untitled task)' }),
+    el('td', { text: t.assigned || '—' }),
+    el('td', { class: 'col-date', text: t.start ? new Date(`${t.start}T00:00:00`).toLocaleDateString() : '—' }),
+    el('td', { class: 'col-date', text: t.end ? new Date(`${t.end}T00:00:00`).toLocaleDateString() : '—' }),
+    el('td', { class: 'col-prio' }, [el('span', { class: `prio-select prio-${slug(t.prio)} is-static`, text: t.prio || '—' })]),
+    el('td', { class: 'col-status' }, [el('span', { class: `status-select status-${slug(t.status)} is-static`, text: t.status || '—' })]),
+    slipCell(t),
+    el('td', { class: 'col-progress' }, [
+      el('div', { class: 'progress-cell' }, [
+        el('div', { class: 'progress-bar' }, [
+          el('div', { class: `progress-bar__fill ${t.status === 'Complete' ? 'is-done' : ''}`, style: `width:${pct}%` }),
+        ]),
+        el('span', { class: 'progress-static', text: `${pct}%` }),
+      ]),
+    ]),
   ]);
 }
 
@@ -396,74 +303,12 @@ function applyTaskFilter() {
 }
 
 function bindTasks() {
-  const tbody = document.getElementById('tasks-body');
-
-  tbody.addEventListener('input', (e) => {
-    const field = e.target.dataset.field;
-    if (!field || field === 'done') return;
-    const item = findById(getState().dashTasks, rowIdOf(e.target));
-    item[field] = e.target.value;
-    commitTaskChange({ rerenderTimeline: field === 'start' || field === 'end' || field === 'name' });
-    if (field === 'name') {
-      applyTaskFilter();
-      const label = document.querySelector(`#tick-body tr[data-id="${item.id}"] .tick-row-label`);
-      if (label) {
-        label.textContent = item.name || 'Untitled task';
-        label.title = item.name || '';
-      }
-    }
-  });
-
-  tbody.addEventListener('change', (e) => {
-    const field = e.target.dataset.field;
-    const item = findById(getState().dashTasks, rowIdOf(e.target));
-
-    if (field === 'assigneeUserId') {
-      if (e.target.value === '__orphan') return;
-      const member = getMembers().find((m) => m.userId === e.target.value);
-      item.assigneeUserId = member ? member.userId : '';
-      // The readable name is kept in step, so the value survives export,
-      // offline use, and anyone who never signs in.
-      item.assigned = member ? member.name : '';
-      commitTaskChange({});
-      return;
-    }
-
-    if (field !== 'status' && field !== 'prio') return;
-    item[field] = e.target.value;
-    e.target.className = `${field}-select ${field}-${slug(e.target.value)}`;
-    commitTaskChange({ rerenderTimeline: field === 'status' });
-  });
-
-  tbody.addEventListener('click', (e) => {
-    if (!e.target.closest('[data-action="delete-task"]')) return;
-    const id = rowIdOf(e.target);
-    const entry = trashRow('dashTasks', id);
-    commitTaskChange({});
-    renderTasks();
-    renderTicks();
-    if (entry) offerUndo(entry);
-  });
-
-  makeSortable(tbody, {
-    onDrop: (draggedId, targetId) => {
-      reorderById(getState().dashTasks, draggedId, targetId);
-      commitTaskChange({});
-      renderTasks();
-      renderTicks();
-    },
-  });
-
-  document.querySelector('#page-planner [data-action="add-task"]').addEventListener('click', () => {
-    getState().dashTasks.push({ id: uid(), ...newTask() });
-    commitTaskChange({});
-    renderTasks();
-    renderTicks();
-  });
-
   document.getElementById('task-search').addEventListener('input', (e) => {
     taskSearchTerm = e.target.value;
     applyTaskFilter();
+  });
+  document.querySelector('#page-planner [data-action="open-tasks"]').addEventListener('click', () => {
+    document.getElementById('tab-tasks').click();
   });
 }
 
@@ -474,11 +319,6 @@ function bindTasks() {
 function commitChange() {
   scheduleSave();
   notifyProjectDataChanged('planner');
-}
-
-function commitTaskChange({ rerenderTimeline = true } = {}) {
-  if (rerenderTimeline) renderTimeline();
-  commitChange();
 }
 
 /** Re-renders the views the Planner shows of shared data. */
@@ -604,7 +444,6 @@ export function initPlanner() {
   // The assignee column changes shape when membership loads.
   onMembersChange(() => renderTasks());
   bindMilestones();
-  bindTicks();
   bindTasks();
   bindBaseline();
   bindNotes();

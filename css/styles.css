@@ -1973,3 +1973,250 @@ body { overflow-anchor: none; }
    the small counts a single project produces. */
 #raid-chart.bar-chart--v { height: 110px; padding-top: 12px; }
 #weekly-workload-chart.bar-chart--week { height: 120px; padding-top: 12px; }
+
+/* ---------- Tasks screen ---------- */
+
+.section-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  border-radius: 5px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Counts across the top, one per state. Colour lives in the icon chip so the
+   row stays readable rather than becoming five coloured blocks. */
+.tally-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 1000px) { .tally-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .tally-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.tally {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "icon value" "icon label" "icon pct";
+  align-items: center;
+  column-gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.tally__icon {
+  grid-area: icon;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 17px;
+}
+.tally__value { grid-area: value; font-size: 22px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tally__label { grid-area: label; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
+.tally__pct { grid-area: pct; font-size: 11px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+
+.tally--done .tally__icon   { background: #dcfce7; color: #15803d; }
+.tally--active .tally__icon { background: #dbeafe; color: #1d4ed8; }
+.tally--hold .tally__icon   { background: #fef3c7; color: #b45309; }
+.tally--late .tally__icon   { background: #fee2e2; color: #b91c1c; }
+
+/* ---------- tracker table ---------- */
+
+.tracker-table { min-width: 1240px; }
+/* The task name is the column people read, so it takes the slack and every
+   other column is pinned to what its content actually needs. */
+.tracker-table th:nth-child(3), .tracker-table td:nth-child(3) { min-width: 220px; }
+.tracker-table .row-input { width: 100%; }
+.col-ref { width: 62px; font-family: ui-monospace, monospace; font-size: 12px; color: var(--color-text-muted); }
+.col-owner { width: 138px; }
+.col-progress { width: 156px; }
+
+#tracker-body tr.is-late .col-ref { color: #b91c1c; font-weight: 700; }
+#tracker-body tr.is-flash { background: #fef9c3; transition: background 0.6s ease; }
+
+.progress-cell { display: flex; align-items: center; gap: 8px; }
+.progress-bar {
+  flex: 1;
+  min-width: 48px;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+.progress-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--color-primary);
+  transition: width 0.2s ease;
+}
+.progress-bar__fill.is-done { background: #16a34a; }
+.progress-suffix { font-size: 11px; color: var(--color-text-muted); margin-left: -4px; }
+.progress-input {
+  width: 46px;
+  min-height: 28px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.progress-input:hover { border-color: var(--color-border); }
+.progress-input:focus-visible { outline: none; border-color: var(--color-primary); box-shadow: var(--focus-ring); }
+
+/* ---------- priority board ---------- */
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(190px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  align-items: start;
+}
+@media (max-width: 1100px) { .board { grid-template-columns: repeat(5, minmax(190px, 220px)); } }
+
+.board-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.board-col__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.board-col__count {
+  flex: none;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.board-col--high .board-col__head   { background: #dc2626; }
+.board-col--medium .board-col__head { background: #ea9308; }
+.board-col--low .board-col__head    { background: #16a34a; }
+.board-col--hold .board-col__head   { background: #1d4ed8; }
+.board-col--done .board-col__head   { background: #64748b; }
+
+.board-col__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 60px;
+  border-radius: 8px;
+}
+.board-col__list.is-drop-target { background: rgba(29, 78, 216, 0.10); outline: 2px dashed var(--color-primary); outline-offset: 2px; }
+
+.board-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.board-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.board-card.is-dragging { opacity: 0.45; }
+.board-card.is-late { border-color: #fca5a5; }
+
+.board-card__head { display: flex; align-items: center; gap: 6px; }
+.board-card__ref { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; color: var(--color-text-muted); }
+.board-card__flag {
+  margin-left: auto;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: #dc2626; color: #fff;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.board-card__tick { margin-left: auto; color: #16a34a; font-weight: 700; font-size: 12px; }
+.board-card__title { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.3; }
+.board-card__meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.board-card__date { font-size: 11px; color: var(--color-text-muted); }
+.board-card__avatar {
+  flex: none;
+  width: 21px; height: 21px;
+  border-radius: 50%;
+  background: var(--color-primary); color: #fff;
+  font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.board-card__progress { display: flex; align-items: center; gap: 7px; }
+.board-card__pct { font-size: 10px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
+
+.board-col__add {
+  margin-top: 8px;
+  border: 1px dashed var(--color-border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px;
+  cursor: pointer;
+}
+.board-col__add:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.board-col__add:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.legend-key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.legend-key li { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-muted); }
+.legend-key__dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+/* Read-only task views (Planner) */
+.progress-static { font-size: 12px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+.tick-day-cell.is-static { cursor: default; }
+.tick-day-cell.is-static:hover { background: transparent; }
+.tick-type-mark { flex: none; width: 18px; text-align: center; color: var(--color-text-muted); }
+
+/* Dashboard task jump-list, which replaced the task table */
+.task-jump { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.task-jump__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--color-rule, var(--color-border));
+  font-size: 14px;
+}
+.task-jump__item:last-child { border-bottom: none; }
+.task-jump__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); }
+.task-jump__dot.is-late { background: #dc2626; }
+.task-jump__name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-jump__meta { font-size: 12px; color: var(--color-text-muted); }
+.task-jump__state { font-size: 11px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .03em; }
+.task-jump__state.is-late { color: #b91c1c; }
+.task-jump__empty { padding: 8px 4px; font-size: 13px; color: var(--color-text-muted); }

@@ -95,14 +95,14 @@ const acceptDialog = async (page) => {
   eq('role updated on the server', dump3.members[0].role, 'editor');
 
   console.log('\n--- the assignee picker is backed by real members ---');
-  await page.click('#tab-planner');
+  await page.click('#tab-tasks');
   await page.waitForTimeout(700);
-  const options = await page.$$eval('#tasks-body tr:first-child select[data-field="assigneeUserId"] option',
+  const options = await page.$$eval('#tracker-body tr:first-child select[data-field="assigneeUserId"] option',
     (els) => els.map((e) => e.textContent));
   eq('picker offers the members', options.filter((o) => o.includes('Ada Owner') || o.includes('Bo Mate')).length, 2);
   eq('and an unassigned choice', options[0], 'Unassigned');
 
-  await page.selectOption('#tasks-body tr:first-child select[data-field="assigneeUserId"]', MATE.id);
+  await page.selectOption('#tracker-body tr:first-child select[data-field="assigneeUserId"]', MATE.id);
   await page.waitForTimeout(600);
   const stored = await page.evaluate(async () => {
     const t = (await import('/js/state.js')).getState().dashTasks[0];

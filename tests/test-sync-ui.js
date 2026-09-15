@@ -8,17 +8,6 @@ async function acceptDialog(page) {
   await page.waitForTimeout(200);
 }
 
-async function fillDialog(page, value) {
-  await page.waitForSelector('.dialog input', { timeout: 5000 });
-  await page.fill('.dialog input', value);
-  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
-  await page.waitForTimeout(200);
-}
-
-async function toastText(page) {
-  await page.waitForSelector('.toast', { timeout: 5000 });
-  return (await page.textContent('.toast__text')).trim();
-}
 (async () => {
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1400, height: 1100 } });

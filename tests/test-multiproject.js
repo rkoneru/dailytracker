@@ -15,11 +15,6 @@ async function fillDialog(page, value) {
   await page.waitForTimeout(200);
 }
 
-async function toastText(page) {
-  await page.waitForSelector('.toast', { timeout: 5000 });
-  return (await page.textContent('.toast__text')).trim();
-}
-
 (async () => {
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });

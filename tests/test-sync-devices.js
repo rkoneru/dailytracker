@@ -1,7 +1,7 @@
 const { APP_URL, API_URL, launch } = require('./harness');
 
 const APP = APP_URL + '/index.html';
-const API = API_URL + '';
+const API = API_URL;
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -41,7 +41,6 @@ const sync = async (d) => {
 const status = (d) => d.page.evaluate(async () => (await import('/js/sync.js')).getSyncStatus());
 const edit = (d, fn) => d.page.evaluate(async (src) => {
   const { getState, saveImmediately } = await import('/js/state.js');
-  // eslint-disable-next-line no-new-func
   new Function('state', src)(getState());
   saveImmediately();
 }, fn);

@@ -3,7 +3,7 @@ const { APP_URL, launch } = require('./harness');
   const browser = await launch();
   const page = await browser.newPage();
   const external = [];
-  page.on('request', r => { if (!r.url().startsWith(APP_URL + '')) external.push(r.url()); });
+  page.on('request', r => { if (!r.url().startsWith(APP_URL)) external.push(r.url()); });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
 

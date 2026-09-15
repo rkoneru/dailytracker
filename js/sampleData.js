@@ -20,6 +20,18 @@ function seedTicks(project) {
     const from = task.start ? new Date(`${task.start}T00:00:00`) : null;
     const to = task.end ? new Date(`${task.end}T00:00:00`) : from;
     task.tickType = from && to && from.getTime() === to.getTime() ? 'diamond' : 'check';
+    // Progress the template ships with: finished work is 100, unstarted is 0,
+    // and anything in flight is estimated from how much of its own date range
+    // has elapsed against the project's status date.
+    if (task.progress === undefined) {
+      if (task.status === 'Complete') task.progress = 100;
+      else if (task.status === 'Not Started') task.progress = 0;
+      else if (from && to) {
+        const asOf = project.dashDate ? new Date(`${project.dashDate}T00:00:00`) : anchor;
+        const span = Math.max(1, (to - from) / DAY_MS);
+        task.progress = Math.min(95, Math.max(5, Math.round(((asOf - from) / DAY_MS / span) * 100 / 5) * 5));
+      } else task.progress = 0;
+    }
     task.cells = [];
     if (!from || !to) return;
     const first = Math.round((from - anchor) / DAY_MS) + 1;

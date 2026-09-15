@@ -113,18 +113,14 @@
         <section class="card" id="sec-ticks">
           <div class="card__head">
             <h2>Tick Timeline</h2>
-            <label class="field-label tick-anchor">
-              Day 1
-              <input type="date" class="field-input" data-field="tickStart" id="tick-start">
-            </label>
+            <span class="hint">Day 1 &middot; <span id="tick-start-label">&mdash;</span></span>
           </div>
-          <p class="hint no-print">Click a day to mark it. Use the ✓/◆ button to switch a row between work and milestone, or ⤓ to fill a row from its start and end dates. Rows follow the task list below.</p>
+          <p class="hint">A read-only view of the task list. Marks come from each task's dates.</p>
           <div class="table-scroll">
             <table class="data-table tick-table" id="tick-table">
               <thead>
                 <tr id="tick-head-row">
                   <th class="col-tickname">Task</th>
-                  <th class="col-action no-print"></th>
                 </tr>
               </thead>
               <tbody id="tick-body"></tbody>
@@ -145,9 +141,9 @@
         <section class="card" id="sec-tasks">
           <div class="card__head">
             <h2>Tasks</h2>
-            <button type="button" class="btn btn-small no-print" data-action="add-task">+ Add Task</button>
+            <button type="button" class="btn btn-small btn-primary no-print" data-action="open-tasks">Open Task Tracker &rarr;</button>
           </div>
-          <p class="hint no-print">The same tasks the Dashboard shows. Edits here update the Dashboard, the Timeline above, and every report.</p>
+          <p class="hint no-print">A read-only view. Tasks are added and edited on the Task Tracker.</p>
           <div class="filter-bar no-print">
             <input type="search" class="field-input" id="task-search" placeholder="Search tasks...">
           </div>
@@ -155,16 +151,15 @@
             <table class="data-table" id="tasks-table">
               <thead>
                 <tr>
-                  <th class="col-drag no-print"></th>
-                  <th class="col-num">#</th>
+                  <th class="col-ref">ID</th>
                   <th>Task</th>
-                  <th>Assignee</th>
+                  <th>Owner</th>
                   <th class="col-date">Start</th>
                   <th class="col-date">End</th>
-                  <th class="col-status">Status</th>
                   <th class="col-prio">Priority</th>
-                  <th>Comments</th>
-                  <th class="col-action no-print"></th>
+                  <th class="col-status">Status</th>
+                  <th class="col-slip">Slip</th>
+                  <th class="col-progress">Progress</th>
                 </tr>
               </thead>
               <tbody id="tasks-body"></tbody>
@@ -200,6 +195,124 @@
           </div>
           <ul class="notes-list" id="notes-list"></ul>
         </section>
+      </div>
+    </section>
+
+    <section id="page-tasks" class="page" role="region" aria-label="Tasks">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title">
+            <span>Task Tracker</span>
+            <span class="dash-header__badge" id="tasks-owner-badge">&mdash;</span>
+          </div>
+          <div class="dash-header__meta">
+            <div class="readonly-fact">
+              <span class="readonly-fact__label">Project</span>
+              <span class="readonly-fact__value" id="tasks-project-name">&mdash;</span>
+            </div>
+            <div class="readonly-fact">
+              <span class="readonly-fact__label">Due</span>
+              <span class="readonly-fact__value" id="tasks-due-date">&mdash;</span>
+            </div>
+          </div>
+        </header>
+
+        <section class="tally-row" aria-label="Task counts">
+          <div class="tally" id="tally-total">
+            <span class="tally__icon" aria-hidden="true">&#9776;</span>
+            <span class="tally__value" id="tally-total-value">0</span>
+            <span class="tally__label">Total tasks</span>
+            <span class="tally__pct">&nbsp;</span>
+          </div>
+          <div class="tally tally--done" id="tally-complete">
+            <span class="tally__icon" aria-hidden="true">&#10003;</span>
+            <span class="tally__value" id="tally-complete-value">0</span>
+            <span class="tally__label">Completed</span>
+            <span class="tally__pct" id="tally-complete-pct">0%</span>
+          </div>
+          <div class="tally tally--active" id="tally-progress">
+            <span class="tally__icon" aria-hidden="true">&#9679;</span>
+            <span class="tally__value" id="tally-progress-value">0</span>
+            <span class="tally__label">In progress</span>
+            <span class="tally__pct" id="tally-progress-pct">0%</span>
+          </div>
+          <div class="tally tally--hold" id="tally-hold">
+            <span class="tally__icon" aria-hidden="true">&#9208;</span>
+            <span class="tally__value" id="tally-hold-value">0</span>
+            <span class="tally__label">On hold</span>
+            <span class="tally__pct" id="tally-hold-pct">0%</span>
+          </div>
+          <div class="tally tally--late" id="tally-overdue">
+            <span class="tally__icon" aria-hidden="true">&#9888;</span>
+            <span class="tally__value" id="tally-overdue-value">0</span>
+            <span class="tally__label">Overdue</span>
+            <span class="tally__pct" id="tally-overdue-pct">0%</span>
+          </div>
+        </section>
+
+        <section class="card card--feature">
+          <div class="card__head">
+            <h2><span class="section-number">1</span> Task Tracker</h2>
+            <button type="button" class="btn btn-small btn-primary no-print" data-action="add-task-row">+ Add Task</button>
+          </div>
+          <div class="filter-bar no-print">
+            <input type="search" class="field-input" id="tasks-search" placeholder="Search tasks, owner, comments...">
+            <select class="field-input" id="tasks-status-filter">
+              <option value="">All statuses</option>
+              <option>Not Started</option>
+              <option>In Progress</option>
+              <option>Complete</option>
+              <option>Overdue</option>
+              <option>On Hold</option>
+            </select>
+            <select class="field-input" id="tasks-prio-filter">
+              <option value="">All priorities</option>
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+            </select>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table tracker-table" id="tracker-table">
+              <thead>
+                <tr>
+                  <th class="col-drag no-print"></th>
+                  <th class="col-ref">ID</th>
+                  <th>Task</th>
+                  <th class="col-owner">Owner</th>
+                  <th class="col-prio">Priority</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-date">Start</th>
+                  <th class="col-date">Due date</th>
+                  <th class="col-progress">Progress</th>
+                  <th>Comments</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="tracker-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="tracker-empty" hidden>No tasks match. Clear the filters, or add one.</p>
+        </section>
+
+        <section class="card card--feature">
+          <div class="card__head">
+            <h2><span class="section-number">2</span> Priority Board</h2>
+            <span class="hint">Drag a card between columns to change its priority or put it on hold.</span>
+          </div>
+          <div class="board" id="priority-board"></div>
+        </section>
+
+        <div class="dash-row dash-row--2">
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Legend</h2></div>
+            <ul class="legend-key" id="tasks-legend"></ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Quick notes</h2></div>
+            <p class="hint" id="tasks-quick-note"></p>
+          </section>
+        </div>
       </div>
     </section>
 
@@ -326,45 +439,10 @@
         <section class="card card--feature">
           <div class="card__head">
             <h2>Tasks</h2>
-            <button type="button" class="btn btn-small no-print" id="btn-edit-in-planner">&#9998; Edit in Planner</button>
+            <button type="button" class="btn btn-primary no-print" id="btn-open-tasks">Open Task Tracker &rarr;</button>
           </div>
-          <p class="hint no-print">This page is a read-only view. Edit tasks on the Planner.</p>
           <p class="hint" id="baseline-note"></p>
-          <div class="filter-bar no-print">
-            <input type="search" class="field-input" id="dash-task-search" placeholder="Search tasks, assignee, comments...">
-            <select class="field-input" id="dash-status-filter">
-              <option value="">All statuses</option>
-              <option>Not Started</option>
-              <option>In Progress</option>
-              <option>Complete</option>
-              <option>Overdue</option>
-              <option>On Hold</option>
-            </select>
-            <select class="field-input" id="dash-prio-filter">
-              <option value="">All priorities</option>
-              <option>High</option>
-              <option>Medium</option>
-              <option>Low</option>
-            </select>
-          </div>
-          <div class="table-scroll">
-            <table class="data-table" id="dash-tasks-table">
-              <thead>
-                <tr>
-                  <th>Task</th>
-                  <th>Assignee</th>
-                  <th class="col-date">Start</th>
-                  <th class="col-date">End</th>
-                  <th class="col-days">Days</th>
-                  <th class="col-slip">Slip</th>
-                  <th class="col-status">Status</th>
-                  <th class="col-prio">Priority</th>
-                  <th>Comments</th>
-                </tr>
-              </thead>
-              <tbody id="dash-tasks-body"></tbody>
-            </table>
-          </div>
+          <ul class="task-jump" id="task-jump"></ul>
         </section>
 
         <!-- Cross-project context sits last: it is the only thing here that

@@ -22,6 +22,7 @@ export const NAV_TREE = [
     label: 'Workspace',
     children: [
       { id: 'tab-dashboard', label: 'Dashboard', icon: '📊', page: 'page-dashboard', title: 'Dashboard' },
+      { id: 'tab-tasks', label: 'Tasks', icon: '✅', page: 'page-tasks', title: 'Tasks' },
       {
         id: 'tab-planner',
         label: 'Planner',

@@ -18,62 +18,62 @@ const eq = (n, got, want) => {
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(700);
 
-  const plannerNames = () => page.$$eval('#tasks-body tr [data-field="name"]', els => els.map(e => e.value));
-  // The Dashboard renders tasks as text now, not inputs.
-  const dashNames = () => page.$$eval('#dash-tasks-body tr td:first-child', els => els.map(e => e.textContent));
+  // Tasks are edited on the Tasks screen; the Planner is the read-only view
+  // of the same list, and the Dashboard summarises it.
+  const trackerNames = () => page.$$eval('#tracker-body tr [data-field="name"]', els => els.map(e => e.value));
+  const plannerNames = () => page.$$eval('#tasks-body tr td:nth-child(2)', els => els.map(e => e.textContent));
 
-  console.log('\n--- one list behind both tables ---');
-  await page.click('#tab-planner'); await page.waitForTimeout(300);
-  const p0 = await plannerNames();
-  await page.click('#tab-dashboard'); await page.waitForTimeout(300);
-  const d0 = await dashNames();
-  eq('planner and dashboard show the same tasks', p0, d0);
-  eq('and it is the dashboard task set', p0[0], 'Campaign strategy & brief');
+  console.log('\n--- one list behind every view ---');
+  await page.click('#tab-tasks'); await page.waitForTimeout(400);
+  const t0 = await trackerNames();
+  await page.click('#tab-planner'); await page.waitForTimeout(400);
+  eq('tracker and planner show the same tasks', await plannerNames(), t0);
+  eq('and it is the one task set', t0[0], 'Campaign strategy & brief');
 
-  console.log('\n--- Planner edit -> Dashboard, live, no tab switch ---');
-  await page.click('#tab-planner'); await page.waitForTimeout(250);
-  await page.locator('#tasks-body tr').first().locator('[data-field="name"]').fill('RENAMED IN PLANNER');
-  await page.waitForTimeout(300);
-  eq('dashboard table updated while hidden', (await dashNames())[0], 'RENAMED IN PLANNER');
+  console.log('\n--- a tracker edit reaches the other views while they are hidden ---');
+  await page.click('#tab-tasks'); await page.waitForTimeout(250);
+  await page.locator('#tracker-body tr').first().locator('[data-field="name"]').fill('RENAMED IN PLANNER');
+  await page.waitForTimeout(400);
+  eq('planner view updated', (await plannerNames())[0], 'RENAMED IN PLANNER');
   eq('dashboard gantt updated too',
      await page.$eval('#dash-gantt .gantt-chart__label', e => e.textContent), 'RENAMED IN PLANNER');
 
-  console.log('\n--- second Planner edit also lands ---');
-  await page.locator('#tasks-body tr').nth(1).locator('[data-field="name"]').fill('RENAMED SECOND ROW');
-  await page.waitForTimeout(300);
-  eq('dashboard shows the second rename', (await dashNames())[1], 'RENAMED SECOND ROW');
+  console.log('\n--- a second edit also lands ---');
+  await page.locator('#tracker-body tr').nth(1).locator('[data-field="name"]').fill('RENAMED SECOND ROW');
+  await page.waitForTimeout(400);
+  eq('planner shows the second rename', (await plannerNames())[1], 'RENAMED SECOND ROW');
 
   console.log('\n--- adding on one page appears on the other ---');
-  await page.click('#tab-planner'); await page.waitForTimeout(250);
-  await page.click('#page-planner [data-action="add-task"]');
+  await page.click('#tab-tasks'); await page.waitForTimeout(250);
+  await page.click('#page-tasks [data-action="add-task-row"]');
   await page.waitForTimeout(300);
-  await page.locator('#tasks-body tr').last().locator('[data-field="name"]').fill('ADDED ON PLANNER');
+  await page.locator('#tracker-body tr').last().locator('[data-field="name"]').fill('ADDED ON PLANNER');
   await page.waitForTimeout(300);
-  eq('dashboard sees the new task', (await dashNames()).includes('ADDED ON PLANNER'), true);
-  eq('counts match', (await plannerNames()).length, (await dashNames()).length);
+  eq('planner sees the new task', (await plannerNames()).includes('ADDED ON PLANNER'), true);
+  eq('counts match', (await trackerNames()).length, (await plannerNames()).length);
 
   console.log('\n--- deleting on the Planner removes it from the Dashboard ---');
-  const before = (await dashNames()).length;
-  await page.locator('#tasks-body tr').last().locator('[data-action="delete-task"]').click();
-  await page.waitForTimeout(300);
-  eq('planner row gone', (await plannerNames()).length, before - 1);
-  eq('dashboard row gone too', (await dashNames()).length, before - 1);
-  eq('dashboard no longer lists it', (await dashNames()).includes('ADDED ON PLANNER'), false);
+  const before = (await trackerNames()).length;
+  await page.locator('#tracker-body tr').last().locator('[data-action="delete-task-row"]').click();
+  await page.waitForTimeout(400);
+  eq('tracker row gone', (await trackerNames()).length, before - 1);
+  eq('planner row gone too', (await plannerNames()).length, before - 1);
+  eq('planner no longer lists it', (await plannerNames()).includes('ADDED ON PLANNER'), false);
 
-  console.log('\n--- status is one field, edited on the Planner ---');
-  const dashStatusCell = () => page.$eval('#dash-tasks-body tr td:nth-child(7)', e => e.textContent);
-  eq('first task starts Complete', await page.inputValue('#tasks-body tr:first-child [data-field="status"]'), 'Complete');
-  await page.selectOption('#tasks-body tr:first-child [data-field="status"]', 'On Hold');
+  console.log('\n--- status is one field, edited on the Tasks screen ---');
+  const plannerStatusCell = () => page.$eval('#tasks-body tr td:nth-child(7)', e => e.textContent);
+  eq('first task starts Complete', await page.inputValue('#tracker-body tr:first-child [data-field="status"]'), 'Complete');
+  await page.selectOption('#tracker-body tr:first-child [data-field="status"]', 'On Hold');
   await page.waitForTimeout(300);
-  eq('dashboard status followed', await dashStatusCell(), 'On Hold');
-  await page.selectOption('#tasks-body tr:first-child [data-field="status"]', 'Complete');
+  eq('planner status followed', await plannerStatusCell(), 'On Hold');
+  await page.selectOption('#tracker-body tr:first-child [data-field="status"]', 'Complete');
   await page.waitForTimeout(300);
-  eq('and back again', await dashStatusCell(), 'Complete');
+  eq('and back again', await plannerStatusCell(), 'Complete');
 
   console.log('\n--- Timeline derives from dates ---');
   const barsBefore = await page.locator('#planner-timeline .gantt-chart__row').count();
   eq('planner timeline drew bars', barsBefore > 0, true);
-  await page.locator('#tasks-body tr').first().locator('[data-field="end"]').fill('2026-12-31');
+  await page.locator('#tracker-body tr').first().locator('[data-field="end"]').fill('2026-12-31');
   await page.waitForTimeout(400);
   const label = await page.$eval('#planner-timeline .gantt-chart__bar', e => e.title);
   eq('timeline bar picked up the new end date', label.includes('12/31/2026'), true);
@@ -81,6 +81,9 @@ const eq = (n, got, want) => {
      (await page.$eval('#dash-gantt .gantt-chart__bar', e => e.title)).includes('12/31/2026'), true);
 
   console.log('\n--- milestones reach the Dashboard live ---');
+  // Milestones are still edited on the Planner — only tasks moved out.
+  await page.click('#tab-planner');
+  await page.waitForTimeout(400);
   // Row 1 is the soonest-due incomplete milestone, so it is inside the
   // widget's top-6 window; row 3 is due far later and legitimately isn't.
   await page.locator('#milestones-body tr').nth(1).locator('[data-field="text"]').fill('MILESTONE RENAMED');
@@ -103,9 +106,9 @@ const eq = (n, got, want) => {
   console.log('\n--- reload persists the unified list ---');
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(700);
-  await page.click('#tab-planner'); await page.waitForTimeout(300);
-  eq('planner name survived reload', (await plannerNames())[0], 'RENAMED IN PLANNER');
-  eq('second rename survived reload', (await dashNames())[1], 'RENAMED SECOND ROW');
+  await page.click('#tab-tasks'); await page.waitForTimeout(300);
+  eq('name survived reload', (await trackerNames())[0], 'RENAMED IN PLANNER');
+  eq('second rename survived reload', (await trackerNames())[1], 'RENAMED SECOND ROW');
   eq('no legacy arrays left in the store', await page.evaluate(async () => {
     const s = (await import('/js/state.js')).getState();
     return ['tasks', 'gantt'].filter(k => k in s);

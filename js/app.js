@@ -11,6 +11,7 @@ import {
 import { onProjectDataChanged, notifyProjectDataChanged } from './taskModel.js';
 import { initNav, setActiveNode } from './nav.js';
 import { el } from './dom.js';
+import { initTasks, renderTasksPage } from './tasks.js';
 import { confirmAction, toast } from './dialog.js';
 import { initTrash, renderTrash } from './trash.js';
 import {
@@ -82,7 +83,7 @@ if ('serviceWorker' in navigator) {
 
 // ---------- Tabs ----------
 
-const PAGE_IDS = ['page-dashboard', 'page-planner', 'page-raid', 'page-reports', 'page-sync', 'page-trash'];
+const PAGE_IDS = ['page-dashboard', 'page-tasks', 'page-planner', 'page-raid', 'page-reports', 'page-sync', 'page-trash'];
 
 function showPage(pageId, title) {
   PAGE_IDS.forEach((id) => {
@@ -99,6 +100,7 @@ function showPage(pageId, title) {
   if (pageId === 'page-reports') refreshReport();
   if (pageId === 'page-sync') renderSyncPage();
   if (pageId === 'page-trash') renderTrash();
+  if (pageId === 'page-tasks') renderTasksPage();
 }
 
 function initTabs() {
@@ -494,8 +496,8 @@ function initTeam() {
 function initSharedDataSync() {
   onProjectDataChanged((source) => {
     if (source !== 'planner') renderPlannerShared();
-    if (source !== 'dashboard') renderDashboardShared();
-    else refreshDashboardDerived();
+    if (source !== 'tasks') renderTasksPage();
+    renderDashboardShared();
 
     // The report spans every project and is rebuilt from scratch, so it is
     // only worth recomputing while it is actually on screen; opening the tab
@@ -508,6 +510,7 @@ function initSharedDataSync() {
 
 function refreshActiveProjectView() {
   hydrateTopLevelFields();
+  renderTasksPage();
   renderPlanner();
   renderDashboard();
   renderRaid();
@@ -704,6 +707,7 @@ function init() {
   initReports();
   initRaid({ onChanged: onRaidChanged });
   initSharedDataSync();
+  initTasks();
   initTrash({ onRestore: refreshActiveProjectView });
   initTeam();
   initSyncPage();

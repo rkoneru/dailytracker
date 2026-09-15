@@ -1,9 +1,9 @@
 import { getState, listProjectsWithProgress, switchProject } from './state.js';
 import { parseDate, daysBetween, renderPieChart, renderLegend, renderGanttChart } from './charts.js';
 import { raidCounts, RAID_TYPES } from './raid.js';
-import { slipDays, scheduleSummary, baselineSummaryText } from './schedule.js';
+import { scheduleSummary, baselineSummaryText } from './schedule.js';
 import {
-  STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS, durationLabel,
+  STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS,
 } from './taskModel.js';
 import { el } from './dom.js';
 
@@ -12,14 +12,6 @@ const BADGE_COLORS = {
   'AT RISK': ['#fde68a', '#78350f'],
   'OFF TRACK': ['#fecaca', '#7f1d1d'],
 };
-
-function slug(value) {
-  return String(value || '').toLowerCase().replace(/\s+/g, '-');
-}
-
-function findById(list, id) {
-  return list.find((item) => item.id === id);
-}
 
 // ---------- Header ----------
 
@@ -420,108 +412,69 @@ export function renderComputed() {
   renderRaidChart();
   renderBudgetChart();
   renderBaselineNote();
+  renderTaskJump();
 }
 
 // ---------- Dashboard task table ----------
 
-function slipCell(t) {
-  const slip = slipDays(t);
-  if (slip === null) return el('td', { class: 'col-slip', 'data-role': 'slip', text: '—', title: 'No baseline set for this task' });
-  const label = slip > 0 ? `+${slip}d` : slip < 0 ? `${slip}d` : 'On plan';
-  const tone = slip > 0 ? 'slip--late' : slip < 0 ? 'slip--early' : 'slip--onplan';
-  return el('td', { class: 'col-slip', 'data-role': 'slip', title: `Baseline ${t.baseStart || '—'} → ${t.baseEnd || '—'}` }, [
-    el('span', { class: `slip-chip ${tone}`, text: label }),
-  ]);
-}
+/**
+ * The Dashboard no longer carries the task table — the Tasks screen owns it.
+ * What stays is a short list of what needs looking at, each row a way in.
+ */
+function renderTaskJump() {
+  const list = document.getElementById('task-jump');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tasks = getState().dashTasks;
 
-// Read-only: this page reports, the Planner edits. Values are plain text and
-// pills rather than disabled inputs — a greyed-out form reads as "broken",
-// while text reads as "this is a view".
-function readOnlyDate(value) {
-  return el('td', { class: 'col-date', text: value ? new Date(`${value}T00:00:00`).toLocaleDateString() : '—' });
-}
-
-function pill(value, kind) {
-  return el('td', { class: `col-${kind}` }, [
-    el('span', { class: `${kind}-select ${kind}-${slug(value)} is-static`, text: value || '—' }),
-  ]);
-}
-
-function renderDashTaskRow(t) {
-  return el('tr', { 'data-id': t.id }, [
-    el('td', { class: 'cell-strong', text: t.name || '(untitled task)' }),
-    el('td', { text: t.assigned || '—' }),
-    readOnlyDate(t.start),
-    readOnlyDate(t.end),
-    el('td', { class: 'col-days', 'data-role': 'duration', text: durationLabel(t.start, t.end) || '—' }),
-    slipCell(t),
-    pill(t.status, 'status'),
-    pill(t.prio, 'prio'),
-    el('td', { class: 'cell-muted', text: t.comments || '' }),
-  ]);
-}
-
-function renderDashTasks() {
-  const state = getState();
-  const tbody = document.getElementById('dash-tasks-body');
-  tbody.innerHTML = '';
-  state.dashTasks.forEach((t) => tbody.appendChild(renderDashTaskRow(t)));
-  applyDashTaskFilters();
-}
-
-// ---------- Filters (view-only — never mutates dashTasks; charts/summaries
-// below always reflect the full project, only this table's rows are hidden) ----------
-
-const dashTaskFilters = { search: '', status: '', prio: '' };
-
-function matchesDashTaskFilters(t) {
-  const term = dashTaskFilters.search.trim().toLowerCase();
-  const matchesSearch = !term
-    || (t.name || '').toLowerCase().includes(term)
-    || (t.assigned || '').toLowerCase().includes(term)
-    || (t.comments || '').toLowerCase().includes(term);
-  const matchesStatus = !dashTaskFilters.status || t.status === dashTaskFilters.status;
-  const matchesPrio = !dashTaskFilters.prio || t.prio === dashTaskFilters.prio;
-  return matchesSearch && matchesStatus && matchesPrio;
-}
-
-function applyDashTaskFilters() {
-  const state = getState();
-  document.querySelectorAll('#dash-tasks-body tr').forEach((row) => {
-    const item = findById(state.dashTasks, row.dataset.id);
-    row.hidden = !item || !matchesDashTaskFilters(item);
+  const late = tasks.filter((t) => {
+    if (t.status === 'Complete') return false;
+    const end = parseDate(t.end);
+    return end && end < today;
   });
+  const active = tasks.filter((t) => t.status === 'In Progress');
+  const shown = [...late, ...active.filter((t) => !late.includes(t))].slice(0, 5);
+
+  list.innerHTML = '';
+  if (tasks.length === 0) {
+    list.appendChild(el('li', { class: 'task-jump__empty', text: 'No tasks yet. Open the Task Tracker to add some.' }));
+    return;
+  }
+  if (shown.length === 0) {
+    list.appendChild(el('li', { class: 'task-jump__empty', text: `Nothing overdue or in flight across ${tasks.length} tasks.` }));
+    return;
+  }
+
+  shown.forEach((task) => {
+    const isLate = late.includes(task);
+    list.appendChild(el('li', { class: 'task-jump__item' }, [
+      el('span', { class: `task-jump__dot ${isLate ? 'is-late' : ''}` }),
+      el('span', { class: 'task-jump__name', text: task.name || '(untitled task)' }),
+      el('span', { class: 'task-jump__meta', text: task.assigned || 'Unassigned' }),
+      el('span', { class: `task-jump__state ${isLate ? 'is-late' : ''}`, text: isLate ? 'Overdue' : 'In progress' }),
+    ]));
+  });
+
+  if (late.length + active.length > shown.length) {
+    list.appendChild(el('li', {
+      class: 'task-jump__empty',
+      text: `and ${late.length + active.length - shown.length} more`,
+    }));
+  }
 }
 
-function bindDashTaskFilters() {
-  document.getElementById('dash-task-search').addEventListener('input', (e) => {
-    dashTaskFilters.search = e.target.value;
-    applyDashTaskFilters();
-  });
-  document.getElementById('dash-status-filter').addEventListener('change', (e) => {
-    dashTaskFilters.status = e.target.value;
-    applyDashTaskFilters();
-  });
-  document.getElementById('dash-prio-filter').addEventListener('change', (e) => {
-    dashTaskFilters.prio = e.target.value;
-    applyDashTaskFilters();
-  });
-}
-
-function bindEditInPlanner() {
-  document.getElementById('btn-edit-in-planner').addEventListener('click', () => {
-    document.getElementById('tab-planner').click();
+function bindOpenTasks() {
+  document.getElementById('btn-open-tasks').addEventListener('click', () => {
+    document.getElementById('tab-tasks').click();
   });
 }
 
 /** Re-renders the views the Dashboard shows of shared data. */
 export function renderDashboardShared() {
-  renderDashTasks();
   renderComputed();
 }
 
 export function renderDashboard() {
-  renderDashTasks();
   renderComputed();
   renderBudgetChart();
   renderRaidChart();
@@ -529,7 +482,6 @@ export function renderDashboard() {
 
 export function initDashboard({ onProjectSwitch: onSwitch } = {}) {
   renderDashboard();
-  bindEditInPlanner();
+  bindOpenTasks();
   bindActiveProjects({ onSwitch });
-  bindDashTaskFilters();
 }

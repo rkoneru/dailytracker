@@ -34,9 +34,32 @@ export function tickMarker(type) {
 export function newTask() {
   return {
     name: '', assigned: '', assigneeUserId: '', start: '', end: '', baseStart: '', baseEnd: '',
-    status: 'Not Started', prio: 'Medium', comments: '',
+    status: 'Not Started', prio: 'Medium', comments: '', progress: 0,
     tickType: 'check', cells: [],
   };
+}
+
+/**
+ * Progress a task should have, given its status, when no explicit figure has
+ * been set. Complete is 100 and Not Started is 0 by definition; the middle
+ * states are genuinely unknown, so they stay at whatever was entered rather
+ * than being invented.
+ */
+export function progressForStatus(status, current = 0) {
+  if (status === 'Complete') return 100;
+  if (status === 'Not Started') return 0;
+  return current;
+}
+
+export function clampProgress(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, n));
+}
+
+/** Short, stable, human-quotable id for a task — the T-101 in the tracker. */
+export function taskRef(index) {
+  return `T-${101 + index}`;
 }
 
 export function durationLabel(start, end) {

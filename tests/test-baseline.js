@@ -8,18 +8,6 @@ async function acceptDialog(page) {
   await page.waitForTimeout(200);
 }
 
-async function fillDialog(page, value) {
-  await page.waitForSelector('.dialog input', { timeout: 5000 });
-  await page.fill('.dialog input', value);
-  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
-  await page.waitForTimeout(200);
-}
-
-async function toastText(page) {
-  await page.waitForSelector('.toast', { timeout: 5000 });
-  return (await page.textContent('.toast__text')).trim();
-}
-
 (async () => {
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1500, height: 1200 } });
@@ -34,7 +22,7 @@ async function toastText(page) {
 
   // --- Baseline shipped with the template ---
   console.log('baseline note:', await page.locator('#baseline-note').textContent());
-  const slips = await page.locator('#dash-tasks-body .slip-chip').allTextContents();
+  const slips = await page.locator('#tasks-body .slip-chip').allTextContents();
   console.log('slip chips:', slips.join(', '));
   console.log('baseline bars on gantt:', await page.locator('#dash-gantt .gantt-chart__baseline').count());
   console.log('dashboard gantt legend present:', await page.locator('#dash-gantt .gantt-chart__legend').isVisible());
@@ -43,10 +31,13 @@ async function toastText(page) {
   await page.screenshot({ path: out('baseline-gantt.png'), fullPage: true });
 
   // --- Moving an end date increases slip live ---
-  await page.click('#tab-planner'); await page.waitForTimeout(250);
-  const dashRow = page.locator('#dash-tasks-body tr').nth(2);
+  await page.click('#tab-planner'); await page.waitForTimeout(400);
+  const dashRow = page.locator('#tasks-body tr').nth(2);
   const before = await dashRow.locator('.slip-chip').textContent();
-  await page.locator('#tasks-body tr').nth(2).locator('input[data-field="end"]').fill('2026-09-20');
+  await page.click('#tab-tasks'); await page.waitForTimeout(400);
+  await page.locator('#tracker-body tr').nth(2).locator('input[data-field="end"]').fill('2026-09-20');
+  await page.waitForTimeout(400);
+  await page.click('#tab-planner'); await page.waitForTimeout(400);
   await page.waitForTimeout(400);
   const after = await dashRow.locator('.slip-chip').textContent();
   console.log(`slip after pushing end date out: ${before} -> ${after}`);
@@ -57,7 +48,7 @@ async function toastText(page) {
   console.log('rebaseline confirm:', (await page.textContent('.dialog__title')).trim());
   await acceptDialog(page);
   await page.waitForTimeout(400);
-  const afterRebaseline = await page.locator('#dash-tasks-body .slip-chip').allTextContents();
+  const afterRebaseline = await page.locator('#tasks-body .slip-chip').allTextContents();
   console.log('slip chips after re-baseline:', [...new Set(afterRebaseline)].join(', '));
   console.log('baseline note:', await page.locator('#planner-baseline-note').textContent());
 
@@ -67,7 +58,7 @@ async function toastText(page) {
   await page.waitForTimeout(300);
   console.log('note after clear (planner):', await page.locator('#planner-baseline-note').textContent());
   console.log('note after clear (dashboard):', await page.locator('#baseline-note').textContent());
-  console.log('slip cells after clear (expect dashes):', [...new Set(await page.locator('#dash-tasks-body [data-role="slip"]').allTextContents())].join(', '));
+  console.log('slip cells after clear (expect dashes):', [...new Set(await page.locator('#tasks-body [data-role="slip"]').allTextContents())].join(', '));
   console.log('baseline bars after clear:', await page.locator('#dash-gantt .gantt-chart__baseline').count());
 
   // --- Reports pick up slippage (use a fresh project that still has its baseline) ---

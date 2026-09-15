@@ -63,11 +63,11 @@ const { eq, done } = createChecks();
   eq('and says so', noBaseline.sub, 'No baseline set');
 
   // Mark every overdue task complete: the overdue tile should go quiet.
-  await page.click('#tab-planner');
-  await page.waitForTimeout(400);
-  const rows = await page.locator('#tasks-body tr').count();
+  await page.click('#tab-tasks');
+  await page.waitForTimeout(500);
+  const rows = await page.locator('#tracker-body tr').count();
   for (let i = 0; i < rows; i += 1) {
-    await page.selectOption(`#tasks-body tr:nth-child(${i + 1}) [data-field="status"]`, 'Complete');
+    await page.selectOption(`#tracker-body tr:nth-child(${i + 1}) [data-field="status"]`, 'Complete');
     await page.waitForTimeout(120);
   }
   await page.click('#tab-dashboard');

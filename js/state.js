@@ -127,6 +127,11 @@ function migrateProject(data) {
     // The account a task is assigned to, as opposed to the free-text name.
     // Empty means "not linked to anyone" — the text still shows.
     if (t.assigneeUserId === undefined) t.assigneeUserId = '';
+    // Percent done, shown as a bar on the task tracker. Seeded from status so
+    // an existing project opens with sensible bars rather than all zeros.
+    if (t.progress === undefined) {
+      t.progress = t.status === 'Complete' ? 100 : 0;
+    }
     if (!Array.isArray(t.cells)) t.cells = [];
     if (t.tickType !== 'diamond') t.tickType = 'check';
   });

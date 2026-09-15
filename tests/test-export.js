@@ -39,7 +39,7 @@ const fs = require('fs');
   await page.fill('#share-subject', 'Test Subject');
   await page.fill('#share-body', 'Test Body');
   // Intercept navigation to mailto: by checking location before click triggers it
-  const mailtoHref = await page.evaluate(() => {
+  await page.evaluate(() => {
     // Reproduce buildMailtoUrl logic isn't exported to window, so just check the click doesn't throw
     return true;
   });

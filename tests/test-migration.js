@@ -85,16 +85,17 @@ const legacy = {
   eq('budget intact', [state.budgetPlanned, state.budgetActual], [100, 50]);
 
   console.log('\n--- the migrated store renders on every page ---');
-  for (const [tab, sel] of [['#tab-planner', '#tasks-body tr'], ['#tab-dashboard', '#dash-tasks-body tr'], ['#tab-raid', '#raid-body'], ['#tab-reports', '#report-project-cards']]) {
+  for (const [tab, sel] of [['#tab-tasks', '#tracker-body tr'], ['#tab-planner', '#tasks-body tr'], ['#tab-raid', '#raid-body'], ['#tab-reports', '#report-project-cards']]) {
     await page.click(tab); await page.waitForTimeout(350);
     const n = await page.locator(sel).count();
     console.log(`   ${tab} -> ${sel}: ${n}`);
   }
-  await page.click('#tab-planner'); await page.waitForTimeout(300);
-  eq('planner table shows every migrated task',
+  await page.click('#tab-tasks'); await page.waitForTimeout(400);
+  eq('tracker shows every migrated task',
+     await page.locator('#tracker-body tr').count(), state.dashTasks.length);
+  await page.click('#tab-planner'); await page.waitForTimeout(400);
+  eq('planner view shows the same count',
      await page.locator('#tasks-body tr').count(), state.dashTasks.length);
-  eq('dashboard table shows the same count',
-     await page.locator('#dash-tasks-body tr').count(), state.dashTasks.length);
 
   console.log('\n--- migration is idempotent across reloads ---');
   await page.reload({ waitUntil: 'networkidle' });

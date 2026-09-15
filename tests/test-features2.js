@@ -1,5 +1,4 @@
 const { APP_URL, launch } = require('./harness');
-const fs = require('fs');
 
 (async () => {
   const browser = await launch();
@@ -12,35 +11,37 @@ const fs = require('fs');
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(300);
-  await page.click('#tab-planner');
+  await page.click('#tab-tasks');
   await page.waitForTimeout(200);
 
   console.log('=== Search/filter: Planner Tasks ===');
-  const beforeSearch = await page.locator('#tasks-body tr:not([hidden])').count();
-  await page.fill('#task-search', 'campaign');
+  const beforeSearch = await page.locator('#tracker-body tr:not([hidden])').count();
+  await page.fill('#tasks-search', 'campaign');
   await page.waitForTimeout(150);
-  const afterSearch = await page.locator('#tasks-body tr:not([hidden])').count();
+  const afterSearch = await page.locator('#tracker-body tr:not([hidden])').count();
   console.log('Visible rows before/after searching "campaign":', beforeSearch, afterSearch);
-  await page.fill('#task-search', '');
+  await page.fill('#tasks-search', '');
   await page.waitForTimeout(150);
 
-  console.log('=== Search/filter: Dashboard Tasks ===');
-  await page.click('#tab-dashboard');
+  // The Dashboard no longer carries a task table, so its filters moved to the
+  // Tasks screen with it.
+  console.log('=== Search/filter: Task Tracker ===');
+  await page.click('#tab-tasks');
+  await page.waitForTimeout(400);
+  const dashBefore = await page.locator('#tracker-body tr:not([hidden])').count();
+  await page.selectOption('#tasks-status-filter', 'Complete');
   await page.waitForTimeout(200);
-  const dashBefore = await page.locator('#dash-tasks-body tr:not([hidden])').count();
-  await page.selectOption('#dash-status-filter', 'Complete');
-  await page.waitForTimeout(150);
-  const dashAfterStatus = await page.locator('#dash-tasks-body tr:not([hidden])').count();
-  console.log('Dashboard rows before/after status=Complete filter:', dashBefore, dashAfterStatus);
-  await page.selectOption('#dash-status-filter', '');
-  await page.fill('#dash-task-search', 'jordan');
-  await page.waitForTimeout(150);
-  const dashAfterSearch = await page.locator('#dash-tasks-body tr:not([hidden])').count();
-  console.log('Dashboard rows after searching "jordan":', dashAfterSearch);
-  await page.fill('#dash-task-search', '');
-  await page.waitForTimeout(150);
+  const dashAfterStatus = await page.locator('#tracker-body tr:not([hidden])').count();
+  console.log('Tracker rows before/after status=Complete filter:', dashBefore, dashAfterStatus);
+  await page.selectOption('#tasks-status-filter', '');
+  await page.fill('#tasks-search', 'jordan');
+  await page.waitForTimeout(200);
+  const dashAfterSearch = await page.locator('#tracker-body tr:not([hidden])').count();
+  console.log('Tracker rows after searching "jordan":', dashAfterSearch);
+  await page.fill('#tasks-search', '');
+  await page.waitForTimeout(200);
 
-  await page.click('#tab-planner');
+  await page.click('#tab-tasks');
   await page.waitForTimeout(200);
 
   console.log('=== Drag reorder: Milestones ===');

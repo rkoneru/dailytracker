@@ -3,19 +3,6 @@ const fs = require('fs');
 
 // The app uses in-page dialogs now, not window.confirm, so a test drives them
 // like any other UI: click the button, then the dialog's own action.
-async function acceptDialog(page) {
-  await page.waitForSelector('.dialog', { timeout: 5000 });
-  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
-  await page.waitForTimeout(200);
-}
-
-async function fillDialog(page, value) {
-  await page.waitForSelector('.dialog input', { timeout: 5000 });
-  await page.fill('.dialog input', value);
-  await page.click('.dialog__actions .btn-primary, .dialog__actions .btn-danger');
-  await page.waitForTimeout(200);
-}
-
 async function toastText(page) {
   await page.waitForSelector('.toast', { timeout: 5000 });
   return (await page.textContent('.toast__text')).trim();
@@ -45,7 +32,7 @@ async function toastText(page) {
   console.log('snapshots after 2nd boot same week (should still be 1):', snap2.snapshots.length);
 
   // 3. Backdate that snapshot to last week with worse numbers, so trends have a baseline
-  const projectId = await page.evaluate(() => {
+  await page.evaluate(() => {
     const h = JSON.parse(localStorage.getItem('projectPlannerHistory_v1'));
     const s = h.snapshots[0];
     const monday = new Date();

@@ -3139,3 +3139,498 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .roster-view-table td { vertical-align: middle; }
 .roster-view-table .is-bad { color: var(--color-danger); font-weight: 600; }
 .roster-view-table .col-skills { font-size: 0.82rem; color: var(--color-text-muted); }
+
+/* ==========================================================================
+   Dashboard: the "Life OS" treatment
+   ==========================================================================
+   Everything below is scoped to .dash-os, which only the Dashboard carries.
+   The rest of the app keeps the denser table-first styling it needs — this
+   page is the one that is glanced at rather than worked in, and it is the only
+   one that can afford the air. */
+
+.dash-os {
+  --dos-ink: #1c2024;
+  --dos-muted: #71767d;
+  --dos-line: rgba(15, 23, 42, 0.07);
+  --dos-surface: rgba(255, 255, 255, 0.72);
+  --dos-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.14);
+  --dos-radius: 18px;
+
+  /* A panel, not a full bleed. A negative margin here would have to know
+     main's padding to the pixel, and got it wrong by 4px in each direction —
+     which is a horizontal scrollbar on every screen. */
+  background: #f6f6f5;
+  border-radius: 22px;
+  padding: 26px 24px 40px;
+  color: var(--dos-ink);
+}
+
+/* ---- masthead ---- */
+
+.dos-masthead {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "mark title" "mark crumbs";
+  column-gap: 16px;
+  row-gap: 2px;
+  align-items: center;
+  padding-bottom: 18px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--dos-line);
+}
+
+.dos-mark {
+  grid-area: mark;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  border-radius: 14px;
+  background: linear-gradient(140deg, #cfe5ff, #e7d9ff 55%, #ffe1c2);
+  box-shadow: var(--dos-shadow);
+}
+
+.dos-title {
+  grid-area: title;
+  margin: 0;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.dos-crumbs {
+  grid-area: crumbs;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--dos-muted);
+}
+
+.dos-crumbs .is-here { color: var(--dos-ink); font-weight: 500; }
+
+/* ---- the glance row ---- */
+
+.dos-glance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 14px;
+}
+
+.dos-tile {
+  position: relative;
+  border: 1px solid var(--dos-line);
+  border-radius: var(--dos-radius);
+  background: var(--dos-surface);
+  box-shadow: var(--dos-shadow);
+  padding: 16px 18px;
+  min-height: 92px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  overflow: hidden;
+}
+
+/* The wash is a pseudo-element so the tile's own translucent surface still
+   reads through it, which is what keeps these from looking like flat swatches. */
+.dos-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.dos-tile--now::before { background: linear-gradient(115deg, #ffffff 40%, #ffe6bd 100%); }
+.dos-tile--now { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+
+.dos-now__time {
+  position: relative;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dos-now__sun { position: relative; font-size: 1.1rem; opacity: 0.8; }
+
+.dos-now__date {
+  position: relative;
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  color: var(--dos-muted);
+}
+
+/* Each health tile gets its own wash so the row reads as four distinct
+   readings rather than one striped block. */
+.dos-tile--kpi { display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+#kpi-status::before { background: linear-gradient(115deg, #ffffff 35%, #cfe8ff 100%); }
+#kpi-schedule::before { background: linear-gradient(115deg, #ffffff 35%, #d8ecdd 100%); }
+#kpi-risk::before { background: linear-gradient(115deg, #ffffff 35%, #ffdcd6 100%); }
+#kpi-budget::before { background: linear-gradient(115deg, #ffffff 35%, #e6ddff 100%); }
+
+.dash-os .kpi__label,
+.dash-os .kpi__value,
+.dash-os .kpi__sub { position: relative; }
+
+.dash-os .kpi__label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dos-muted);
+  font-weight: 600;
+}
+
+.dash-os .kpi__value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.dash-os .kpi__sub { font-size: 0.76rem; color: var(--dos-muted); }
+
+/* Tone still carries the reading; it just does it with the number rather than
+   by repainting the whole tile, which the wash already owns. */
+.dash-os .kpi.is-good .kpi__value { color: #15803d; }
+.dash-os .kpi.is-warn .kpi__value { color: #b45309; }
+.dash-os .kpi.is-bad .kpi__value { color: #b91c1c; }
+.dash-os .kpi.is-idle .kpi__value { color: var(--dos-muted); }
+
+.dos-tile--kpi:hover { transform: translateY(-1px); }
+.dos-tile--kpi:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .dos-tile--kpi { transition: transform 140ms ease, box-shadow 140ms ease; }
+}
+
+/* ---- the two columns ---- */
+
+.dos-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.dos-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+@media (max-width: 860px) {
+  .dos-columns { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- cards ---- */
+
+.dos-card {
+  border: 1px solid var(--dos-line);
+  border-radius: var(--dos-radius);
+  background: var(--dos-surface);
+  box-shadow: var(--dos-shadow);
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+.dos-card__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.dos-card__head h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.dos-card__head .hint { margin: 0; font-size: 0.78rem; }
+.dos-card__head .btn { margin-left: auto; }
+.dos-card__head--bare { padding: 0 4px; }
+
+.dos-sub { margin: -6px 0 12px; font-size: 0.78rem; }
+
+/* The two cards the reference gives a tint to: the day's work, and the one
+   place the page is quietly proud of. */
+.dos-card--today { background: linear-gradient(170deg, rgba(226, 242, 255, 0.85), rgba(255, 255, 255, 0.75)); }
+.dos-card--goals { background: linear-gradient(170deg, rgba(255, 246, 232, 0.85), rgba(255, 255, 255, 0.72)); }
+
+.dos-card--glow {
+  background: linear-gradient(170deg, rgba(233, 240, 255, 0.9), rgba(255, 255, 255, 0.75));
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 34px -16px rgba(79, 110, 220, 0.4);
+}
+
+/* ---- the attention list, as a timeline ---- */
+
+.dash-os .deadline-list { display: flex; flex-direction: column; gap: 0; }
+
+.dash-os .deadline-list > li {
+  position: relative;
+  padding: 10px 0 10px 20px;
+  border-bottom: 1px solid var(--dos-line);
+}
+
+.dash-os .deadline-list > li:last-child { border-bottom: 0; }
+
+/* The rail is drawn rather than marked up, because the list is rendered by a
+   function that predates this page and should not have to know about it. The
+   node is the dot that function already emits — adding a second one would put
+   two markers on every row. */
+.dash-os .deadline-list > li::after {
+  content: "";
+  position: absolute;
+  left: 6.5px;
+  top: 26px;
+  bottom: -1px;
+  width: 1px;
+  background: var(--dos-line);
+}
+
+.dash-os .deadline-list > li:last-child::after { display: none; }
+
+.dash-os .deadline-list__dot {
+  position: absolute;
+  left: 2px;
+  top: 16px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px #f6f6f5;
+}
+
+/* ---- goals ---- */
+
+.dos-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+
+.dos-goal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.dos-goal__label { font-size: 0.92rem; font-weight: 600; }
+.dos-goal__figure { font-size: 0.78rem; color: var(--dos-muted); font-variant-numeric: tabular-nums; }
+
+.dos-goal__track {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+}
+
+.dos-goal__fill { height: 100%; border-radius: 999px; }
+.dos-goal__fill--a { background: linear-gradient(90deg, #6366f1, #22d3ee); }
+.dos-goal__fill--b { background: linear-gradient(90deg, #10b981, #84cc16); }
+.dos-goal__fill--c { background: linear-gradient(90deg, #f59e0b, #fb7185); }
+.dos-goal__fill--d { background: linear-gradient(90deg, #0ea5e9, #6366f1); }
+.dos-goal__fill--over { background: linear-gradient(90deg, #dc2626, #f97316); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .dos-goal__fill { transition: width 400ms ease; }
+}
+
+/* ---- top tasks ---- */
+
+.dos-tasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+.dos-task {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--dos-line);
+}
+
+.dos-task:last-child { border-bottom: 0; }
+
+.dos-task__ref {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--dos-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dos-task__prio {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.dos-task__prio--high { background: #fee2e2; color: #991b1b; }
+.dos-task__prio--medium { background: #fef3c7; color: #854d0e; }
+.dos-task__prio--low { background: #dcfce7; color: #14532d; }
+
+.dos-task__name {
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dos-task__who { font-size: 0.76rem; color: var(--dos-muted); white-space: nowrap; }
+
+/* ---- activity ---- */
+
+.dos-activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.dos-activity__row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; }
+
+.dos-activity__dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, #6366f1, #22d3ee);
+}
+
+.dos-activity__body { min-width: 0; display: flex; flex-direction: column; }
+.dos-activity__what { font-size: 0.88rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dos-activity__move { font-size: 0.76rem; color: var(--dos-muted); }
+.dos-activity__when { font-size: 0.74rem; color: var(--dos-muted); white-space: nowrap; }
+
+/* ---- the project board ---- */
+
+.dos-board-wrap { display: flex; flex-direction: column; gap: 10px; }
+
+.dos-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.dos-board__col {
+  border: 1px solid var(--dos-line);
+  border-radius: var(--dos-radius);
+  background: rgba(255, 255, 255, 0.55);
+  padding: 12px;
+  min-width: 0;
+}
+
+.dos-board__head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+
+.dos-board__tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+
+.dos-board__tag--todo { background: #e3edff; color: #1e40af; }
+.dos-board__tag--doing { background: #ffedd5; color: #9a3412; }
+.dos-board__tag--done { background: #dcfce7; color: #14532d; }
+.dos-board__count { font-size: 0.75rem; color: var(--dos-muted); margin-left: auto; }
+
+.dos-board__stack { display: flex; flex-direction: column; gap: 8px; }
+
+.dos-project {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 11px 12px;
+  border: 1px solid var(--dos-line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  min-width: 0;
+}
+
+.dos-project:hover { border-color: #b9c6d8; }
+.dos-project:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.dos-project .active-projects-list__name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dos-project .active-projects-list__meta { font-size: 0.74rem; color: var(--dos-muted); }
+.dos-project .active-projects-list__pct { grid-row: 1; grid-column: 2; font-size: 0.78rem; color: var(--dos-muted); font-variant-numeric: tabular-nums; }
+
+.dos-project .active-projects-list__track {
+  grid-column: 1 / -1;
+  height: 5px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.dos-project .active-projects-list__fill { height: 100%; background: linear-gradient(90deg, #6366f1, #22d3ee); }
+
+.dos-board .empty-hint { grid-column: 1 / -1; margin: 0; padding: 14px; }
+
+/* ---- the bottom row ---- */
+
+.dos-bottom { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; align-items: start; }
+
+.dos-budget { display: flex; gap: 22px; margin-bottom: 12px; }
+
+.dos-card--ring { text-align: center; }
+.dos-card--ring .dos-card__head { justify-content: center; }
+
+.dos-ring { position: relative; width: 132px; margin: 4px auto 12px; }
+.dos-ring__svg { width: 100%; height: auto; transform: rotate(-90deg); }
+.dos-ring__track { fill: none; stroke: rgba(15, 23, 42, 0.08); stroke-width: 10; }
+
+.dos-ring__fill {
+  fill: none;
+  stroke: url(#dos-ring-grad);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dos-ring__fill { transition: stroke-dashoffset 500ms ease; }
+}
+
+.dos-ring__pct {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* The bar the ring replaced still exists, because the renderer sets its width
+   and a second source of truth for the same number is exactly what this app
+   spent a session removing. It simply is not shown. */
+.mini-progress--hidden { display: none; }
+
+/* ---- shared bits, softened for this page only ---- */
+
+.dash-os .chart-scroll { border-radius: 12px; }
+.dash-os .team-list { margin: 0; }
+.dash-os .mini-stat-list { justify-content: center; }
+.dash-os .empty-hint { color: var(--dos-muted); font-size: 0.86rem; }
+
+@media (max-width: 640px) {
+  .dash-os { padding: 18px 14px 32px; border-radius: 16px; }
+  .dos-title { font-size: 1.45rem; }
+}
+
+@media print {
+  .dash-os { background: #fff; padding: 0; border-radius: 0; }
+  .dos-tile, .dos-card, .dos-board__col { box-shadow: none; background: #fff; }
+}
+
+/* The weekly chart collapses to a sentence when there is nothing in it, so the
+   card sizes to what it has to say. */
+.dash-os .bar-chart--week:has(.empty-hint) { min-height: 0; height: auto; display: block; }

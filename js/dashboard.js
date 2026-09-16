@@ -3,11 +3,11 @@
 // the RAID breakdown on the RAID page, and the editable plan on the Planner —
 // each health tile here is a summary of one of those, and a link to it.
 
-import { getState, listProjectsWithProgress, switchProject } from './state.js';
+import { getState, listProjectsWithProgress, switchProject, listChangeLog } from './state.js';
 import { parseDate, daysBetween, renderGanttChart } from './charts.js';
 import { raidCounts } from './raid.js';
 import { scheduleSummary, baselineSummaryText } from './schedule.js';
-import { STATUS_COLORS } from './taskModel.js';
+import { STATUS_COLORS, taskRef } from './taskModel.js';
 import { el } from './dom.js';
 
 const MONEY = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
@@ -180,6 +180,16 @@ function renderMilestoneProgress() {
   document.getElementById('milestone-progress-pct').textContent = `${avgPct}%`;
   document.getElementById('milestone-progress-bar').style.width = `${avgPct}%`;
 
+  // The ring is the same figure drawn round. Dash offset rather than a
+  // conic gradient so it animates, and so the stroke keeps its rounded cap at
+  // any value — including the 0% that a fresh project opens on.
+  const ring = document.getElementById('dos-ring-fill');
+  if (ring) {
+    const circumference = 2 * Math.PI * 52;
+    ring.style.strokeDasharray = String(circumference);
+    ring.style.strokeDashoffset = String(circumference * (1 - avgPct / 100));
+  }
+
   const completed = milestones.filter((m) => m.progress >= 5).length;
   const inProgress = milestones.filter((m) => m.progress > 0 && m.progress < 5).length;
   const toDo = milestones.filter((m) => (m.progress || 0) === 0).length;
@@ -214,6 +224,16 @@ function renderWeeklyWorkload() {
     return start && end && day >= start && day <= end;
   }).length);
   const max = Math.max(...counts, 1);
+
+  // Seven empty columns reading zero take up as much room as a real chart and
+  // say less than one sentence does.
+  if (counts.every((n) => n === 0)) {
+    container.appendChild(el('p', {
+      class: 'empty-hint',
+      text: 'Nothing scheduled in the next seven days.',
+    }));
+    return;
+  }
 
   days.forEach((day, i) => {
     const heightPct = Math.max(2, (counts[i] / max) * 100);
@@ -346,34 +366,59 @@ function renderTeamWorkload() {
 
 let onProjectSwitch = () => {};
 
-function renderActiveProjectsList() {
-  const list = document.getElementById('active-projects-list');
-  list.innerHTML = '';
+/**
+ * The other projects, in three columns by how far along they are.
+ *
+ * Grouped rather than listed because a flat list of eleven projects is a thing
+ * you read; three columns is a thing you glance at. The boundaries are the
+ * obvious ones — nothing done, something done, everything done — and a project
+ * with no tasks at all sits in the first, which is where it belongs.
+ */
+const BOARD_COLUMNS = [
+  { id: 'todo', label: 'Not started', match: (p) => p.pctComplete === 0 },
+  { id: 'doing', label: 'In progress', match: (p) => p.pctComplete > 0 && p.pctComplete < 100 },
+  { id: 'done', label: 'Complete', match: (p) => p.pctComplete === 100 },
+];
 
-  // The card is headed "Other projects", so the one you are looking at does
+function projectCard(p) {
+  const card = el('button', { type: 'button', class: 'dos-project', 'data-id': p.id }, [
+    el('span', { class: 'active-projects-list__name', text: p.name }),
+    el('span', { class: 'active-projects-list__meta', text: p.dueDate ? `Due ${p.dueDate}` : 'No due date' }),
+    el('div', { class: 'active-projects-list__track' }, [
+      el('div', { class: 'active-projects-list__fill', style: `width:${p.pctComplete}%` }),
+    ]),
+    el('span', { class: 'active-projects-list__pct', text: `${p.pctComplete}%` }),
+  ]);
+  card.addEventListener('click', () => {
+    switchProject(p.id);
+    const label = document.getElementById('active-project-label');
+    if (label) label.textContent = p.name;
+    onProjectSwitch();
+  });
+  return card;
+}
+
+function renderActiveProjectsList() {
+  const board = document.getElementById('active-projects-list');
+  board.innerHTML = '';
+
+  // The section is headed "Other projects", so the one you are looking at does
   // not belong in it — it was the whole rest of the page.
   const others = listProjectsWithProgress().filter((p) => !p.isActive);
   if (others.length === 0) {
-    list.appendChild(el('p', { class: 'empty-hint', text: 'This is your only project.' }));
+    board.appendChild(el('p', { class: 'empty-hint', text: 'This is your only project.' }));
     return;
   }
 
-  others.forEach((p) => {
-    const item = el('li', {}, [
-      el('div', { class: 'active-projects-list__info' }, [
-        el('span', { class: 'active-projects-list__name', text: p.name }),
-        el('span', { class: 'active-projects-list__meta', text: p.dueDate ? `Due ${p.dueDate}` : 'No due date' }),
-        el('div', { class: 'active-projects-list__track' }, [el('div', { class: 'active-projects-list__fill', style: `width:${p.pctComplete}%` })]),
+  BOARD_COLUMNS.forEach((column) => {
+    const inColumn = others.filter(column.match);
+    board.appendChild(el('div', { class: `dos-board__col dos-board__col--${column.id}` }, [
+      el('div', { class: 'dos-board__head' }, [
+        el('span', { class: `dos-board__tag dos-board__tag--${column.id}`, text: column.label }),
+        el('span', { class: 'dos-board__count', text: String(inColumn.length) }),
       ]),
-      el('span', { class: 'active-projects-list__pct', text: `${p.pctComplete}%` }),
-    ]);
-    item.addEventListener('click', () => {
-      switchProject(p.id);
-      const label = document.getElementById('active-project-label');
-      if (label) label.textContent = p.name;
-      onProjectSwitch();
-    });
-    list.appendChild(item);
+      el('div', { class: 'dos-board__stack' }, inColumn.map(projectCard)),
+    ]));
   });
 }
 
@@ -384,14 +429,186 @@ function bindActiveProjects({ onSwitch }) {
   });
 }
 
+// ---------- The clock ----------
+//
+// Not decoration: the page is read against a date, and every overdue figure on
+// it is relative to today. Saying which today it is costs a line.
+
+function renderClock() {
+  const now = new Date();
+  const clock = document.getElementById('dos-clock');
+  if (!clock) return;
+  clock.textContent = now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  document.getElementById('dos-date').textContent = now.toLocaleDateString(undefined, {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
+  const crumb = document.getElementById('dos-crumb-project');
+  if (crumb) crumb.textContent = getState().projectName || 'Untitled project';
+}
+
+// ---------- Goals ----------
+//
+// Three commitments with a number against each, in the form a steering meeting
+// asks for them: what was promised, where it has got to. Only goals that have
+// actually been set appear — a bar at 0% because nobody filled in a budget says
+// nothing, and three of them say less than one real one.
+
+function goalRows(state) {
+  const rows = [];
+
+  const milestones = state.milestones || [];
+  if (milestones.length) {
+    const done = milestones.filter((m) => m.done).length;
+    rows.push({
+      label: 'Milestones reached',
+      pct: Math.round((done / milestones.length) * 100),
+      detail: `${done} / ${milestones.length}`,
+      tone: 'a',
+    });
+  }
+
+  const deliverables = state.deliverables || [];
+  if (deliverables.length) {
+    const accepted = deliverables.filter((d) => d.status === 'Accepted').length;
+    rows.push({
+      label: 'Deliverables accepted',
+      pct: Math.round((accepted / deliverables.length) * 100),
+      detail: `${accepted} / ${deliverables.length}`,
+      tone: 'b',
+    });
+  }
+
+  const planned = Number(state.budgetPlanned) || 0;
+  if (planned > 0) {
+    const actual = Number(state.budgetActual) || 0;
+    rows.push({
+      label: 'Budget spent',
+      pct: Math.round((actual / planned) * 100),
+      detail: `${MONEY.format(actual)} / ${MONEY.format(planned)}`,
+      // Spending is the one bar where a full track is bad news.
+      tone: actual > planned ? 'over' : 'c',
+    });
+  }
+
+  const tasks = state.dashTasks || [];
+  if (tasks.length) {
+    const complete = tasks.filter((t) => t.status === 'Complete').length;
+    rows.push({
+      label: 'Tasks complete',
+      pct: Math.round((complete / tasks.length) * 100),
+      detail: `${complete} / ${tasks.length}`,
+      tone: 'd',
+    });
+  }
+
+  return rows;
+}
+
+function renderGoals() {
+  const list = document.getElementById('dos-goals');
+  if (!list) return;
+  const rows = goalRows(getState());
+  list.innerHTML = '';
+
+  if (!rows.length) {
+    list.appendChild(el('li', { class: 'empty-hint', text: 'No milestones, deliverables or budget set yet.' }));
+    return;
+  }
+
+  rows.forEach((row) => {
+    list.appendChild(el('li', { class: 'dos-goal' }, [
+      el('div', { class: 'dos-goal__head' }, [
+        el('span', { class: 'dos-goal__label', text: row.label }),
+        el('span', { class: 'dos-goal__figure', text: `${row.pct}% \u00b7 ${row.detail}` }),
+      ]),
+      el('div', { class: 'dos-goal__track' }, [
+        el('div', { class: `dos-goal__fill dos-goal__fill--${row.tone}`, style: `width:${Math.min(100, row.pct)}%` }),
+      ]),
+    ]));
+  });
+}
+
+// ---------- Top tasks ----------
+
+const PRIORITY_RANK = { High: 0, Medium: 1, Low: 2 };
+
+function renderTopTasks() {
+  const list = document.getElementById('dos-top-tasks');
+  if (!list) return;
+  const state = getState();
+  const indexOf = new Map(state.dashTasks.map((t, i) => [t.id, i]));
+
+  const open = state.dashTasks
+    .filter((t) => t.status !== 'Complete')
+    .sort((a, b) => {
+      const p = (PRIORITY_RANK[a.prio] ?? 3) - (PRIORITY_RANK[b.prio] ?? 3);
+      if (p !== 0) return p;
+      // Undated work sorts last rather than first, which is what an empty
+      // string would do on a plain string compare.
+      return (a.end || '9999').localeCompare(b.end || '9999');
+    })
+    .slice(0, 5);
+
+  list.innerHTML = '';
+  if (!open.length) {
+    list.appendChild(el('li', { class: 'empty-hint', text: 'Nothing open. Every task is complete.' }));
+    return;
+  }
+
+  open.forEach((task) => {
+    list.appendChild(el('li', { class: 'dos-task' }, [
+      el('span', { class: 'dos-task__ref', text: taskRef(indexOf.get(task.id)) }),
+      el('span', { class: `dos-task__prio dos-task__prio--${(task.prio || 'medium').toLowerCase()}`, text: task.prio || 'Medium' }),
+      el('span', { class: 'dos-task__name', text: task.name || '(untitled task)' }),
+      el('span', { class: 'dos-task__who', text: task.assigned || 'Unassigned' }),
+    ]));
+  });
+}
+
+// ---------- Recent activity ----------
+
+function renderActivity() {
+  const list = document.getElementById('dos-activity');
+  if (!list) return;
+  const entries = listChangeLog().slice(0, 5);
+  list.innerHTML = '';
+
+  if (!entries.length) {
+    list.appendChild(el('li', { class: 'empty-hint', text: 'Nothing recorded yet. Changes to statuses, dates and sign-offs appear here.' }));
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const when = new Date(entry.at);
+    list.appendChild(el('li', { class: 'dos-activity__row' }, [
+      el('span', { class: 'dos-activity__dot', 'aria-hidden': 'true' }),
+      el('span', { class: 'dos-activity__body' }, [
+        el('span', { class: 'dos-activity__what', text: `${entry.what}${entry.where ? ` \u00b7 ${entry.where}` : ''}` }),
+        el('span', {
+          class: 'dos-activity__move',
+          text: entry.from || entry.to ? `${entry.from || '\u2014'} \u2192 ${entry.to || '\u2014'}` : 'added',
+        }),
+      ]),
+      el('span', {
+        class: 'dos-activity__when',
+        text: Number.isNaN(when.getTime()) ? '' : when.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+      }),
+    ]));
+  });
+}
+
 // Recomputes everything derived from dashTasks/milestones/other projects
 // (called after any dashboard edit, and whenever the Dashboard tab is shown
 // so it picks up milestone edits made on the Planner page).
 export function renderComputed() {
   renderDashHeader();
+  renderClock();
   renderDashGantt();
   renderKpis();
   renderMilestoneProgress();
+  renderGoals();
+  renderTopTasks();
+  renderActivity();
   renderWeeklyWorkload();
   renderUpcomingDeadlines();
   renderTeamWorkload();
@@ -421,4 +638,7 @@ export function initDashboard({ onProjectSwitch: onSwitch } = {}) {
   bindOpenTasks();
   bindKpiLinks();
   bindActiveProjects({ onSwitch });
+  // Once a minute is enough for a clock showing hours and minutes, and it
+  // keeps the page from doing work nobody asked for.
+  setInterval(renderClock, 60000);
 }

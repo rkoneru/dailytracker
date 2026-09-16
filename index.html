@@ -325,93 +325,115 @@
     </section>
 
     <section id="page-dashboard" class="page is-active" role="region" aria-label="Dashboard">
-      <div class="print-page">
-        <header class="dash-header">
-          <div class="dash-header__title">
-            <span id="dash-project-name">Project</span>
-          </div>
-          <div class="dash-header__meta">
-            <div class="stat-pill">
-              <span class="stat-pill__value" id="dash-pct-complete">0%</span>
-              <span class="stat-pill__label">Complete</span>
-            </div>
-          </div>
+      <div class="print-page dash-os">
+
+        <header class="dos-masthead">
+          <span class="dos-mark" aria-hidden="true">&#9889;</span>
+          <h1 class="dos-title" id="dash-project-name">Project</h1>
+          <p class="dos-crumbs">
+            <span>Portfolio</span>
+            <span aria-hidden="true">/</span>
+            <span id="dos-crumb-project">&mdash;</span>
+            <span aria-hidden="true">/</span>
+            <span class="is-here">Dashboard</span>
+          </p>
         </header>
 
-        <!-- Project health, at the altitude only this page works at. These
-             used to be task counts, which the Tasks screen already owns and
-             shows in more detail — two pages answering the same question with
-             the same numbers. Each tile now links to whichever page owns the
-             thing it summarises. -->
-        <section class="kpi-row" aria-label="Project health">
-          <button type="button" class="kpi" id="kpi-status" data-goto="tab-planner">
+        <!-- Five tiles, read left to right: when it is, then the four things
+             that decide whether the engagement is in trouble. Each of the four
+             opens the page that owns the number rather than repeating its
+             detail here. -->
+        <section class="dos-glance" aria-label="At a glance">
+          <div class="dos-tile dos-tile--now">
+            <span class="dos-now__time" id="dos-clock">&mdash;</span>
+            <span class="dos-now__sun" aria-hidden="true">&#9728;</span>
+            <span class="dos-now__date" id="dos-date">&mdash;</span>
+          </div>
+
+          <button type="button" class="dos-tile dos-tile--kpi kpi" id="kpi-status" data-goto="tab-planner">
             <span class="kpi__label">Status</span>
             <span class="kpi__value" id="kpi-status-value">&mdash;</span>
             <span class="kpi__sub" id="kpi-status-sub">Set on the Planner</span>
           </button>
-          <button type="button" class="kpi" id="kpi-schedule" data-goto="tab-planner">
+          <button type="button" class="dos-tile dos-tile--kpi kpi" id="kpi-schedule" data-goto="tab-planner">
             <span class="kpi__label">Schedule</span>
             <span class="kpi__value" id="kpi-schedule-value">&mdash;</span>
             <span class="kpi__sub" id="kpi-schedule-sub">No baseline set</span>
           </button>
-          <button type="button" class="kpi" id="kpi-risk" data-goto="tab-raid">
+          <button type="button" class="dos-tile dos-tile--kpi kpi" id="kpi-risk" data-goto="tab-raid">
             <span class="kpi__label">Risk</span>
             <span class="kpi__value" id="kpi-risk-value">0</span>
             <span class="kpi__sub" id="kpi-risk-sub">Nothing open</span>
           </button>
-          <button type="button" class="kpi" id="kpi-budget" data-goto="tab-planner">
+          <button type="button" class="dos-tile dos-tile--kpi kpi" id="kpi-budget" data-goto="tab-planner">
             <span class="kpi__label">Budget</span>
             <span class="kpi__value" id="kpi-budget-value">&mdash;</span>
             <span class="kpi__sub" id="kpi-budget-sub">Not set</span>
           </button>
         </section>
 
-        <!-- What needs attention, before anything else on the page. Overdue
-             and upcoming work in one list: an overdue task used to show here
-             and again in a second "Tasks" card further down. -->
-        <section class="card card--feature">
-          <div class="card__head">
-            <h2>Needs Attention</h2>
-            <button type="button" class="btn btn-primary no-print" id="btn-open-tasks">Open Task Tracker &rarr;</button>
+        <div class="dos-columns">
+          <div class="dos-col">
+            <section class="dos-card dos-card--today">
+              <div class="dos-card__head">
+                <h2>Needs Attention</h2>
+                <button type="button" class="btn btn-small btn-primary no-print" id="btn-open-tasks">Open Task Tracker &rarr;</button>
+              </div>
+              <ul class="deadline-list" id="upcoming-deadlines"></ul>
+              <p class="hint" id="baseline-note"></p>
+            </section>
+
+            <section class="dos-card">
+              <div class="dos-card__head">
+                <h2>Top Tasks</h2>
+                <span class="hint">Highest priority, soonest first</span>
+              </div>
+              <ul class="dos-tasks" id="dos-top-tasks"></ul>
+            </section>
           </div>
-          <ul class="deadline-list" id="upcoming-deadlines"></ul>
-          <p class="hint" id="baseline-note"></p>
-        </section>
 
+          <div class="dos-col">
+            <section class="dos-card dos-card--goals">
+              <div class="dos-card__head"><h2>Goals</h2></div>
+              <ul class="dos-goals" id="dos-goals"></ul>
+            </section>
 
-        <section class="card card--feature">
-          <div class="card__head"><h2>Task Timeline</h2></div>
-          <p class="hint">The red line marks today. Dashed bars show the baseline where one is set.</p>
-          <div class="chart-scroll"><div class="gantt-chart" id="dash-gantt"></div></div>
-        </section>
+            <section class="dos-card">
+              <div class="dos-card__head">
+                <h2>This Week</h2>
+                <span class="hint">Scheduled task-days, next 7</span>
+              </div>
+              <div class="bar-chart bar-chart--v bar-chart--week" id="weekly-workload-chart"></div>
+            </section>
 
-        <!-- Rollups no other page carries: progress by milestone, and who is
-             carrying what. The status and priority splits live on the Priority
-             Board, so they are not repeated here. -->
-        <div class="dash-row dash-row--2">
-          <div class="card">
-            <div class="card__head"><h2>Milestones</h2></div>
-            <div class="mini-progress">
-              <span class="mini-progress__pct" id="milestone-progress-pct">0%</span>
-              <div class="bar-row__track"><div class="bar-row__fill" id="milestone-progress-bar" style="background:var(--color-primary)"></div></div>
-            </div>
-            <ul class="mini-stat-list" id="milestone-progress-breakdown"></ul>
-          </div>
-          <div class="card">
-            <div class="card__head"><h2>Team Workload</h2></div>
-            <ul class="team-list" id="team-workload-list"></ul>
+            <section class="dos-card dos-card--glow">
+              <div class="dos-card__head"><h2>Recent Activity</h2></div>
+              <p class="hint dos-sub">Statuses, sign-offs and budgets, as they moved</p>
+              <ul class="dos-activity" id="dos-activity"></ul>
+            </section>
           </div>
         </div>
 
-        <div class="dash-row dash-row--2">
-          <div class="card">
-            <div class="card__head"><h2>Weekly Workload</h2></div>
-            <p class="hint">Scheduled task-days for the next 7 days.</p>
-            <div class="bar-chart bar-chart--v bar-chart--week" id="weekly-workload-chart"></div>
+        <section class="dos-card">
+          <div class="dos-card__head">
+            <h2>Task Timeline</h2>
+            <span class="hint">The red line marks today. Dashed bars show the baseline.</span>
           </div>
-          <div class="card">
-            <div class="card__head"><h2>Budget</h2></div>
-            <div class="budget-fields">
+          <div class="chart-scroll"><div class="gantt-chart" id="dash-gantt"></div></div>
+        </section>
+
+        <section class="dos-board-wrap">
+          <div class="dos-card__head dos-card__head--bare">
+            <h2>Other Projects</h2>
+            <button type="button" class="btn btn-small no-print" id="btn-view-all-projects">View All</button>
+          </div>
+          <div class="dos-board" id="active-projects-list"></div>
+        </section>
+
+        <div class="dash-row dash-row--2 dos-bottom">
+          <section class="dos-card">
+            <div class="dos-card__head"><h2>Budget</h2></div>
+            <div class="dos-budget">
               <div class="readonly-fact">
                 <span class="readonly-fact__label">Planned</span>
                 <span class="readonly-fact__value" id="dash-budget-planned">&mdash;</span>
@@ -422,18 +444,37 @@
               </div>
             </div>
             <div class="bar-chart bar-chart--h" id="budget-chart"></div>
-          </div>
-        </div>
+          </section>
 
-        <!-- Cross-project context sits last: it is the only thing here that
-             is not about the project you are looking at. -->
-        <section class="card card--quiet">
-          <div class="card__head">
-            <h2>Other projects</h2>
-            <button type="button" class="btn btn-small no-print" id="btn-view-all-projects">View All</button>
-          </div>
-          <ul class="active-projects-list" id="active-projects-list"></ul>
-        </section>
+          <section class="dos-card dos-card--ring">
+            <div class="dos-card__head"><h2>Milestones</h2></div>
+            <div class="dos-ring" id="dos-ring">
+              <svg viewBox="0 0 120 120" class="dos-ring__svg" aria-hidden="true">
+                <defs>
+                  <linearGradient id="dos-ring-grad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#22d3ee"></stop>
+                    <stop offset="100%" stop-color="#6366f1"></stop>
+                  </linearGradient>
+                </defs>
+                <circle class="dos-ring__track" cx="60" cy="60" r="52"></circle>
+                <circle class="dos-ring__fill" cx="60" cy="60" r="52" id="dos-ring-fill"></circle>
+              </svg>
+              <span class="dos-ring__pct" id="milestone-progress-pct">0%</span>
+            </div>
+            <div class="mini-progress mini-progress--hidden">
+              <div class="bar-row__track"><div class="bar-row__fill" id="milestone-progress-bar"></div></div>
+            </div>
+            <ul class="mini-stat-list" id="milestone-progress-breakdown"></ul>
+          </section>
+
+          <section class="dos-card">
+            <div class="dos-card__head">
+              <h2>Team</h2>
+              <span class="hint"><span id="dash-pct-complete">0%</span> complete</span>
+            </div>
+            <ul class="team-list" id="team-workload-list"></ul>
+          </section>
+        </div>
       </div>
     </section>
 

@@ -5,6 +5,11 @@ import { projectTrend, portfolioTrend, portfolioPctTrend } from './history.js';
 import { raidCounts, openItemsByType, raidScore } from './raid.js';
 import { scheduleSummary } from './schedule.js';
 import { el } from './dom.js';
+import {
+  sheet, ragChips, bulletBox, listBox, boxRow, fieldStrip, milestoneGrid,
+  milestoneTimeline, issuesTable,
+} from './reportFormat.js';
+import { KEY_ROLES } from './resourceModel.js';
 
 // ---------- Report types ----------
 
@@ -104,6 +109,62 @@ function inRange(date, start, end) {
   return date >= start && date <= end;
 }
 
+/**
+ * The five RAG readings a status report is graded on.
+ *
+ * Each returns grey rather than green when the thing it measures has not been
+ * set up: an untouched budget is not "on plan", it is unmeasured, and a pack
+ * full of greens that were never earned is how a project gets to red in one
+ * step. `trend` only moves when there is a snapshot to compare against — an
+ * invented arrow is worse than none.
+ */
+function ragDimensions({ project, rag, overdue, pctComplete, burnPct, budgetPlanned, schedule, deliverables, changeRequests, today }) {
+  const tone = { Green: 'green', Amber: 'amber', Red: 'red' };
+
+  const pctTrend = projectTrend(project.id, 'pctComplete', pctComplete);
+  const overdueTrend = projectTrend(project.id, 'overdue', overdue.length);
+  const dir = (t, betterWhenUp) => {
+    if (!t || t.delta === 0) return 'flat';
+    const improving = betterWhenUp ? t.delta > 0 : t.delta < 0;
+    return improving ? 'up' : 'down';
+  };
+
+  // Scope: approved changes that moved the date are the ones that matter; a
+  // pile of drafts nobody has decided on is an amber, not a red.
+  const approvedDays = changeRequests
+    .filter((c) => c.status === 'Approved')
+    .reduce((n, c) => n + (Number(c.scheduleImpact) || 0), 0);
+  const pending = changeRequests.filter((c) => c.status === 'Submitted' || c.status === 'Under Review').length;
+  const scope = changeRequests.length === 0 ? 'green'
+    : approvedDays > 10 ? 'red' : pending > 0 || approvedDays > 0 ? 'amber' : 'green';
+
+  // Costs: burn against progress, not against the calendar. Spending 60% to
+  // deliver 60% is on plan; spending 60% to deliver 20% is not.
+  const costs = budgetPlanned <= 0 ? 'grey'
+    : burnPct > 100 ? 'red'
+      : burnPct > pctComplete + 15 ? 'amber' : 'green';
+
+  const sched = !schedule.baselined ? 'grey'
+    : schedule.maxSlip > 10 ? 'red'
+      : schedule.slipped.length > 0 ? 'amber' : 'green';
+
+  const rejected = deliverables.filter((d) => d.status === 'Rejected').length;
+  const lateDeliverable = deliverables.filter((d) => {
+    const due = parseDate(d.due);
+    return due && due < today && d.status !== 'Accepted';
+  }).length;
+  const benefits = deliverables.length === 0 ? 'grey'
+    : rejected > 0 ? 'red' : lateDeliverable > 0 ? 'amber' : 'green';
+
+  return [
+    { label: 'Overall', tone: tone[rag] || 'grey', trend: dir(pctTrend, true), note: project.dashStatus || '' },
+    { label: 'Scope', tone: scope, trend: 'flat', note: `${changeRequests.length} change requests, ${approvedDays}d approved impact` },
+    { label: 'Costs', tone: costs, trend: 'flat', note: budgetPlanned > 0 ? `${burnPct}% of budget used at ${pctComplete}% complete` : 'No budget set' },
+    { label: 'Schedule', tone: sched, trend: dir(overdueTrend, false), note: schedule.baselined ? `${schedule.slipped.length} behind baseline` : 'No baseline set' },
+    { label: 'Benefits', tone: benefits, trend: 'flat', note: `${deliverables.filter((d) => d.status === 'Accepted').length} of ${deliverables.length} accepted` },
+  ];
+}
+
 function computeProject(project, periodStart, periodEnd, today) {
   const dashTasks = project.dashTasks || [];
   const milestones = project.milestones || [];
@@ -153,10 +214,31 @@ function computeProject(project, periodStart, periodEnd, today) {
   else if (upcomingMilestones.length > 0) headline = `Next: ${upcomingMilestones[0].text || 'untitled milestone'}`;
   else headline = 'No blockers';
 
+  const deliverables = project.deliverables || [];
+  const changeRequests = project.changeRequests || [];
+  const allocations = project.allocations || [];
+  const roleLabel = new Map(KEY_ROLES.map((r) => [r.id, r.label]));
+  const leads = allocations
+    .filter((a) => a.keyRole)
+    .map((a) => `${a.name || 'Unnamed'} (${roleLabel.get(a.keyRole) || a.keyRole})`);
+
   return {
     id: project.id,
     name: project.projectName || 'Untitled project',
     objective: project.objective || '',
+    lead: leads[0] || '',
+    leads,
+    // The raw task list, which the milestone grid plots. The period-filtered
+    // slices below answer "what happened this week"; the grid answers "where
+    // does this sit in the plan", and needs all of it.
+    dashTasks,
+    milestones,
+    deliverables,
+    changeRequests,
+    dimensions: ragDimensions({
+      project, rag, overdue, pctComplete, burnPct, budgetPlanned,
+      schedule: scheduleSummary(project), deliverables, changeRequests, today,
+    }),
     dueDate: project.dueDate || '',
     status,
     rag,
@@ -253,10 +335,9 @@ function statCard(icon, tone, value, label, trend, goodDirection) {
   ]);
 }
 
-function ragBadge(rag) {
-  const cls = rag === 'Red' ? 'report-badge--bad' : rag === 'Amber' ? 'report-badge--warn' : 'report-badge--ok';
-  return el('span', { class: `report-badge ${cls}`, text: rag });
-}
+// ragBadge went with the card layout: the house format carries RAG as a
+// swatch in the chip row, where it sits beside the other four readings rather
+// than alone at the top of a card.
 
 /**
  * Renders a change-since-last-snapshot chip, or nothing when there's no
@@ -277,239 +358,349 @@ function trendChip(trend, goodDirection) {
   });
 }
 
-function statBox(value, label, trend, goodDirection) {
-  const chip = trendChip(trend, goodDirection);
-  return el('div', {}, [
-    el('div', { class: 'report-stat-value' }, [el('strong', { text: value }), chip]),
-    el('span', { text: label }),
-  ]);
+// statBox, listSection, taskItems and projectCard used to build a free-form
+// card per project — each report arranging its own headings in its own order.
+// They went with the move to one house format: every sheet is now assembled
+// from js/reportFormat.js, so the arrangement is a property of the format
+// rather than of whichever renderer happened to be writing it.
+
+// ---------- The house sheets ----------
+//
+// Four cadences, one format. Each sheet is assembled from js/reportFormat.js
+// rather than laid out here, so a change to the house style lands on all four
+// at once and a reader who knows one knows the others.
+
+/** Everything the grid needs from a project's tasks, in plot order. */
+function gridRows(p, limit = 12) {
+  const milestoneMonths = new Set((p.milestones || [])
+    .map((m) => parseDate(m.due))
+    .filter(Boolean)
+    .map((d) => `${d.getFullYear()}-${d.getMonth()}`));
+
+  const toneFor = (task) => {
+    if (task.status === 'Complete') return 'green';
+    const end = parseDate(task.end);
+    if (end && end < startOfDay(new Date())) return 'red';
+    if (task.status === 'On Hold') return 'amber';
+    return 'green';
+  };
+
+  return (p.dashTasks || [])
+    .map((t) => ({ t, start: parseDate(t.start), end: parseDate(t.end) }))
+    .filter((x) => x.start && x.end)
+    .sort((a, b) => a.start - b.start)
+    .slice(0, limit)
+    .map(({ t, start, end }) => ({
+      label: t.name || '(untitled activity)',
+      start,
+      end,
+      pct: clampPct(t.progress, t.status),
+      tone: toneFor(t),
+      owner: t.assigned || '',
+      // A diamond where a milestone lands in the same month this activity
+      // finishes: the reason the date matters, marked on the thing that moves it.
+      marker: milestoneMonths.has(`${end.getFullYear()}-${end.getMonth()}`),
+    }));
 }
 
-// Returns null for an empty section with no empty-state text, so callers can
-// drop it entirely rather than printing a heading with nothing under it.
-function listSection(title, items, emptyText) {
-  if (items.length === 0 && !emptyText) return null;
-  const section = el('div', { class: 'report-card__section' }, [el('h4', { text: title })]);
-  if (items.length === 0) {
-    section.appendChild(el('p', { class: 'empty-hint', text: emptyText }));
-    return section;
-  }
-  const ul = el('ul', { class: 'report-card__list' });
-  items.forEach(({ label, meta }) => {
-    ul.appendChild(el('li', {}, [
-      el('span', { text: label }),
-      el('span', { class: 'report-card__list-meta', text: meta || '' }),
-    ]));
+function clampPct(progress, status) {
+  if (status === 'Complete') return 100;
+  const n = Math.round(Number(progress) || 0);
+  return Math.max(0, Math.min(100, n));
+}
+
+/** The window a grid or timeline is drawn over, across whatever it is given. */
+function spanOf(projects) {
+  const dates = [];
+  projects.forEach((p) => {
+    (p.dashTasks || []).forEach((t) => {
+      [parseDate(t.start), parseDate(t.end)].forEach((d) => { if (d) dates.push(d); });
+    });
+    (p.milestones || []).forEach((m) => { const d = parseDate(m.due); if (d) dates.push(d); });
+    (p.deliverables || []).forEach((dv) => { const d = parseDate(dv.due); if (d) dates.push(d); });
   });
-  section.appendChild(ul);
-  return section;
+  if (!dates.length) return {};
+  return { from: new Date(Math.min(...dates)), to: new Date(Math.max(...dates)) };
 }
 
-function taskItems(tasks) {
-  return tasks.map((t) => ({ label: t.name || '(untitled task)', meta: t.assigned || '' }));
+function timelineItems(p) {
+  return (p.milestones || [])
+    .map((m) => ({
+      label: m.text || '(untitled milestone)',
+      date: parseDate(m.due),
+      tone: (m.progress || 0) >= 5 ? 'green'
+        : parseDate(m.due) && parseDate(m.due) < startOfDay(new Date()) ? 'red' : 'amber',
+    }))
+    .filter((m) => m.date);
 }
 
-function projectCard(p, children) {
-  return el('div', { class: 'card report-card' }, [
-    el('div', { class: 'report-card__head' }, [
-      el('h3', { class: 'report-card__name', text: p.name }),
-      ragBadge(p.rag),
-      el('span', { class: 'report-card__status', text: p.status }),
+/** What happened in the period, in the order a reader cares about it. */
+function keyActivities(p) {
+  const out = [];
+  p.milestonesInPeriod.forEach((m) => out.push(`Milestone: ${m.text || 'untitled'} (${m.due})`));
+  p.completedInPeriod.slice(0, 6).forEach((t) => out.push(`Completed: ${t.name || 'untitled task'}`));
+  p.inProgress.slice(0, 4).forEach((t) => out.push(`In progress: ${t.name || 'untitled task'} \u00b7 ${t.assigned || 'unassigned'}`));
+  return out.slice(0, 8);
+}
+
+/**
+ * What the report is asking the room to do. Only things a reader could act on:
+ * a risk nobody can do anything about belongs in the register, not here.
+ */
+function managementActions(p) {
+  const out = [];
+  p.openDecisions.slice(0, 3).forEach((d) => out.push(`Decision needed: ${d.title || 'untitled'} \u00b7 ${d.owner || 'unowned'}`));
+  [...p.openRisks, ...p.openIssues]
+    .filter((i) => i.severity === 'Critical' || i.severity === 'High')
+    .slice(0, 3)
+    .forEach((i) => out.push(`${i.type}: ${i.title || 'untitled'} \u00b7 ${i.severity} \u00b7 ${i.owner || 'unowned'}`));
+  p.openBlockers.slice(0, 3).forEach((b) => out.push(`${b.type}: ${b.title || 'untitled'} \u00b7 ${b.owner || 'unowned'}`));
+  if (p.overdue.length) out.push(`${p.overdue.length} task${p.overdue.length === 1 ? '' : 's'} overdue, worst ${p.overdue[0].daysLate}d`);
+  if (p.budgetPlanned > 0 && p.burnPct > 100) out.push(`Budget exceeded: ${p.burnPct}% of plan spent`);
+  return out.slice(0, 8);
+}
+
+function issueRows(p) {
+  return [...p.openIssues, ...p.openRisks].slice(0, 6).map((i) => ({
+    name: i.title || '(untitled)',
+    status: i.status || 'Open',
+    priority: i.severity || '\u2014',
+    owner: i.owner || 'Unowned',
+  }));
+}
+
+function supportNeeded(p) {
+  const out = [];
+  p.openBlockers.slice(0, 4).forEach((b) => out.push(`${b.title || 'untitled'} \u2014 ${b.owner || 'owner unassigned'}`));
+  p.openDecisions.slice(0, 3).forEach((d) => out.push(`Decision: ${d.title || 'untitled'}`));
+  const unfilled = KEY_ROLES.filter((r) => !(p.leads || []).some((l) => l.includes(r.label)));
+  if (unfilled.length) out.push(`Unfilled: ${unfilled.map((r) => r.label).join(', ')}`);
+  return out.slice(0, 6);
+}
+
+/**
+ * The period detail each report carried before the house format arrived.
+ *
+ * Kept, and moved inside the frame rather than dropped: the headline boxes say
+ * what the reader should do, and this is the evidence underneath it. Which
+ * lists appear depends on the cadence, because "completed this week" is the
+ * point of a weekly and noise on a daily.
+ */
+function taskRows(tasks, meta) {
+  return tasks.map((t) => ({ label: t.name || '(untitled task)', meta: meta ? meta(t) : (t.assigned || '') }));
+}
+
+function detailBoxes(p, type) {
+  if (type === 'daily') {
+    return boxRow([
+      listBox('Due today', taskRows(p.dueInPeriod), { empty: 'Nothing due today.' }),
+      listBox('In progress', taskRows(p.inProgress), { empty: 'Nothing in progress.' }),
+      listBox('Blocked / on hold', taskRows(p.onHold), { empty: 'Nothing on hold.' }),
+      listBox('Overdue', taskRows(p.overdue, (t) => `${t.daysLate}d late`), { empty: 'Nothing overdue.' }),
+    ], { tight: true });
+  }
+
+  if (type === 'weekly') {
+    return boxRow([
+      listBox('Completed this week', taskRows(p.completedInPeriod), { empty: 'Nothing completed this week.' }),
+      listBox('Due this week', taskRows(p.dueInPeriod), { empty: 'Nothing due this week.' }),
+      listBox('Overdue', taskRows(p.overdue, (t) => `${t.daysLate}d late`), { empty: 'Nothing overdue.' }),
+      listBox('Milestones this week', p.milestonesInPeriod.map((m) => ({
+        label: m.text || '(untitled milestone)', meta: m.due,
+      })), { empty: 'No milestones this week.' }),
+    ], { tight: true });
+  }
+
+  // Monthly and portfolio: the numbers a steering committee argues about, and
+  // what is coming rather than what has been.
+  const variance = p.budgetActual - p.budgetPlanned;
+  return boxRow([
+    listBox('Budget & schedule', [
+      { label: 'Planned', meta: `$${p.budgetPlanned.toLocaleString()}` },
+      { label: 'Actual', meta: `$${p.budgetActual.toLocaleString()}` },
+      {
+        label: 'Variance',
+        meta: p.budgetPlanned === 0 ? 'no budget set'
+          : `${variance > 0 ? '+' : '\u2212'}$${Math.abs(variance).toLocaleString()} (${p.burnPct}% used)`,
+      },
+      {
+        label: 'Schedule',
+        meta: p.schedule.baselined
+          ? `${p.schedule.slipped.length} behind, worst +${p.schedule.maxSlip}d`
+          : 'no baseline set',
+      },
+      { label: 'Milestones', meta: `${p.milestonesDone} of ${p.milestoneTotal} reached` },
     ]),
-    ...children.filter(Boolean),
+    listBox('Upcoming milestones', p.upcomingMilestones.map((m) => ({
+      label: m.text || '(untitled milestone)', meta: m.due,
+    })), { empty: 'None scheduled.' }),
+    listBox('Open risks & issues', [...p.openRisks, ...p.openIssues].slice(0, 6).map((i) => ({
+      label: i.title || '(untitled)',
+      meta: `${i.severity || '\u2014'} \u00b7 ${i.owner || 'unowned'}`,
+    })), { empty: 'Nothing open.' }),
   ]);
 }
 
-// ---------- Per-type renderers ----------
+const ISSUE_COLUMNS = [
+  { key: 'name', label: 'Name' },
+  { key: 'status', label: 'Status' },
+  { key: 'priority', label: 'Priority' },
+  { key: 'owner', label: 'Owner' },
+];
+
+// ---------- Chapter 1 | Daily Operational ----------
 
 function renderDaily(report, cards, summaryEl) {
   summaryEl.append(
-    statCard('📁', 'blue', String(report.summary.totalProjects), 'Projects'),
-    statCard('📅', 'amber', String(report.summary.dueInPeriod), 'Due Today'),
-    statCard('🔨', 'green', String(report.summary.inProgress), 'In Progress'),
-    statCard('⚠️', 'purple', String(report.summary.overdue), 'Overdue', portfolioTrend('overdue', report.summary.overdue), 'down'),
+    statCard('\ud83d\udcc1', 'blue', String(report.summary.totalProjects), 'Projects'),
+    statCard('\ud83d\udcc5', 'amber', String(report.summary.dueInPeriod), 'Due Today'),
+    statCard('\ud83d\udd28', 'green', String(report.summary.inProgress), 'In Progress'),
+    statCard('\u26a0\ufe0f', 'purple', String(report.summary.overdue), 'Overdue', portfolioTrend('overdue', report.summary.overdue), 'down'),
   );
 
   report.projects.forEach((p) => {
-    cards.appendChild(projectCard(p, [
-      el('div', { class: 'report-card__stats' }, [
-        statBox(`${p.pctComplete}%`, 'Complete'),
-        statBox(String(p.completedInPeriod.length), 'Done today'),
-        statBox(String(p.dueInPeriod.length), 'Due today'),
-        statBox(String(p.inProgress.length), 'In progress'),
-        statBox(String(p.overdue.length), 'Overdue'),
-      ]),
-      listSection('Due today', taskItems(p.dueInPeriod), 'Nothing due today.'),
-      listSection('In progress', taskItems(p.inProgress), 'Nothing in progress.'),
-      listSection('Blocked / on hold', taskItems(p.onHold), ''),
-      listSection('Open issues', p.openIssues.slice(0, 5).map((i) => ({
-        label: i.title || '(untitled issue)',
-        meta: `${i.severity} · ${i.owner || 'unowned'}`,
-      })), ''),
-      listSection('Overdue', p.overdue.map((t) => ({ label: t.name || '(untitled task)', meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}` })), ''),
-    ]));
+    cards.appendChild(sheet({
+      chapter: 1,
+      cadence: 'Daily Operational',
+      title: 'Daily Status Report',
+      children: [
+        fieldStrip(
+          [{ label: 'Project Name', value: p.name }, { label: 'Lead', value: p.lead }],
+          { tone: p.dimensions[0].tone, trend: p.dimensions[0].trend },
+        ),
+        boxRow([
+          bulletBox('Key Activities', keyActivities(p), { empty: 'Nothing moved today.' }),
+          bulletBox('Management Action Required', managementActions(p), { empty: 'No action required.' }),
+        ]),
+        boxRow([
+          issuesTable('Key Issues', issueRows(p), ISSUE_COLUMNS),
+          bulletBox('Support Needed', supportNeeded(p), { empty: 'None.' }),
+        ]),
+        detailBoxes(p, 'daily'),
+      ],
+    }));
   });
 }
+
+// ---------- Chapter 3 | Weekly Tactical ----------
 
 function renderWeekly(report, cards, summaryEl) {
   summaryEl.append(
-    statCard('📁', 'blue', String(report.summary.totalProjects), 'Projects'),
-    statCard('✅', 'green', String(report.summary.completedInPeriod), 'Completed This Week'),
-    statCard('📅', 'amber', String(report.summary.dueInPeriod), 'Due This Week'),
-    statCard('⚠️', 'purple', String(report.summary.overdue), 'Overdue', portfolioTrend('overdue', report.summary.overdue), 'down'),
+    statCard('\ud83d\udcc1', 'blue', String(report.summary.totalProjects), 'Projects'),
+    statCard('\u2705', 'green', String(report.summary.completedInPeriod), 'Completed This Week'),
+    statCard('\ud83d\udcc5', 'amber', String(report.summary.dueInPeriod), 'Due This Week'),
+    statCard('\u26a0\ufe0f', 'purple', String(report.summary.overdue), 'Overdue', portfolioTrend('overdue', report.summary.overdue), 'down'),
   );
 
   report.projects.forEach((p) => {
-    const children = [
-      el('div', { class: 'report-card__stats' }, [
-        statBox(`${p.pctComplete}%`, 'Complete', projectTrend(p.id, 'pctComplete', p.pctComplete), 'up'),
-        statBox(String(p.completedInPeriod.length), 'Done this week'),
-        statBox(String(p.dueInPeriod.length), 'Due this week'),
-        statBox(String(p.overdue.length), 'Overdue', projectTrend(p.id, 'overdue', p.overdue.length), 'down'),
-        statBox(`$${p.budgetActual.toLocaleString()}`, `of $${p.budgetPlanned.toLocaleString()} budget`),
-      ]),
-      listSection('Completed this week', taskItems(p.completedInPeriod), 'Nothing completed this week.'),
-      listSection('Due this week', taskItems(p.dueInPeriod), 'Nothing due this week.'),
-      listSection('Overdue', p.overdue.map((t) => ({ label: t.name || '(untitled task)', meta: `${t.daysLate}d late` })), 'Nothing overdue — nice.'),
-    ];
-    if (p.milestonesInPeriod.length > 0) {
-      children.push(listSection('Milestones this week', p.milestonesInPeriod.map((m) => ({ label: m.text || '(untitled milestone)', meta: m.due })), ''));
-    }
-    children.push(listSection('Open risks & issues', [...p.openRisks, ...p.openIssues].slice(0, 5).map((i) => ({
-      label: i.title || '(untitled)',
-      meta: `${i.type} · ${i.severity} · ${i.owner || 'unowned'}`,
-    })), ''));
-    cards.appendChild(projectCard(p, children));
+    cards.appendChild(sheet({
+      chapter: 3,
+      cadence: 'Weekly Tactical',
+      title: 'Executive Project Status Report',
+      children: [
+        fieldStrip(
+          [{ label: 'Project Name', value: p.name }, { label: 'Lead', value: p.lead }],
+          { tone: p.dimensions[0].tone, trend: p.dimensions[0].trend },
+        ),
+        milestoneTimeline(timelineItems(p), spanOf([p])),
+        boxRow([
+          issuesTable('Key Issues', issueRows(p), ISSUE_COLUMNS),
+          bulletBox('Support Needed', supportNeeded(p), { empty: 'None.' }),
+        ]),
+        detailBoxes(p, 'weekly'),
+      ],
+    }));
   });
 }
+
+// ---------- Chapter 4 | Monthly Strategic ----------
 
 function renderSteerCo(report, cards, summaryEl) {
   const s = report.summary;
   summaryEl.append(
-    statCard('🚦', 'blue', `${s.green}/${s.amber}/${s.red}`, 'Green / Amber / Red'),
-    statCard('📉', 'green', s.worstSlip > 0 ? `+${s.worstSlip}d` : 'On plan', `Worst Slip · ${s.slippedTasks} task${s.slippedTasks === 1 ? '' : 's'}`),
-    statCard('🗳', 'amber', String(s.decisions), 'Decisions Needed'),
-    statCard('💷', 'purple', `${s.burnPct}%`, 'Portfolio Budget Used'),
+    statCard('\ud83d\udea6', 'blue', `${s.green}/${s.amber}/${s.red}`, 'Green / Amber / Red'),
+    statCard('\ud83d\udcc9', 'green', s.worstSlip > 0 ? `+${s.worstSlip}d` : 'On plan', `Worst Slip \u00b7 ${s.slippedTasks} task${s.slippedTasks === 1 ? '' : 's'}`),
+    statCard('\ud83d\uddf3', 'amber', String(s.decisions), 'Decisions Needed'),
+    statCard('\ud83d\udcb7', 'purple', `${s.burnPct}%`, 'Portfolio Budget Used'),
   );
 
   report.projects.forEach((p) => {
-    const variance = p.budgetActual - p.budgetPlanned;
-    const varianceLabel = variance > 0 ? `$${variance.toLocaleString()} over` : `$${Math.abs(variance).toLocaleString()} under`;
-
-    cards.appendChild(projectCard(p, [
-      p.objective ? el('p', { class: 'report-card__objective', text: p.objective }) : null,
-      el('div', { class: 'report-card__stats' }, [
-        statBox(`${p.pctComplete}%`, 'Tasks complete', projectTrend(p.id, 'pctComplete', p.pctComplete), 'up'),
-        statBox(`${p.milestonesDone}/${p.milestoneTotal}`, 'Milestones done', projectTrend(p.id, 'milestonesDone', p.milestonesDone), 'up'),
-        statBox(String(p.completedInPeriod.length), 'Delivered this period'),
-        statBox(`${p.burnPct}%`, `Budget used · ${varianceLabel}`, projectTrend(p.id, 'budgetActual', p.budgetActual), null),
-        statBox(p.schedule.baselined ? (p.schedule.maxSlip > 0 ? `+${p.schedule.maxSlip}d` : 'On plan') : '—',
-          p.schedule.baselined ? `Worst slip · ${p.schedule.slipped.length} task${p.schedule.slipped.length === 1 ? '' : 's'}` : 'No baseline set',
-          projectTrend(p.id, 'maxSlip', p.schedule.maxSlip), 'down'),
-        statBox(p.dueDate || '—', 'Target date'),
-      ]),
-      listSection('Milestone outlook', p.upcomingMilestones.map((m) => ({
-        label: m.text || '(untitled milestone)',
-        meta: `${m.due || 'no date'} · ${Math.round(((m.progress || 0) / 5) * 100)}%`,
-      })), 'All milestones complete.'),
-      listSection('Decisions needed', p.openDecisions.map((i) => ({
-        label: i.title || '(untitled decision)',
-        meta: `${i.owner || 'unowned'}${i.due ? ` · by ${i.due}` : ''}`,
-      })), 'No decisions outstanding.'),
-      listSection('Top risks', p.openRisks.slice(0, 5).map((i) => ({
-        label: i.title || '(untitled risk)',
-        meta: `score ${raidScore(i) || '—'} · ${i.severity}/${i.likelihood || '—'} · ${i.owner || 'unowned'}`,
-      })), 'No open risks logged.'),
-      listSection('Open issues', p.openIssues.slice(0, 5).map((i) => ({
-        label: i.title || '(untitled issue)',
-        meta: `${i.severity} · ${i.owner || 'unowned'}${i.due ? ` · due ${i.due}` : ''}`,
-      })), 'No open issues.'),
-      listSection('Dependencies & assumptions', p.openBlockers.slice(0, 5).map((i) => ({
-        label: i.title || '(untitled)',
-        meta: `${i.type} · ${i.owner || 'unowned'}`,
-      })), ''),
-      listSection('Schedule variance vs baseline', p.schedule.slipped.slice(0, 5).map((t) => ({
-        label: t.name || '(untitled task)',
-        meta: `+${t.slip}d · planned ${t.baseEnd} → now ${t.end}`,
-      })), p.schedule.baselined ? 'Every task is on or ahead of its baseline.' : 'No baseline set for this project.'),
-      listSection('Delivery risks (schedule)', [
-        ...p.overdue.slice(0, 5).map((t) => ({ label: t.name || '(untitled task)', meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}` })),
-        ...p.onHold.map((t) => ({ label: t.name || '(untitled task)', meta: `on hold · ${t.comments || 'no note'}` })),
-      ], ''),
-    ]));
+    cards.appendChild(sheet({
+      chapter: 4,
+      cadence: 'Monthly Strategic',
+      title: `Project Status Report \u2014 ${p.name}`,
+      children: [
+        ragChips(p.dimensions, { completePct: p.pctComplete }),
+        boxRow([
+          bulletBox('Key Activities', keyActivities(p), { empty: 'Nothing moved this period.' }),
+          bulletBox('Management Action Required', managementActions(p), { empty: 'No action required.' }),
+        ]),
+        milestoneGrid(gridRows(p), spanOf([p])),
+        detailBoxes(p, 'steerco'),
+      ],
+    }));
   });
 }
+
+// ---------- Chapter 5 | Portfolio ----------
 
 function renderExecutive(report, cards, summaryEl) {
   const s = report.summary;
   summaryEl.append(
-    statCard('📁', 'blue', String(s.totalProjects), 'Projects'),
-    statCard('📈', 'green', `${s.portfolioPct}%`, 'Portfolio Complete', portfolioPctTrend(s.portfolioPct), 'up'),
-    statCard('💷', 'amber', `${s.burnPct}%`, `Budget Used · $${s.budgetActual.toLocaleString()} of $${s.budgetPlanned.toLocaleString()}`),
-    statCard('⚠️', 'purple', String(s.openRisks + s.openIssues), `Open Risks & Issues${s.criticalRaid > 0 ? ` · ${s.criticalRaid} critical` : ''}`),
+    statCard('\ud83d\udcc1', 'blue', String(s.totalProjects), 'Projects'),
+    statCard('\ud83d\udea6', 'green', `${s.green}/${s.amber}/${s.red}`, 'Green / Amber / Red'),
+    statCard('\ud83d\udcca', 'amber', `${s.portfolioPct}%`, 'Portfolio Complete', portfolioPctTrend(s.portfolioPct), 'up'),
+    statCard('\ud83d\udcb7', 'purple', `${s.burnPct}%`, 'Budget Used'),
   );
 
-  const table = el('table', { class: 'data-table exec-table' });
-  table.appendChild(el('thead', {}, [
-    el('tr', {}, [
-      el('th', { text: 'Project' }),
-      el('th', { class: 'exec-table__rag', text: 'RAG' }),
-      el('th', { class: 'exec-table__num', text: 'Complete' }),
-      el('th', { class: 'exec-table__num', text: 'Target' }),
-      el('th', { class: 'exec-table__num', text: 'Slip' }),
-      el('th', { class: 'exec-table__num', text: 'Budget' }),
-      el('th', { text: 'Headline' }),
-    ]),
-  ]));
+  // One sheet for the whole portfolio: an executive reads across projects, and
+  // four separate sheets is exactly the thing that makes that hard.
+  const portfolioRag = [
+    { label: 'Overall', tone: s.red > 0 ? 'red' : s.amber > 0 ? 'amber' : 'green', trend: 'flat', note: `${s.red} red, ${s.amber} amber` },
+    { label: 'Scope', tone: worstTone(report.projects, 1), trend: 'flat' },
+    { label: 'Costs', tone: worstTone(report.projects, 2), trend: 'flat' },
+    { label: 'Schedule', tone: worstTone(report.projects, 3), trend: 'flat' },
+    { label: 'Benefits', tone: worstTone(report.projects, 4), trend: 'flat' },
+  ];
 
-  const tbody = el('tbody');
-  report.projects.forEach((p) => {
-    tbody.appendChild(el('tr', {}, [
-      el('td', {}, [el('strong', { text: p.name })]),
-      el('td', { class: 'exec-table__rag' }, [ragBadge(p.rag)]),
-      el('td', { class: 'exec-table__num', text: `${p.pctComplete}%` }),
-      el('td', { class: 'exec-table__num', text: p.dueDate || '—' }),
-      el('td', { class: 'exec-table__num' }, [
-        p.schedule.baselined
-          ? el('span', { class: `slip-chip ${p.schedule.maxSlip > 0 ? 'slip--late' : 'slip--onplan'}`, text: p.schedule.maxSlip > 0 ? `+${p.schedule.maxSlip}d` : 'On plan' })
-          : el('span', { text: '—' }),
+  const rows = report.projects.map((p) => ({
+    name: p.name,
+    status: p.status,
+    complete: `${p.pctComplete}%`,
+    overdue: String(p.overdue.length),
+    headline: p.headline,
+  }));
+
+  cards.appendChild(sheet({
+    chapter: 5,
+    cadence: 'Portfolio',
+    title: 'Executive Leadership Report',
+    children: [
+      ragChips(portfolioRag, { completePct: s.portfolioPct }),
+      issuesTable('Portfolio', rows, [
+        { key: 'name', label: 'Project' },
+        { key: 'status', label: 'Status' },
+        { key: 'complete', label: 'Complete' },
+        { key: 'overdue', label: 'Overdue' },
+        { key: 'headline', label: 'Headline' },
       ]),
-      el('td', { class: 'exec-table__num', text: `${p.burnPct}%` }),
-      el('td', { text: p.headline }),
-    ]));
-  });
-  table.appendChild(tbody);
+      boxRow([
+        bulletBox('Key Activities', report.projects.flatMap(keyActivities).slice(0, 8), { empty: 'Nothing moved this period.' }),
+        bulletBox('Management Action Required', report.projects.flatMap(managementActions).slice(0, 8), { empty: 'No action required.' }),
+      ]),
+      milestoneGrid(
+        report.projects.flatMap((p) => gridRows(p, 4).map((r) => ({ ...r, label: `${p.name} \u00b7 ${r.label}` }))).slice(0, 14),
+        spanOf(report.projects),
+      ),
+    ],
+  }));
+}
 
-  cards.appendChild(el('div', { class: 'card' }, [
-    el('div', { class: 'card__head' }, [el('h2', { text: 'Portfolio at a glance' })]),
-    el('div', { class: 'table-scroll' }, [table]),
-  ]));
-
-  const topRaid = report.projects
-    .flatMap((p) => [...p.openRisks, ...p.openIssues].map((i) => ({ ...i, project: p.name })))
-    .sort((a, b) => (raidScore(b) - raidScore(a)) || (a.severity === 'Critical' ? -1 : 1))
-    .slice(0, 6);
-
-  cards.appendChild(el('div', { class: 'card' }, [
-    el('div', { class: 'card__head' }, [el('h2', { text: 'Top risks & issues across the portfolio' })]),
-    listSection('', topRaid.map((i) => ({
-      label: `${i.project} — ${i.title || '(untitled)'}`,
-      meta: `${i.type} · ${i.severity}${raidScore(i) ? ` · score ${raidScore(i)}` : ''} · ${i.owner || 'unowned'}`,
-    })), 'Nothing open in any RAID log.'),
-  ]));
-
-  const scheduleRisks = report.projects
-    .flatMap((p) => p.overdue.map((t) => ({ ...t, project: p.name })))
-    .sort((a, b) => b.daysLate - a.daysLate)
-    .slice(0, 5);
-
-  cards.appendChild(el('div', { class: 'card' }, [
-    el('div', { class: 'card__head' }, [el('h2', { text: 'Schedule slippage' })]),
-    listSection('', scheduleRisks.map((t) => ({
-      label: `${t.project} — ${t.name || '(untitled task)'}`,
-      meta: `${t.daysLate}d late · ${t.assigned || 'unassigned'}`,
-    })), 'No overdue work anywhere in the portfolio.'),
-  ]));
+/** The worst reading any project has on one dimension — a portfolio is only as green as its reddest. */
+function worstTone(projects, index) {
+  const order = ['red', 'amber', 'green', 'grey'];
+  const tones = projects.map((p) => p.dimensions[index].tone);
+  return order.find((t) => tones.includes(t)) || 'grey';
 }
 
 const RENDERERS = { daily: renderDaily, weekly: renderWeekly, steerco: renderSteerCo, executive: renderExecutive };
@@ -518,7 +709,7 @@ const RENDERERS = { daily: renderDaily, weekly: renderWeekly, steerco: renderSte
 
 function trendText(trend) {
   if (!trend || trend.delta === 0) return '';
-  return ` (${trend.delta > 0 ? '+' : '−'}${Math.abs(trend.delta)} since ${trend.since.toLocaleDateString()})`;
+  return ` (${trend.delta > 0 ? '+' : '\u2212'}${Math.abs(trend.delta)} since ${trend.since.toLocaleDateString()})`;
 }
 
 function buildReportText(report) {

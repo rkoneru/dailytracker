@@ -3634,3 +3634,379 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 /* The weekly chart collapses to a sentence when there is nothing in it, so the
    card sizes to what it has to say. */
 .dash-os .bar-chart--week:has(.empty-hint) { min-height: 0; height: auto; display: block; }
+
+/* Visually hidden, still read aloud. The report format carries RAG as colour,
+   which a screen reader and a monochrome printout both miss entirely — each
+   swatch and dot pairs with a text reading that only these rules hide. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   Status reports: the house format
+   ==========================================================================
+   Consulting-pack styling — near-monochrome, thin rules, small-caps labels,
+   colour reserved entirely for RAG. It reads as one system because every sheet
+   is built from the same parts; see js/reportFormat.js. */
+
+.rpt-sheet {
+  --rpt-rule: #1c1c1c;
+  --rpt-hair: #d4d4d4;
+  --rpt-ink: #141414;
+  --rpt-muted: #6b6b6b;
+  --rpt-green: #6fbf73;
+  --rpt-amber: #e8c15c;
+  --rpt-red: #e2574c;
+  --rpt-grey: #c9c9c9;
+
+  background: #fff;
+  border: 1px solid var(--rpt-hair);
+  border-radius: 4px;
+  padding: 22px 24px 14px;
+  margin-bottom: 20px;
+  color: var(--rpt-ink);
+  font-size: 0.85rem;
+}
+
+.rpt-sheet__chapter {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--rpt-ink);
+}
+
+.rpt-sheet__divider { color: var(--rpt-muted); }
+
+.rpt-sheet__title {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--rpt-rule);
+}
+
+.rpt-sheet__body { display: flex; flex-direction: column; gap: 14px; padding-top: 14px; }
+
+/* ---- RAG chips ---- */
+
+.rpt-rag { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.rpt-rag__chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--rpt-rule);
+  padding: 6px 10px;
+  min-width: 120px;
+  flex: 1 1 auto;
+}
+
+.rpt-rag__label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  flex: 1;
+}
+
+.rpt-rag__swatch {
+  width: 24px;
+  height: 13px;
+  flex: 0 0 auto;
+  background: var(--rpt-grey);
+}
+
+.rpt-rag__swatch.is-green { background: var(--rpt-green); }
+.rpt-rag__swatch.is-amber { background: var(--rpt-amber); }
+.rpt-rag__swatch.is-red { background: var(--rpt-red); }
+.rpt-rag__swatch.is-grey { background: var(--rpt-grey); }
+
+/* The chevrons are rotated guillemets, which gives a double-chevron at any
+   font size without shipping an icon or an SVG per chip. */
+.rpt-rag__trend {
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--rpt-ink);
+  flex: 0 0 auto;
+}
+
+.rpt-rag__trend--up { transform: rotate(90deg); }
+.rpt-rag__trend--down { transform: rotate(90deg); }
+.rpt-rag__trend--flat { color: var(--rpt-muted); }
+
+.rpt-rag__chip--pct { justify-content: space-between; min-width: 130px; }
+.rpt-rag__pct { font-size: 1rem; }
+
+/* ---- field strip ---- */
+
+.rpt-fields { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.rpt-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--rpt-rule);
+  padding: 7px 10px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.rpt-field__label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; white-space: nowrap; }
+.rpt-field__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rpt-field--status { flex: 0 0 auto; min-width: 120px; }
+
+/* ---- boxes ---- */
+
+.rpt-boxrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: start; }
+
+.rpt-box { border: 1px solid var(--rpt-rule); padding: 10px 12px 12px; min-width: 0; }
+
+.rpt-box__title {
+  margin: 0 0 8px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.rpt-box__list { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; }
+.rpt-box__list li { font-size: 0.8rem; line-height: 1.4; }
+.rpt-box__empty { margin: 0; font-size: 0.8rem; color: var(--rpt-muted); font-style: italic; }
+.rpt-box--grid { padding: 0; border: 0; }
+
+/* ---- the milestone grid ---- */
+
+.rpt-grid {
+  display: grid;
+  border: 1px solid var(--rpt-rule);
+  font-size: 0.7rem;
+  align-items: stretch;
+  overflow-x: auto;
+}
+
+.rpt-grid__corner,
+.rpt-grid__year,
+.rpt-grid__head {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--rpt-rule);
+  text-align: center;
+  font-size: 0.6rem;
+}
+
+.rpt-grid__corner { text-align: left; letter-spacing: 0.12em; }
+.rpt-grid__year { border-left: 1px solid var(--rpt-hair); }
+.rpt-grid__year--blank { border-left: 0; }
+.rpt-grid__head--month { border-left: 1px solid var(--rpt-hair); font-weight: 600; }
+
+.rpt-grid__label,
+.rpt-grid__num,
+.rpt-grid__status,
+.rpt-grid__owner {
+  padding: 6px;
+  border-bottom: 1px solid var(--rpt-hair);
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.rpt-grid__label { overflow: hidden; }
+.rpt-grid__label,
+.rpt-grid__owner { white-space: nowrap; text-overflow: ellipsis; display: block; overflow: hidden; padding-block: 8px; }
+.rpt-grid__num { justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.rpt-grid__status { justify-content: center; }
+
+/* One track per row rather than a cell per month: the bar is positioned as a
+   percentage inside it, so a task that starts mid-month is not rounded to the
+   nearest column boundary. */
+.rpt-grid__track {
+  position: relative;
+  display: flex;
+  border-bottom: 1px solid var(--rpt-hair);
+  min-height: 26px;
+}
+
+.rpt-grid__cell { flex: 1; border-left: 1px solid var(--rpt-hair); }
+
+.rpt-bar {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  background: #1c1c1c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* The arrowhead the reference gives every bar: a flat left edge, a point on
+     the right, so direction of travel reads without a legend. */
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 0 100%);
+}
+
+.rpt-bar__text {
+  color: #fff;
+  font-size: 0.6rem;
+  padding: 0 10px 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rpt-bar--moment {
+  min-width: 13px;
+  width: 13px !important;
+  background: #1c1c1c;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.rpt-bar__diamond {
+  position: absolute;
+  right: -5px;
+  width: 11px;
+  height: 11px;
+  background: #1c1c1c;
+  transform: rotate(45deg);
+}
+
+.rpt-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; background: var(--rpt-grey); }
+.rpt-dot.is-green { background: var(--rpt-green); }
+.rpt-dot.is-amber { background: var(--rpt-amber); }
+.rpt-dot.is-red { background: var(--rpt-red); }
+
+/* ---- the milestone timeline ---- */
+
+.rpt-box--time { padding-bottom: 6px; }
+.rpt-time { position: relative; padding-top: 4px; }
+.rpt-time__track { position: relative; height: 150px; }
+
+.rpt-time__pin { position: absolute; bottom: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+.rpt-time__pin.is-high { height: 150px; }
+.rpt-time__pin.is-low { height: 92px; }
+
+.rpt-time__callout {
+  border: 1px solid var(--rpt-rule);
+  background: #fff;
+  padding: 5px 7px;
+  font-size: 0.65rem;
+  line-height: 1.25;
+  width: 124px;
+  text-align: center;
+}
+
+.rpt-time__stem { flex: 1; width: 1px; background: var(--rpt-green); }
+.rpt-time__dot { width: 10px; height: 10px; border-radius: 50%; margin-bottom: -5px; }
+
+.rpt-time__axis { height: 1px; background: var(--rpt-rule); position: relative; }
+
+.rpt-time__axis::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: -4px;
+  border-left: 7px solid var(--rpt-rule);
+  border-block: 4px solid transparent;
+}
+
+.rpt-time__months { display: flex; padding-top: 6px; }
+
+.rpt-time__month {
+  flex: 1;
+  text-align: center;
+  font-size: 0.62rem;
+  color: var(--rpt-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- tables ---- */
+
+.rpt-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+
+.rpt-table th {
+  text-align: left;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 4px 6px 5px;
+  border-bottom: 1px solid var(--rpt-rule);
+  white-space: nowrap;
+}
+
+.rpt-table td { padding: 5px 6px; border-bottom: 1px solid var(--rpt-hair); }
+.rpt-table tr:last-child td { border-bottom: 0; }
+
+/* ---- legend ---- */
+
+.rpt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rpt-hair);
+  font-size: 0.62rem;
+  color: var(--rpt-ink);
+}
+
+.rpt-legend__item { display: flex; align-items: center; gap: 5px; }
+
+.rpt-mark { display: inline-block; }
+.rpt-mark--swatch { width: 15px; height: 9px; background: var(--rpt-grey); }
+.rpt-mark--swatch.is-green { background: var(--rpt-green); }
+.rpt-mark--swatch.is-amber { background: var(--rpt-amber); }
+.rpt-mark--swatch.is-red { background: var(--rpt-red); }
+
+.rpt-mark--trend-up,
+.rpt-mark--trend-down {
+  width: 0;
+  height: 0;
+  border-inline: 5px solid transparent;
+}
+
+.rpt-mark--trend-up { border-bottom: 7px solid var(--rpt-ink); }
+.rpt-mark--trend-down { border-top: 7px solid var(--rpt-ink); }
+
+/* A status pack is a print artefact first. Each sheet takes its own page and
+   never breaks across one. */
+@media print {
+  .rpt-sheet { break-inside: avoid; break-after: page; border: 0; padding: 0; margin-bottom: 0; }
+  .rpt-sheet:last-child { break-after: auto; }
+}
+
+@media (max-width: 720px) {
+  .rpt-sheet { padding: 16px 14px 10px; }
+  .rpt-sheet__title { font-size: 1.15rem; }
+  .rpt-grid { font-size: 0.62rem; }
+}
+
+/* The detail lists inside a sheet: a record per row, owner right-aligned so
+   the column can be scanned rather than read. */
+.rpt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+.rpt-list__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid #ececec;
+  font-size: 0.78rem;
+}
+
+.rpt-list__row:last-child { border-bottom: 0; }
+.rpt-list__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rpt-list__meta { flex: 0 0 auto; color: #6b6b6b; font-size: 0.72rem; white-space: nowrap; }
+
+.rpt-boxrow--tight { grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); }

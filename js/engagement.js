@@ -9,10 +9,11 @@
 // js/registerDefs.js; the only bespoke part is the charter, because a charter
 // is one statement about the engagement rather than a list of rows.
 
-import { getState, scheduleSave } from './state.js';
+import { getState, scheduleSave, findResource, listAllAllocations, listAbsences } from './state.js';
 import { el } from './dom.js';
 import { mountRegisters, renderAll, renderRosterOptions } from './register.js';
 import { SCOPE_REGISTERS, PEOPLE_REGISTERS, CHARTER_FIELDS } from './registerDefs.js';
+import { KEY_ROLES, utilisation } from './resourceModel.js';
 import { notifyProjectDataChanged } from './taskModel.js';
 
 // ---------- Charter ----------
@@ -90,12 +91,21 @@ const COUNTERS = [
   },
   {
     id: 'people-count-roster',
-    value: (s) => (s.roster || []).filter((p) => p.status !== 'Rolled off').length,
+    value: (s) => (s.allocations || []).length,
     sub: (s) => {
-      const list = s.roster || [];
-      if (list.length === 0) return 'No one on the roster yet';
-      const unassigned = list.filter((p) => !(p.role || '').trim()).length;
-      return unassigned > 0 ? `${unassigned} with no role set` : 'All have a role';
+      const list = s.allocations || [];
+      if (list.length === 0) return 'Nobody allocated yet';
+      const filled = new Set(list.filter((a) => a.keyRole).map((a) => a.keyRole));
+      const missing = KEY_ROLES.filter((r) => !filled.has(r.id));
+      // The count of people is much less interesting than whether the three
+      // roles that have to exist actually do.
+      return missing.length === 0
+        ? 'Lead, PM and product owner all named'
+        : `No ${missing.map((r) => r.label).join(', no ')}`;
+    },
+    tone: (s) => {
+      const filled = new Set((s.allocations || []).filter((a) => a.keyRole).map((a) => a.keyRole));
+      return KEY_ROLES.every((r) => filled.has(r.id)) ? 'is-good' : 'is-warn';
     },
   },
   {
@@ -137,11 +147,75 @@ function renderCounters() {
   });
 }
 
+// ---------- The roster, as a view ----------
+//
+// Read-only on purpose. The roster used to be a table typed into each project,
+// which meant the same person existed once per engagement and nothing could
+// tell you they were already committed elsewhere. It is now whoever is
+// allocated here, with the one number this page could never show before: how
+// much of that person the rest of the portfolio has already taken.
+
+function rosterWindow(allocation) {
+  // Measured over the allocation's own window, so "% everywhere" answers
+  // "while they are on this, what else are they on?" rather than comparing
+  // against some arbitrary quarter.
+  return { from: allocation.from || '', to: allocation.to || '' };
+}
+
+function renderRosterView() {
+  const body = document.getElementById('roster-view-body');
+  if (!body) return;
+
+  const state = getState();
+  const allocations = state.allocations || [];
+  const everywhere = listAllAllocations();
+  const absences = listAbsences();
+  const roleLabel = new Map(KEY_ROLES.map((r) => [r.id, r.label]));
+
+  body.innerHTML = '';
+  allocations.forEach((allocation) => {
+    const resource = findResource(allocation.resourceId);
+    const win = rosterWindow(allocation);
+    const total = resource && win.from
+      ? utilisation(resource, everywhere, absences, win.from, win.to).allocated
+      : null;
+
+    body.appendChild(el('tr', { 'data-id': allocation.id }, [
+      el('td', { class: 'col-name' }, [
+        el('span', { class: 'alloc-who', text: resource ? resource.name : allocation.name || '(nobody)' }),
+        resource ? null : el('span', { class: 'alloc-ghost', title: 'Not in this device\u2019s pool', text: 'not in pool' }),
+      ]),
+      el('td', { text: allocation.role || '\u2014' }),
+      el('td', {}, [allocation.keyRole
+        ? el('span', { class: 'key-role', text: roleLabel.get(allocation.keyRole) || allocation.keyRole })
+        : document.createTextNode('\u2014')]),
+      el('td', { text: resource ? resource.org : '\u2014' }),
+      el('td', { class: 'col-num', text: `${Number(allocation.percent) || 0}%` }),
+      el('td', {
+        class: `col-num ${total !== null && total > 100 ? 'is-bad' : ''}`,
+        text: total === null ? '\u2014' : `${total}%`,
+        title: total === null ? 'Needs dates and a person in the pool' : 'Across every project, over this allocation\u2019s dates',
+      }),
+      el('td', { class: 'col-date', text: allocation.from || '\u2014' }),
+      el('td', { class: 'col-date', text: allocation.to || '\u2014' }),
+      el('td', { class: 'col-skills', text: resource ? (resource.skills || []).map((sk) => sk.name).join(', ') : '' }),
+    ]));
+  });
+
+  document.getElementById('roster-view-empty').hidden = allocations.length > 0;
+  const count = document.getElementById('roster-view-count');
+  if (count) {
+    count.textContent = allocations.length === 0 ? 'Nobody allocated'
+      : `${allocations.length} allocated`;
+  }
+}
+
 // ---------- Pages ----------
 
 export function renderEngagement() {
   renderCharter();
   renderAll([...SCOPE_REGISTERS, ...PEOPLE_REGISTERS]);
+  renderRosterView();
   renderRosterOptions();
   renderCounters();
 }
@@ -157,6 +231,10 @@ export function initEngagement() {
   };
   mountRegisters('scope-registers', SCOPE_REGISTERS, onChanged);
   mountRegisters('people-registers', PEOPLE_REGISTERS, onChanged);
+  document.getElementById('btn-open-resources')?.addEventListener('click', () => {
+    document.getElementById('tab-resources')?.click();
+  });
+  renderRosterView();
   renderRosterOptions();
   renderCounters();
 }

@@ -68,10 +68,14 @@ const dashNames = (d) => d.page.evaluate(async () => (await import('/js/state.js
   eq('server has every row of the project', dump.rows.length, expectedRows);
   eq('project name uploaded', dump.projects[0].data.projectName, 'Social Media Marketing Campaign');
   // Registers are ordinary row kinds, so the PMP ones the sample project fills
-  // in upload beside the tasks with no special handling.
+  // in upload beside the tasks with no special handling. `roster` is absent and
+  // `allocations` present because the per-project roster became a view of the
+  // central pool: the rows are the same people, carried across on load.
   eq('rows carry their kind', [...new Set(dump.rows.map(r => r.kind))].sort(),
-     ['changeRequests', 'comms', 'dashTasks', 'deliverables', 'dependencies',
-      'lessons', 'milestones', 'notes', 'raci', 'raid', 'roster', 'stakeholders']);
+     ['allocations', 'changeRequests', 'comms', 'dashTasks', 'deliverables', 'dependencies',
+      'lessons', 'milestones', 'notes', 'raci', 'raid', 'stakeholders']);
+  eq('and the migration converted rather than dropped them',
+     dump.rows.filter((r) => r.kind === 'allocations').length > 0, true);
   eq('no updatedAt duplicated into the blob', 'updatedAt' in dump.projects[0].data, false);
 
   console.log('\n--- phone: fresh device pulls it down ---');

@@ -481,8 +481,10 @@
         <header class="dash-header">
           <div class="dash-header__title"><span>People &amp; Stakeholders</span></div>
           <p class="hint report-subtitle">
-            The roster is the one list of names in the app &mdash; every owner field elsewhere offers it.
-            Accounts and who may edit what are on Sync &amp; Team.
+            Who decides, who needs telling, and who is booked on this engagement. The team
+            itself is allocated from the central pool on Resources, so one person exists once
+            across every project rather than once per project. Accounts and who may edit what
+            are on Sync &amp; Team.
           </p>
         </header>
 
@@ -497,6 +499,39 @@
             <span class="kpi__value">0</span>
             <span class="kpi__sub">&mdash;</span>
           </div>
+        </section>
+
+        <section class="card" id="sec-roster">
+          <div class="card__head">
+            <h2>Team Roster</h2>
+            <span class="hint" id="roster-view-count"></span>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-open-resources">Allocate someone</button>
+          </div>
+          <p class="hint">
+            A view of who is allocated to this project. Edit it on Resources, where you can
+            also see what else each person is committed to.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table roster-view-table">
+              <thead>
+                <tr>
+                  <th class="col-name">Name</th>
+                  <th>Project role</th>
+                  <th>Key role</th>
+                  <th>Type</th>
+                  <th class="col-num">% here</th>
+                  <th class="col-num">% everywhere</th>
+                  <th class="col-date">From</th>
+                  <th class="col-date">To</th>
+                  <th>Skills</th>
+                </tr>
+              </thead>
+              <tbody id="roster-view-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="roster-view-empty" hidden>
+            Nobody is allocated to this project yet.
+          </p>
         </section>
 
         <div id="people-registers"></div>
@@ -746,6 +781,181 @@
 
         <div id="mywork-buckets"></div>
         <p class="hint" id="mywork-empty" hidden></p>
+      </div>
+    </section>
+
+    <section id="page-resources" class="page" role="region" aria-label="Resources">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Resources</span></div>
+          <p class="hint report-subtitle">
+            Who you have, what they can do, and whether they have the time. The pool spans
+            every project, because the reason to say no to a booking is almost always in a
+            project you are not looking at.
+          </p>
+        </header>
+
+        <div class="res-controls no-print">
+          <label class="field-label">From
+            <input type="date" class="field-input" id="res-from">
+          </label>
+          <label class="field-label">To
+            <input type="date" class="field-input" id="res-to">
+          </label>
+          <label class="field-label field-label--grow">Need these skills
+            <input type="search" class="field-input" id="res-skills"
+                   placeholder="Kubernetes, Terraform &mdash; ranks the pool by who covers them">
+          </label>
+        </div>
+
+        <section class="card card--feature">
+          <div class="card__head">
+            <h2><span class="section-number">1</span> People</h2>
+            <span class="hint" id="resources-count">Nobody yet</span>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-add-resource">+ Add Person</button>
+          </div>
+          <p class="hint">
+            Utilisation is measured over the window above, across every project. The notch on
+            a bar is what is left after booked leave &mdash; a bar past it is a promise that
+            cannot be kept.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table resources-table" id="resources-table">
+              <thead>
+                <tr>
+                  <th class="col-name">Name</th>
+                  <th>Title</th>
+                  <th>Type</th>
+                  <th class="col-email">Email</th>
+                  <th class="col-skills">Skills</th>
+                  <th class="col-num" title="Hours available per week">Hrs/wk</th>
+                  <th class="col-num" title="Cost per hour">Cost</th>
+                  <th class="col-num" title="Bill rate per hour">Bill</th>
+                  <th class="col-num" title="Margin per hour">Margin</th>
+                  <th class="col-util">Booked</th>
+                  <th>Timezone</th>
+                  <th>Onboarding</th>
+                  <th>Status</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="resources-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="resources-empty" hidden>
+            Nobody in the pool yet. Add the people you staff engagements from &mdash; they become
+            selectable when you create a project and wherever the app asks who owns something.
+          </p>
+        </section>
+
+        <section class="card card--feature">
+          <div class="card__head">
+            <h2><span class="section-number">2</span> Allocations</h2>
+            <span class="hint" id="allocations-count">Nothing booked</span>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-add-allocation">+ Allocate to this project</button>
+          </div>
+          <p class="hint">
+            Who is on what, at what share of their week. This is also each project&rsquo;s team
+            roster &mdash; there is no separate list to keep in step.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table allocations-table" id="allocations-table">
+              <thead>
+                <tr>
+                  <th class="col-name">Person</th>
+                  <th>Project</th>
+                  <th>Project role</th>
+                  <th>Key role</th>
+                  <th class="col-num">%</th>
+                  <th class="col-date">From</th>
+                  <th class="col-date">To</th>
+                  <th class="col-check" title="Billable to the client">Bill</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="allocations-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="allocations-empty" hidden>Nobody is booked on anything yet.</p>
+        </section>
+
+        <div class="dash-row dash-row--2">
+          <section class="card">
+            <div class="card__head">
+              <h2><span class="section-number">3</span> Availability</h2>
+              <button type="button" class="btn btn-small btn-ghost no-print" id="btn-add-absence">+ Add Absence</button>
+            </div>
+            <p class="hint">Leave, holidays and training &mdash; the time that was never available to book.</p>
+            <div class="table-scroll">
+              <table class="data-table absences-table" id="absences-table">
+                <thead>
+                  <tr>
+                    <th class="col-name">Person</th>
+                    <th>Type</th>
+                    <th class="col-date">From</th>
+                    <th class="col-date">To</th>
+                    <th class="col-wide">Note</th>
+                    <th class="col-action no-print"></th>
+                  </tr>
+                </thead>
+                <tbody id="absences-body"></tbody>
+              </table>
+            </div>
+            <p class="hint" id="absences-empty" hidden>No absences recorded.</p>
+          </section>
+
+          <section class="card">
+            <div class="card__head">
+              <h2>On the bench</h2>
+              <span class="hint" id="bench-count"></span>
+            </div>
+            <p class="hint">A quarter of their week or more unbooked, in this window.</p>
+            <ul class="bench-list" id="bench-list"></ul>
+            <p class="hint" id="bench-empty" hidden>Everyone is substantially booked.</p>
+          </section>
+        </div>
+
+        <section class="card card--feature">
+          <div class="card__head">
+            <h2><span class="section-number">4</span> Timesheets</h2>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-add-timesheet">+ Add Week</button>
+          </div>
+          <div class="effort-strip">
+            <div class="effort"><span class="effort__label">Hours booked</span><span class="effort__value" id="ts-hours">0h</span></div>
+            <div class="effort"><span class="effort__label">Approved</span><span class="effort__value" id="ts-approved">0h</span></div>
+            <div class="effort"><span class="effort__label">Revenue</span><span class="effort__value" id="ts-revenue">&mdash;</span></div>
+            <div class="effort"><span class="effort__label">Margin</span><span class="effort__value" id="ts-margin">&mdash;</span></div>
+            <p class="effort__caveat" id="ts-caveat"></p>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table timesheets-table" id="timesheets-table">
+              <thead>
+                <tr>
+                  <th class="col-name">Person</th>
+                  <th>Project</th>
+                  <th class="col-date">Week of</th>
+                  <th class="col-num">Hours</th>
+                  <th class="col-wide">Note</th>
+                  <th>Status</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="timesheets-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="timesheets-empty" hidden>No time booked yet.</p>
+        </section>
+
+        <section class="card card--quiet">
+          <div class="card__head">
+            <h2>Worth looking at</h2>
+            <span class="hint" id="conflicts-count">Nothing to flag</span>
+          </div>
+          <ul class="conflict-list" id="resource-conflicts"></ul>
+          <p class="hint" id="conflicts-empty" hidden>
+            No over-allocation, no bookings across leave, and every project has its key roles filled.
+          </p>
+        </section>
       </div>
     </section>
 
@@ -1051,6 +1261,27 @@
         <label class="field-label field-label--block">Project name
           <input type="text" class="field-input" id="new-project-name" placeholder="Leave blank to use the template's name">
         </label>
+
+        <div class="staffing" id="new-project-staffing">
+          <h4 class="staffing__title">Who is running it</h4>
+          <p class="hint">
+            Picked from the resource pool, so the same person is the same person across every
+            project. Leave any of them unset and the project will say so until it is filled.
+          </p>
+          <div class="staffing__roles" id="new-project-roles"></div>
+
+          <h4 class="staffing__title">Team</h4>
+          <label class="field-label field-label--block">Skills this needs
+            <input type="search" class="field-input" id="new-project-skills"
+                   placeholder="Kubernetes, Terraform &mdash; sorts the list by who covers them">
+          </label>
+          <ul class="staffing__team" id="new-project-team"></ul>
+          <p class="hint" id="new-project-pool-empty" hidden>
+            The resource pool is empty. You can create the project now and allocate people later
+            on Resources, or add people there first.
+          </p>
+        </div>
+
         <button type="button" class="btn btn-primary" id="btn-create-project">Create Project</button>
       </div>
 

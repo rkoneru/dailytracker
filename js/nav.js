@@ -28,6 +28,19 @@ export const NAV_TREE = [
     children: [
       { id: 'tab-mywork', label: 'My Work', icon: '🎯', page: 'page-mywork', title: 'My Work' },
       { id: 'tab-portfolio', label: 'Portfolio', icon: '🗂', page: 'page-portfolio', title: 'Portfolio' },
+      {
+        id: 'tab-resources',
+        label: 'Resources',
+        icon: '👥',
+        page: 'page-resources',
+        title: 'Resources',
+        children: [
+          { id: 'nav-pool', label: 'People', page: 'page-resources', title: 'Resources', section: 'resources-table' },
+          { id: 'nav-allocations', label: 'Allocations', page: 'page-resources', title: 'Resources', section: 'allocations-table' },
+          { id: 'nav-availability', label: 'Availability', page: 'page-resources', title: 'Resources', section: 'absences-table' },
+          { id: 'nav-timesheets', label: 'Timesheets', page: 'page-resources', title: 'Resources', section: 'timesheets-table' },
+        ],
+      },
     ],
   },
   {

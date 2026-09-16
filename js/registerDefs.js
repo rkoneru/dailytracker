@@ -381,7 +381,11 @@ export const KNOWN_ERRORS = {
 export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS];
 
 /** Relationships: who is on it, who decides, who needs telling. Leads only. */
-export const PEOPLE_REGISTERS = [ROSTER, RACI, STAKEHOLDERS, COMMS];
+// The roster used to be the first of these. It is now a view of the central
+// resource pool's allocations — see adoptLegacyRosters in state.js — because a
+// roster typed separately into each project cannot answer the question a
+// roster exists for: whether this person has the time.
+export const PEOPLE_REGISTERS = [RACI, STAKEHOLDERS, COMMS];
 
 /** Blockers, alongside the RAID log — the other half of "what is in our way". */
 export const BLOCKER_REGISTERS = [DEPENDENCIES];
@@ -415,6 +419,10 @@ export const ALL_REGISTERS = [
 
 /** Every collection these pages own, for migrations, sync and cloning. */
 export const REGISTER_KEYS = ALL_REGISTERS.map((r) => r.key);
+
+// `roster` is no longer a register, but rows of that kind may still sit in an
+// already-synced database and in old exports, so the key stays known.
+export const LEGACY_REGISTER_KEYS = ['roster'];
 
 // ---------- Which registers hold work, and when that work is finished ----------
 //

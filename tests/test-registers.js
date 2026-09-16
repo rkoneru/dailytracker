@@ -112,16 +112,20 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(400);
 
   console.log('\n--- search filters a register without touching its neighbours ---');
-  await page.fill('#roster-search', 'Jordan');
+  // The roster used to be this test's subject; it is now a view of the central
+  // resource pool rather than a register, so RACI stands in for it.
+  const raciRows = await page.locator('#raci-body tr').count();
+  await page.fill('#raci-search', 'Influencer');
   await page.waitForTimeout(400);
-  eq('only matching roster rows show', await page.locator('#roster-body tr:not([hidden])').count(), 1);
+  eq('the search narrows its own register',
+     await page.locator('#raci-body tr:not([hidden])').count() < raciRows, true);
   eq('the register next to it is untouched',
      await page.locator('#stakeholders-body tr:not([hidden])').count(),
      await page.locator('#stakeholders-body tr').count());
-  await page.fill('#roster-search', 'zzzz');
+  await page.fill('#raci-search', 'zzzz');
   await page.waitForTimeout(400);
-  eq('a search with no hits says so', await page.textContent('#roster-empty'), 'Nothing matches that search.');
-  await page.fill('#roster-search', '');
+  eq('a search with no hits says so', await page.textContent('#raci-empty'), 'Nothing matches that search.');
+  await page.fill('#raci-search', '');
   await page.waitForTimeout(400);
 
   console.log('\n--- refs are per-register and stable-looking ---');
@@ -135,18 +139,31 @@ const { eq, done } = createChecks();
   eq('dependencies use their own prefix',
      await page.textContent('#dependencies-body tr:first-child .col-ref'), 'DEP-01');
 
-  console.log('\n--- the roster is the one list of names, offered everywhere ---');
+  console.log('\n--- one list of names, now drawn from the resource pool ---');
   await page.click('#tab-people');
-  await page.waitForTimeout(500);
-  eq('datalist is the roster',
-     await page.$$eval('#roster-names option', (e) => e.map((x) => x.value)),
-     ['Priya N.', 'Marcus T.', 'Jordan K.', 'Legal']);
+  await page.waitForTimeout(600);
+  const offered = await page.$$eval('#roster-names option', (e) => e.map((x) => x.value));
+  eq('the datalist is populated', offered.length > 0, true);
+  eq('from the people allocated to this project',
+     await page.evaluate(async (list) => {
+       const state = await import('/js/state.js');
+       return (state.getState().allocations || []).every((a) => !a.name || list.includes(a.name));
+     }, offered), true);
   eq('a RACI owner field offers it',
      await page.getAttribute('#raci-body tr:first-child [data-field="accountable"]', 'list'), 'roster-names');
-  await page.fill('#roster-body tr:first-child [data-field="name"]', 'Priya Nayar');
-  await page.waitForTimeout(500);
-  eq('renaming on the roster updates the list everything offers',
-     (await page.$$eval('#roster-names option', (e) => e.map((x) => x.value)))[0], 'Priya Nayar');
+
+  // Renaming in the pool is what now changes the list, because the pool is
+  // where a person's name lives.
+  await page.evaluate(async () => {
+    const state = await import('/js/state.js');
+    state.updateResource(state.listResources()[0].id, { name: 'Renamed In Pool' });
+  });
+  await page.click('#tab-scope');
+  await page.waitForTimeout(400);
+  await page.click('#tab-people');
+  await page.waitForTimeout(600);
+  eq('renaming in the pool updates the list everything offers',
+     (await page.$$eval('#roster-names option', (e) => e.map((x) => x.value))).includes('Renamed In Pool'), true);
 
   console.log('\n--- dependencies have exactly one home ---');
   // They used to be a RAID type as well; the RAID row is carried across on
@@ -231,10 +248,12 @@ const { eq, done } = createChecks();
 
   console.log('\n--- registers sync like any other row collection ---');
   const kinds = await page.evaluate(async () => (await import('/js/syncModel.js')).ROW_KINDS);
-  ['roster', 'raci', 'deliverables', 'dependencies', 'stakeholders', 'comms', 'changeRequests',
+  ['raci', 'deliverables', 'dependencies', 'stakeholders', 'comms', 'changeRequests',
     'lessons', 'serviceLevels', 'sac', 'releases', 'changes', 'csi', 'knownErrors'].forEach((k) => {
     eq(`${k} is a synced row kind`, kinds.includes(k), true);
   });
+  eq('roster is not, because it is no longer a register', kinds.includes('roster'), false);
+  eq('allocations are, and they are what replaced it', kinds.includes('allocations'), true);
 
   console.log('\n--- the charter is fields, and they persist ---');
   await page.click('#tab-scope');

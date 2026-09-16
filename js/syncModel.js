@@ -11,7 +11,7 @@
 // and stamps `_rev` on the ones whose contents actually moved. The hashes
 // live in their own storage key so they never sync as noise.
 
-import { REGISTER_KEYS } from './registerDefs.js';
+import { REGISTER_KEYS, LEGACY_REGISTER_KEYS } from './registerDefs.js';
 
 // The Planner's old `tasks` and `gantt` lists were folded into `dashTasks`.
 // Rows of those kinds may still sit in an already-synced database; they are
@@ -24,12 +24,20 @@ import { REGISTER_KEYS } from './registerDefs.js';
 // The change log syncs like any other row collection. Append-only from several
 // devices merges cleanly: every entry has its own id, so adds from both sides
 // survive and nothing has to be reconciled.
-export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog', ...REGISTER_KEYS];
+export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog',
+  // Who is booked on this project, and the time booked to it. The people they
+  // point at live in a device-local pool that sync has no place for; see the
+  // note on migrateStore in state.js for why, and what keeps the reference
+  // resolvable across devices anyway.
+  'allocations', 'timesheets',
+  ...REGISTER_KEYS];
 
 // Fields the app keeps locally that must never be pushed to the server.
 // `updatedAt` is carried as the wire `rev` column, so it must not also be
 // duplicated inside the jsonb blob.
-const LOCAL_ONLY_PROJECT_FIELDS = ['id', 'updatedAt', ...ROW_KINDS];
+// `rosterAdoptedAt` and the emptied `roster` are local bookkeeping from the
+// move to a central pool; neither belongs in the project blob on the server.
+const LOCAL_ONLY_PROJECT_FIELDS = ['id', 'updatedAt', 'rosterAdoptedAt', ...LEGACY_REGISTER_KEYS, ...ROW_KINDS];
 const LOCAL_ONLY_ROW_FIELDS = ['id', '_rev'];
 
 /**

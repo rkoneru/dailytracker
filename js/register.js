@@ -11,7 +11,7 @@
 // reason: fourteen hand-written tables is ~600 lines of near-identical markup,
 // and every id in it is one more thing that can fall out of step with the JS.
 
-import { getState, scheduleSave, uid, trashRow, getActiveProjectId } from './state.js';
+import { getState, scheduleSave, uid, trashRow, getActiveProjectId, listResources } from './state.js';
 import { offerUndo } from './trash.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 import { el, dragHandle } from './dom.js';
@@ -198,17 +198,28 @@ export function renderRegister(def) {
  * The roster feeds every "who" field in the app, so it is published once as a
  * datalist rather than each register reaching into the roster itself.
  */
+/**
+ * The names every owner field offers.
+ *
+ * Drawn from the people booked on this project first, because they are who a
+ * row is most likely to belong to, then the rest of the pool — someone can
+ * quite reasonably own a risk on a project they are not allocated to. It used
+ * to come from a per-project roster, which could only ever offer people
+ * somebody had already typed into this project by hand.
+ */
 export function renderRosterOptions() {
   const list = document.getElementById('roster-names');
   if (!list) return;
   list.innerHTML = '';
   const seen = new Set();
-  (getState().roster || []).forEach((p) => {
-    const name = (p.name || '').trim();
+  const add = (value) => {
+    const name = String(value || '').trim();
     if (!name || seen.has(name)) return;
     seen.add(name);
     list.appendChild(el('option', { value: name }));
-  });
+  };
+  (getState().allocations || []).forEach((a) => add(a.name));
+  listResources().forEach((r) => add(r.name));
 }
 
 // ---------- Binding ----------
@@ -219,7 +230,6 @@ function bindRegister(def, onChanged) {
 
   const commit = () => {
     scheduleSave();
-    if (def.key === 'roster') renderRosterOptions();
     onChanged?.(def);
   };
 

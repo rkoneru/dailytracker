@@ -23,10 +23,10 @@ const eq = (n, got, want) => {
   console.log('\n--- structure ---');
   eq('one tree', await page.locator('[role="tree"]').count(), 1);
   eq('every row is a treeitem', await page.locator('.nav-row').count(), await page.locator('[role="treeitem"]').count());
-  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 13);
+  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 14);
   // The default role is the engagement lead, who sees all of it.
   eq('groups open, pages closed at first run', await visibleLabels(),
-     ['Across Projects', 'My Work', 'Portfolio',
+     ['Across Projects', 'My Work', 'Portfolio', 'Resources',
       'This Project', 'Dashboard', 'Tasks', 'Plan',
       'Delivery', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons',
       'Engagement', 'Scope & Contract', 'People & Stakeholders',
@@ -198,7 +198,7 @@ const eq = (n, got, want) => {
 
   // 6. Pages are regions now, not orphaned tabpanels.
   eq('no stale tabpanel roles', await page.locator('[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 14);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 15);
 
   // 7. Opening a report from the nav renders it once, not twice.
   await page.click('#tab-dashboard'); await page.waitForTimeout(300);

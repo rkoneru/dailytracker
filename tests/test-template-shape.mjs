@@ -12,6 +12,7 @@
 import { TEMPLATES } from '../js/sampleData.js';
 import { ALL_REGISTERS, CHARTER_FIELDS } from '../js/registerDefs.js';
 import { analyse } from '../js/critical.js';
+import { SKILL_LEVELS, ORG_TYPES, ONBOARDING, RESOURCE_STATUS, resourceIdFor } from '../js/resourceModel.js';
 
 let passed = 0;
 const failures = [];
@@ -110,6 +111,39 @@ TEMPLATES.forEach((template) => {
   check(`${template.key}: no dependency loops`, graph.cyclic.length === 0, graph.cyclic.join(', '));
 });
 
+// People a template seeds into the shared pool. A bad level or org type here
+// renders as an empty select rather than an error, and the person quietly loses
+// the attribute the pool exists to hold.
+TEMPLATES.forEach((template) => {
+  const project = template.build();
+  const seeded = project.seedResources || [];
+  const ids = new Set();
+
+  seeded.forEach((person, i) => {
+    const where = `${template.key}/seedResources[${i}]`;
+    check(`${where}: has a name`, typeof person.name === 'string' && person.name.length > 0);
+    check(`${where}: org type`, ORG_TYPES.includes(person.org), `got ${person.org}`);
+    check(`${where}: onboarding`, ONBOARDING.includes(person.onboarding), `got ${person.onboarding}`);
+    check(`${where}: status`, RESOURCE_STATUS.includes(person.status), `got ${person.status}`);
+    (person.skills || []).forEach((skill, j) => {
+      check(`${where}.skills[${j}]: level`, SKILL_LEVELS.includes(skill.level), `got ${skill.level}`);
+      check(`${where}.skills[${j}]: name`, typeof skill.name === 'string' && skill.name.length > 0);
+    });
+
+    // Two people with the same email would collapse into one in the pool.
+    const id = resourceIdFor(person);
+    check(`${where}: identity is unique within the template`, !ids.has(id), person.email);
+    ids.add(id);
+  });
+
+  // Everyone on the roster should be in the pool the template seeds, or they
+  // arrive as a bare name with no skills, rates or capacity.
+  (project.roster || []).forEach((row) => {
+    if (!row.name || !seeded.length) return;
+    check(`${template.key}: ${row.name} is seeded into the pool`, ids.has(resourceIdFor(row)), row.email || row.name);
+  });
+});
+
 // The transition template is the worked example of the dependency features, so
 // it has to actually demonstrate them.
 {
@@ -122,6 +156,11 @@ TEMPLATES.forEach((template) => {
     project.dashTasks.some((t) => (t.checklist || []).length > 0), true);
   check('transition estimates most of its work',
     project.dashTasks.filter((t) => t.estimate !== '').length >= 8);
+  check('transition seeds a pool worth opening', (project.seedResources || []).length >= 6);
+  check('and most of them have rates, so margin is not all dashes',
+    (project.seedResources || []).filter((p) => p.costRate && p.billRate).length >= 4);
+  check('and skills, so the skill search finds somebody',
+    (project.seedResources || []).every((p) => (p.skills || []).length > 0), true);
 }
 
 console.log(`\n${passed} checks passed${failures.length ? `, ${failures.length} failed` : ''}`);

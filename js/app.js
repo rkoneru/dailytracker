@@ -33,6 +33,7 @@ import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refres
 import { initPalette } from './palette.js';
 import { initMyWork, renderMyWork } from './myWork.js';
 import { initPortfolio, renderPortfolio } from './portfolio.js';
+import { initResources, renderResources } from './resourcesPage.js';
 import { seedMeFrom, getMe, onMeChange } from './me.js';
 import * as supabase from './supabase.js';
 
@@ -93,7 +94,7 @@ if ('serviceWorker' in navigator) {
 
 // ---------- Tabs ----------
 
-const PAGE_IDS = ['page-mywork', 'page-portfolio',
+const PAGE_IDS = ['page-mywork', 'page-portfolio', 'page-resources',
   'page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
   'page-scope', 'page-people', 'page-service', 'page-improve',
   'page-reports', 'page-sync', 'page-changelog', 'page-trash'];
@@ -119,6 +120,7 @@ function showPage(pageId, title) {
   // than kept warm — there is nothing on them that is theirs to go stale.
   if (pageId === 'page-mywork') renderMyWork();
   if (pageId === 'page-portfolio') renderPortfolio();
+  if (pageId === 'page-resources') renderResources();
   // Every register page offers the roster in its owner fields, and the roster
   // is edited on one of them, so each arrival re-reads rather than trusting
   // whatever the last render left behind.
@@ -895,6 +897,7 @@ function init() {
   initPalette(goTo);
   initMyWork(goTo);
   initPortfolio(goTo);
+  initResources(goTo);
   initWhoAmI();
 
   // A link someone was sent wins over the role's usual landing page: they

@@ -2898,3 +2898,244 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 
 .board-card__checks.is-complete { background: #dcfce7; border-color: #bbf7d0; color: #14532d; }
 .board-card__blocked { background: #fef3c7; border-color: #fde68a; color: #854d0e; }
+
+/* ==========================================================================
+   Resources: pool, allocations, availability, timesheets
+   ========================================================================== */
+
+.res-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+.field-label--grow { flex: 1 1 260px; }
+.res-controls .field-input { min-width: 160px; }
+
+.resources-table .col-skills { min-width: 220px; }
+.resources-table .col-num,
+.allocations-table .col-num,
+.timesheets-table .col-num,
+.roster-view-table .col-num { width: 78px; text-align: right; }
+.resources-table .col-util { width: 128px; }
+.col-check { width: 52px; text-align: center; }
+
+/* ---- utilisation ---- */
+
+.util-bar {
+  position: relative;
+  display: inline-block;
+  width: 72px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+  overflow: hidden;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.util-bar__fill { display: block; height: 100%; }
+.util-bar__fill.is-free { background: transparent; }
+.util-bar__fill.is-busy { background: #38bdf8; }
+.util-bar__fill.is-full { background: #f59e0b; }
+.util-bar__fill.is-over { background: var(--color-danger); }
+
+/* Where capacity actually ends once leave is taken out. A fill past this is a
+   promise that cannot be kept, which is the thing worth seeing at a glance. */
+.util-bar__cap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-text);
+  opacity: 0.55;
+}
+
+.util-figure { font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.util-figure.is-over { color: var(--color-danger); font-weight: 600; }
+.util-figure.is-full { color: #b45309; font-weight: 600; }
+.util-figure.is-free { color: var(--color-text-muted); }
+
+/* ---- skill matching ---- */
+
+.skill-match {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.skill-match.is-full { color: #15803d; font-weight: 600; }
+.skill-match.is-partial { color: #b45309; }
+
+.resources-table tr.is-match td { background: #f0fdf4; }
+
+/* ---- allocations ---- */
+
+.alloc-who { font-weight: 500; }
+
+.alloc-ghost {
+  margin-left: 6px;
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.key-role {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.link-btn {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.link-btn:hover { text-decoration: underline; }
+.link-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 3px; }
+
+/* ---- bench ---- */
+
+.bench-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.bench-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bench-row:last-child { border-bottom: 0; }
+.bench-name { font-weight: 500; flex: 0 0 auto; }
+
+.bench-skills {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bench-free { flex: 0 0 auto; font-size: 0.82rem; font-weight: 600; color: #15803d; }
+
+/* ---- conflicts ---- */
+
+.conflict-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.conflict {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  border-left: 3px solid var(--color-border);
+  font-size: 0.9rem;
+}
+
+.conflict--high { border-left-color: var(--color-danger); background: #fef2f2; }
+.conflict--medium { border-left-color: var(--prio-medium); background: #fffbeb; }
+.conflict--low { border-left-color: var(--color-border); }
+
+.conflict__tag {
+  flex: 0 0 auto;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.conflict--high .conflict__tag { color: var(--color-danger); }
+.conflict--medium .conflict__tag { color: #b45309; }
+
+/* ---- staffing a new project ---- */
+
+.staffing {
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.staffing__title {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.staffing__title:not(:first-child) { margin-top: 18px; }
+
+.staffing__roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.staffing__role { margin: 0; }
+.staffing__blurb { display: block; font-size: 0.75rem; margin-bottom: 4px; }
+
+.staffing__team {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 230px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.staffing__member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.staffing__member:last-child { border-bottom: 0; }
+.staffing__member-label { flex: 1; min-width: 0; cursor: pointer; }
+.staffing__name { display: block; font-weight: 500; }
+
+.staffing__meta {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staffing__util { flex: 0 0 auto; font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--color-text-muted); }
+.staffing__util.is-full { color: #b45309; font-weight: 600; }
+.staffing__util.is-over { color: var(--color-danger); font-weight: 600; }
+.staffing__member.is-over { background: #fef2f2; }
+
+/* ---- the roster, as a view ---- */
+
+.roster-view-table td { vertical-align: middle; }
+.roster-view-table .is-bad { color: var(--color-danger); font-weight: 600; }
+.roster-view-table .col-skills { font-size: 0.82rem; color: var(--color-text-muted); }

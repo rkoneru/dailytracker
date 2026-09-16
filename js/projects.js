@@ -1,7 +1,9 @@
 import {
   listProjects, listTemplates, getActiveProjectId, switchProject,
   createProject, cloneProject, renameProject, deleteProject, importProjectFromJSON,
+  listResources, allocateResource, listAllAllocations, listAbsences,
 } from './state.js';
+import { KEY_ROLES, rankBySkill, utilisation, skillMatch, toISO, weekStart, addDays } from './resourceModel.js';
 import { readJSONFile } from './export.js';
 import { confirmAction, promptText, toast } from './dialog.js';
 import { el } from './dom.js';
@@ -72,6 +74,134 @@ export function initProjects({ onProjectChange }) {
     });
   }
 
+  // ---------- Staffing the new project ----------
+  //
+  // A project with no named Engagement Manager, Project Manager or Product
+  // Owner is the single most common way an engagement goes quiet, and the
+  // cheapest moment to fix it is while the project is being created. These are
+  // offered rather than required: a project started before anyone is assigned
+  // is a real situation, and refusing to create it would just push people into
+  // typing a placeholder name.
+
+  const staffing = { skills: '', team: new Set(), roles: {} };
+
+  function staffingWindow() {
+    const start = weekStart(new Date());
+    return { from: toISO(start), to: toISO(addDays(start, 83)) };
+  }
+
+  /** The pool, ranked by the skills asked for, with what each is already committed to. */
+  function candidates() {
+    const pool = listResources();
+    const required = staffing.skills.split(',').map((x) => x.trim()).filter(Boolean);
+    const ordered = required.length
+      ? rankBySkill(pool, required).map((x) => x.resource)
+      : pool.slice().sort((a, b) => a.name.localeCompare(b.name));
+    const allocations = listAllAllocations();
+    const absences = listAbsences();
+    const win = staffingWindow();
+    return ordered.map((resource) => ({
+      resource,
+      util: utilisation(resource, allocations, absences, win.from, win.to),
+      match: required.length ? skillMatch(resource, required) : null,
+    }));
+  }
+
+  function renderRolePickers(people) {
+    const host = document.getElementById('new-project-roles');
+    if (!host) return;
+    host.innerHTML = '';
+    KEY_ROLES.forEach((role) => {
+      const select = el('select', { class: 'field-input', id: `role-pick-${role.id}`, 'data-role': role.id });
+      select.appendChild(el('option', { value: '', text: 'Not assigned yet' }));
+      people.forEach(({ resource, util }) => {
+        select.appendChild(el('option', {
+          value: resource.id,
+          // The commitment is shown in the option itself: choosing someone
+          // already at 100% should feel like a decision, not an accident.
+          text: `${resource.name}${resource.title ? ` — ${resource.title}` : ''} (${util.allocated}% booked)`,
+          selected: staffing.roles[role.id] === resource.id,
+        }));
+      });
+      host.appendChild(el('label', { class: 'field-label field-label--block staffing__role' }, [
+        document.createTextNode(role.label),
+        el('span', { class: 'hint staffing__blurb', text: role.blurb }),
+        select,
+      ]));
+    });
+  }
+
+  function renderTeamPicker(people) {
+    const host = document.getElementById('new-project-team');
+    if (!host) return;
+    host.innerHTML = '';
+    people.forEach(({ resource, util, match }) => {
+      const id = `team-pick-${resource.id}`;
+      const tone = util.over > 0 ? 'is-over' : util.allocated >= 85 ? 'is-full' : '';
+      host.appendChild(el('li', { class: `staffing__member ${tone}` }, [
+        el('input', {
+          type: 'checkbox', id, value: resource.id, 'data-member': resource.id,
+          checked: staffing.team.has(resource.id),
+        }),
+        el('label', { class: 'staffing__member-label', htmlFor: id }, [
+          el('span', { class: 'staffing__name', text: resource.name || '(unnamed)' }),
+          el('span', { class: 'staffing__meta', text: [resource.title, (resource.skills || []).map((sk) => sk.name).join(', ')].filter(Boolean).join(' · ') }),
+        ]),
+        match
+          ? el('span', {
+            class: `skill-match ${match.missing.length ? 'is-partial' : 'is-full'}`,
+            text: match.missing.length ? `missing ${match.missing.join(', ')}` : 'covers all',
+          })
+          : null,
+        el('span', { class: `staffing__util ${tone}`, text: `${util.allocated}%` }),
+      ]));
+    });
+    document.getElementById('new-project-pool-empty').hidden = people.length > 0;
+  }
+
+  function renderStaffing() {
+    const people = candidates();
+    renderRolePickers(people);
+    renderTeamPicker(people);
+  }
+
+  /** Turns the form's choices into allocations on the freshly made project. */
+  function applyStaffing(projectId) {
+    const win = staffingWindow();
+    const done = new Set();
+
+    KEY_ROLES.forEach((role) => {
+      const resourceId = staffing.roles[role.id];
+      if (!resourceId) return;
+      const resource = listResources().find((r) => r.id === resourceId);
+      allocateResource(projectId, {
+        resourceId,
+        name: resource ? resource.name : '',
+        role: role.label,
+        keyRole: role.id,
+        percent: 20,
+        from: win.from,
+        to: win.to,
+      });
+      done.add(resourceId);
+    });
+
+    staffing.team.forEach((resourceId) => {
+      // Someone picked as both a key role and a team member is one allocation,
+      // not two — the key role already books them.
+      if (done.has(resourceId)) return;
+      const resource = listResources().find((r) => r.id === resourceId);
+      allocateResource(projectId, {
+        resourceId,
+        name: resource ? resource.name : '',
+        role: resource ? resource.title : '',
+        percent: 50,
+        from: win.from,
+        to: win.to,
+      });
+    });
+  }
+
   function refreshAll() {
     renderProjectList();
     refreshActiveLabel();
@@ -81,6 +211,12 @@ export function initProjects({ onProjectChange }) {
     renderTemplateGrid();
     renderProjectList();
     nameInput.value = '';
+    // Choices from the last project created are not choices about this one.
+    staffing.skills = '';
+    staffing.team = new Set();
+    staffing.roles = {};
+    document.getElementById('new-project-skills').value = '';
+    renderStaffing();
     overlay.hidden = false;
     document.body.classList.remove('sidebar-open');
   }
@@ -133,10 +269,37 @@ export function initProjects({ onProjectChange }) {
     }
   });
 
+  document.getElementById('new-project-skills').addEventListener('input', (e) => {
+    staffing.skills = e.target.value;
+    renderStaffing();
+  });
+
+  document.getElementById('new-project-roles').addEventListener('change', (e) => {
+    const role = e.target.dataset.role;
+    if (!role) return;
+    staffing.roles[role] = e.target.value;
+    // One person cannot hold two of the three; picking them for a second
+    // clears the first rather than silently double-booking the title.
+    Object.keys(staffing.roles).forEach((other) => {
+      if (other !== role && staffing.roles[other] && staffing.roles[other] === e.target.value) {
+        staffing.roles[other] = '';
+      }
+    });
+    renderStaffing();
+  });
+
+  document.getElementById('new-project-team').addEventListener('change', (e) => {
+    const id = e.target.dataset.member;
+    if (!id) return;
+    if (e.target.checked) staffing.team.add(id);
+    else staffing.team.delete(id);
+  });
+
   document.getElementById('btn-create-project').addEventListener('click', () => {
     const templateKey = templateGrid.querySelector('input[name="template"]:checked')?.value;
     const name = nameInput.value.trim();
-    createProject({ name, templateKey });
+    const project = createProject({ name, templateKey });
+    applyStaffing(project.id);
     refreshAll();
     onProjectChange();
     close();

@@ -84,6 +84,29 @@ export function createServiceTransition() {
       { id: id('r'), type: 'Assumption', title: 'Client provides test data for the P1 rehearsal', owner: 'Grace Lin', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-11-20', action: 'Unconfirmed. If not, rehearse against anonymised production copies.' },
     ],
 
+    // The people themselves, as opposed to their names on this engagement's
+    // roster. Merged into the pool the first time this template is used, so
+    // Resources opens with skills, rates and capacity rather than a table of
+    // names and dashes.
+    seedResources: [
+      { name: 'Dev Raman', email: 'dev.raman@example.com', org: 'Internal', title: 'Service Delivery Manager', capacityHours: 40, costRate: 78, billRate: 145, location: 'Manchester', timezone: 'UTC+0', onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'Service transition', level: 'Expert' }, { name: 'ITIL', level: 'Expert' }, { name: 'Contract management', level: 'Practitioner' }, { name: 'Stakeholder management', level: 'Expert' }] },
+      { name: 'Grace Lin', email: 'grace.lin@example.com', org: 'Internal', title: 'Support Lead', capacityHours: 40, costRate: 58, billRate: 110, location: 'Manchester', timezone: 'UTC+0', onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'Incident management', level: 'Expert' }, { name: 'ITIL', level: 'Practitioner' }, { name: 'Service desk tooling', level: 'Practitioner' }, { name: 'Runbooks', level: 'Working' }] },
+      { name: 'Nadia Osei', email: 'nadia.osei@example.com', org: 'Internal', title: 'Platform Engineer', capacityHours: 40, costRate: 65, billRate: 125, location: 'Remote', timezone: 'UTC+1', onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'Kubernetes', level: 'Expert' }, { name: 'Terraform', level: 'Practitioner' }, { name: 'Observability', level: 'Expert' }, { name: 'Networking', level: 'Working' }] },
+      { name: 'Tom Byrne', email: 'tom.byrne@example.com', org: 'Internal', title: 'Lead Engineer', capacityHours: 24, costRate: 72, billRate: 140, location: 'Dublin', timezone: 'UTC+0', onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'Java', level: 'Expert' }, { name: 'Kubernetes', level: 'Working' }, { name: 'CI/CD', level: 'Practitioner' }, { name: 'Postgres', level: 'Practitioner' }] },
+      { name: 'Marco Silva', email: 'marco.silva@example.com', org: 'Contractor', title: 'Tooling & Process', capacityHours: 16, costRate: 85, billRate: 120, location: 'Lisbon', timezone: 'UTC+0', onboarding: 'In progress', status: 'Allocated', leavingOn: '2027-01-31',
+        skills: [{ name: 'Service desk tooling', level: 'Expert' }, { name: 'Process design', level: 'Practitioner' }, { name: 'Data migration', level: 'Working' }] },
+      { name: 'Helen Ward', email: 'helen.ward@example.com', org: 'Client', title: 'COO', capacityHours: 4, onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'Sponsorship', level: 'Expert' }] },
+      { name: 'Ade Fashola', email: 'ade.fashola@example.com', org: 'Client', title: 'Head of Orders IT', capacityHours: 12, onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'Orders platform', level: 'Expert' }, { name: 'Service ownership', level: 'Practitioner' }] },
+      { name: 'Rita Vos', email: 'rita.vos@example.com', org: 'Partner', title: 'Outgoing Platform Lead', capacityHours: 20, onboarding: 'Cleared', status: 'Notice', leavingOn: '2026-12-31',
+        skills: [{ name: 'Orders platform', level: 'Expert' }, { name: 'Deployments', level: 'Expert' }] },
+    ],
+
     roster: [
       { id: id('p'), name: 'Dev Raman', role: 'Service Delivery Manager', org: 'Supplier', email: 'dev.raman@example.com', allocation: 100, start: '2026-09-21', end: '', status: 'Active' },
       { id: id('p'), name: 'Grace Lin', role: 'Support Lead', org: 'Supplier', email: 'grace.lin@example.com', allocation: 80, start: '2026-10-01', end: '', status: 'Active' },
@@ -242,6 +265,17 @@ export function createServiceDeskLaunch() {
       { id: id('r'), type: 'Risk', title: 'November finance close collides with the pilot', owner: 'Owen Clarke', severity: 'Medium', likelihood: 'Medium', status: 'Open', due: '2026-11-03', action: 'Pilot the first week only, before close begins on the 9th.' },
       { id: id('r'), type: 'Issue', title: 'Four catalogue owners have not responded in two weeks', owner: 'Sara Boyd', severity: 'Medium', likelihood: '', status: 'In Progress', due: '2026-10-20', action: 'Escalate to Priya Shah at the next IT leadership meeting.' },
       { id: id('r'), type: 'Decision', title: 'Import all spreadsheet history or the last 90 days', owner: 'Ben Iqbal', severity: 'Low', likelihood: '', status: 'Closed', due: '2026-10-08', action: 'Decided: 90 days. Older rows go to an archive sheet, read-only.' },
+    ],
+
+    seedResources: [
+      { name: 'Owen Clarke', email: 'owen.clarke@example.com', org: 'Internal', title: 'Service Desk Manager', capacityHours: 24, costRate: 55, billRate: 0, location: 'Leeds', timezone: 'UTC+0', onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'ITIL', level: 'Practitioner' }, { name: 'Incident management', level: 'Expert' }, { name: 'Process design', level: 'Working' }] },
+      { name: 'Sara Boyd', email: 'sara.boyd@example.com', org: 'Internal', title: 'Process & Comms', capacityHours: 20, costRate: 48, billRate: 0, location: 'Leeds', timezone: 'UTC+0', onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'Process design', level: 'Practitioner' }, { name: 'Internal comms', level: 'Expert' }, { name: 'Change adoption', level: 'Practitioner' }] },
+      { name: 'Ben Iqbal', email: 'ben.iqbal@example.com', org: 'Internal', title: 'Tooling Engineer', capacityHours: 32, costRate: 60, billRate: 0, location: 'Remote', timezone: 'UTC+0', onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'Service desk tooling', level: 'Expert' }, { name: 'Single sign-on', level: 'Practitioner' }, { name: 'Data migration', level: 'Practitioner' }] },
+      { name: 'Priya Shah', email: 'priya.shah@example.com', org: 'Internal', title: 'IT Director', capacityHours: 2, onboarding: 'Cleared', status: 'Allocated',
+        skills: [{ name: 'Sponsorship', level: 'Expert' }] },
     ],
 
     roster: [

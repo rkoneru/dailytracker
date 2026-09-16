@@ -1,5 +1,6 @@
 import { TEMPLATES, DEFAULT_TEMPLATE_KEY } from './sampleData.js';
 import { REGISTER_KEYS, CHARTER_FIELDS } from './registerDefs.js';
+import { newResource, resourceIdFor } from './resourceModel.js';
 import { snapshotOf, diffSnapshots } from './changeLog.js';
 
 const STORAGE_KEY = 'projectPlannerStore_v2';
@@ -197,6 +198,10 @@ function migrateProject(data) {
   // The change log is per project and append-only; projects made before it
   // existed simply start empty rather than inventing a history.
   if (!Array.isArray(data.changeLog)) data.changeLog = [];
+  // Who is booked on this project, and the time they have booked to it. Both
+  // are project rows so they sync; the people they point at are not.
+  if (!Array.isArray(data.allocations)) data.allocations = [];
+  if (!Array.isArray(data.timesheets)) data.timesheets = [];
   migrateRegisters(data);
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are
@@ -305,6 +310,8 @@ const TRASH_LABELS = {
   changes: 'Change',
   csi: 'Improvement',
   knownErrors: 'Known error',
+  allocations: 'Allocation',
+  timesheets: 'Timesheet entry',
   project: 'Project',
 };
 
@@ -335,7 +342,16 @@ function pushTrash(entry) {
  * Returns the trash entry, or null when the row was already gone.
  */
 export function trashRow(collection, id) {
-  const project = getState();
+  return trashRowIn(getState(), collection, id);
+}
+
+/**
+ * The same, for a project that is not the one on screen. Allocations are
+ * managed from a page that spans every project, so deleting one cannot assume
+ * the project it belongs to is the active one.
+ */
+function trashRowIn(project, collection, id) {
+  if (!project) return null;
   const list = project[collection] || [];
   const index = list.findIndex((row) => row.id === id);
   if (index === -1) return null;
@@ -415,7 +431,125 @@ export function trashCount() {
 
 function createDefaultStore() {
   const project = buildProjectFromTemplate(DEFAULT_TEMPLATE_KEY);
-  return { activeProjectId: project.id, projects: { [project.id]: project }, trash: [] };
+  return {
+    activeProjectId: project.id,
+    projects: { [project.id]: project },
+    trash: [],
+    // The pool and the leave calendar span every project, so they live beside
+    // the projects rather than inside one. See migrateStore for why they are
+    // not row kinds.
+    resources: [],
+    absences: [],
+  };
+}
+
+/**
+ * Store-level collections, brought up to shape.
+ *
+ * Resources and absences are deliberately not sync row kinds. Sync is scoped
+ * to a project — a row belongs to a project or it does not exist — and a pool
+ * that spans projects has nowhere to live in that model. So the pool is held
+ * on the device and travels in the backup file, while the allocations that
+ * reference it are ordinary project rows and sync normally.
+ *
+ * That leaves one seam: an allocation can arrive on a device whose pool has
+ * never heard of the person. It is survivable because a resource id is derived
+ * from the person's email rather than generated (resourceIdFor), so two
+ * devices that both know someone agree on the id without ever having talked;
+ * and the allocation carries the name, so a device that does not know them can
+ * still say who is booked. Everything else about the person — skills, rates,
+ * capacity — is simply unavailable there, and the Resources page says so
+ * rather than showing blanks that look like data.
+ */
+function migrateStore(s) {
+  if (!Array.isArray(s.resources)) s.resources = [];
+  if (!Array.isArray(s.absences)) s.absences = [];
+  s.resources = s.resources.map((r) => newResource(r));
+  return s;
+}
+
+/**
+ * The per-project Team Roster, folded into the pool it should always have been.
+ *
+ * Every project used to carry its own hand-typed roster, so the same person
+ * existed once per engagement with no way to tell that they were already fully
+ * committed somewhere else — which is the whole question a roster is for. Each
+ * row becomes a resource (deduplicated by email, or by name when there is no
+ * email) plus an allocation to the project it came from.
+ *
+ * The roster is cleared once it has been adopted. Leaving it in place would
+ * leave two copies of every person free to drift apart, and re-adopting on
+ * every load would resurrect anyone whose allocation had since been deleted.
+ */
+function adoptLegacyRosters(projects) {
+  const s = store;
+  let adopted = 0;
+
+  (projects || Object.values(s.projects || {})).forEach((project) => {
+    // A template may ship the people themselves, not just their names on a
+    // roster — skills, rates, capacity. They are merged into the pool and
+    // dropped from the project, because a person is not project data.
+    (project.seedResources || []).forEach((seed) => {
+      const resource = newResource(seed);
+      if (!s.resources.some((r) => r.id === resource.id)) {
+        s.resources.push(resource);
+        adopted += 1;
+      }
+    });
+    delete project.seedResources;
+
+    const rows = project.roster;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      project.rosterAdoptedAt = project.rosterAdoptedAt || null;
+      return;
+    }
+
+    rows.forEach((row) => {
+      const name = String(row.name || '').trim();
+      if (!name) return;
+
+      const id = resourceIdFor({ email: row.email, name });
+      let resource = s.resources.find((r) => r.id === id);
+      if (!resource) {
+        resource = newResource({
+          id,
+          name,
+          email: row.email || '',
+          org: ['Internal', 'Client', 'Partner', 'Contractor'].includes(row.org) ? row.org : 'Internal',
+          title: row.role || '',
+          // A roster never recorded these, and inventing them would be worse
+          // than leaving them for someone to fill in.
+          status: row.status === 'Rolled off' ? 'Left' : 'Allocated',
+          notes: row.org && !['Internal', 'Client', 'Partner', 'Contractor'].includes(row.org)
+            ? `Organisation on the old roster: ${row.org}` : '',
+        });
+        s.resources.push(resource);
+      }
+
+      const already = (project.allocations || []).some((a) => a.resourceId === id);
+      if (!already) {
+        project.allocations = project.allocations || [];
+        project.allocations.push({
+          id: uid(),
+          resourceId: id,
+          name,
+          role: row.role || '',
+          keyRole: '',
+          percent: Number(row.allocation) || 100,
+          from: row.start || '',
+          to: row.end || '',
+          billable: true,
+          notes: '',
+        });
+      }
+      adopted += 1;
+    });
+
+    project.roster = [];
+    project.rosterAdoptedAt = Date.now();
+  });
+
+  if (adopted > 0) writeStore();
 }
 
 function getStore() {
@@ -427,7 +561,9 @@ function getStore() {
     // created before the RAID log existed have no raid array).
     Object.values(saved.projects || {}).forEach(migrateProject);
     if (!Array.isArray(saved.trash)) saved.trash = [];
+    migrateStore(saved);
     store = saved;
+    adoptLegacyRosters();
     baselineAudit();
     return store;
   }
@@ -436,7 +572,8 @@ function getStore() {
   // than waiting for the first edit. Otherwise project ids are regenerated on
   // every reload until the user types something, which silently breaks
   // anything that references a project across sessions (snapshot history).
-  store = migrateLegacyStore() || createDefaultStore();
+  store = migrateStore(migrateLegacyStore() || createDefaultStore());
+  adoptLegacyRosters();
   baselineAudit();
   writeStore();
   return store;
@@ -707,6 +844,10 @@ export function createProject({ name, templateKey } = {}) {
   const s = getStore();
   const project = buildProjectFromTemplate(templateKey, name);
   s.projects[project.id] = project;
+  // A template still ships the old roster shape; folding it into the pool has
+  // to happen as the project appears, or the people on it would be invisible
+  // until the next reload.
+  adoptLegacyRosters([project]);
   s.activeProjectId = project.id;
   saveImmediately();
   emitProjectsChanged();
@@ -790,6 +931,9 @@ export function importProjectFromJSON(rawData, name) {
 
   const s = getStore();
   s.projects[data.id] = data;
+  // An export from before the pool existed carries a roster; adopt it so the
+  // imported project's people are the same people as everyone else's.
+  adoptLegacyRosters([data]);
   s.activeProjectId = data.id;
   saveImmediately();
   emitProjectsChanged();
@@ -897,4 +1041,217 @@ export function shouldNudgeBackup() {
 
   const oldestChange = Math.min(...changedSinceBackup.map((p) => p.updatedAt || Date.now()));
   return Date.now() - oldestChange > 7 * DAY_MS;
+}
+
+
+// ---------- The resource pool ----------
+//
+// Reads return copies of the array but the live objects inside it, matching
+// how the rest of the store behaves: callers render from them and go through
+// the functions below to change anything.
+
+const resourceListeners = new Set();
+
+export function onResourcesChange(listener) {
+  resourceListeners.add(listener);
+  return () => resourceListeners.delete(listener);
+}
+
+function emitResourcesChanged() {
+  resourceListeners.forEach((fn) => fn());
+}
+
+export function listResources() {
+  return getStore().resources.slice();
+}
+
+export function findResource(id) {
+  return getStore().resources.find((r) => r.id === id) || null;
+}
+
+/**
+ * Adds someone, or returns the person already there.
+ *
+ * The id is derived from the email, so adding the same person twice is not an
+ * error to report but a no-op to absorb — two people typing the same colleague
+ * into the pool on two devices must converge rather than collide.
+ */
+export function addResource(seed = {}) {
+  const s = getStore();
+  const resource = newResource(seed);
+  const existing = s.resources.find((r) => r.id === resource.id);
+  if (existing) return existing;
+  s.resources.push(resource);
+  saveImmediately();
+  emitResourcesChanged();
+  return resource;
+}
+
+export function updateResource(id, patch) {
+  const s = getStore();
+  const resource = s.resources.find((r) => r.id === id);
+  if (!resource) return null;
+  Object.assign(resource, patch);
+  // Changing the email changes who this is. Rather than silently keeping the
+  // old id and letting two devices disagree, the row keeps its id and the new
+  // address is simply stored: re-keying would orphan every allocation pointing
+  // at it, which is a worse outcome than an id that no longer matches its email.
+  scheduleSave();
+  emitResourcesChanged();
+  return resource;
+}
+
+/**
+ * Removing someone from the pool does not remove them from the projects they
+ * are booked on — those allocations are a record of a commitment that was
+ * made, and deleting them silently would rewrite history. They become
+ * "not in the pool on this device", which is a state the Resources page
+ * already has to handle for sync anyway.
+ */
+export function removeResource(id) {
+  const s = getStore();
+  const i = s.resources.findIndex((r) => r.id === id);
+  if (i === -1) return null;
+  const [removed] = s.resources.splice(i, 1);
+  saveImmediately();
+  emitResourcesChanged();
+  return removed;
+}
+
+export function listAbsences(resourceId = '') {
+  const all = getStore().absences.slice();
+  return resourceId ? all.filter((a) => a.resourceId === resourceId) : all;
+}
+
+export function addAbsence(seed = {}) {
+  const s = getStore();
+  const absence = { id: uid(), resourceId: '', type: 'Annual leave', from: '', to: '', note: '', ...seed };
+  s.absences.push(absence);
+  saveImmediately();
+  emitResourcesChanged();
+  return absence;
+}
+
+export function updateAbsence(id, patch) {
+  const absence = getStore().absences.find((a) => a.id === id);
+  if (!absence) return null;
+  Object.assign(absence, patch);
+  scheduleSave();
+  emitResourcesChanged();
+  return absence;
+}
+
+export function removeAbsence(id) {
+  const s = getStore();
+  const i = s.absences.findIndex((a) => a.id === id);
+  if (i === -1) return null;
+  const [removed] = s.absences.splice(i, 1);
+  saveImmediately();
+  emitResourcesChanged();
+  return removed;
+}
+
+// ---------- Allocations, across every project ----------
+
+/** Every booking everywhere, each stamped with the project it belongs to. */
+export function listAllAllocations() {
+  const s = getStore();
+  return Object.values(s.projects).flatMap((p) =>
+    (p.allocations || []).map((a) => ({ ...a, projectId: p.id, projectName: p.projectName || 'Untitled project' })));
+}
+
+export function listAllTimesheets() {
+  const s = getStore();
+  return Object.values(s.projects).flatMap((p) =>
+    (p.timesheets || []).map((t) => ({ ...t, projectId: p.id, projectName: p.projectName || 'Untitled project' })));
+}
+
+function projectById(projectId) {
+  const s = getStore();
+  return s.projects[projectId || s.activeProjectId] || null;
+}
+
+export function allocateResource(projectId, seed = {}) {
+  const project = projectById(projectId);
+  if (!project) return null;
+  const resource = seed.resourceId ? findResource(seed.resourceId) : null;
+  const allocation = {
+    id: uid(),
+    resourceId: '',
+    // The name is carried alongside the id so a device that does not have this
+    // person in its pool can still say who is booked. The pool stays the home
+    // for everything else about them.
+    name: resource ? resource.name : (seed.name || ''),
+    role: '', keyRole: '', percent: 50, from: '', to: '', billable: true, notes: '',
+    ...seed,
+  };
+  project.allocations = project.allocations || [];
+  // One person holds a key role once per project; assigning it moves it.
+  if (allocation.keyRole) {
+    project.allocations.forEach((a) => { if (a.keyRole === allocation.keyRole) a.keyRole = ''; });
+  }
+  project.allocations.push(allocation);
+  saveImmediately();
+  emitResourcesChanged();
+  return allocation;
+}
+
+export function updateAllocation(projectId, id, patch) {
+  const project = projectById(projectId);
+  const allocation = (project?.allocations || []).find((a) => a.id === id);
+  if (!allocation) return null;
+  if (patch.keyRole) {
+    project.allocations.forEach((a) => { if (a !== allocation && a.keyRole === patch.keyRole) a.keyRole = ''; });
+  }
+  Object.assign(allocation, patch);
+  scheduleSave();
+  emitResourcesChanged();
+  return allocation;
+}
+
+export function removeAllocation(projectId, id) {
+  const project = projectById(projectId);
+  if (!project) return null;
+  const entry = trashRowIn(project, 'allocations', id);
+  saveImmediately();
+  emitResourcesChanged();
+  return entry;
+}
+
+// ---------- Timesheets ----------
+
+export function addTimesheet(projectId, seed = {}) {
+  const project = projectById(projectId);
+  if (!project) return null;
+  const resource = seed.resourceId ? findResource(seed.resourceId) : null;
+  const entry = {
+    id: uid(),
+    resourceId: '', name: resource ? resource.name : (seed.name || ''),
+    weekStart: '', hours: '', taskId: '', status: 'Draft', note: '',
+    ...seed,
+  };
+  project.timesheets = project.timesheets || [];
+  project.timesheets.push(entry);
+  saveImmediately();
+  emitResourcesChanged();
+  return entry;
+}
+
+export function updateTimesheet(projectId, id, patch) {
+  const project = projectById(projectId);
+  const entry = (project?.timesheets || []).find((t) => t.id === id);
+  if (!entry) return null;
+  Object.assign(entry, patch);
+  scheduleSave();
+  emitResourcesChanged();
+  return entry;
+}
+
+export function removeTimesheet(projectId, id) {
+  const project = projectById(projectId);
+  if (!project) return null;
+  const entry = trashRowIn(project, 'timesheets', id);
+  saveImmediately();
+  emitResourcesChanged();
+  return entry;
 }

@@ -157,6 +157,10 @@ function migrateProject(data) {
   if (typeof data.notes === 'string') {
     data.notes = data.notes.split('\n').filter((line) => line.trim() !== '').map((text) => ({ id: uid(), text }));
   }
+  // Absent, not just the wrong shape: import only insists on milestones and
+  // dashTasks, so a file without notes is legitimate and used to reach the
+  // Planner as undefined and throw on the first render.
+  if (!Array.isArray(data.notes)) data.notes = [];
   if (!Array.isArray(data.raid)) data.raid = [];
   foldLegacyTaskLists(data);
   // Schedule baselines: left empty rather than seeded from current dates,
@@ -176,6 +180,14 @@ function migrateProject(data) {
     }
     if (!Array.isArray(t.cells)) t.cells = [];
     if (t.tickType !== 'diamond') t.tickType = 'check';
+    // Checklist, effort and dependencies, added together. Estimate and spent
+    // stay empty strings rather than becoming 0: an unestimated task and a
+    // task estimated at nothing are different claims, and a migration that
+    // conflated them would invent a plan nobody wrote.
+    if (!Array.isArray(t.checklist)) t.checklist = [];
+    if (t.estimate === undefined) t.estimate = '';
+    if (t.spent === undefined) t.spent = '';
+    if (!Array.isArray(t.dependsOn)) t.dependsOn = [];
   });
   // A milestone can name the deliverable it marks, so the Dashboard shows the
   // pair once. Empty means "this milestone is just a date".

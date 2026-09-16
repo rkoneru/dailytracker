@@ -2716,3 +2716,185 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   font-weight: 600;
   background: var(--color-bg);
 }
+
+/* ==========================================================================
+   Task depth: effort, checklists, dependencies
+   ========================================================================== */
+
+.effort-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 28px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.effort { display: flex; align-items: baseline; gap: 8px; }
+
+.effort__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.effort__value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Over is not automatically bad and under is not automatically good, so these
+   are warm and cool rather than red and green. */
+.effort__value.is-over { color: #b45309; }
+.effort__value.is-under { color: #0369a1; }
+
+.effort__caveat {
+  margin: 0;
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.col-hours { width: 72px; }
+.row-input--hours { width: 100%; text-align: right; font-variant-numeric: tabular-nums; }
+
+.col-blocked { width: 92px; }
+.col-checks { width: 64px; }
+
+/* ---- the critical path ---- */
+
+.tracker-table tr.is-critical > td:first-child + td { position: relative; }
+
+.crit-dot {
+  margin-left: 5px;
+  font-size: 0.6rem;
+  color: var(--color-danger);
+  vertical-align: middle;
+}
+
+.schedule-note {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.schedule-note.is-warn { color: #b45309; font-weight: 500; }
+
+/* ---- what a task waits for ---- */
+
+.dep-chip,
+.check-toggle {
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dep-chip:focus-visible,
+.check-toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.dep-chip.has-deps { color: var(--color-text); border-color: var(--rule-strong, #cbd5e1); }
+.dep-chip.is-blocked { background: #fef3c7; border-color: #fde68a; color: #854d0e; }
+.dep-chip.is-clash { background: #fee2e2; border-color: #fecaca; color: #991b1b; font-weight: 600; }
+
+.check-toggle.is-open { background: var(--color-primary-light); border-color: var(--color-primary); color: var(--color-primary); }
+.check-toggle.is-complete { background: #dcfce7; border-color: #bbf7d0; color: #14532d; }
+
+/* ---- the drawer ---- */
+
+.task-detail > td { background: var(--color-bg); }
+
+.task-detail__cell { padding: 14px 16px !important; }
+
+.task-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  align-items: start;
+}
+
+.detail-block { display: flex; flex-direction: column; gap: 8px; }
+
+.detail-block__title {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.checklist,
+.dep-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.checklist__item { display: flex; align-items: center; gap: 8px; }
+.checklist__box { flex: 0 0 auto; }
+
+.checklist__text {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.checklist__text:hover { border-color: var(--color-border); }
+.checklist__text:focus { border-color: var(--color-primary); outline: none; background: var(--color-surface); }
+.checklist__item.is-done .checklist__text { text-decoration: line-through; color: var(--color-text-muted); }
+
+.dep-list__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  padding: 3px 0;
+}
+
+.dep-list__ref {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.dep-list__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dep-list__warn { font-size: 0.75rem; color: var(--color-danger); white-space: nowrap; }
+.dep-list__item.is-clash .dep-list__ref { background: #fee2e2; color: #991b1b; }
+
+.dep-picker { max-width: 320px; font-size: 0.85rem; }
+
+.icon-btn--small { padding: 0 5px; font-size: 0.95rem; line-height: 1.2; }
+
+/* ---- board card chips ---- */
+
+.board-card__checks,
+.board-card__blocked {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.board-card__checks.is-complete { background: #dcfce7; border-color: #bbf7d0; color: #14532d; }
+.board-card__blocked { background: #fef3c7; border-color: #fde68a; color: #854d0e; }

@@ -236,6 +236,22 @@
           </div>
         </section>
 
+        <section class="effort-strip" aria-label="Effort">
+          <div class="effort">
+            <span class="effort__label">Estimated</span>
+            <span class="effort__value" id="effort-estimate">&mdash;</span>
+          </div>
+          <div class="effort">
+            <span class="effort__label">Spent</span>
+            <span class="effort__value" id="effort-spent">&mdash;</span>
+          </div>
+          <div class="effort">
+            <span class="effort__label">Variance</span>
+            <span class="effort__value" id="effort-variance">&mdash;</span>
+          </div>
+          <p class="effort__caveat" id="effort-unestimated"></p>
+        </section>
+
         <section class="card card--feature">
           <div class="card__head">
             <h2><span class="section-number">1</span> Task Tracker</h2>
@@ -271,7 +287,11 @@
                   <th class="col-date">Start</th>
                   <th class="col-date">Due date</th>
                   <th class="col-slip">Slip</th>
+                  <th class="col-blocked no-print" title="What this task waits for">Waits for</th>
+                  <th class="col-hours" title="Estimated hours">Est.</th>
+                  <th class="col-hours" title="Hours spent">Spent</th>
                   <th class="col-progress">Progress</th>
+                  <th class="col-checks no-print" title="Checklist">Checks</th>
                   <th>Comments</th>
                   <th class="col-action no-print"></th>
                 </tr>
@@ -280,6 +300,7 @@
             </table>
           </div>
           <p class="hint" id="tracker-empty" hidden>No tasks match. Clear the filters, or add one.</p>
+          <p class="hint schedule-note" id="tasks-schedule-note"></p>
         </section>
 
         <section class="card card--feature">

@@ -11,6 +11,7 @@
 
 import { TEMPLATES } from '../js/sampleData.js';
 import { ALL_REGISTERS, CHARTER_FIELDS } from '../js/registerDefs.js';
+import { analyse } from '../js/critical.js';
 
 let passed = 0;
 const failures = [];
@@ -81,6 +82,47 @@ TEMPLATES.forEach((template) => {
   check(`${key} populates every register`, empty.length === 0, `empty: ${empty.join(', ')}`);
   check(`${key} has a charter`, (project.charterScopeIn || '').length > 20);
 });
+
+// Dependencies are written by hand in a template, by id, which is the one place
+// an edge can point at nothing or close a loop before anyone opens the app.
+TEMPLATES.forEach((template) => {
+  const project = template.build();
+  const tasks = project.dashTasks || [];
+  const ids = new Set(tasks.map((t) => t.id));
+
+  tasks.forEach((task) => {
+    (task.dependsOn || []).forEach((dep) => {
+      check(`${template.key}: ${task.name} waits for a task that exists`, ids.has(dep), `missing ${dep}`);
+      check(`${template.key}: ${task.name} does not wait for itself`, dep !== task.id);
+    });
+    (task.checklist || []).forEach((item, i) => {
+      check(`${template.key}: ${task.name} checklist[${i}] has an id`, typeof item.id === 'string' && !!item.id);
+      check(`${template.key}: ${task.name} checklist[${i}] has text`, typeof item.text === 'string' && item.text.length > 0);
+    });
+    ['estimate', 'spent'].forEach((field) => {
+      const v = task[field];
+      check(`${template.key}: ${task.name} ${field} is a number or blank`,
+        v === undefined || v === '' || (typeof v === 'number' && v >= 0), `got ${JSON.stringify(v)}`);
+    });
+  });
+
+  const graph = analyse(tasks);
+  check(`${template.key}: no dependency loops`, graph.cyclic.length === 0, graph.cyclic.join(', '));
+});
+
+// The transition template is the worked example of the dependency features, so
+// it has to actually demonstrate them.
+{
+  const project = TEMPLATES.find((t) => t.key === 'transition').build();
+  const graph = analyse(project.dashTasks);
+  check('transition has a critical path', graph.critical.length > 3);
+  check('transition shows one deliberate fast-tracked overlap, no more',
+    graph.conflicts.length, 1);
+  check('transition has a checklist somewhere',
+    project.dashTasks.some((t) => (t.checklist || []).length > 0), true);
+  check('transition estimates most of its work',
+    project.dashTasks.filter((t) => t.estimate !== '').length >= 8);
+}
 
 console.log(`\n${passed} checks passed${failures.length ? `, ${failures.length} failed` : ''}`);
 if (failures.length) {

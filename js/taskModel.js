@@ -36,7 +36,60 @@ export function newTask() {
     name: '', assigned: '', assigneeUserId: '', start: '', end: '', baseStart: '', baseEnd: '',
     status: 'Not Started', prio: 'Medium', comments: '', progress: 0,
     tickType: 'check', cells: [],
+    // The three below are held on the task rather than as their own row kinds.
+    // A checklist item, an estimate and an edge all belong to exactly one task
+    // and are meaningless without it, so making them separate synced rows would
+    // buy nothing and cost a merge conflict every time two people touched the
+    // same task from different devices.
+    checklist: [], estimate: '', spent: '', dependsOn: [],
   };
+}
+
+// ---------- Checklists ----------
+
+export function newChecklistItem(text = '') {
+  return { id: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, text, done: false };
+}
+
+/** Done and total, for the "3/5" a task shows without being opened. */
+export function checklistProgress(task) {
+  const items = Array.isArray(task.checklist) ? task.checklist : [];
+  return { done: items.filter((i) => i.done).length, total: items.length };
+}
+
+// ---------- Effort ----------
+//
+// Hours, because that is what people quote and what timesheets are kept in.
+// Blank means "not estimated", which is different from zero and has to stay
+// different — a plan with half its tasks unestimated should say so rather than
+// quietly report a total that is missing half the work.
+
+export function hours(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/**
+ * Estimate, spent, and how many tasks have no estimate at all. The last one is
+ * the honesty check on the first two.
+ */
+export function effortTotals(tasks) {
+  let estimate = 0;
+  let spent = 0;
+  let unestimated = 0;
+  tasks.forEach((t) => {
+    const e = hours(t.estimate);
+    const s = hours(t.spent);
+    if (e === null) unestimated += 1; else estimate += e;
+    if (s !== null) spent += s;
+  });
+  return { estimate, spent, unestimated, variance: spent - estimate };
+}
+
+export function formatHours(n) {
+  if (n === null) return '\u2014';
+  return Number.isInteger(n) ? `${n}h` : `${n.toFixed(1)}h`;
 }
 
 /**

@@ -14,6 +14,11 @@
 let idCounter = 0;
 const id = (prefix) => `svc-${prefix}${++idCounter}`;
 
+// Task ids are fixed rather than generated, because these tasks name each other
+// as dependencies and a generated id is not knowable at the point the
+// dependency is written. Namespaced so two templates cannot collide.
+const T = (key) => `svc-task-${key}`;
+
 // The one deliverable a milestone points at, so the Dashboard shows the pair
 // once rather than twice. Same device the marketing template uses.
 const ACCEPTANCE_ID = 'sample-deliverable-service-acceptance';
@@ -47,22 +52,27 @@ export function createServiceTransition() {
     milestones: [
       { id: id('m'), text: 'Transition plan signed off', progress: 5, due: '2026-10-10', done: true },
       { id: id('m'), text: 'Knowledge transfer complete', progress: 4, due: '2026-11-14', done: false },
-      { id: id('m'), text: 'Service acceptance passed', progress: 4, due: '2026-12-05', done: false, deliverableId: ACCEPTANCE_ID },
+      { id: id('m'), text: 'Service acceptance passed', progress: 4, due: '2026-12-12', done: false, deliverableId: ACCEPTANCE_ID },
       { id: id('m'), text: 'Go-live — service handover', progress: 3, due: '2026-12-18', done: false },
     ],
 
     dashTasks: [
-      { id: id('t'), name: 'Due diligence & service discovery', assigned: 'Dev Raman', start: '2026-09-21', end: '2026-10-02', baseStart: '2026-09-21', baseEnd: '2026-10-02', status: 'Complete', prio: 'High', comments: 'Twelve undocumented integrations found. Scope note raised.' },
-      { id: id('t'), name: 'Transition plan & exit plan review', assigned: 'Dev Raman', start: '2026-10-05', end: '2026-10-10', baseStart: '2026-10-05', baseEnd: '2026-10-10', status: 'Complete', prio: 'High', comments: 'Signed by Helen Ward 10 Oct.' },
-      { id: id('t'), name: 'PAM access onboarding (all engineers)', assigned: 'Nadia Osei', start: '2026-10-06', end: '2026-10-24', baseStart: '2026-10-06', baseEnd: '2026-10-17', status: 'In Progress', prio: 'High', comments: 'Two of six engineers still waiting. This is the current critical path.' },
-      { id: id('t'), name: 'Knowledge transfer — platform & deployments', assigned: 'Tom Byrne', start: '2026-10-20', end: '2026-11-07', baseStart: '2026-10-20', baseEnd: '2026-11-07', status: 'In Progress', prio: 'High', comments: 'Three-week shadow window. No room to slip.' },
-      { id: id('t'), name: 'Knowledge transfer — support & escalation', assigned: 'Grace Lin', start: '2026-10-27', end: '2026-11-14', baseStart: '2026-10-27', baseEnd: '2026-11-14', status: 'Not Started', prio: 'High', comments: '' },
-      { id: id('t'), name: 'Monitoring & alerting cutover', assigned: 'Nadia Osei', start: '2026-11-03', end: '2026-11-21', baseStart: '2026-11-03', baseEnd: '2026-11-21', status: 'Not Started', prio: 'High', comments: 'Runs in parallel with the incumbent for two weeks.' },
-      { id: id('t'), name: 'Runbook authoring & review', assigned: 'Grace Lin', start: '2026-11-03', end: '2026-11-28', baseStart: '2026-11-03', baseEnd: '2026-11-28', status: 'Not Started', prio: 'Medium', comments: '' },
-      { id: id('t'), name: 'Service desk & ticket tooling migration', assigned: 'Marco Silva', start: '2026-11-10', end: '2026-11-28', baseStart: '2026-11-10', baseEnd: '2026-11-28', status: 'Not Started', prio: 'Medium', comments: 'Open tickets migrate with history.' },
-      { id: id('t'), name: 'Dry-run: P1 incident rehearsal', assigned: 'Grace Lin', start: '2026-12-01', end: '2026-12-02', baseStart: '2026-12-01', baseEnd: '2026-12-02', status: 'Not Started', prio: 'High', comments: 'Client observes. Feeds service acceptance.' },
-      { id: id('t'), name: 'Service acceptance review', assigned: 'Dev Raman', start: '2026-12-03', end: '2026-12-05', baseStart: '2026-12-03', baseEnd: '2026-12-05', status: 'Not Started', prio: 'High', comments: '' },
-      { id: id('t'), name: 'Early life support & hypercare', assigned: 'Grace Lin', start: '2026-12-18', end: '2027-01-16', baseStart: '2026-12-18', baseEnd: '2027-01-16', status: 'Not Started', prio: 'Medium', comments: 'Daily stand-up with the client for the first two weeks.' },
+      { id: T('dd'), name: 'Due diligence & service discovery', assigned: 'Dev Raman', start: '2026-09-21', end: '2026-10-02', baseStart: '2026-09-21', baseEnd: '2026-10-02', status: 'Complete', prio: 'High', comments: 'Twelve undocumented integrations found. Scope note raised.', estimate: 40, spent: 46, dependsOn: [] },
+      { id: T('plan'), name: 'Transition plan & exit plan review', assigned: 'Dev Raman', start: '2026-10-05', end: '2026-10-10', baseStart: '2026-10-05', baseEnd: '2026-10-10', status: 'Complete', prio: 'High', comments: 'Signed by Helen Ward 10 Oct.', estimate: 24, spent: 27, dependsOn: [T('dd')] },
+      { id: T('pam'), name: 'PAM access onboarding (all engineers)', assigned: 'Nadia Osei', start: '2026-10-13', end: '2026-10-24', baseStart: '2026-10-13', baseEnd: '2026-10-17', status: 'In Progress', prio: 'High', comments: 'Two of six engineers still waiting. This is the current critical path.', estimate: 16, spent: 34, dependsOn: [T('plan')], checklist: [
+        { id: 'svc-chk-1', text: 'Raise the six PAM requests as one batch', done: true },
+        { id: 'svc-chk-2', text: 'Chase client IT Security at day five, not day fifteen', done: true },
+        { id: 'svc-chk-3', text: 'Confirm break-glass account for out-of-hours P1', done: false },
+        { id: 'svc-chk-4', text: 'Evidence the access model for the acceptance pack', done: false },
+      ] },
+      { id: T('ktplat'), name: 'Knowledge transfer — platform & deployments', assigned: 'Tom Byrne', start: '2026-10-27', end: '2026-11-14', baseStart: '2026-10-27', baseEnd: '2026-11-14', status: 'In Progress', prio: 'High', comments: 'Three-week shadow window. No room to slip.', estimate: 90, spent: 32, dependsOn: [T('pam')] },
+      { id: T('ktsup'), name: 'Knowledge transfer — support & escalation', assigned: 'Grace Lin', start: '2026-10-27', end: '2026-11-14', baseStart: '2026-10-27', baseEnd: '2026-11-14', status: 'Not Started', prio: 'High', comments: '', estimate: 60, spent: '', dependsOn: [T('pam')] },
+      { id: T('mon'), name: 'Monitoring & alerting cutover', assigned: 'Nadia Osei', start: '2026-11-10', end: '2026-11-28', baseStart: '2026-11-10', baseEnd: '2026-11-28', status: 'Not Started', prio: 'High', comments: 'Runs in parallel with the incumbent for two weeks.', estimate: 70, spent: '', dependsOn: [T('ktplat')] },
+      { id: T('runbook'), name: 'Runbook authoring & review', assigned: 'Grace Lin', start: '2026-11-17', end: '2026-12-05', baseStart: '2026-11-17', baseEnd: '2026-12-05', status: 'Not Started', prio: 'Medium', comments: '', estimate: 55, spent: '', dependsOn: [T('ktplat'), T('ktsup')] },
+      { id: T('desk'), name: 'Service desk & ticket tooling migration', assigned: 'Marco Silva', start: '2026-11-17', end: '2026-11-28', baseStart: '2026-11-17', baseEnd: '2026-11-28', status: 'Not Started', prio: 'Medium', comments: 'Open tickets migrate with history.', estimate: 45, spent: '', dependsOn: [T('ktsup')] },
+      { id: T('rehearse'), name: 'Dry-run: P1 incident rehearsal', assigned: 'Grace Lin', start: '2026-12-08', end: '2026-12-09', baseStart: '2026-12-08', baseEnd: '2026-12-09', status: 'Not Started', prio: 'High', comments: 'Client observes. Feeds service acceptance.', estimate: 16, spent: '', dependsOn: [T('mon'), T('runbook')] },
+      { id: T('sac'), name: 'Service acceptance review', assigned: 'Dev Raman', start: '2026-12-10', end: '2026-12-12', baseStart: '2026-12-10', baseEnd: '2026-12-12', status: 'Not Started', prio: 'High', comments: '', estimate: 12, spent: '', dependsOn: [T('rehearse')] },
+      { id: T('els'), name: 'Early life support & hypercare', assigned: 'Grace Lin', start: '2026-12-18', end: '2027-01-16', baseStart: '2026-12-18', baseEnd: '2027-01-16', status: 'Not Started', prio: 'Medium', comments: 'Daily stand-up with the client for the first two weeks.', estimate: 120, spent: '', dependsOn: [T('sac')] },
     ],
 
     raid: [

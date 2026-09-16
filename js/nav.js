@@ -136,6 +136,7 @@ export const NAV_TREE = [
     children: [
       { id: 'btn-projects', label: 'Projects', icon: '📁', panel: 'projects' },
       { id: 'tab-sync', label: 'Sync & Team', icon: '🔄', page: 'page-sync', title: 'Sync & Team' },
+      { id: 'tab-changelog', label: 'Change Log', icon: '🕓', page: 'page-changelog', title: 'Change Log' },
       { id: 'tab-trash', label: 'Trash', icon: '🗑', page: 'page-trash', title: 'Trash', badge: 'trash-count' },
       { id: 'btn-export-panel', label: 'Export / Share', icon: '📤', panel: 'export' },
     ],

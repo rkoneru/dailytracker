@@ -64,6 +64,8 @@
         </button>
 
         <div class="app-header__actions">
+          <button type="button" class="btn btn-ghost btn-small" id="btn-copy-link"
+                  title="Copy a link to this page, in this project">🔗 Copy link</button>
           <span class="save-indicator" id="save-indicator" aria-live="polite">Saved</span>
           <button type="button" class="sync-pill" id="sync-pill" aria-live="polite" hidden></button>
         </div>
@@ -663,6 +665,49 @@
       </div>
     </section>
 
+    <!-- The record of how the project got to where it is. Read-only: an audit
+         log you can edit is not an audit log. -->
+    <section id="page-changelog" class="page" role="region" aria-label="Change log">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Change Log</span></div>
+          <p class="hint report-subtitle">
+            Statuses, dates, sign-offs, owners and budgets, recorded as they move.
+            Deliberately not a keystroke log &mdash; only the changes someone could be asked
+            to account for. Deleted rows are recoverable from Trash for a while; this
+            keeps the record of what happened either way.
+          </p>
+        </header>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>History</h2>
+            <span class="hint" id="changelog-count">No entries</span>
+            <button type="button" class="btn btn-small btn-danger no-print" id="btn-clear-changelog">Clear log</button>
+          </div>
+          <div class="filter-bar no-print">
+            <input type="search" class="field-input" id="changelog-search"
+                   placeholder="Search what changed, which row, or who&hellip;" aria-label="Search the change log">
+          </div>
+          <div class="table-scroll">
+            <table class="data-table changelog-table" id="changelog-table">
+              <thead>
+                <tr>
+                  <th class="col-when">When</th>
+                  <th>What changed</th>
+                  <th>Which one</th>
+                  <th>Movement</th>
+                  <th class="col-who">By</th>
+                </tr>
+              </thead>
+              <tbody id="changelog-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="changelog-empty" hidden></p>
+        </section>
+      </div>
+    </section>
+
     <section id="page-trash" class="page" role="region" aria-label="Trash">
       <div class="print-page">
         <header class="dash-header">
@@ -744,8 +789,10 @@
             </label>
             <div class="sync-actions">
               <button type="button" class="btn btn-primary" id="btn-sync-signin">Email me a link</button>
+              <button type="button" class="btn" id="btn-sync-check">Check setup</button>
             </div>
             <p class="sync-message" id="sync-signin-message" role="status" hidden></p>
+            <ul class="setup-check" id="sync-check-results" hidden></ul>
           </section>
 
           <section class="card" id="sync-team" hidden>

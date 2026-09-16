@@ -12,6 +12,10 @@ const db = {
 };
 let requests = 0;
 
+// GoTrue's own settings, which the app's setup check reads to explain why a
+// magic link might never arrive. A test flips these to stand up each failure.
+let authSettings = { disable_signup: false, mailer_autoconfirm: false };
+
 function send(res, code, body) {
   res.writeHead(code, {
     'Content-Type': 'application/json',
@@ -32,11 +36,18 @@ const server = http.createServer((req, res) => {
     const json = body ? JSON.parse(body) : null;
 
     if (url.pathname === '/auth/v1/otp') return send(res, 200, {});
+    if (url.pathname === '/auth/v1/settings') return send(res, 200, authSettings);
+    // Lets a test reproduce the "accepted but never delivered" configurations.
+    if (url.pathname === '/__auth-settings') {
+      authSettings = { ...authSettings, ...(json || {}) };
+      return send(res, 200, authSettings);
+    }
     if (url.pathname === '/auth/v1/user') {
       return send(res, 200, { id: '00000000-0000-4000-8000-000000000001', email: 'tester@x.test' });
     }
     if (url.pathname === '/__reset') {
       Object.values(db).forEach((store) => store.clear());
+      authSettings = { disable_signup: false, mailer_autoconfirm: false };
       return send(res, 200, {});
     }
     // Lets a test stand up an account without a mail round trip.

@@ -35,7 +35,7 @@ export const ROLES = [
     blurb: 'Plan, tasks, risks and reports, plus the scope and change record.',
     home: 'tab-dashboard',
     nav: ['tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-service', 'tab-improve', 'tab-reports', 'btn-projects', 'tab-sync', 'tab-trash', 'btn-export-panel'],
+      'tab-service', 'tab-improve', 'tab-reports', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
   },
   {
     id: 'product-manager',
@@ -80,7 +80,7 @@ export const ROLES = [
     blurb: 'Service levels, releases, change control and known issues.',
     home: 'tab-service',
     nav: ['tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-reports',
-      'btn-projects', 'tab-sync', 'btn-export-panel'],
+      'btn-projects', 'tab-sync', 'tab-changelog', 'btn-export-panel'],
   },
 ];
 

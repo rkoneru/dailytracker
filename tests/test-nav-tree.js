@@ -29,7 +29,7 @@ const eq = (n, got, want) => {
      ['My Work', 'Dashboard', 'Tasks', 'Plan',
       'Delivery', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons',
       'Engagement', 'Scope & Contract', 'People & Stakeholders',
-      'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Trash', 'Export / Share']);
+      'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Change Log', 'Trash', 'Export / Share']);
   eq('aria-level is set', await page.getAttribute('#tab-dashboard', 'aria-level'), '2');
   eq('leaf level is deeper', await page.getAttribute('#nav-ticks', 'aria-level'), '3');
 
@@ -194,7 +194,7 @@ const eq = (n, got, want) => {
 
   // 6. Pages are regions now, not orphaned tabpanels.
   eq('no stale tabpanel roles', await page.locator('[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 11);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 12);
 
   // 7. Opening a report from the nav renders it once, not twice.
   await page.click('#tab-dashboard'); await page.waitForTimeout(300);

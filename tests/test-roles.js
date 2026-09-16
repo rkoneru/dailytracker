@@ -79,7 +79,11 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(450);
   eq('unchecking filters again', (await pages()).includes('Scope & Contract'), false);
 
-  console.log('\n--- each role lands where it would have clicked ---');
+  console.log('\n--- each role opens where it would have clicked ---');
+  // Deep links made the URL the source of truth for where you are, so the
+  // role's home page is the default for a *fresh* open rather than something
+  // that overrides a route. Clearing the hash is what a first visit, an
+  // installed shortcut or a bookmark to the bare URL all look like.
   const landings = {
     'engagement-lead': 'page-dashboard',
     'project-manager': 'page-dashboard',
@@ -90,10 +94,19 @@ const { eq, done } = createChecks();
   };
   for (const [role, expected] of Object.entries(landings)) {
     await setRole(role);
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.goto(`${APP_URL}/index.html`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1100);
     eq(`${role} opens on ${expected}`, await activePage(), expected);
   }
+
+  console.log('\n--- but a route wins over the role default ---');
+  await setRole('service-manager');
+  await page.click('#tab-raid');
+  await page.waitForTimeout(450);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(1100);
+  eq('reloading keeps you where you were, not where your role starts',
+     await activePage(), 'page-raid');
 
   console.log('\n--- switching role never strands you on a page you cannot leave ---');
   await setRole('engagement-lead');
@@ -114,7 +127,7 @@ const { eq, done } = createChecks();
 
   console.log('\n--- the choice sticks, and survives a reload ---');
   await setRole('product-manager');
-  await page.reload({ waitUntil: 'networkidle' });
+  await page.goto(`${APP_URL}/index.html`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1100);
   eq('role persisted', await page.inputValue('#role-select'), 'product-manager');
   eq('and the picker agrees with the nav',

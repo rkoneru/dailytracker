@@ -1,7 +1,7 @@
 import {
   getState, getPath, setPath, scheduleSave, onSaveStatusChange, resetActiveProjectToTemplate,
   buildBackup, restoreBackup, markBackedUp, getLastBackupAt, dismissBackupNudge, shouldNudgeBackup,
-  listProjects, onProjectsChange,
+  listProjects, onProjectsChange, getActiveProjectId, switchProject,
 } from './state.js';
 import { initPlanner, renderPlanner, renderPlannerShared } from './planner.js';
 import {
@@ -9,7 +9,7 @@ import {
   renderComputed as refreshDashboardDerived,
 } from './dashboard.js';
 import { onProjectDataChanged, notifyProjectDataChanged } from './taskModel.js';
-import { initNav, setActiveNode } from './nav.js';
+import { initNav, setActiveNode, NAV_TREE } from './nav.js';
 import { el } from './dom.js';
 import { initTasks, renderTasksPage } from './tasks.js';
 import { confirmAction, toast } from './dialog.js';
@@ -26,6 +26,8 @@ import { initRaid, renderRaid } from './raid.js';
 import { initEngagement, renderEngagement } from './engagement.js';
 import { initService, renderService } from './service.js';
 import { initRolePicker } from './rolePicker.js';
+import { initRouter, setRoute, onRouteChange, revealRow, currentUrl } from './router.js';
+import { initChangeLog, renderChangeLog } from './changeLogPage.js';
 import { getRole, seedRoleFromMembership } from './roles.js';
 import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refreshSyncStatus } from './sync.js';
 import * as supabase from './supabase.js';
@@ -89,7 +91,7 @@ if ('serviceWorker' in navigator) {
 
 const PAGE_IDS = ['page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
   'page-scope', 'page-people', 'page-service', 'page-improve',
-  'page-reports', 'page-sync', 'page-trash'];
+  'page-reports', 'page-sync', 'page-changelog', 'page-trash'];
 
 function showPage(pageId, title) {
   PAGE_IDS.forEach((id) => {
@@ -106,12 +108,97 @@ function showPage(pageId, title) {
   if (pageId === 'page-reports') refreshReport();
   if (pageId === 'page-sync') renderSyncPage();
   if (pageId === 'page-trash') renderTrash();
+  if (pageId === 'page-changelog') renderChangeLog();
   if (pageId === 'page-tasks') renderTasksPage();
   // Every register page offers the roster in its owner fields, and the roster
   // is edited on one of them, so each arrival re-reads rather than trusting
   // whatever the last render left behind.
   if (pageId === 'page-scope' || pageId === 'page-people') renderEngagement();
   if (pageId === 'page-service' || pageId === 'page-improve') renderService();
+}
+
+// The node the app is currently showing, so the router can rebuild the link
+// for "here" without the page having to remember its own address.
+let activeNode = null;
+
+/**
+ * Everything that changes what is on screen goes through here, so the address
+ * bar can never disagree with the app. `fromRoute` marks the one direction
+ * that must not write back — restoring a link, which would otherwise push a
+ * duplicate entry on top of the one the browser just used.
+ */
+function navigateTo(node, { fromRoute = false, rowId = '' } = {}) {
+  if (node.report) setReportType(node.report, { render: false });
+  showPage(node.page, node.title);
+  setActiveNode(node.id);
+  activeNode = node;
+
+  if (!fromRoute) setRoute({ navId: node.id, projectId: getActiveProjectId() });
+
+  // The page has to be visible before anything on it can be scrolled to, and
+  // a named row wins over the section the nav row points at.
+  const section = node.section;
+  if (rowId || section) {
+    requestAnimationFrame(() => {
+      if (rowId) {
+        if (revealRow(rowId)) return;
+        // The row is genuinely not here — a different project, or someone
+        // deleted it. Landing silently on the right page with nothing
+        // highlighted looks like the link worked, which is worse than saying so.
+        toast('That link points at something this project no longer has.', 'error');
+        return;
+      }
+      if (section) document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+}
+
+/** Opens whatever a pasted link names: project first, then page, then row. */
+function applyRoute(route) {
+  const node = findNavNode(route.navId);
+  if (!node || !node.page) return false;
+
+  if (route.projectId && route.projectId !== getActiveProjectId()
+      && listProjects().some((p) => p.id === route.projectId)) {
+    switchProject(route.projectId);
+    refreshActiveProjectView();
+  }
+  navigateTo(node, { fromRoute: true, rowId: route.rowId });
+  return true;
+}
+
+function findNavNode(id) {
+  const walk = (nodes) => {
+    for (const n of nodes) {
+      if (n.id === id) return n;
+      const hit = n.children && walk(n.children);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  return walk(NAV_TREE);
+}
+
+/**
+ * "Copy link" rather than an address bar people are expected to notice: the
+ * app is usually running as an installed PWA, where there is no address bar
+ * to copy from at all.
+ */
+function initCopyLink() {
+  document.getElementById('btn-copy-link').addEventListener('click', async () => {
+    const url = currentUrl({
+      navId: activeNode ? activeNode.id : 'tab-dashboard',
+      projectId: getActiveProjectId(),
+    });
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link copied. It opens this page, in this project.', 'success');
+    } catch {
+      // Clipboard access needs a secure context and a user gesture; when it is
+      // refused, showing the link is more use than an apology.
+      toast(`Copy this link: ${url}`);
+    }
+  });
 }
 
 function initTabs() {
@@ -121,20 +208,7 @@ function initTabs() {
       // (btn-projects, btn-export-panel), so the same click opens the panel
       // without the nav needing to know anything about it.
       if (node.panel) return;
-
-      // Select the report type first, without drawing: showPage refreshes the
-      // report itself, so rendering here too would compute it twice and flash
-      // the previous type.
-      if (node.report) setReportType(node.report, { render: false });
-      showPage(node.page, node.title);
-      setActiveNode(node.id);
-      if (node.section) {
-        // The page has to be visible before it can be scrolled to.
-        requestAnimationFrame(() => {
-          document.getElementById(node.section)
-            .scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      }
+      navigateTo(node);
     },
   });
   setActiveNode('tab-dashboard');
@@ -310,10 +384,36 @@ function initSyncPage() {
     showSyncMessage('sync-signin-message', 'Sending…', '');
     try {
       await supabase.sendMagicLink(email, location.href.split('#')[0]);
-      showSyncMessage('sync-signin-message', `Check ${email} for a sign-in link, and open it on this device.`, 'success');
+      // Deliberately not "sent": Supabase answers 200 whether or not it sent
+      // anything, so claiming delivery here would be the app's word for
+      // something it does not know.
+      showSyncMessage(
+        'sync-signin-message',
+        `Requested a link for ${email}. Open it on this device. `
+        + 'If nothing arrives within a minute, use Check setup — a link that is never delivered still returns success here.',
+        'success',
+      );
     } catch (err) {
       showSyncMessage('sync-signin-message', err.message, 'error');
     }
+  });
+
+  document.getElementById('btn-sync-check').addEventListener('click', async () => {
+    const list = document.getElementById('sync-check-results');
+    list.hidden = false;
+    list.innerHTML = '';
+    list.appendChild(el('li', { class: 'setup-check__item', text: 'Checking…' }));
+    const results = await supabase.checkSetup();
+    list.innerHTML = '';
+    results.forEach((r) => {
+      list.appendChild(el('li', { class: `setup-check__item ${r.ok ? 'is-ok' : 'is-bad'}` }, [
+        el('span', { class: 'setup-check__mark', 'aria-hidden': 'true', text: r.ok ? '✓' : '✕' }),
+        el('div', {}, [
+          el('span', { class: 'setup-check__label', text: r.label }),
+          el('span', { class: 'setup-check__detail', text: r.detail }),
+        ]),
+      ]));
+    });
   });
 
   document.getElementById('btn-sync-now').addEventListener('click', async () => {
@@ -534,6 +634,11 @@ function refreshActiveProjectView() {
   renderEngagement();
   renderService();
   refreshReport();
+  // The project is half of every link, so switching one has to move the
+  // address with it — otherwise Copy link quietly hands out the project
+  // someone was looking at a minute ago. Replace rather than push: switching
+  // project is not a place you want Back to take you through twice.
+  if (activeNode) setRoute({ navId: activeNode.id, projectId: getActiveProjectId() }, { replace: true });
 }
 
 // RAID feeds the dashboard summary and every report, so a change on the
@@ -733,10 +838,19 @@ function init() {
   initTeam();
   initSyncPage();
   initRolePicker();
-  // Roles differ on where they would have clicked first — a scrum master opens
-  // the board, a service manager opens service levels — so first paint lands
-  // on the role's own page rather than always on the Dashboard.
-  document.getElementById(getRole().home)?.click();
+  initCopyLink();
+  initChangeLog();
+
+  // A link someone was sent wins over the role's usual landing page: they
+  // clicked it to see something specific.
+  const opening = initRouter();
+  onRouteChange(applyRoute);
+  if (!(opening && applyRoute(opening))) {
+    // Roles differ on where they would have clicked first — a scrum master
+    // opens the board, a service manager opens service levels — so first paint
+    // lands on the role's own page rather than always on the Dashboard.
+    document.getElementById(getRole().home)?.click();
+  }
 }
 
 if (document.readyState === 'loading') {

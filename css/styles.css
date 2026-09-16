@@ -2291,3 +2291,85 @@ button.kpi:hover::after, button.kpi:focus-visible::after { opacity: 1; }
   font-style: italic;
 }
 .col-deliverable { width: 190px; }
+
+/* ---------- Deep links ---------- */
+
+/* A reference like D-03 is the row's address, so it behaves like one: it looks
+   inert until you reach for it, then reads as the affordance it is. */
+.ref-link {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-border);
+}
+.ref-link:hover {
+  color: var(--color-primary);
+  text-decoration-color: currentColor;
+  background: rgba(29, 78, 216, 0.06);
+}
+.ref-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* Landing on a linked row. It fades on its own — a highlight that outstays the
+   moment stops meaning "this one" and becomes part of the furniture. */
+@keyframes row-linked {
+  0%   { background: rgba(250, 204, 21, .45); }
+  100% { background: transparent; }
+}
+tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) {
+  tr.is-linked > td { animation: none; background: rgba(250, 204, 21, .28); }
+}
+
+/* ---------- Change log ---------- */
+
+.changelog-table .col-when { width: 130px; }
+.changelog-table .col-who { width: 150px; }
+.changelog-table td { vertical-align: top; }
+
+.log-when { display: flex; flex-direction: column; line-height: 1.35; }
+.log-day { font-weight: 600; white-space: nowrap; }
+.log-time { font-size: 12px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.log-what { font-weight: 600; }
+.log-where { color: var(--color-text); }
+.log-who { color: var(--color-text-muted); }
+
+/* Before and after read as one movement, not two columns of text. */
+.log-move { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.log-from { color: var(--color-text-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.log-arrow { color: var(--color-text-muted); font-size: 12px; }
+.log-to { font-weight: 600; }
+.log-move--none { color: var(--color-text-muted); }
+
+/* ---------- Supabase setup check ---------- */
+
+.setup-check { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.setup-check__item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-bg);
+  border-left: 3px solid var(--color-border);
+}
+.setup-check__item.is-ok { border-left-color: #16a34a; }
+.setup-check__item.is-bad { border-left-color: #dc2626; }
+.setup-check__mark { font-weight: 700; line-height: 1.5; }
+.setup-check__item.is-ok .setup-check__mark { color: #16a34a; }
+.setup-check__item.is-bad .setup-check__mark { color: #dc2626; }
+.setup-check__label { display: block; font-weight: 700; }
+.setup-check__detail { display: block; color: var(--color-text-muted); }

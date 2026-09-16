@@ -392,6 +392,18 @@ export const SERVICE_REGISTERS = [SERVICE_LEVELS, SAC, RELEASES, CHANGES, KNOWN_
  */
 export const IMPROVE_REGISTERS = [CSI, LESSONS];
 
+// Which page each register is reachable on. Stamped from the grouping above
+// rather than repeated on every def, so a register that moves page cannot end
+// up handing out links to the page it used to live on.
+const PAGE_OF = [
+  [SCOPE_REGISTERS, 'tab-scope'],
+  [PEOPLE_REGISTERS, 'tab-people'],
+  [BLOCKER_REGISTERS, 'tab-raid'],
+  [SERVICE_REGISTERS, 'tab-service'],
+  [IMPROVE_REGISTERS, 'tab-improve'],
+];
+PAGE_OF.forEach(([group, navId]) => group.forEach((def) => { def.navId = navId; }));
+
 export const ALL_REGISTERS = [
   ...SCOPE_REGISTERS, ...PEOPLE_REGISTERS, ...BLOCKER_REGISTERS,
   ...SERVICE_REGISTERS, ...IMPROVE_REGISTERS,

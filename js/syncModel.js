@@ -21,7 +21,10 @@ import { REGISTER_KEYS } from './registerDefs.js';
 // The PMP and ITIL registers are ordinary row kinds too, so they merge, sync
 // and resolve conflicts through exactly the same path as tasks — nothing in
 // the merge or the wire format knows what a register is.
-export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', ...REGISTER_KEYS];
+// The change log syncs like any other row collection. Append-only from several
+// devices merges cleanly: every entry has its own id, so adds from both sides
+// survive and nothing has to be reconciled.
+export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog', ...REGISTER_KEYS];
 
 // Fields the app keeps locally that must never be pushed to the server.
 // `updatedAt` is carried as the wire `rev` column, so it must not also be

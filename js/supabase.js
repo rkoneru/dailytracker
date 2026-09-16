@@ -162,14 +162,98 @@ export async function sendMagicLink(email, redirectTo) {
 }
 
 /**
+ * Checks everything about a Supabase setup that can be checked from here.
+ *
+ * It exists because of one specific trap: `/auth/v1/otp` returns 200 whether or
+ * not an email was actually sent. GoTrue does that on purpose — answering
+ * honestly would tell an attacker which addresses are registered — but the
+ * result for an honest operator is "Check your email", followed by nothing
+ * arriving and no way to tell why. These are the two settings that cause it,
+ * plus the setup mistake that costs the most time: never having run the schema.
+ *
+ * Each check returns { ok, label, detail }, so the page can report what is
+ * wrong rather than that something is.
+ */
+export async function checkSetup() {
+  const c = getConfig();
+  if (!c) return [{ ok: false, label: 'Configuration', detail: 'No project URL or anon key saved yet.' }];
+
+  const results = [];
+
+  let settings = null;
+  try {
+    settings = await request('/auth/v1/settings', { auth: false });
+    results.push({ ok: true, label: 'Project reachable', detail: 'The URL and anon key are accepted by this project.' });
+  } catch (err) {
+    results.push({
+      ok: false,
+      label: 'Project reachable',
+      detail: `${err.message}. Check the project URL and the anon key — a typo in either fails exactly like this.`,
+    });
+    return results;
+  }
+
+  if (settings.disable_signup) {
+    results.push({
+      ok: false,
+      label: 'Email sign-in',
+      detail: 'Signups are disabled for this project, so a link to an address that has never signed in '
+        + 'is accepted and then silently dropped. Enable signups, or invite the address first.',
+    });
+  } else if (settings.mailer_autoconfirm) {
+    results.push({
+      ok: false,
+      label: 'Email sign-in',
+      detail: 'Auto-confirm is on, which means Supabase does not send a confirmation email at all. '
+        + 'Turn it off under Authentication → Providers → Email for magic links to be delivered.',
+    });
+  } else {
+    results.push({
+      ok: true,
+      label: 'Email sign-in',
+      detail: 'Signups are on and auto-confirm is off, so magic links should send. '
+        + 'Delivery itself depends on your SMTP settings, which cannot be checked from here.',
+    });
+  }
+
+  // The most expensive setup mistake is forgetting to run schema.sql: sync then
+  // fails much later, with an error that says nothing about the cause.
+  try {
+    await request('/rest/v1/project_rows?select=id&limit=1', { auth: false });
+    results.push({ ok: true, label: 'Schema installed', detail: 'The project_rows table exists and is readable.' });
+  } catch (err) {
+    const missing = /relation|does not exist|42P01|404/i.test(err.message);
+    results.push({
+      ok: false,
+      label: 'Schema installed',
+      detail: missing
+        ? 'project_rows was not found. Run supabase/schema.sql in the SQL editor — re-running it is safe.'
+        : `${err.message}. If this mentions row level security, the schema is installed but the policies are not.`,
+    });
+  }
+
+  return results;
+}
+
+/**
  * Consumes the `#access_token=...` fragment GoTrue appends when the magic link
  * returns, then scrubs it from the address bar so the tokens aren't left in
  * history or leaked by a copied URL.
  */
+// The fragment as it was when the page loaded.
+//
+// GoTrue returns the tokens in the hash, and the router writes routes into the
+// same hash. Reading `location.hash` later is a race that sign-in loses: by the
+// time this runs the router may already have replaced the tokens with a route,
+// and the session would be dropped with no error anywhere. Captured at import,
+// before any of that can happen.
+const initialHash = typeof location !== 'undefined' && location.hash.startsWith('#')
+  ? location.hash.slice(1)
+  : '';
+
 export async function consumeAuthRedirect() {
-  const hash = location.hash.startsWith('#') ? location.hash.slice(1) : '';
-  if (!hash) return null;
-  const params = new URLSearchParams(hash);
+  if (!initialHash) return null;
+  const params = new URLSearchParams(initialHash);
   const accessTokenValue = params.get('access_token');
   if (!accessTokenValue) return null;
 
@@ -178,7 +262,11 @@ export async function consumeAuthRedirect() {
     refresh_token: params.get('refresh_token'),
     expires_in: Number(params.get('expires_in')) || 3600,
   });
-  history.replaceState(null, '', location.pathname + location.search);
+  // Scrub the tokens out of the address bar so they are not left in history or
+  // leaked by a copied URL — but keep whatever route the app has navigated to
+  // in the meantime rather than dropping the user back at a bare URL.
+  const routeNow = location.hash.startsWith('#/') ? location.hash : '';
+  history.replaceState(null, '', location.pathname + location.search + routeNow);
 
   try {
     const user = await request('/auth/v1/user');

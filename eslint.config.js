@@ -12,6 +12,7 @@ const browserGlobals = {
   requestAnimationFrame: 'readonly', structuredClone: 'readonly', alert: 'readonly',
   confirm: 'readonly', prompt: 'readonly', MutationObserver: 'readonly', DragEvent: 'readonly',
   DataTransfer: 'readonly', Image: 'readonly', getComputedStyle: 'readonly', CustomEvent: 'readonly',
+  CSS: 'readonly',
 };
 
 const nodeGlobals = {

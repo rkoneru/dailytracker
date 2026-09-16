@@ -11,10 +11,12 @@
 // reason: fourteen hand-written tables is ~600 lines of near-identical markup,
 // and every id in it is one more thing that can fall out of step with the JS.
 
-import { getState, scheduleSave, uid, trashRow } from './state.js';
+import { getState, scheduleSave, uid, trashRow, getActiveProjectId } from './state.js';
 import { offerUndo } from './trash.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 import { el, dragHandle } from './dom.js';
+import { currentUrl } from './router.js';
+import { toast } from './dialog.js';
 
 export function slug(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -67,7 +69,18 @@ function buildCell(col, row, index, def) {
   const cls = ['register-cell', col.cls].filter(Boolean).join(' ');
 
   if (col.type === 'ref') {
-    return el('td', { class: `${cls} col-ref`, text: refFor(def.refPrefix, index) });
+    // The reference is the address. Clicking D-03 copies a link that opens
+    // this project, on this page, scrolled to this row — which is what people
+    // were taking screenshots to say.
+    return el('td', { class: `${cls} col-ref` }, [
+      el('button', {
+        type: 'button',
+        class: 'ref-link',
+        'data-action': 'copy-row-link',
+        title: 'Copy a link to this row',
+        text: refFor(def.refPrefix, index),
+      }),
+    ]);
   }
   if (col.type === 'select') {
     return el('td', { class: cls }, [selectCell(col, row[col.field])]);
@@ -234,7 +247,17 @@ function bindRegister(def, onChanged) {
     commit();
   });
 
-  tbody.addEventListener('click', (e) => {
+  tbody.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-action="copy-row-link"]')) {
+      const url = currentUrl({ navId: def.navId, projectId: getActiveProjectId(), rowId: rowIdOf(e.target) });
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('Link copied. It opens this row.', 'success');
+      } catch {
+        toast(`Copy this link: ${url}`);
+      }
+      return;
+    }
     if (!e.target.closest('[data-action="delete-row"]')) return;
     const entry = trashRow(def.key, rowIdOf(e.target));
     scheduleSave();

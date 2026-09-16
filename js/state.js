@@ -1,5 +1,6 @@
 import { TEMPLATES, DEFAULT_TEMPLATE_KEY } from './sampleData.js';
 import { REGISTER_KEYS, CHARTER_FIELDS } from './registerDefs.js';
+import { snapshotOf, diffSnapshots } from './changeLog.js';
 
 const STORAGE_KEY = 'projectPlannerStore_v2';
 const LEGACY_STORAGE_KEY = 'projectPlannerData_v1';
@@ -181,6 +182,9 @@ function migrateProject(data) {
   (data.milestones || []).forEach((m) => {
     if (m.deliverableId === undefined) m.deliverableId = '';
   });
+  // The change log is per project and append-only; projects made before it
+  // existed simply start empty rather than inventing a history.
+  if (!Array.isArray(data.changeLog)) data.changeLog = [];
   migrateRegisters(data);
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are
@@ -412,6 +416,7 @@ function getStore() {
     Object.values(saved.projects || {}).forEach(migrateProject);
     if (!Array.isArray(saved.trash)) saved.trash = [];
     store = saved;
+    baselineAudit();
     return store;
   }
 
@@ -420,6 +425,7 @@ function getStore() {
   // every reload until the user types something, which silently breaks
   // anything that references a project across sessions (snapshot history).
   store = migrateLegacyStore() || createDefaultStore();
+  baselineAudit();
   writeStore();
   return store;
 }
@@ -474,6 +480,7 @@ export function scheduleSave() {
   emitSaveStatus('saving');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
+    recordChanges();
     getState().updatedAt = Date.now();
     if (writeStore()) {
       emitSaveStatus('saved');
@@ -484,11 +491,95 @@ export function scheduleSave() {
 
 export function saveImmediately() {
   clearTimeout(saveTimer);
+  recordChanges();
   getState().updatedAt = Date.now();
   if (writeStore()) {
     emitSaveStatus('saved');
     runAfterSaveHook();
   }
+}
+
+// ---------- Change log ----------
+//
+// Recording happens on the save path rather than in the edit handlers. There
+// are about forty places that mutate a project and one place that persists it;
+// auditing the one is the difference between a log that is complete and a log
+// that is complete until somebody adds a register and forgets.
+//
+// The debounce does useful work here too: a status changed and changed back
+// inside 400ms never reaches a snapshot, so it never becomes an entry.
+
+const CHANGE_LOG_LIMIT = 400;
+
+let auditSnapshot = null;
+let auditProjectId = null;
+let changeActor = '';
+const changeLogListeners = new Set();
+
+/** Who to attribute changes to. Set when a sync session identifies someone. */
+export function setChangeActor(name) {
+  changeActor = name || '';
+}
+
+export function onChangeLogChange(listener) {
+  changeLogListeners.add(listener);
+  return () => changeLogListeners.delete(listener);
+}
+
+/**
+ * Takes the "before" picture.
+ *
+ * This has to happen when a project is *opened*, not on its first save — a
+ * baseline taken after the first edit has already absorbed it, and the first
+ * change of every session would go unrecorded. Switching project re-baselines
+ * for the same reason: neither project changed, the view did.
+ */
+function baselineAudit() {
+  const s = store;
+  const project = s && s.projects ? s.projects[s.activeProjectId] : null;
+  if (!project) return;
+  auditProjectId = project.id;
+  auditSnapshot = snapshotOf(project);
+}
+
+function recordChanges() {
+  const s = getStore();
+  const project = s.projects[s.activeProjectId];
+  if (!project) return;
+
+  const next = snapshotOf(project);
+
+  if (auditProjectId !== project.id) {
+    auditProjectId = project.id;
+    auditSnapshot = next;
+    return;
+  }
+
+  const found = diffSnapshots(auditSnapshot, next);
+  auditSnapshot = next;
+  if (found.length === 0) return;
+
+  if (!Array.isArray(project.changeLog)) project.changeLog = [];
+  const at = new Date().toISOString();
+  found.forEach((entry) => project.changeLog.unshift({ id: uid(), at, who: changeActor, ...entry }));
+  if (project.changeLog.length > CHANGE_LOG_LIMIT) {
+    project.changeLog.length = CHANGE_LOG_LIMIT;
+  }
+  changeLogListeners.forEach((fn) => fn());
+}
+
+export function listChangeLog() {
+  const s = getStore();
+  return (s.projects[s.activeProjectId] || {}).changeLog || [];
+}
+
+export function clearChangeLog() {
+  const s = getStore();
+  const project = s.projects[s.activeProjectId];
+  if (!project) return;
+  project.changeLog = [];
+  saveImmediately();
+  changeLogListeners.forEach((fn) => fn());
 }
 
 /**
@@ -542,6 +633,9 @@ export function onProjectsChange(listener) {
 }
 
 function emitProjectsChanged() {
+  // Creating, switching, cloning, importing or restoring all land here, and
+  // all of them mean the "before" picture is now of the wrong project.
+  baselineAudit();
   projectsChangeListeners.forEach((fn) => fn());
 }
 

@@ -21,8 +21,8 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(600);
 
   console.log('\n--- the screen matches the reference structure ---');
-  eq('five tallies', await page.locator('.tally').count(), 5);
-  eq('tally labels', await page.$$eval('.tally__label', (els) => els.map((e) => e.textContent)),
+  eq('five tallies', await page.locator('#page-tasks .tally').count(), 5);
+  eq('tally labels', await page.$$eval('#page-tasks .tally__label', (els) => els.map((e) => e.textContent)),
      ['Total tasks', 'Completed', 'In progress', 'On hold', 'Overdue']);
   // Start and Comments are beyond the reference layout, kept because the
   // Planner is read-only now and nothing else edits them.
@@ -35,7 +35,7 @@ const { eq, done } = createChecks();
   eq('every column offers Add Task', await page.locator('.board-col__add').count(), 5);
 
   console.log('\n--- tallies count what they say ---');
-  const tallies = await page.$$eval('.tally__value', (els) => els.map((e) => Number(e.textContent)));
+  const tallies = await page.$$eval('#page-tasks .tally__value', (els) => els.map((e) => Number(e.textContent)));
   eq('total matches the row count', tallies[0], await page.locator('#tracker-body tr').count());
   eq('completed + in progress + on hold do not exceed total', tallies[1] + tallies[2] + tallies[3] <= tallies[0], true);
 

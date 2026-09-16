@@ -64,6 +64,9 @@
         </button>
 
         <div class="app-header__actions">
+          <button type="button" class="btn btn-ghost btn-small btn-search" id="btn-palette"
+                  title="Search everything (Ctrl-K)">🔍 <span class="btn-search__label">Search</span>
+            <kbd class="btn-search__key">Ctrl K</kbd></button>
           <button type="button" class="btn btn-ghost btn-small" id="btn-copy-link"
                   title="Copy a link to this page, in this project">🔗 Copy link</button>
           <span class="save-indicator" id="save-indicator" aria-live="polite">Saved</span>
@@ -667,6 +670,92 @@
 
     <!-- The record of how the project got to where it is. Read-only: an audit
          log you can edit is not an audit log. -->
+    <section id="page-mywork" class="page" role="region" aria-label="My work">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>My Work</span></div>
+          <p class="hint report-subtitle">
+            Everything waiting on one person, across every project &mdash; tasks, risks,
+            deliverables, releases, improvements. Nothing is stored here: each row lives
+            in its own register, and clicking it goes there.
+          </p>
+        </header>
+
+        <div class="mywork-controls no-print">
+          <label class="field-label">You are
+            <input type="text" class="field-input" id="mywork-name" list="mywork-names"
+                   placeholder="Your name, as it is written on rows" autocomplete="off">
+          </label>
+          <datalist id="mywork-names"></datalist>
+          <label class="field-label">Showing
+            <select class="field-input" id="mywork-scope">
+              <option value="mine">Just mine</option>
+              <option value="everyone">Everyone&rsquo;s</option>
+            </select>
+          </label>
+          <label class="check-label">
+            <input type="checkbox" id="mywork-done"> Include finished
+          </label>
+        </div>
+
+        <div class="tally-row" id="mywork-tallies">
+          <div class="tally tally--bad">
+            <span class="tally__value" id="mywork-count-overdue">0</span>
+            <span class="tally__label">Overdue</span>
+          </div>
+          <div class="tally tally--warn">
+            <span class="tally__value" id="mywork-count-week">0</span>
+            <span class="tally__label">Due in 7 days</span>
+          </div>
+          <div class="tally">
+            <span class="tally__value" id="mywork-count-open">0</span>
+            <span class="tally__label">Open items</span>
+          </div>
+          <div class="tally">
+            <span class="tally__value" id="mywork-count-projects">0</span>
+            <span class="tally__label">Projects involved</span>
+          </div>
+        </div>
+
+        <p class="hint callout" id="mywork-noname" hidden>
+          Tell the app who you are and this becomes your list. The name is matched against
+          the assignees and owners already written on rows, so use the same spelling
+          &mdash; it is kept on this device only, and is never part of sign-in.
+        </p>
+
+        <div id="mywork-buckets"></div>
+        <p class="hint" id="mywork-empty" hidden></p>
+      </div>
+    </section>
+
+    <section id="page-portfolio" class="page" role="region" aria-label="Portfolio">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Portfolio</span></div>
+          <p class="hint report-subtitle">
+            Every project on one line, totalled at the bottom. Sort by any column;
+            click a row to open that project. These are the same numbers each project&rsquo;s
+            own Dashboard shows &mdash; side by side rather than one at a time.
+          </p>
+        </header>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>All projects</h2>
+            <span class="hint">Click a column heading to sort, a row to open.</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table portfolio-table" id="portfolio-table">
+              <thead id="portfolio-head"></thead>
+              <tbody id="portfolio-body"></tbody>
+              <tfoot id="portfolio-foot"></tfoot>
+            </table>
+          </div>
+          <p class="hint" id="portfolio-empty" hidden>No projects yet.</p>
+        </section>
+      </div>
+    </section>
+
     <section id="page-changelog" class="page" role="region" aria-label="Change log">
       <div class="print-page">
         <header class="dash-header">
@@ -949,6 +1038,26 @@
         <p class="hint">Import a project previously exported as JSON (see Export / Share). This adds a new project — it won't overwrite anything.</p>
         <input type="file" accept="application/json" class="field-input" id="import-project-file">
       </div>
+    </div>
+  </div>
+
+  <div class="palette-overlay no-print" id="palette-overlay" hidden>
+    <div class="palette" role="dialog" aria-modal="true" aria-label="Search everything">
+      <div class="palette__inputrow">
+        <span class="palette__icon" aria-hidden="true">🔍</span>
+        <input type="text" class="palette__input" id="palette-input" role="combobox"
+               aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list"
+               autocomplete="off" spellcheck="false"
+               placeholder="Search tasks, risks, deliverables, releases, people&hellip;">
+        <kbd class="palette__esc">Esc</kbd>
+      </div>
+      <ul class="palette__results" id="palette-results" role="listbox" aria-label="Search results"></ul>
+      <p class="palette__hint" id="palette-hint"></p>
+      <footer class="palette__foot">
+        <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> move</span>
+        <span><kbd>&crarr;</kbd> open</span>
+        <span><kbd>Esc</kbd> close</span>
+      </footer>
     </div>
   </div>
 

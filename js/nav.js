@@ -18,9 +18,21 @@ const EXPANDED_KEY = 'projectPlannerNavExpanded_v1';
 // `id` doubles as the DOM id of the row, so the ids pages already reach for
 // (tab-planner, btn-projects…) are preserved and existing wiring keeps working.
 export const NAV_TREE = [
+  // Two levels of "where am I?": the first group spans every project, the rest
+  // are surfaces onto the one that is open. Keeping the cross-project pages at
+  // the top says that plainly, and stops "My Work" (everything on you, everywhere)
+  // from reading as a sibling of "Tasks" (this project's board).
+  {
+    id: 'group-across',
+    label: 'Across Projects',
+    children: [
+      { id: 'tab-mywork', label: 'My Work', icon: '🎯', page: 'page-mywork', title: 'My Work' },
+      { id: 'tab-portfolio', label: 'Portfolio', icon: '🗂', page: 'page-portfolio', title: 'Portfolio' },
+    ],
+  },
   {
     id: 'group-work',
-    label: 'My Work',
+    label: 'This Project',
     children: [
       { id: 'tab-dashboard', label: 'Dashboard', icon: '📊', page: 'page-dashboard', title: 'Dashboard' },
       { id: 'tab-tasks', label: 'Tasks', icon: '✅', page: 'page-tasks', title: 'Tasks' },

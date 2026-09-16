@@ -242,7 +242,11 @@ export const SERVICE_LEVELS = {
     { field: 'agreement', label: 'Type', type: 'select', tone: true, options: ['SLA', 'OLA', 'Underpinning contract'] },
     { field: 'target', label: 'Target', placeholder: 'e.g. 99.5% / 30 min' },
     { field: 'actual', label: 'Actual', placeholder: 'This period' },
-    { field: 'period', label: 'Period', type: 'select', options: ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annual'] },
+    { field: 'period', label: 'Period', type: 'select',
+      // Availability is measured over a window; response and resolution are
+      // measured per event. A list with only windows in it forces a
+      // response-time SLA to claim a reporting period it does not have.
+      options: ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annual', 'Per incident', 'Per request'] },
     { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Met', 'At Risk', 'Breached', 'Not measured'] },
     { field: 'owner', label: 'Owner', type: 'person', placeholder: 'Accountable' },
   ],
@@ -411,3 +415,45 @@ export const ALL_REGISTERS = [
 
 /** Every collection these pages own, for migrations, sync and cloning. */
 export const REGISTER_KEYS = ALL_REGISTERS.map((r) => r.key);
+
+// ---------- Which registers hold work, and when that work is finished ----------
+//
+// "What is mine?" needs three things a column list cannot supply: which field
+// names the person on the hook, which date it is wanted by, and which statuses
+// mean it is off their plate. The last one cannot be inferred from the options
+// — for a deliverable "Rejected" is finished and for a go-live criterion
+// "Failed" is emphatically not.
+//
+// Registers missing from this table are deliberately absent. A roster row, an
+// RACI line and a stakeholder are records of a standing arrangement rather
+// than something anyone is expected to close, and listing them as outstanding
+// work would bury the things that actually are.
+
+const WORK_SHAPE = {
+  deliverables: { ownerField: 'owner', dueField: 'due', closed: ['Accepted', 'Rejected'] },
+  dependencies: { ownerField: 'owner', dueField: 'neededBy', closed: ['Met', 'Missed'] },
+  changeRequests: { ownerField: 'raisedBy', dueField: '', closed: ['Approved', 'Rejected', 'Deferred'] },
+  // An SLA is a standing promise, so only a promise in trouble is work.
+  serviceLevels: { ownerField: 'owner', dueField: '', closed: ['Met', 'Not measured'] },
+  sac: { ownerField: 'owner', dueField: '', closed: ['Met', 'Waived'] },
+  releases: { ownerField: 'owner', dueField: 'windowStart', closed: ['Deployed', 'Rolled Back', 'Cancelled'] },
+  changes: { ownerField: 'implementer', dueField: 'scheduled', closed: ['Implemented', 'Reviewed', 'Closed'] },
+  csi: { ownerField: 'owner', dueField: 'target', closed: ['Done', 'Rejected'] },
+  knownErrors: { ownerField: 'owner', dueField: '', closed: ['Resolved'] },
+  lessons: { ownerField: 'owner', dueField: '', closed: ['Applied', 'Rejected'] },
+};
+
+ALL_REGISTERS.forEach((def) => {
+  const shape = WORK_SHAPE[def.key];
+  if (!shape) return;
+  Object.assign(def, shape);
+});
+
+/** The registers that can put something on someone's list. */
+export const WORK_REGISTERS = ALL_REGISTERS.filter((def) => WORK_SHAPE[def.key]);
+
+/** Whether a row in a work register is still outstanding. */
+export function isOpenRow(def, row) {
+  if (!def.closed) return false;
+  return !def.closed.includes(row.status);
+}

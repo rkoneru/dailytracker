@@ -24,7 +24,10 @@ export const ROLES = [
     id: 'engagement-lead',
     label: 'Engagement Lead',
     aka: 'Engagement manager, account manager, delivery lead, admin',
-    blurb: 'Everything. The commercial and governance pages are yours.',
+    blurb: 'Everything, including the commercial and governance pages.',
+    // The Dashboard, not the Portfolio: this is also the role nobody has chosen
+    // yet, and a first run has exactly one project — a portfolio of one is a
+    // worse opening screen than the project itself.
     home: 'tab-dashboard',
     nav: null,          // null means "all of it"
   },
@@ -34,7 +37,7 @@ export const ROLES = [
     aka: 'Delivery manager, programme manager',
     blurb: 'Plan, tasks, risks and reports, plus the scope and change record.',
     home: 'tab-dashboard',
-    nav: ['tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
       'tab-service', 'tab-improve', 'tab-reports', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
   },
   {
@@ -43,7 +46,7 @@ export const ROLES = [
     aka: 'Product owner',
     blurb: 'What is being delivered and why, plus what is landing when.',
     home: 'tab-dashboard',
-    nav: ['tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
       'tab-service', 'tab-improve', 'tab-reports', 'btn-projects', 'btn-export-panel'],
   },
   {
@@ -52,25 +55,25 @@ export const ROLES = [
     aka: 'Agile delivery lead, team lead',
     blurb: 'The board, the plan, what is blocking the team, and retrospectives.',
     home: 'tab-tasks',
-    nav: ['tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
+    nav: ['tab-mywork', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
       'tab-improve', 'tab-reports', 'btn-projects', 'btn-export-panel'],
   },
   {
     id: 'developer',
     label: 'Developer',
     aka: 'Engineer, architect',
-    blurb: 'Your tasks, what is blocked, and what is being released or changed.',
-    home: 'tab-tasks',
-    nav: ['tab-dashboard', 'tab-tasks', 'tab-raid', 'tab-service', 'tab-improve',
+    blurb: 'What is on you across every project, then what is blocked or shipping.',
+    home: 'tab-mywork',
+    nav: ['tab-mywork', 'tab-dashboard', 'tab-tasks', 'tab-raid', 'tab-service', 'tab-improve',
       'btn-projects', 'tab-sync', 'btn-export-panel'],
   },
   {
     id: 'tester',
     label: 'Tester / QA',
     aka: 'Test lead, quality engineer',
-    blurb: 'Tasks, defects, the go-live checklist and what is known to be broken.',
-    home: 'tab-tasks',
-    nav: ['tab-dashboard', 'tab-tasks', 'tab-raid', 'tab-service', 'tab-improve',
+    blurb: 'What is assigned to you, defects, the go-live checklist and known breakage.',
+    home: 'tab-mywork',
+    nav: ['tab-mywork', 'tab-dashboard', 'tab-tasks', 'tab-raid', 'tab-service', 'tab-improve',
       'btn-projects', 'tab-sync', 'btn-export-panel'],
   },
   {
@@ -79,7 +82,7 @@ export const ROLES = [
     aka: 'Service delivery manager, operations, support lead',
     blurb: 'Service levels, releases, change control and known issues.',
     home: 'tab-service',
-    nav: ['tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-reports',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-reports',
       'btn-projects', 'tab-sync', 'tab-changelog', 'btn-export-panel'],
   },
 ];

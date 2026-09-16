@@ -23,10 +23,11 @@ const eq = (n, got, want) => {
   console.log('\n--- structure ---');
   eq('one tree', await page.locator('[role="tree"]').count(), 1);
   eq('every row is a treeitem', await page.locator('.nav-row').count(), await page.locator('[role="treeitem"]').count());
-  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 12);
+  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 13);
   // The default role is the engagement lead, who sees all of it.
   eq('groups open, pages closed at first run', await visibleLabels(),
-     ['My Work', 'Dashboard', 'Tasks', 'Plan',
+     ['Across Projects', 'My Work', 'Portfolio',
+      'This Project', 'Dashboard', 'Tasks', 'Plan',
       'Delivery', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons',
       'Engagement', 'Scope & Contract', 'People & Stakeholders',
       'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Change Log', 'Trash', 'Export / Share']);
@@ -84,6 +85,9 @@ const eq = (n, got, want) => {
   await page.waitForTimeout(300);
 
   console.log('\n--- keyboard: WAI-ARIA tree pattern ---');
+  // Walking from "This Project" rather than the first group: the arrow-key
+  // assertions below are about stepping into a node with children, and the
+  // Plan subtree is the only one deep enough to test that.
   await page.focus('#group-work');
   const focused = () => page.evaluate(() => document.activeElement.id);
   await page.keyboard.press('ArrowDown');
@@ -104,11 +108,11 @@ const eq = (n, got, want) => {
   await page.keyboard.press('End');
   eq('End goes to the last visible row', await focused(), 'btn-export-panel');
   await page.keyboard.press('Home');
-  eq('Home goes to the first', await focused(), 'group-work');
+  eq('Home goes to the first', await focused(), 'group-across');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(300);
-  eq('Enter activates', await page.textContent('#page-title'), 'Dashboard');
+  eq('Enter activates', await page.textContent('#page-title'), 'My Work');
 
   console.log('\n--- the twisty toggles, and expansion survives a reload ---');
   // Reports was expanded by activating it above, so the twisty collapses it.
@@ -163,7 +167,7 @@ const eq = (n, got, want) => {
   // 2. Every group heading gets its separation, not just the first.
   const groupMargins = await page.$$eval('.nav-row--group',
     els => els.map(e => getComputedStyle(e).marginTop));
-  eq('only the first group sits flush', groupMargins, ['0px', '10px', '10px', '10px', '10px']);
+  eq('only the first group sits flush', groupMargins, ['0px', '10px', '10px', '10px', '10px', '10px']);
 
   // 3. A jumped-to section must clear the sticky header.
   // The Planner subtree may be collapsed at this point, so open it first.
@@ -194,7 +198,7 @@ const eq = (n, got, want) => {
 
   // 6. Pages are regions now, not orphaned tabpanels.
   eq('no stale tabpanel roles', await page.locator('[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 12);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 14);
 
   // 7. Opening a report from the nav renders it once, not twice.
   await page.click('#tab-dashboard'); await page.waitForTimeout(300);

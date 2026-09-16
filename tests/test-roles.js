@@ -79,6 +79,15 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(450);
   eq('unchecking filters again', (await pages()).includes('Scope & Contract'), false);
 
+  console.log('\n--- everyone gets My Work; the Portfolio is for the roles that run several ---');
+  await setRole('developer');
+  const dev = await pages();
+  eq('a developer has My Work', dev.includes('My Work'), true);
+  eq('but not the Portfolio', dev.includes('Portfolio'), false);
+  await setRole('project-manager');
+  const pm = await pages();
+  eq('a project manager has both', pm.includes('My Work') && pm.includes('Portfolio'), true);
+
   console.log('\n--- each role opens where it would have clicked ---');
   // Deep links made the URL the source of truth for where you are, so the
   // role's home page is the default for a *fresh* open rather than something
@@ -88,8 +97,12 @@ const { eq, done } = createChecks();
     'engagement-lead': 'page-dashboard',
     'project-manager': 'page-dashboard',
     'scrum-master': 'page-tasks',
-    developer: 'page-tasks',
-    tester: 'page-tasks',
+    // A developer and a tester work across engagements more often than they run
+    // one, so their home is the cross-project queue rather than this project's
+    // board. The lead stays on the Dashboard: that is also the role nobody has
+    // chosen yet, and a first run has one project.
+    developer: 'page-mywork',
+    tester: 'page-mywork',
     'service-manager': 'page-service',
   };
   for (const [role, expected] of Object.entries(landings)) {
@@ -115,7 +128,7 @@ const { eq, done } = createChecks();
   eq('the lead is on Scope & Contract', await activePage(), 'page-scope');
   await setRole('developer');
   eq('a developer is moved to their own home rather than left there',
-     await activePage(), 'page-tasks');
+     await activePage(), 'page-mywork');
 
   // The opposite case matters too: a page the new role can still see should
   // not be yanked away just because the role changed.

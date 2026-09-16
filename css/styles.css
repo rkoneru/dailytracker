@@ -2373,3 +2373,346 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .setup-check__item.is-bad .setup-check__mark { color: #dc2626; }
 .setup-check__label { display: block; font-weight: 700; }
 .setup-check__detail { display: block; color: var(--color-text-muted); }
+
+/* ==========================================================================
+   Command palette
+   ==========================================================================
+   Deliberately not styled like the dialogs: a dialog is a question you have to
+   answer, and this is a place you pass through. It sits high on the screen
+   rather than centred so the results grow downwards into empty space instead
+   of pushing the box around as you type. */
+
+.palette-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 10vh 16px 16px;
+}
+
+.palette {
+  width: min(640px, 100%);
+  background: var(--color-surface);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 72vh;
+}
+
+.palette__inputrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.palette__icon { font-size: 1.05rem; opacity: 0.7; }
+
+.palette__input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: 1.05rem;
+  color: var(--color-text);
+  background: transparent;
+}
+
+.palette__esc,
+.palette__foot kbd,
+.btn-search__key {
+  font: inherit;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  white-space: nowrap;
+}
+
+.palette__results {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.palette__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.palette__item.is-cursor { background: var(--color-primary-light); }
+.palette__item:hover { background: var(--color-bg); }
+
+/* The kind is fixed-width so the titles line up into a readable column rather
+   than starting at a different place on every row. */
+.palette__kind {
+  flex: 0 0 104px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.palette__title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette__title mark {
+  background: #fde68a;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.palette__meta,
+.palette__project {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette__project {
+  flex: 0 0 auto;
+  max-width: 140px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.palette__hint { margin: 0; padding: 14px 18px; color: var(--color-text-muted); font-size: 0.85rem; }
+
+.palette__foot {
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.palette__foot kbd { margin-right: 4px; }
+
+.btn-search { display: inline-flex; align-items: center; gap: 6px; }
+
+/* The keycap is a hint, not an instruction — on a narrow screen there is no
+   keyboard to press it on, and on a very narrow one there is no room for the
+   word either. */
+@media (max-width: 900px) { .btn-search__key { display: none; } }
+@media (max-width: 640px) { .btn-search__label { display: none; } }
+
+/* ==========================================================================
+   My Work
+   ========================================================================== */
+
+.mywork-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.mywork-controls .field-input { min-width: 200px; }
+
+.check-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+
+.callout {
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 12px 14px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--color-text);
+}
+
+.work-bucket { margin-bottom: 18px; }
+
+.work-bucket__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 6px;
+}
+
+.work-bucket__title { margin: 0; font-size: 0.95rem; }
+
+.work-bucket__count {
+  font-size: 0.75rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.work-bucket__hint { font-size: 0.78rem; color: var(--color-text-muted); }
+
+.work-bucket--overdue .work-bucket__count { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+.work-bucket--week .work-bucket__count { background: #fef3c7; border-color: #fde68a; color: #854d0e; }
+
+.work-list { list-style: none; margin: 0; padding: 0; }
+
+.work-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.work-row:hover { background: var(--color-bg); }
+.work-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.work-row--overdue { border-left-color: var(--color-danger); }
+.work-row--week { border-left-color: var(--prio-medium); }
+.work-row.is-done { opacity: 0.5; }
+.work-row.is-done .work-row__title { text-decoration: line-through; }
+
+.work-row__kind {
+  flex: 0 0 120px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.work-row__title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.work-row__status { flex: 0 0 auto; font-size: 0.78rem; color: var(--color-text-muted); }
+
+.work-row__project {
+  flex: 0 0 auto;
+  max-width: 170px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The project you are already in needs no badge — it is the default, and a
+   badge on every row would stop the badge meaning anything. */
+.work-row__project.is-current { visibility: hidden; }
+
+.work-row__due { flex: 0 0 110px; text-align: right; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.work-row--overdue .work-row__due { color: var(--color-danger); font-weight: 600; }
+
+/* ==========================================================================
+   Portfolio
+   ========================================================================== */
+
+.portfolio-table th.pf-th { cursor: pointer; user-select: none; white-space: nowrap; }
+.portfolio-table th.pf-th:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.pf-sort { margin-left: 4px; font-size: 0.7rem; color: var(--color-primary); }
+
+.pf-row { cursor: pointer; }
+.pf-row:hover { background: var(--color-primary-light); }
+.pf-row:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.pf-row.is-current { background: var(--color-bg); }
+
+.pf-name { font-weight: 600; }
+
+.pf-here {
+  margin-left: 8px;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.pf-rag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.pf-rag.is-good { background: #dcfce7; color: #14532d; }
+.pf-rag.is-warn { background: #fef3c7; color: #854d0e; }
+.pf-rag.is-bad { background: #fee2e2; color: #991b1b; }
+
+.portfolio-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.portfolio-table .num.is-bad { color: var(--color-danger); font-weight: 600; }
+.portfolio-table .num.is-warn { color: #b45309; font-weight: 600; }
+.portfolio-table .num.is-quiet { color: var(--color-text-muted); }
+
+.pf-sub { display: block; font-size: 0.72rem; color: var(--color-text-muted); }
+.pf-sub.is-bad { color: var(--color-danger); }
+
+.pf-progress { min-width: 110px; }
+
+.pf-bar {
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: hidden;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.pf-bar__fill { display: block; height: 100%; background: var(--color-primary); }
+.pf-bar__label { font-size: 0.78rem; }
+
+.pf-due.is-late { color: var(--color-danger); font-weight: 600; }
+.pf-due.is-soon { color: #b45309; }
+.pf-due__rel { display: block; font-size: 0.72rem; color: var(--color-text-muted); }
+
+.pf-next { font-size: 0.85rem; }
+
+.portfolio-table tfoot td {
+  border-top: 2px solid var(--color-border);
+  font-weight: 600;
+  background: var(--color-bg);
+}

@@ -1,7 +1,7 @@
 import {
   getState, getPath, setPath, scheduleSave, onSaveStatusChange, resetActiveProjectToTemplate,
   buildBackup, restoreBackup, markBackedUp, getLastBackupAt, dismissBackupNudge, shouldNudgeBackup,
-  listProjects, onProjectsChange, getActiveProjectId, switchProject,
+  listProjects, onProjectsChange, getActiveProjectId, switchProject, setChangeActor,
 } from './state.js';
 import { initPlanner, renderPlanner, renderPlannerShared } from './planner.js';
 import {
@@ -30,6 +30,10 @@ import { initRouter, setRoute, onRouteChange, revealRow, currentUrl } from './ro
 import { initChangeLog, renderChangeLog } from './changeLogPage.js';
 import { getRole, seedRoleFromMembership } from './roles.js';
 import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refreshSyncStatus } from './sync.js';
+import { initPalette } from './palette.js';
+import { initMyWork, renderMyWork } from './myWork.js';
+import { initPortfolio, renderPortfolio } from './portfolio.js';
+import { seedMeFrom, getMe, onMeChange } from './me.js';
 import * as supabase from './supabase.js';
 
 // ---------- Service worker ----------
@@ -89,7 +93,8 @@ if ('serviceWorker' in navigator) {
 
 // ---------- Tabs ----------
 
-const PAGE_IDS = ['page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
+const PAGE_IDS = ['page-mywork', 'page-portfolio',
+  'page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
   'page-scope', 'page-people', 'page-service', 'page-improve',
   'page-reports', 'page-sync', 'page-changelog', 'page-trash'];
 
@@ -110,6 +115,10 @@ function showPage(pageId, title) {
   if (pageId === 'page-trash') renderTrash();
   if (pageId === 'page-changelog') renderChangeLog();
   if (pageId === 'page-tasks') renderTasksPage();
+  // Both of these read every project, so they are assembled on arrival rather
+  // than kept warm — there is nothing on them that is theirs to go stale.
+  if (pageId === 'page-mywork') renderMyWork();
+  if (pageId === 'page-portfolio') renderPortfolio();
   // Every register page offers the roster in its owner fields, and the roster
   // is edited on one of them, so each arrival re-reads rather than trusting
   // whatever the last render left behind.
@@ -167,6 +176,31 @@ function applyRoute(route) {
   return true;
 }
 
+/**
+ * "Take me to that thing", wherever it is — the one entry point the palette,
+ * My Work and the Portfolio all use. It is applyRoute's twin: same work, but
+ * started by a click rather than by an address, so the address gets written
+ * rather than read.
+ */
+function goTo({ projectId = '', navId, rowId = '' }) {
+  const node = findNavNode(navId);
+  if (!node) return;
+
+  if (projectId && projectId !== getActiveProjectId()
+      && listProjects().some((p) => p.id === projectId)) {
+    switchProject(projectId);
+    refreshActiveProjectView();
+  }
+
+  // A panel is not a page — Projects and Export open over whatever is showing,
+  // and clicking their nav row is the only thing that knows how.
+  if (node.panel) {
+    document.getElementById(node.id)?.click();
+    return;
+  }
+  navigateTo(node, { rowId });
+}
+
 function findNavNode(id) {
   const walk = (nodes) => {
     for (const n of nodes) {
@@ -212,6 +246,18 @@ function initTabs() {
     },
   });
   setActiveNode('tab-dashboard');
+}
+
+// ---------- Who is making the changes ----------
+//
+// The change log has always had a "by" column and nothing to put in it: the
+// app had no idea who was typing. My Work asks that question for its own
+// reasons, and the answer is the same answer, so it is wired through here
+// rather than asked for twice.
+
+function initWhoAmI() {
+  setChangeActor(getMe());
+  onMeChange((name) => setChangeActor(name));
 }
 
 // ---------- Sidebar (mobile toggle) ----------
@@ -519,6 +565,12 @@ function renderTeam() {
   // engagement — so membership seeds the sidebar's role the first time, and
   // never overrides a choice someone made for themselves.
   if (role) seedRoleFromMembership(role);
+
+  // Same reasoning for the name: a signed-in address is a better first guess at
+  // "who are you" than an empty box, and is overridden the moment someone types
+  // their own. It only fills a blank — see seedMeFrom.
+  const user = supabase.getUser();
+  if (user) seedMeFrom(user.email, (user.user_metadata || {}).full_name);
 
   // Only the owner can invite, so hiding the form is the honest thing to do
   // rather than showing one that will be refused.
@@ -840,6 +892,10 @@ function init() {
   initRolePicker();
   initCopyLink();
   initChangeLog();
+  initPalette(goTo);
+  initMyWork(goTo);
+  initPortfolio(goTo);
+  initWhoAmI();
 
   // A link someone was sent wins over the role's usual landing page: they
   // clicked it to see something specific.

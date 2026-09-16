@@ -1,4 +1,5 @@
 import { TICK_DAYS } from './taskModel.js';
+import { createServiceTransition, createServiceDeskLaunch } from './sampleServices.js';
 
 // Starter templates for new projects. Each template is a factory function
 // (not a static object) so every project created from it gets its own
@@ -536,6 +537,9 @@ export const TEMPLATES = [
   { key: 'ml-model', category: 'AI & Data', label: 'ML Model Development', description: 'A predictive model end to end — data pipeline, training, fairness gate, deployment and drift monitoring.', build: () => seedTicks(createMLModelDevelopment()) },
   { key: 'ai-agent', category: 'AI & Data', label: 'AI Agent Automation Pilot', description: 'Pilot an agent on a real workflow with tool integrations, guardrails, human review and a go/no-go.', build: () => seedTicks(createAgentAutomationPilot()) },
   { key: 'ai-governance', category: 'AI & Data', label: 'AI Governance & Readiness', description: 'Model inventory, risk tiering, review gates and assessments for getting AI systems audit-ready.', build: () => seedTicks(createAIGovernance()) },
+
+  { key: 'transition', category: 'Services & Operations', label: 'Managed Service Transition', description: 'Take a service over from another supplier: due diligence, knowledge transfer, service acceptance and hypercare. The one template that fills every register.', build: () => seedTicks(createServiceTransition()) },
+  { key: 'servicedesk', category: 'Services & Operations', label: 'Service Desk Launch', description: 'Replace mailboxes and a spreadsheet with one desk: priority model, request catalogue, pilot, and closing the old channel.', build: () => seedTicks(createServiceDeskLaunch()) },
 
   { key: 'blank', category: 'General', label: 'Blank Project', description: 'Start from an empty sheet — no sample data.', build: () => seedTicks(createBlankProject()) },
 ];

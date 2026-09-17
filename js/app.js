@@ -9,7 +9,7 @@ import {
   renderComputed as refreshDashboardDerived,
 } from './dashboard.js';
 import { onProjectDataChanged, notifyProjectDataChanged } from './taskModel.js';
-import { initNav, setActiveNode, NAV_TREE } from './nav.js';
+import { initNav, setActiveNode, renderNav, registerPanel, openPanel, NAV_TREE } from './nav.js';
 import { el } from './dom.js';
 import { initTasks, renderTasksPage } from './tasks.js';
 import { confirmAction, toast } from './dialog.js';
@@ -33,6 +33,10 @@ import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refres
 import { initPalette } from './palette.js';
 import { mountTabs, showSection } from './tabs.js';
 import { initKpis, renderKpis } from './kpiPage.js';
+import { initSettings, refreshSettings } from './settings.js';
+import { usePagePolicy } from './roles.js';
+import { pagesFor, onPolicyChange } from './policy.js';
+import { refreshIdentity, onIdentityChange } from './identity.js';
 import { initMeetings, renderMeetings, setMeetingsChangedHandler } from './meetings.js';
 import { initMyWork, renderMyWork } from './myWork.js';
 import { initPortfolio, renderPortfolio } from './portfolio.js';
@@ -100,7 +104,7 @@ if ('serviceWorker' in navigator) {
 const PAGE_IDS = ['page-mywork', 'page-portfolio', 'page-resources',
   'page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
   'page-scope', 'page-people', 'page-service', 'page-improve',
-  'page-meetings', 'page-kpis', 'page-reports', 'page-sync', 'page-changelog', 'page-trash'];
+  'page-meetings', 'page-kpis', 'page-reports', 'page-settings', 'page-sync', 'page-changelog', 'page-trash'];
 
 function showPage(pageId, title) {
   PAGE_IDS.forEach((id) => {
@@ -130,6 +134,10 @@ function showPage(pageId, title) {
   // Attendees are offered from the project team, which is edited elsewhere,
   // so the page re-reads on arrival rather than trusting the last render.
   if (pageId === 'page-meetings') renderMeetings();
+  // Re-read on arrival rather than kept warm: membership and the page policy
+  // are the server's to state, and a stale "you are an admin" is exactly the
+  // claim that must not linger.
+  if (pageId === 'page-settings') refreshSettings();
   // Every register page offers the roster in its owner fields, and the roster
   // is edited on one of them, so each arrival re-reads rather than trusting
   // whatever the last render left behind.
@@ -219,10 +227,11 @@ function goTo({ projectId = '', navId, rowId = '' }) {
     refreshActiveProjectView();
   }
 
-  // A panel is not a page — Projects and Export open over whatever is showing,
-  // and clicking their nav row is the only thing that knows how.
+  // A panel is not a page — Projects and Export open over whatever is showing.
+  // Asked for by name rather than by clicking the row, which the role filter
+  // may have hidden.
   if (node.panel) {
-    document.getElementById(node.id)?.click();
+    openPanel(node.panel);
     return;
   }
   navigateTo(node, { rowId });
@@ -265,9 +274,8 @@ function initCopyLink() {
 function initTabs() {
   initNav({
     onActivate: (node) => {
-      // Panel rows keep the ids their own modules already listen on
-      // (btn-projects, btn-export-panel), so the same click opens the panel
-      // without the nav needing to know anything about it.
+      // Panels are opened inside nav.js by the handler their module
+      // registered, so nothing is left for this to do.
       if (node.panel) return;
       navigateTo(node);
     },
@@ -514,6 +522,12 @@ function initSyncPage() {
     // page, so it is loaded on any sync state change rather than on arrival.
     if (status.state === 'synced' || status.state === 'signed-out') {
       loadMembers({ force: true }).catch((err) => console.warn('Could not load members.', err));
+      // And who the server says you are: access role, assigned job role, admin
+      // grant, page policy. Re-read on every sync rather than cached, because
+      // an administrator revoking something has to take effect without asking
+      // the person it was revoked from to do anything.
+      refreshIdentity(getActiveProjectId())
+        .catch((err) => console.warn('Could not refresh your membership.', err));
     }
   });
 
@@ -853,7 +867,7 @@ function initExportPanel() {
   };
   const close = () => { overlay.hidden = true; };
 
-  document.getElementById('btn-export-panel').addEventListener('click', open);
+  registerPanel('export', open);
   document.getElementById('btn-close-panel').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) close(); });
@@ -923,7 +937,19 @@ function init() {
   initMyWork(goTo);
   initPortfolio(goTo);
   initResources(goTo);
+  // The nav asks the policy which pages a role may see. Injected rather than
+  // imported by roles.js, because policy.js reads the role list from there and
+  // a cycle would leave one of them empty at load.
+  usePagePolicy(pagesFor);
+  onPolicyChange(() => renderNav());
+  // An assignment arriving mid-session redraws the sidebar immediately: being
+  // told your role changed only on the next reload would leave you clicking
+  // pages that are no longer yours.
+  onIdentityChange(() => renderNav());
+  refreshIdentity(getActiveProjectId())
+    .catch((err) => console.warn('Could not read your membership.', err));
   initKpis();
+  initSettings(goTo);
   initMeetings(goTo);
   setMeetingsChangedHandler(() => notifyProjectDataChanged('meetings'));
   initWhoAmI();

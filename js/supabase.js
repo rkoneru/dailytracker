@@ -305,6 +305,22 @@ export async function upsert(table, rows, onConflict = 'id') {
   }) || [];
 }
 
+/**
+ * Updates the rows a filter selects, without inserting when none match.
+ *
+ * `upsert` would create a membership row for someone who has none, which on a
+ * table whose whole job is to say who belongs is the wrong default: an admin
+ * editing a member who has just been removed should get nothing changed, not
+ * a resurrected membership.
+ */
+export async function patch(table, filter, values) {
+  return request(`/rest/v1/${table}?${filter}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: values,
+  });
+}
+
 export async function remove(table, filter) {
   return request(`/rest/v1/${table}?${filter}`, {
     method: 'DELETE',

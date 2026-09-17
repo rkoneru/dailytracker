@@ -21,13 +21,17 @@
         <span>Project Planner</span>
       </div>
 
-      <!-- Who is looking. Filters the nav below to the pages that role uses;
-           the toggle inside the panel puts everything back. -->
+      <!-- Who is looking. Filters the nav below to the pages that role uses.
+           On a device of your own it is yours to set; inside a workspace an
+           administrator assigns it and the picker becomes a statement. -->
       <div class="role-picker">
         <label class="role-picker__label" for="role-select">I'm working as</label>
         <select class="field-input role-picker__select" id="role-select"></select>
         <p class="role-picker__blurb" id="role-blurb"></p>
-        <label class="role-picker__toggle">
+        <p class="role-picker__assigned" id="role-assigned" hidden>
+          🔒 Assigned by your administrator
+        </p>
+        <label class="role-picker__toggle" id="role-show-all-row">
           <input type="checkbox" id="role-show-all">
           <span>Show every page</span>
         </label>
@@ -38,6 +42,13 @@
 
       <div class="sidebar__footer">
         <button type="button" class="btn btn-primary btn-install-sidebar" id="btn-install" hidden>⬇ Install App</button>
+        <button type="button" class="sidebar__account" id="btn-account">
+          <span class="sidebar__account-avatar" id="account-avatar" aria-hidden="true">·</span>
+          <span class="sidebar__account-text">
+            <span class="sidebar__account-name" id="account-name">Signed out</span>
+            <span class="sidebar__account-role" id="account-role">On this device</span>
+          </span>
+        </button>
         <button type="button" class="sidebar__link" id="btn-reset">Reset this project</button>
       </div>
     </aside>
@@ -1435,6 +1446,172 @@
               </thead>
               <tbody id="trash-body"></tbody>
             </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- Settings: the account, the workspace, and who may see what. -->
+    <section id="page-settings" class="page" role="region" aria-label="Settings">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title">
+            <span>Settings</span>
+            <span class="dash-header__badge" id="settings-identity">Signed out</span>
+          </div>
+          <p class="hint report-subtitle">
+            Your account, this workspace, and &mdash; if you administer it &mdash; who is assigned
+            what and which pages each role is offered.
+          </p>
+        </header>
+
+        <section class="card" id="sec-settings-account">
+          <div class="card__head"><h2>Account</h2></div>
+
+          <div class="signin" id="signin-block">
+            <p class="hint">
+              Sign in to sync across devices and to join a workspace. Without an account the app
+              works exactly as it does now &mdash; everything stays in this browser.
+            </p>
+            <div class="signin__form">
+              <label class="field-label field-label--grow">Email
+                <input type="email" class="field-input" id="signin-email" autocomplete="email"
+                       placeholder="you@example.com">
+              </label>
+              <button type="button" class="btn btn-primary" id="btn-signin">Email me a link</button>
+            </div>
+            <p class="hint" id="signin-note"></p>
+            <p class="hint callout" id="signin-unconfigured" hidden>
+              No workspace is connected yet. Connect one on <strong>Sync &amp; Team</strong> first &mdash;
+              sign-in needs somewhere to sign in to.
+            </p>
+          </div>
+
+          <div class="signed-in" id="signed-in-block" hidden>
+            <div class="identity-row">
+              <span class="identity-row__avatar" id="settings-avatar" aria-hidden="true">·</span>
+              <div>
+                <p class="identity-row__who" id="settings-email">&mdash;</p>
+                <p class="identity-row__meta" id="settings-meta">&mdash;</p>
+              </div>
+            </div>
+            <div class="sync-actions">
+              <button type="button" class="btn btn-ghost" id="btn-signout">Sign out</button>
+              <button type="button" class="btn btn-ghost" id="btn-signout-wipe">Sign out and erase this device</button>
+            </div>
+            <p class="hint">
+              &ldquo;Erase this device&rdquo; removes every project from this browser. Anything that
+              reached the server is still there when you sign back in; anything that never
+              synced is gone for good. Use it on a shared computer.
+            </p>
+          </div>
+        </section>
+
+        <section class="card" id="sec-settings-workspace">
+          <div class="card__head"><h2>This Workspace</h2></div>
+          <div class="kpi-row" aria-label="Workspace state">
+            <div class="kpi" id="ws-count-mode">
+              <span class="kpi__label">Mode</span>
+              <span class="kpi__value">&mdash;</span>
+              <span class="kpi__sub">&mdash;</span>
+            </div>
+            <div class="kpi" id="ws-count-access">
+              <span class="kpi__label">Your access</span>
+              <span class="kpi__value">&mdash;</span>
+              <span class="kpi__sub">&mdash;</span>
+            </div>
+            <div class="kpi" id="ws-count-job">
+              <span class="kpi__label">Your job role</span>
+              <span class="kpi__value">&mdash;</span>
+              <span class="kpi__sub">&mdash;</span>
+            </div>
+            <div class="kpi" id="ws-count-people">
+              <span class="kpi__label">People</span>
+              <span class="kpi__value">&mdash;</span>
+              <span class="kpi__sub">&mdash;</span>
+            </div>
+          </div>
+          <p class="hint" id="workspace-note"></p>
+        </section>
+
+        <section class="card" id="sec-settings-people">
+          <div class="card__head">
+            <h2>People &amp; Roles</h2>
+            <span class="hint" id="admin-count"></span>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-refresh-members">Refresh</button>
+          </div>
+
+          <p class="hint callout" id="admin-denied" hidden>
+            Only an administrator can assign roles here. An administrator is the project&rsquo;s
+            owner, or someone the owner has granted the right to run the workspace &mdash; usually
+            the engagement manager.
+          </p>
+
+          <div id="admin-people" hidden>
+            <p class="hint">
+              <strong>Access</strong> is what somebody may read and write, and it is enforced by the
+              server. <strong>Job role</strong> decides which pages the app offers them, and it is
+              not a security boundary &mdash; see <em>What is actually enforced</em> below.
+            </p>
+            <div class="table-scroll">
+              <table class="data-table" id="members-table">
+                <thead>
+                  <tr>
+                    <th class="col-name">Person</th>
+                    <th class="col-status">Access</th>
+                    <th class="col-status">Job role</th>
+                    <th class="col-check" title="May manage people and page access">Admin</th>
+                  </tr>
+                </thead>
+                <tbody id="members-body"></tbody>
+              </table>
+            </div>
+            <p class="hint" id="members-empty" hidden>Nobody else has joined this workspace yet.</p>
+          </div>
+        </section>
+
+        <section class="card" id="sec-settings-pages">
+          <div class="card__head">
+            <h2>Page Access</h2>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-save-policy">Save page access</button>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-reset-policy">Reset to defaults</button>
+          </div>
+
+          <p class="hint callout" id="pages-denied" hidden>
+            Only an administrator can change which pages each role is offered.
+          </p>
+
+          <div id="admin-pages" hidden>
+            <p class="hint">
+              Tick the pages each job role is offered. Everyone keeps their own access level
+              regardless &mdash; unticking a page hides it, it does not take away permission.
+            </p>
+            <label class="field-label field-label--block">
+              <span class="policy-require">
+                <input type="checkbox" id="policy-require-signin">
+                <span>Expect everyone in this workspace to sign in</span>
+              </span>
+            </label>
+            <p class="hint">
+              A statement of intent, shown to anyone who opens the app unauthenticated. It is not
+              a lock &mdash; what protects the data is that without an account there is nothing
+              to sync down.
+            </p>
+            <div class="policy-grid" id="policy-grid"></div>
+          </div>
+        </section>
+
+        <section class="card card--quiet" id="sec-settings-security">
+          <div class="card__head"><h2>What is actually enforced</h2></div>
+          <div class="security-facts" id="security-facts"></div>
+        </section>
+
+        <section class="card card--quiet" id="sec-settings-data">
+          <div class="card__head"><h2>Data on this device</h2></div>
+          <p class="hint" id="storage-note">&mdash;</p>
+          <div class="sync-actions">
+            <button type="button" class="btn btn-ghost" id="btn-settings-export">Export a full backup</button>
+            <button type="button" class="btn btn-ghost" id="btn-settings-open-export">Export &amp; share options</button>
           </div>
         </section>
       </div>

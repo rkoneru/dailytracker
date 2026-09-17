@@ -203,6 +203,21 @@ export const NAV_TREE = [
     label: 'Manage',
     children: [
       { id: 'btn-projects', label: 'Projects', icon: '📁', panel: 'projects' },
+      {
+        id: 'tab-settings',
+        label: 'Settings',
+        icon: '⚙️',
+        page: 'page-settings',
+        title: 'Settings',
+        children: [
+          { id: 'nav-settings-account', label: 'Account', page: 'page-settings', title: 'Settings', section: 'sec-settings-account' },
+          { id: 'nav-settings-workspace', label: 'Workspace', page: 'page-settings', title: 'Settings', section: 'sec-settings-workspace' },
+          { id: 'nav-settings-people', label: 'People & Roles', page: 'page-settings', title: 'Settings', section: 'sec-settings-people' },
+          { id: 'nav-settings-pages', label: 'Page Access', page: 'page-settings', title: 'Settings', section: 'sec-settings-pages' },
+          { id: 'nav-settings-security', label: 'Security', page: 'page-settings', title: 'Settings', section: 'sec-settings-security' },
+          { id: 'nav-settings-data', label: 'Data', page: 'page-settings', title: 'Settings', section: 'sec-settings-data' },
+        ],
+      },
       { id: 'tab-sync', label: 'Sync & Team', icon: '🔄', page: 'page-sync', title: 'Sync & Team' },
       { id: 'tab-changelog', label: 'Change Log', icon: '🕓', page: 'page-changelog', title: 'Change Log' },
       { id: 'tab-trash', label: 'Trash', icon: '🗑', page: 'page-trash', title: 'Trash', badge: 'trash-count' },
@@ -214,6 +229,29 @@ export const NAV_TREE = [
 let onActivate = null;
 let expanded = null;
 let rows = [];            // every rendered row, in document order
+
+// Panels are opened by whoever owns them, registered by name rather than by
+// binding a listener to the nav row. The rows are rebuilt whenever the nav
+// re-renders — a role change, an assignment arriving, a policy update — and a
+// listener attached to the old element dies with it. That was a real bug:
+// changing your role left the Projects and Export panels dead until reload.
+const panels = new Map();
+
+export function registerPanel(name, open) {
+  panels.set(name, open);
+}
+
+/**
+ * Opens a panel by name, whether or not its nav row is on screen.
+ *
+ * The role filter can hide the row, and a link or a command-palette result
+ * that reached for the row would then quietly do nothing.
+ */
+export function openPanel(name) {
+  const open = panels.get(name);
+  if (open) open();
+  return !!open;
+}
 
 // ---------- expansion state ----------
 
@@ -412,6 +450,12 @@ function activate(row) {
   // A group heading has nothing behind it, so clicking it opens or closes it.
   if (isGroup) { toggle(row); return; }
 
+  if (node.panel) {
+    const open = panels.get(node.panel);
+    if (open) open();
+    return;
+  }
+
   // Opening a page reveals what's inside it. Activating never collapses —
   // use the twisty for that — so clicking the page you're already on doesn't
   // hide the section you were aiming for.
@@ -457,12 +501,7 @@ function onKeyDown(e) {
     case 'End': focusRow(visible[visible.length - 1]); break;
     case 'Enter':
     case ' ':
-      // Panel rows are opened by listeners their own modules put on these ids,
-      // which only fire on click. These used to be <button>s, where the
-      // browser synthesised that click for us; a div[role=treeitem] doesn't,
-      // so without this the panels are mouse-only.
-      if (row._node.panel) row.click();
-      else activate(row);
+      activate(row);
       break;
     default: return;
   }

@@ -9,6 +9,7 @@ const db = {
   project_members: new Map(),
   project_invites: new Map(),
   profiles: new Map(),
+  workspace_policy: new Map(),
 };
 let requests = 0;
 
@@ -54,6 +55,8 @@ const server = http.createServer((req, res) => {
     if (url.pathname === '/__seed') {
       (json.profiles || []).forEach((p) => db.profiles.set(p.id, p));
       (json.members || []).forEach((m) => db.project_members.set(`${m.project_id}:${m.user_id}`, { ...m, id: `${m.project_id}:${m.user_id}` }));
+      (json.policies || []).forEach((p) => db.workspace_policy.set(p.project_id, { ...p, id: p.project_id }));
+      (json.projects || []).forEach((p) => db.projects.set(p.id, p));
       return send(res, 200, {});
     }
     if (url.pathname === '/__dump') {
@@ -62,6 +65,7 @@ const server = http.createServer((req, res) => {
         rows: [...db.project_rows.values()],
         members: [...db.project_members.values()],
         invites: [...db.project_invites.values()],
+        policies: [...db.workspace_policy.values()],
         requests,
       });
     }
@@ -98,10 +102,26 @@ const server = http.createServer((req, res) => {
       matched.forEach(([k]) => store.delete(k));
       return send(res, 204);
     }
+    // PATCH, for the admin screens. Like the GET filters, this enforces
+    // nothing: what a real server would refuse is proved in tests/test-rls.js
+    // against Postgres, and this only has to carry the request faithfully.
+    if (req.method === 'PATCH') {
+      let matched = [...store.entries()];
+      url.searchParams.forEach((raw, key) => {
+        if (!raw.startsWith('eq.')) return;
+        const want = decodeURIComponent(raw.slice(3));
+        matched = matched.filter(([, r]) => String(r[key]) === want);
+      });
+      matched.forEach(([k, row]) => store.set(k, { ...row, ...json }));
+      return send(res, 204);
+    }
+
     if (req.method === 'POST') {
       (Array.isArray(json) ? json : [json]).forEach((row) => {
         // Composite keys, for the tables whose primary key is not `id`.
-        const key = row.id || `${row.project_id}:${row.user_id || row.email}`;
+        const key = table === 'workspace_policy'
+          ? row.project_id
+          : (row.id || `${row.project_id}:${row.user_id || row.email}`);
         const stored = { ...(store.get(key) || {}), ...row };
         if (!stored.id) stored.id = key;
         store.set(key, stored);

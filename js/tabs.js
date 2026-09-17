@@ -77,6 +77,14 @@ export const PAGE_TABS = {
     { id: 'sec-meeting-followups', label: 'Follow-up' },
     { id: 'sec-meeting-transcript', label: 'Recording & Transcript' },
   ],
+  'page-settings': [
+    { id: 'sec-settings-account', label: 'Account' },
+    { id: 'sec-settings-workspace', label: 'Workspace' },
+    { id: 'sec-settings-people', label: 'People & Roles' },
+    { id: 'sec-settings-pages', label: 'Page Access' },
+    { id: 'sec-settings-security', label: 'Security' },
+    { id: 'sec-settings-data', label: 'Data' },
+  ],
   'page-kpis': [
     { id: 'sec-kpi-schedule', label: 'Schedule' },
     { id: 'sec-kpi-cost', label: 'Cost' },

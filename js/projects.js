@@ -1,3 +1,4 @@
+import { registerPanel } from './nav.js';
 import {
   listProjects, listTemplates, getActiveProjectId, switchProject,
   createProject, cloneProject, renameProject, deleteProject, importProjectFromJSON,
@@ -222,7 +223,10 @@ export function initProjects({ onProjectChange }) {
   }
   function close() { overlay.hidden = true; }
 
-  document.getElementById('btn-projects').addEventListener('click', open);
+  // The nav row is registered by name, not bound to: the row is replaced on
+  // every nav re-render. The dashboard's own button is an ordinary element
+  // that stays put, so it binds directly.
+  registerPanel('projects', open);
   document.getElementById('btn-projects-2').addEventListener('click', open);
   document.getElementById('btn-close-projects').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });

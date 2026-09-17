@@ -346,3 +346,124 @@ grant execute on function public.can_read_project(uuid)  to authenticated;
 grant execute on function public.can_write_project(uuid) to authenticated;
 grant execute on function public.project_owner(uuid)     to authenticated;
 grant execute on function public.shares_project_with(uuid) to authenticated;
+
+-- ============================================================ administration
+--
+-- Two things move server-side here, because a preference every user could set
+-- for themselves is not a policy:
+--
+--   * `job_role` — what somebody does (project manager, tester, service
+--     manager). It decides which pages the app offers them. It was a personal
+--     setting; it is now assigned.
+--   * `can_admin` — the grant that lets someone administer the workspace
+--     without owning it, which is what an engagement manager needs: manage
+--     people and page access, but not delete the project.
+--
+-- Being blunt about what this is and is not. `job_role` and the page policy
+-- below are workspace policy, not access control: the app hides a page, and
+-- hiding is a client-side act that a determined person can undo in a browser
+-- console. What stops them reaching the *data* is the row level security
+-- above, which is enforced by Postgres and cannot be undone from a client.
+-- Those are two different guarantees and conflating them would be the most
+-- dangerous sentence in this file.
+
+alter table public.project_members
+  add column if not exists job_role  text,
+  add column if not exists can_admin boolean not null default false;
+
+-- Free text rather than an enum: job roles are the app's vocabulary and it
+-- gains one every few releases. An unrecognised value falls back to the most
+-- restrictive set of pages on the client, so a typo cannot open anything up.
+alter table public.project_members drop constraint if exists project_members_job_role_check;
+alter table public.project_members add constraint project_members_job_role_check
+  check (job_role is null or (job_role <> '' and length(job_role) <= 64));
+
+/**
+ * Who may administer a project: its owner, anyone holding the owner role, and
+ * anyone the owner has granted can_admin.
+ *
+ * SECURITY DEFINER for the same reason as the functions above — a policy on
+ * project_members that reads project_members would recurse.
+ */
+create or replace function public.is_project_admin(p_project uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce(
+    (select owner_id from public.projects where id = p_project) = auth.uid()
+    or exists (
+      select 1 from public.project_members
+      where project_id = p_project and user_id = auth.uid()
+        and (role = 'owner' or can_admin)
+    ), false);
+$$;
+
+-- Members: owners keep full control. A delegated admin may manage everyone
+-- else, and is deliberately fenced away from three things — promoting anyone
+-- to owner, minting another admin, and touching their own row. Without that
+-- last clause an admin could simply grant themselves ownership, and the
+-- delegation would be indistinguishable from handing over the keys.
+drop policy if exists project_members_write on public.project_members;
+create policy project_members_write on public.project_members for all
+  using (
+    public.project_owner(project_id) = auth.uid()
+    or (public.is_project_admin(project_id)
+        and role <> 'owner'
+        and user_id <> auth.uid())
+  )
+  with check (
+    public.project_owner(project_id) = auth.uid()
+    or (public.is_project_admin(project_id)
+        and role <> 'owner'
+        and can_admin = false
+        and user_id <> auth.uid())
+  );
+
+-- An admin needs to see everyone to manage them; a plain member still sees
+-- only their own membership.
+drop policy if exists project_members_read on public.project_members;
+create policy project_members_read on public.project_members for select
+  using (user_id = auth.uid() or public.is_project_admin(project_id));
+
+-- Invites follow the same delegation, minus the ability to invite an owner.
+drop policy if exists project_invites_read on public.project_invites;
+create policy project_invites_read on public.project_invites for select
+  using (public.is_project_admin(project_id));
+
+drop policy if exists project_invites_write on public.project_invites;
+create policy project_invites_write on public.project_invites for all
+  using (public.is_project_admin(project_id))
+  with check (
+    public.is_project_admin(project_id)
+    and (role <> 'owner' or public.project_owner(project_id) = auth.uid())
+  );
+
+-- ============================================================ page policy
+
+-- Which pages each job role is offered, for one project. One row per project,
+-- a JSON object of { jobRole: [navId, ...] }, because the app's nav is the
+-- only thing that knows what a page is and this table should not have to be
+-- migrated every time one is added.
+create table if not exists public.workspace_policy (
+  project_id  uuid primary key references public.projects (id) on delete cascade,
+  pages       jsonb not null default '{}'::jsonb,
+  -- Whether this workspace expects people to sign in. A client honours it by
+  -- showing the sign-in screen; it is a statement of intent, not a lock, and
+  -- the UI says so. What actually protects the data is that without an account
+  -- there is nothing to sync down.
+  require_sign_in boolean not null default false,
+  updated_at  timestamptz not null default now(),
+  updated_by  uuid references auth.users (id) on delete set null
+);
+
+alter table public.workspace_policy enable row level security;
+
+drop policy if exists workspace_policy_read on public.workspace_policy;
+create policy workspace_policy_read on public.workspace_policy for select
+  using (public.can_read_project(project_id));
+
+drop policy if exists workspace_policy_write on public.workspace_policy;
+create policy workspace_policy_write on public.workspace_policy for all
+  using (public.is_project_admin(project_id))
+  with check (public.is_project_admin(project_id));
+
+grant select, insert, update, delete on public.workspace_policy to authenticated;
+grant execute on function public.is_project_admin(uuid) to authenticated;

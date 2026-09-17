@@ -38,7 +38,7 @@ export const ROLES = [
     blurb: 'Plan, tasks, risks and reports, plus the change log.',
     home: 'tab-dashboard',
     nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
+      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
   },
   {
     id: 'product-manager',
@@ -47,7 +47,7 @@ export const ROLES = [
     blurb: 'What is being delivered and why, plus what is landing when.',
     home: 'tab-dashboard',
     nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'btn-projects', 'btn-export-panel'],
+      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'btn-export-panel'],
   },
   {
     id: 'scrum-master',
@@ -56,7 +56,7 @@ export const ROLES = [
     blurb: 'The board, the plan, what is blocking the team, and retrospectives.',
     home: 'tab-tasks',
     nav: ['tab-mywork', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'btn-projects', 'btn-export-panel'],
+      'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'btn-export-panel'],
   },
   {
     id: 'developer',
@@ -65,7 +65,7 @@ export const ROLES = [
     blurb: 'What is on you across every project, then what is blocked or shipping.',
     home: 'tab-mywork',
     nav: ['tab-mywork', 'tab-dashboard', 'tab-tasks', 'tab-raid', 'tab-service', 'tab-improve',
-      'btn-projects', 'tab-sync', 'btn-export-panel'],
+      'tab-settings', 'btn-projects', 'tab-sync', 'btn-export-panel'],
   },
   {
     id: 'tester',
@@ -74,7 +74,7 @@ export const ROLES = [
     blurb: 'What is assigned to you, defects, the go-live checklist and known breakage.',
     home: 'tab-mywork',
     nav: ['tab-mywork', 'tab-dashboard', 'tab-tasks', 'tab-raid', 'tab-service', 'tab-improve',
-      'btn-projects', 'tab-sync', 'btn-export-panel'],
+      'tab-settings', 'btn-projects', 'tab-sync', 'btn-export-panel'],
   },
   {
     id: 'service-manager',
@@ -83,7 +83,7 @@ export const ROLES = [
     blurb: 'Service levels, releases, change control and known issues.',
     home: 'tab-service',
     nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports',
-      'btn-projects', 'tab-sync', 'tab-changelog', 'btn-export-panel'],
+      'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'btn-export-panel'],
   },
 ];
 
@@ -104,6 +104,12 @@ const SEED_FROM_MEMBER_ROLE = {
 
 let current = null;
 let showAll = null;
+// The job role an administrator assigned, when a workspace governs this
+// device. It wins over `current`, which is what this browser chose for itself,
+// and it is never written here — identity.js installs it from the server on
+// every load. Kept in memory rather than localStorage so that a stale copy
+// cannot outlive the membership that granted it.
+let assigned = null;
 const listeners = new Set();
 
 function read(key, fallback) {
@@ -125,19 +131,55 @@ function write(key, value) {
 }
 
 export function getRoleId() {
+  if (assigned && ROLES.some((r) => r.id === assigned)) return assigned;
   if (current === null) current = read(ROLE_KEY, DEFAULT_ROLE);
   return ROLES.some((r) => r.id === current) ? current : DEFAULT_ROLE;
+}
+
+/**
+ * Installs the role an administrator assigned.
+ *
+ * An unknown value is ignored rather than accepted, so a role this build does
+ * not have cannot leave `getRoleId` returning something no page understands.
+ */
+export function setAssignedRole(id) {
+  const next = ROLES.some((r) => r.id === id) ? id : null;
+  if (assigned === next) return;
+  assigned = next;
+  emit();
+}
+
+export function clearAssignedRole() {
+  if (assigned === null) return;
+  assigned = null;
+  emit();
+}
+
+/** True when the role came from a workspace rather than from this device. */
+export function roleIsAssigned() {
+  return assigned !== null;
 }
 
 export function getRole() {
   return ROLES.find((r) => r.id === getRoleId()) || ROLES[0];
 }
 
+/**
+ * Chooses a role for this device.
+ *
+ * Refused while a workspace is assigning one. This is not the security
+ * boundary — it stops the picker from lying about what is in force, and the
+ * picker is hidden in that case anyway. What actually keeps somebody out of
+ * a page they were not assigned is that the assignment is re-read from the
+ * server on every load and cannot be written from here.
+ */
 export function setRole(id) {
-  if (!ROLES.some((r) => r.id === id)) return;
+  if (assigned !== null) return false;
+  if (!ROLES.some((r) => r.id === id)) return false;
   current = id;
   write(ROLE_KEY, id);
   emit();
+  return true;
 }
 
 /** True once the person has chosen for themselves, rather than inheriting. */
@@ -171,11 +213,48 @@ export function setShowEverything(value) {
   emit();
 }
 
-/** Whether a nav node id is part of this role's working set. */
+/**
+ * Whether a nav node id is part of this role's working set.
+ *
+ * `pagesFor` is injected rather than imported, because policy.js imports the
+ * role list from here and a cycle between the two would leave whichever loaded
+ * second holding an empty module. Until something injects it — which app.js
+ * does on boot — this falls back to the role's built-in list, which is the
+ * behaviour a device with no workspace should have anyway.
+ */
+let pagesFor = null;
+
+export function usePagePolicy(fn) {
+  pagesFor = fn;
+  emit();
+}
+
+/**
+ * Pages no policy may take away.
+ *
+ * Settings is where you find out what role you have been given, read what is
+ * and is not enforced, and sign out. An administrator who removed it — by
+ * intent or by unticking a box — would strand that person with no way to see
+ * their own account or leave it, which is a worse outcome than any page they
+ * might see. So it is not the policy's to remove, and it is left out of the
+ * editor entirely rather than offered and then ignored.
+ */
+export const ALWAYS_AVAILABLE = ['tab-settings'];
+
 export function roleShows(nodeId) {
-  if (isShowingEverything()) return true;
+  if (ALWAYS_AVAILABLE.includes(nodeId)) return true;
+  // "Show everything" is a personal convenience and must not survive being
+  // governed: an assigned role is somebody else's decision about this account,
+  // and a checkbox that overrode it would make the whole policy advisory.
+  if (isShowingEverything() && assigned === null) return true;
   const role = getRole();
-  return role.nav === null || role.nav.includes(nodeId);
+  const allowed = pagesFor ? pagesFor(role.id) : role.nav;
+  return allowed === null || allowed.includes(nodeId);
+}
+
+/** True when the escape hatch is available at all. */
+export function canShowEverything() {
+  return assigned === null;
 }
 
 /** How many top-level destinations the current filter is holding back. */

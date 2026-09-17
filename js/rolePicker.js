@@ -8,6 +8,7 @@ import { el } from './dom.js';
 import {
   ROLES, getRole, getRoleId, setRole, onRoleChange,
   isShowingEverything, setShowEverything, roleShows,
+  roleIsAssigned, canShowEverything,
 } from './roles.js';
 import { renderNav, NAV_TREE } from './nav.js';
 
@@ -34,6 +35,26 @@ function goHomeIfStranded(activePageId) {
   document.getElementById(getRole().home)?.click();
 }
 
+/**
+ * Reflects who is deciding.
+ *
+ * When an administrator has assigned the role, the picker becomes a label:
+ * disabled, marked as assigned, and with the "show every page" escape hatch
+ * withdrawn. None of that is what enforces the assignment — the server is, and
+ * it re-states the assignment on every load. This only stops the control from
+ * claiming a choice the person does not have.
+ */
+function renderAssignment() {
+  const select = document.getElementById('role-select');
+  const assigned = roleIsAssigned();
+  const note = document.getElementById('role-assigned');
+  const showAllRow = document.getElementById('role-show-all-row');
+
+  select.disabled = assigned;
+  if (note) note.hidden = !assigned;
+  if (showAllRow) showAllRow.hidden = !canShowEverything();
+}
+
 export function initRolePicker() {
   const select = document.getElementById('role-select');
   if (!select) return;
@@ -43,17 +64,23 @@ export function initRolePicker() {
   });
   select.value = getRoleId();
   renderBlurb();
+  renderAssignment();
 
   const showAll = document.getElementById('role-show-all');
   showAll.checked = isShowingEverything();
 
-  select.addEventListener('change', (e) => setRole(e.target.value));
+  select.addEventListener('change', (e) => {
+    // Refused while assigned, so put the control back to what is true rather
+    // than leaving it showing a role nobody granted.
+    if (!setRole(e.target.value)) select.value = getRoleId();
+  });
   showAll.addEventListener('change', (e) => setShowEverything(e.target.checked));
 
   onRoleChange(() => {
     select.value = getRoleId();
     showAll.checked = isShowingEverything();
     renderBlurb();
+    renderAssignment();
     const active = document.querySelector('.page.is-active')?.id;
     renderNav();
     goHomeIfStranded(active);

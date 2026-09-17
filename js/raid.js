@@ -1,4 +1,4 @@
-import { getState, scheduleSave, uid, trashRow } from './state.js';
+import { getState, scheduleSave, uid, trashRow, todayISO } from './state.js';
 import { offerUndo } from './trash.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 import { el } from './dom.js';
@@ -108,7 +108,12 @@ function renderRow(item) {
     el('td', { class: 'col-sev' }, [buildSelect(LIKELIHOODS, item.likelihood, 'likelihood', 'like', true)]),
     scoreCell(item),
     el('td', { class: 'col-status' }, [buildSelect(RAID_STATUSES, item.status, 'status', 'raidstatus')]),
+    // Raised and closed bracket the item. They are what turn "three open
+    // issues" into "issues take nine days to close", which is the number that
+    // actually tells you whether the log is being worked.
+    el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'raised', value: item.raised || '' })]),
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'due', value: item.due || '' })]),
+    el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'closed', value: item.closed || '' })]),
     el('td', {}, [el('input', { class: 'row-input', 'data-field': 'action', value: item.action || '', placeholder: 'Mitigation / next step' })]),
     el('td', { class: 'col-action no-print' }, [
       el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-raid', 'aria-label': 'Delete entry', text: '🗑' }),
@@ -227,7 +232,9 @@ function bindControls(onChanged) {
       severity: 'Medium',
       likelihood: 'Medium',
       status: 'Open',
+      raised: todayISO(),
       due: '',
+      closed: '',
       action: '',
     });
     scheduleSave();

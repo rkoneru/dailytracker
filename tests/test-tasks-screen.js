@@ -26,10 +26,11 @@ const { eq, done } = createChecks();
      ['Total tasks', 'Completed', 'In progress', 'On hold', 'Overdue']);
   // Start and Comments are beyond the reference layout, kept because the
   // Planner is read-only now and nothing else edits them. Waits for, Est.,
-  // Spent and Checks came later, with dependencies, effort and checklists.
+  // Spent and Checks came later, with dependencies, effort and checklists;
+  // Rework came with the KPI set, which cannot report rework without it.
   eq('tracker columns', await page.$$eval('#tracker-table thead th', (els) => els.map((e) => e.textContent).filter(Boolean)),
      ['ID', 'Task', 'Owner', 'Priority', 'Status', 'Start', 'Due date', 'Slip',
-      'Waits for', 'Est.', 'Spent', 'Progress', 'Checks', 'Comments']);
+      'Waits for', 'Est.', 'Spent', 'Rework', 'Progress', 'Checks', 'Comments']);
   eq('five board columns', await page.$$eval('.board-col__label', (els) => els.map((e) => e.textContent)),
      ['High Priority', 'Medium Priority', 'Low Priority', 'On Hold', 'Completed']);
   eq('ids are stable refs', (await page.$$eval('#tracker-body .col-ref', (els) => els.map((e) => e.textContent))).slice(0, 3),

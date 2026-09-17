@@ -302,7 +302,7 @@ function detailRow(task) {
 
   return el('tr', { class: 'task-detail', 'data-detail-for': task.id }, [
     el('td', { class: 'no-print' }),
-    el('td', { class: 'task-detail__cell no-print', colSpan: 13 }, [
+    el('td', { class: 'task-detail__cell no-print', colSpan: 14 }, [
       el('div', { class: 'task-detail__grid' }, [checklist, depends]),
     ]),
   ]);
@@ -338,6 +338,7 @@ function trackerRow(task, index, today) {
     blockedCell(task),
     effortCell(task, 'estimate', 'Estimated hours'),
     effortCell(task, 'spent', 'Hours spent'),
+    effortCell(task, 'rework', 'Hours spent redoing work already called done'),
     progressCell(task),
     checklistCell(task),
     el('td', {}, [el('input', { class: 'row-input', 'data-field': 'comments', value: task.comments || '', placeholder: 'Comments' })]),
@@ -542,7 +543,7 @@ function bindTracker() {
 
     // Hours are stored as typed so a cleared box means "unestimated" rather
     // than zero; the model does the parsing.
-    if (field === 'estimate' || field === 'spent') {
+    if (field === 'estimate' || field === 'spent' || field === 'rework') {
       task[field] = e.target.value === '' ? '' : String(hours(e.target.value) ?? '');
       commit({});
       renderTallies();

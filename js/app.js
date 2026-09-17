@@ -32,6 +32,7 @@ import { getRole, seedRoleFromMembership } from './roles.js';
 import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refreshSyncStatus } from './sync.js';
 import { initPalette } from './palette.js';
 import { mountTabs, showSection } from './tabs.js';
+import { initKpis, renderKpis } from './kpiPage.js';
 import { initMyWork, renderMyWork } from './myWork.js';
 import { initPortfolio, renderPortfolio } from './portfolio.js';
 import { initResources, renderResources } from './resourcesPage.js';
@@ -98,7 +99,7 @@ if ('serviceWorker' in navigator) {
 const PAGE_IDS = ['page-mywork', 'page-portfolio', 'page-resources',
   'page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
   'page-scope', 'page-people', 'page-service', 'page-improve',
-  'page-reports', 'page-sync', 'page-changelog', 'page-trash'];
+  'page-kpis', 'page-reports', 'page-sync', 'page-changelog', 'page-trash'];
 
 function showPage(pageId, title) {
   PAGE_IDS.forEach((id) => {
@@ -122,6 +123,9 @@ function showPage(pageId, title) {
   if (pageId === 'page-mywork') renderMyWork();
   if (pageId === 'page-portfolio') renderPortfolio();
   if (pageId === 'page-resources') renderResources();
+  // Every indicator is derived, so the page is assembled on arrival rather
+  // than kept warm: there is nothing on it that is its own to go stale.
+  if (pageId === 'page-kpis') renderKpis();
   // Every register page offers the roster in its owner fields, and the roster
   // is edited on one of them, so each arrival re-reads rather than trusting
   // whatever the last render left behind.
@@ -915,6 +919,7 @@ function init() {
   initMyWork(goTo);
   initPortfolio(goTo);
   initResources(goTo);
+  initKpis();
   initWhoAmI();
 
   // A link someone was sent wins over the role's usual landing page: they

@@ -23,13 +23,13 @@ const eq = (n, got, want) => {
   console.log('\n--- structure ---');
   eq('one tree', await page.locator('[role="tree"]').count(), 1);
   eq('every row is a treeitem', await page.locator('.nav-row').count(), await page.locator('[role="treeitem"]').count());
-  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 14);
+  eq('child lists are groups', await page.locator('.nav-tree [role="group"]').count(), 15);
   // The default role is the engagement lead, who sees all of it.
   eq('groups open, pages closed at first run', await visibleLabels(),
      ['Across Projects', 'My Work', 'Portfolio', 'Resources',
       'Plan & Build', 'Dashboard', 'Tasks', 'Plan', 'Scope & Contract',
       'Run & Support', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons',
-      'People & Reporting', 'People & Stakeholders', 'Reports',
+      'Report & Share', 'KPIs', 'People & Stakeholders', 'Reports',
       'Manage', 'Projects', 'Sync & Team', 'Change Log', 'Trash', 'Export / Share']);
   eq('aria-level is set', await page.getAttribute('#tab-dashboard', 'aria-level'), '2');
   eq('leaf level is deeper', await page.getAttribute('#nav-ticks', 'aria-level'), '3');
@@ -199,7 +199,7 @@ const eq = (n, got, want) => {
   // 6. Pages are regions, not tabpanels — the tabpanel role belongs to the
   // sections inside a page, which are what the in-page tab strip switches.
   eq('no page claims the tabpanel role', await page.locator('.page[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 15);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 16);
 
   // 7. Opening a report from the nav renders it once, not twice.
   await page.click('#tab-dashboard'); await page.waitForTimeout(300);

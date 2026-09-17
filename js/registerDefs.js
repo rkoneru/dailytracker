@@ -100,8 +100,13 @@ export const DELIVERABLES = {
     { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Not Started', 'In Progress', 'In Review', 'Accepted', 'Rejected'] },
     { field: 'signedOffBy', label: 'Signed off by', type: 'person', placeholder: 'Who accepted it' },
     { field: 'signOffDate', label: 'Sign-off', type: 'date' },
+    // Defects found against this deliverable. The denominator of defect
+    // density, which without it is an indicator the app can define and never
+    // answer — so it is a field on the thing defects are found in, rather than
+    // a register of its own nobody would keep up to date.
+    { field: 'defects', label: 'Defects', type: 'number', min: 0, step: 1, cls: 'col-num' },
   ],
-  newRow: () => ({ name: '', type: 'Document', owner: '', due: '', acceptance: '', status: 'Not Started', signedOffBy: '', signOffDate: '' }),
+  newRow: () => ({ name: '', type: 'Document', owner: '', due: '', acceptance: '', status: 'Not Started', signedOffBy: '', signOffDate: '', defects: '' }),
 };
 
 export const DEPENDENCIES = {

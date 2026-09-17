@@ -28,7 +28,7 @@ export function uid() {
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
 
-function todayISO() {
+export function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
@@ -163,6 +163,13 @@ function migrateProject(data) {
   // Planner as undefined and throw on the first render.
   if (!Array.isArray(data.notes)) data.notes = [];
   if (!Array.isArray(data.raid)) data.raid = [];
+  // When it was raised and when it closed. Without these an issue has no
+  // resolution time and a risk response has no timeliness — two of the twenty
+  // indicators that could only ever read "not measured".
+  data.raid.forEach((item) => {
+    if (item.raised === undefined) item.raised = '';
+    if (item.closed === undefined) item.closed = '';
+  });
   foldLegacyTaskLists(data);
   // Schedule baselines: left empty rather than seeded from current dates,
   // so an un-baselined project reads as "no baseline" instead of pretending
@@ -188,12 +195,21 @@ function migrateProject(data) {
     if (!Array.isArray(t.checklist)) t.checklist = [];
     if (t.estimate === undefined) t.estimate = '';
     if (t.spent === undefined) t.spent = '';
+    // Hours spent redoing work that was already called done. Blank, like the
+    // two above, because "no rework" and "nobody recorded it" are different
+    // claims and the rework KPI has to be able to tell them apart.
+    if (t.rework === undefined) t.rework = '';
     if (!Array.isArray(t.dependsOn)) t.dependsOn = [];
   });
   // A milestone can name the deliverable it marks, so the Dashboard shows the
   // pair once. Empty means "this milestone is just a date".
   (data.milestones || []).forEach((m) => {
     if (m.deliverableId === undefined) m.deliverableId = '';
+    // When it was actually hit. Seeded from the due date for milestones that
+    // were already ticked before this field existed: their real date is not
+    // recoverable, and the due date is the only defensible stand-in — it reads
+    // as "on time", which is what ticking it off already asserted.
+    if (m.achieved === undefined) m.achieved = m.done ? (m.due || '') : '';
   });
   // The change log is per project and append-only; projects made before it
   // existed simply start empty rather than inventing a history.

@@ -132,12 +132,27 @@ export const NAV_TREE = [
     ],
   },
   {
-    // Stakeholder maps, the communications plan and the status reports all
-    // answer one question — who needs telling what, and when — so they sit
-    // together rather than in a governance folder and a reporting folder.
+    // What the numbers say, the pack that says it, and who gets told. The
+    // stakeholder map and the communications plan belong here for the same
+    // reason the reports do: they all answer "who needs telling what".
     id: 'group-share',
-    label: 'People & Reporting',
+    label: 'Report & Share',
     children: [
+      {
+        id: 'tab-kpis',
+        label: 'KPIs',
+        icon: '📐',
+        page: 'page-kpis',
+        title: 'Project KPIs',
+        children: [
+          { id: 'nav-kpi-schedule', label: 'Schedule', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-schedule' },
+          { id: 'nav-kpi-cost', label: 'Cost', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-cost' },
+          { id: 'nav-kpi-scope', label: 'Scope & Change', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-scope' },
+          { id: 'nav-kpi-risk', label: 'Risk & Issue', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-risk' },
+          { id: 'nav-kpi-quality', label: 'Quality & Resource', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-quality' },
+          { id: 'nav-kpi-basis', label: 'How These Work', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-basis' },
+        ],
+      },
       {
         id: 'tab-people',
         label: 'People & Stakeholders',

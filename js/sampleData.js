@@ -64,7 +64,7 @@ function createMarketingCampaign() {
       { id: id('n'), text: 'Revisit ad spend split after week 1 performance data.' },
     ],
     milestones: [
-      { id: id('m'), text: 'Creative assets approved', progress: 5, due: '2026-09-05', done: true },
+      { id: id('m'), text: 'Creative assets approved', progress: 5, due: '2026-09-05', done: true, achieved: '2026-09-05' },
       { id: id('m'), text: 'Campaign launch', progress: 3, due: '2026-09-08', done: false, deliverableId: LIVE_CAMPAIGN_ID },
       { id: id('m'), text: 'Mid-campaign performance review', progress: 1, due: '2026-09-18', done: false },
       { id: id('m'), text: 'Campaign wrap + report', progress: 0, due: '2026-09-30', done: false },
@@ -75,9 +75,10 @@ function createMarketingCampaign() {
     budgetPlanned: 25000,
     budgetActual: 18500,
     raid: [
-      { id: id('r'), type: 'Risk', title: 'Influencer contracts may slip past launch', owner: 'Priya N.', severity: 'High', likelihood: 'Medium', status: 'Open', due: '2026-09-12', action: 'Prepare organic-only fallback creative.' },
-      { id: id('r'), type: 'Issue', title: 'Tracking pixel not firing on checkout', owner: 'Jordan K.', severity: 'High', likelihood: '', status: 'In Progress', due: '2026-09-11', action: 'Dev ticket raised, fix in this sprint.' },
-      { id: id('r'), type: 'Decision', title: 'Confirm paid/organic budget split', owner: 'Priya N.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-09-15', action: 'Needs week 1 performance data first.' },
+      { id: id('r'), type: 'Risk', title: 'Influencer contracts may slip past launch', owner: 'Priya N.', severity: 'High', likelihood: 'Medium', raised: '2026-09-02', closed: '', status: 'Open', due: '2026-09-12', action: 'Prepare organic-only fallback creative.' },
+      { id: id('r'), type: 'Issue', title: 'Tracking pixel not firing on checkout', owner: 'Jordan K.', severity: 'High', likelihood: '', raised: '2026-09-05', closed: '', status: 'In Progress', due: '2026-09-11', action: 'Dev ticket raised, fix in this sprint.' },
+      { id: id('r'), type: 'Decision', title: 'Confirm paid/organic budget split', owner: 'Priya N.', severity: 'Medium', likelihood: '', raised: '2026-09-06', closed: '', status: 'Open', due: '2026-09-15', action: 'Needs week 1 performance data first.' },
+      { id: id('r'), type: 'Issue', title: 'Creative pack missing the 9:16 cut', owner: 'Marcus T.', severity: 'Medium', likelihood: '', raised: '2026-09-03', closed: '2026-09-06', status: 'Closed', due: '2026-09-06', action: 'Re-exported and re-approved.' },
       { id: id('r'), type: 'Dependency', title: 'Legal sign-off on influencer terms', owner: 'Legal', severity: 'High', likelihood: '', status: 'Open', due: '2026-09-10', action: 'Chased 9/8, no response yet.' },
     ],
     roster: [
@@ -93,8 +94,8 @@ function createMarketingCampaign() {
       { id: id('ra'), activity: 'Influencer contracting', responsible: 'Priya N.', accountable: 'Legal', consulted: 'Marcus T.', informed: '' },
     ],
     deliverables: [
-      { id: id('dl'), name: 'Campaign brief', type: 'Document', owner: 'Priya N.', due: '2026-09-02', acceptance: 'Objectives, audience, channels and budget agreed in writing by the marketing lead.', status: 'Accepted', signedOffBy: 'Marcus T.', signOffDate: '2026-09-02' },
-      { id: id('dl'), name: 'Creative asset pack', type: 'Document', owner: 'Marcus T.', due: '2026-09-05', acceptance: 'All six formats delivered at spec, brand-checked, with source files.', status: 'Accepted', signedOffBy: 'Priya N.', signOffDate: '2026-09-05' },
+      { id: id('dl'), name: 'Campaign brief', type: 'Document', owner: 'Priya N.', due: '2026-09-02', acceptance: 'Objectives, audience, channels and budget agreed in writing by the marketing lead.', status: 'Accepted', signedOffBy: 'Marcus T.', signOffDate: '2026-09-02', defects: 0 },
+      { id: id('dl'), name: 'Creative asset pack', type: 'Document', owner: 'Marcus T.', due: '2026-09-05', acceptance: 'All six formats delivered at spec, brand-checked, with source files.', status: 'Accepted', signedOffBy: 'Priya N.', signOffDate: '2026-09-05', defects: 3 },
       { id: LIVE_CAMPAIGN_ID, name: 'Live campaign across Meta and TikTok', type: 'Service', owner: 'Jordan K.', due: '2026-09-08', acceptance: 'Both channels live, tracking verified end to end, daily spend within 10% of plan.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Campaign wrap report', type: 'Report', owner: 'Priya N.', due: '2026-09-30', acceptance: 'Reach, CTR, cost per visit and spend against plan, with recommendations.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
     ],
@@ -117,15 +118,15 @@ function createMarketingCampaign() {
       { id: id('ls'), date: '2026-09-08', phase: 'Planning', category: 'Quality', what: 'The tracking pixel was set up after the ad account rather than as part of it.', impact: 'Launch went live with unverified attribution for two days.', recommendation: 'Make verified tracking part of the ad-account deliverable, not a follow-on task.', owner: 'Jordan K.', status: 'New' },
     ],
     dashTasks: [
-      { id: id('d'), name: 'Campaign strategy & brief', assigned: 'Priya N.', start: '2026-09-01', end: '2026-09-02', baseStart: '2026-09-01', baseEnd: '2026-09-02', status: 'Complete', prio: 'High', comments: 'Signed off by marketing lead.' },
-      { id: id('d'), name: 'Creative asset design', assigned: 'Marcus T.', start: '2026-09-02', end: '2026-09-05', baseStart: '2026-09-02', baseEnd: '2026-09-05', status: 'Complete', prio: 'High', comments: 'All variants approved.' },
-      { id: id('d'), name: 'Ad account & tracking setup', assigned: 'Jordan K.', start: '2026-09-03', end: '2026-09-06', baseStart: '2026-08-30', baseEnd: '2026-09-02', status: 'In Progress', prio: 'Medium', comments: 'Pixel verification pending.' },
-      { id: id('d'), name: 'Influencer contracts', assigned: 'Priya N.', start: '2026-09-04', end: '2026-09-10', baseStart: '2026-09-04', baseEnd: '2026-09-10', status: 'On Hold', prio: 'Medium', comments: 'Waiting on legal sign-off.' },
-      { id: id('d'), name: 'Paid ad launch', assigned: 'Jordan K.', start: '2026-09-08', end: '2026-09-26', baseStart: '2026-09-08', baseEnd: '2026-09-26', status: 'In Progress', prio: 'High', comments: 'Live on Meta + TikTok.' },
-      { id: id('d'), name: 'Influencer posts', assigned: 'Marcus T.', start: '2026-09-09', end: '2026-09-23', baseStart: '2026-09-02', baseEnd: '2026-09-16', status: 'Not Started', prio: 'Medium', comments: 'Blocked on contracts.' },
-      { id: id('d'), name: 'Weekly reporting', assigned: 'Priya N.', start: '2026-09-12', end: '2026-09-30', baseStart: '2026-09-12', baseEnd: '2026-09-30', status: 'Not Started', prio: 'Low', comments: '' },
-      { id: id('d'), name: 'Mid-campaign optimization', assigned: 'Jordan K.', start: '2026-09-14', end: '2026-09-18', baseStart: '2026-09-14', baseEnd: '2026-09-18', status: 'Overdue', prio: 'High', comments: 'Needs budget reallocation decision.' },
-      { id: id('d'), name: 'Campaign wrap report', assigned: 'Priya N.', start: '2026-09-27', end: '2026-09-30', baseStart: '2026-09-27', baseEnd: '2026-09-30', status: 'Not Started', prio: 'Medium', comments: '' },
+      { id: id('d'), name: 'Campaign strategy & brief', assigned: 'Priya N.', start: '2026-09-01', end: '2026-09-02', baseStart: '2026-09-01', baseEnd: '2026-09-02', status: 'Complete', prio: 'High', comments: 'Signed off by marketing lead.', estimate: 12, spent: 11, rework: 0 },
+      { id: id('d'), name: 'Creative asset design', assigned: 'Marcus T.', start: '2026-09-02', end: '2026-09-05', baseStart: '2026-09-02', baseEnd: '2026-09-05', status: 'Complete', prio: 'High', comments: 'All variants approved.', estimate: 40, spent: 46, rework: 6 },
+      { id: id('d'), name: 'Ad account & tracking setup', assigned: 'Jordan K.', start: '2026-09-03', end: '2026-09-06', baseStart: '2026-08-30', baseEnd: '2026-09-02', status: 'In Progress', prio: 'Medium', comments: 'Pixel verification pending.', estimate: 16, spent: 14, rework: 2 },
+      { id: id('d'), name: 'Influencer contracts', assigned: 'Priya N.', start: '2026-09-04', end: '2026-09-10', baseStart: '2026-09-04', baseEnd: '2026-09-10', status: 'On Hold', prio: 'Medium', comments: 'Waiting on legal sign-off.', estimate: 10, spent: 4, rework: 0 },
+      { id: id('d'), name: 'Paid ad launch', assigned: 'Jordan K.', start: '2026-09-08', end: '2026-09-26', baseStart: '2026-09-08', baseEnd: '2026-09-26', status: 'In Progress', prio: 'High', comments: 'Live on Meta + TikTok.', estimate: 60, spent: 22, rework: 0 },
+      { id: id('d'), name: 'Influencer posts', assigned: 'Marcus T.', start: '2026-09-09', end: '2026-09-23', baseStart: '2026-09-02', baseEnd: '2026-09-16', status: 'Not Started', prio: 'Medium', comments: 'Blocked on contracts.', estimate: 24, spent: 0, rework: 0 },
+      { id: id('d'), name: 'Weekly reporting', assigned: 'Priya N.', start: '2026-09-12', end: '2026-09-30', baseStart: '2026-09-12', baseEnd: '2026-09-30', status: 'Not Started', prio: 'Low', comments: '', estimate: 18, spent: 0, rework: 0 },
+      { id: id('d'), name: 'Mid-campaign optimization', assigned: 'Jordan K.', start: '2026-09-14', end: '2026-09-18', baseStart: '2026-09-14', baseEnd: '2026-09-18', status: 'Overdue', prio: 'High', comments: 'Needs budget reallocation decision.', estimate: 12, spent: 3, rework: 0 },
+      { id: id('d'), name: 'Campaign wrap report', assigned: 'Priya N.', start: '2026-09-27', end: '2026-09-30', baseStart: '2026-09-27', baseEnd: '2026-09-30', status: 'Not Started', prio: 'Medium', comments: '', estimate: 14, spent: 0, rework: 0 },
     ],
   };
 }

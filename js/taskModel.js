@@ -41,7 +41,7 @@ export function newTask() {
     // and are meaningless without it, so making them separate synced rows would
     // buy nothing and cost a merge conflict every time two people touched the
     // same task from different devices.
-    checklist: [], estimate: '', spent: '', dependsOn: [],
+    checklist: [], estimate: '', spent: '', rework: '', dependsOn: [],
   };
 }
 

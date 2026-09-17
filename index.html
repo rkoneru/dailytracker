@@ -290,6 +290,7 @@
                   <th class="col-blocked no-print" title="What this task waits for">Waits for</th>
                   <th class="col-hours" title="Estimated hours">Est.</th>
                   <th class="col-hours" title="Hours spent">Spent</th>
+                  <th class="col-hours" title="Hours spent redoing work already called done">Rework</th>
                   <th class="col-progress">Progress</th>
                   <th class="col-checks no-print" title="Checklist">Checks</th>
                   <th>Comments</th>
@@ -694,7 +695,9 @@
                   <th class="col-sev">Likelihood</th>
                   <th class="col-score">Score</th>
                   <th class="col-status">Status</th>
+                  <th class="col-date">Raised</th>
                   <th class="col-date">Due</th>
+                  <th class="col-date">Closed</th>
                   <th>Mitigation / next step</th>
                   <th class="col-action no-print"></th>
                 </tr>
@@ -706,6 +709,86 @@
         </section>
 
         <div id="blocker-registers"></div>
+      </div>
+    </section>
+
+    <!-- The twenty indicators, all derived. Nothing on this page is typed in. -->
+    <section id="page-kpis" class="page" role="region" aria-label="Project KPIs">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title">
+            <span>Project KPIs</span>
+            <span class="dash-header__badge" id="kpi-coverage">&mdash;</span>
+          </div>
+          <p class="hint report-subtitle">
+            Twenty indicators for schedule, cost, scope, risk and quality &mdash; every one of them
+            worked out from the plan and the registers, none of them typed in. An indicator with
+            nothing behind it reads &ldquo;not measured&rdquo; and says which field would fill it,
+            rather than showing a number nobody earned.
+          </p>
+        </header>
+
+        <section class="kpi-row" aria-label="Headline indicators">
+          <div class="kpi" id="kpi-head-spi">
+            <span class="kpi__label">Schedule (SPI)</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="kpi-head-cpi">
+            <span class="kpi__label">Cost (CPI)</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="kpi-head-risk">
+            <span class="kpi__label">Open risk exposure</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="kpi-head-util">
+            <span class="kpi__label">Resource utilisation</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+        </section>
+
+        <section class="card" id="sec-kpi-schedule">
+          <div class="card__head"><h2>Schedule KPIs</h2></div>
+          <div class="kpi-grid" id="kpi-grid-schedule"></div>
+        </section>
+        <section class="card" id="sec-kpi-cost">
+          <div class="card__head"><h2>Cost KPIs</h2></div>
+          <div class="kpi-grid" id="kpi-grid-cost"></div>
+        </section>
+        <section class="card" id="sec-kpi-scope">
+          <div class="card__head"><h2>Scope &amp; Change KPIs</h2></div>
+          <div class="kpi-grid" id="kpi-grid-scope"></div>
+        </section>
+        <section class="card" id="sec-kpi-risk">
+          <div class="card__head"><h2>Risk &amp; Issue KPIs</h2></div>
+          <div class="kpi-grid" id="kpi-grid-risk"></div>
+        </section>
+        <section class="card" id="sec-kpi-quality">
+          <div class="card__head"><h2>Quality &amp; Resource KPIs</h2></div>
+          <div class="kpi-grid" id="kpi-grid-quality"></div>
+        </section>
+
+        <section class="card card--quiet" id="sec-kpi-basis">
+          <div class="card__head"><h2>How these are worked out</h2></div>
+          <div class="table-scroll">
+            <table class="data-table" id="kpi-basis-table">
+              <thead>
+                <tr>
+                  <th class="col-num">#</th>
+                  <th>Indicator</th>
+                  <th>Formula</th>
+                  <th>Reads from</th>
+                  <th class="col-status">State</th>
+                </tr>
+              </thead>
+              <tbody id="kpi-basis-body"></tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </section>
 

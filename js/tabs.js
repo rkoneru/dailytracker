@@ -65,6 +65,14 @@ export const PAGE_TABS = {
     { id: 'sec-csi', label: 'Improvements' },
     { id: 'sec-lessons', label: 'Lessons Learned' },
   ],
+  'page-kpis': [
+    { id: 'sec-kpi-schedule', label: 'Schedule' },
+    { id: 'sec-kpi-cost', label: 'Cost' },
+    { id: 'sec-kpi-scope', label: 'Scope & Change' },
+    { id: 'sec-kpi-risk', label: 'Risk & Issue' },
+    { id: 'sec-kpi-quality', label: 'Quality & Resource' },
+    { id: 'sec-kpi-basis', label: 'How These Work' },
+  ],
   'page-resources': [
     { id: 'sec-people', label: 'People' },
     { id: 'sec-allocations', label: 'Allocations' },

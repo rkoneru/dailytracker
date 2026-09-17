@@ -1,4 +1,4 @@
-import { getState, scheduleSave, uid, trashRow } from './state.js';
+import { getState, scheduleSave, uid, trashRow, todayISO } from './state.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 import { parseDate } from './charts.js';
 import { scheduleSummary, setBaseline, clearBaseline, baselineSummaryText } from './schedule.js';
@@ -92,8 +92,13 @@ function bindMilestones() {
     if (field !== 'done' && field !== 'deliverableId') return;
     const item = findById(getState().milestones, rowIdOf(e.target));
     if (!item) return;
-    if (field === 'done') item.done = e.target.checked;
-    else item.deliverableId = e.target.value;
+    if (field === 'done') {
+      item.done = e.target.checked;
+      // Stamped when it is ticked, cleared when it is un-ticked. Without this
+      // the milestone achievement rate knows a milestone landed but not
+      // whether it landed on time, which is the only part worth measuring.
+      item.achieved = e.target.checked ? (item.achieved || todayISO()) : '';
+    } else item.deliverableId = e.target.value;
     commitChange();
   });
 
@@ -126,7 +131,7 @@ function bindMilestones() {
   });
 
   document.querySelector('#page-planner [data-action="add-milestone"]').addEventListener('click', () => {
-    getState().milestones.push({ id: uid(), text: '', progress: 0, due: '', done: false });
+    getState().milestones.push({ id: uid(), text: '', progress: 0, due: '', done: false, achieved: '' });
     commitChange();
     renderMilestones();
   });

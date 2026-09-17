@@ -25,17 +25,29 @@ function relativeTime(ts) {
 }
 
 /**
- * The toast shown straight after a delete. This is the path most undos will
- * take, so it names what went and puts Undo one click away.
+ * A toast with an Undo button on it. The Trash path below is the main caller,
+ * but rows that live inside another row — a checklist item, a meeting's agenda
+ * — never reach the Trash and still deserve the same one-click way back.
  */
-export function offerUndo(entry) {
-  const dismiss = toast(`${entry.typeLabel} "${entry.label}" moved to Trash.`);
+export function offerUndoAction(message, onUndo) {
+  const dismiss = toast(message);
   const node = document.querySelector('.toast-host .toast:last-child');
   if (!node) return;
 
   const undo = el('button', { type: 'button', class: 'toast__action', text: 'Undo' });
   undo.addEventListener('click', () => {
     dismiss();
+    onUndo();
+  });
+  node.insertBefore(undo, node.querySelector('.toast__close'));
+}
+
+/**
+ * The toast shown straight after a delete. This is the path most undos will
+ * take, so it names what went and puts Undo one click away.
+ */
+export function offerUndo(entry) {
+  offerUndoAction(`${entry.typeLabel} "${entry.label}" moved to Trash.`, () => {
     if (restoreFromTrash(entry.id)) {
       toast(`Restored "${entry.label}".`, 'success');
       if (onRestored) onRestored();
@@ -43,7 +55,6 @@ export function offerUndo(entry) {
       toast(`Could not restore "${entry.label}".`, 'error');
     }
   });
-  node.insertBefore(undo, node.querySelector('.toast__close'));
 }
 
 function renderRow(entry) {

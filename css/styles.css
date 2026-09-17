@@ -4168,3 +4168,125 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .kpi-basis__formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 #kpi-basis-body tr.is-unmeasured { color: var(--color-text-muted); }
 .tone-idle { background: var(--color-bg); color: var(--color-text-muted); }
+
+/* ---------- Meetings ---------- */
+
+.meeting-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* With no meeting selected there is nothing for these to show, and eight
+   empty tabs read as eight broken sections. */
+.is-empty-hidden { display: none; }
+
+.col-time { width: 120px; }
+.col-task { width: 110px; }
+
+.agenda-time {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint.is-over { color: #b91c1c; font-weight: 600; }
+
+.meeting-notes { width: 100%; resize: vertical; font-family: inherit; line-height: 1.6; }
+.meeting-outcome { margin-top: 16px; }
+
+/* ---------- Recorder ---------- */
+
+.recorder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+.recorder.is-live { border-color: #dc2626; }
+
+.recorder__state { font-size: 13px; font-weight: 600; color: var(--color-text-muted); }
+.recorder__state.is-live { color: #dc2626; }
+/* A recording indicator that does not move is easy to leave running by
+   mistake, so the live state pulses. */
+.recorder__state.is-live::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #dc2626;
+  animation: recorder-pulse 1.4s ease-in-out infinite;
+}
+@keyframes recorder-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) {
+  .recorder__state.is-live::before { animation: none; }
+}
+
+.recorder__interim {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.meeting-paste { margin: 12px 0; }
+.meeting-paste > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.meeting-paste textarea { width: 100%; margin-top: 8px; resize: vertical; }
+
+.transcript {
+  margin-top: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.transcript:empty { display: none; }
+
+.transcript__line {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  border-bottom: 1px solid var(--color-border);
+}
+.transcript__line:last-child { border-bottom: 0; }
+.transcript__at {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  padding-top: 2px;
+}
+.transcript__who { flex: 0 0 auto; font-weight: 700; }
+.transcript__text { flex: 1 1 auto; min-width: 0; }
+
+.suggestions { margin-top: 16px; }
+.suggestion__heading {
+  margin: 12px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.suggestion:last-child { border-bottom: 0; }
+.suggestion__text { flex: 1 1 auto; min-width: 0; font-size: 13px; }

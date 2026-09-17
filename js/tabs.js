@@ -65,6 +65,18 @@ export const PAGE_TABS = {
     { id: 'sec-csi', label: 'Improvements' },
     { id: 'sec-lessons', label: 'Lessons Learned' },
   ],
+  // The tabs are in the order a meeting happens in: prepare, discuss, follow
+  // up. A page whose tabs follow the work needs no explaining.
+  'page-meetings': [
+    { id: 'sec-meeting-overview', label: 'Overview' },
+    { id: 'sec-meeting-agenda', label: 'Agenda' },
+    { id: 'sec-meeting-attendees', label: 'Attendees' },
+    { id: 'sec-meeting-notes', label: 'Discussion Notes' },
+    { id: 'sec-meeting-decisions', label: 'Decisions' },
+    { id: 'sec-meeting-actions', label: 'Action Items' },
+    { id: 'sec-meeting-followups', label: 'Follow-up' },
+    { id: 'sec-meeting-transcript', label: 'Recording & Transcript' },
+  ],
   'page-kpis': [
     { id: 'sec-kpi-schedule', label: 'Schedule' },
     { id: 'sec-kpi-cost', label: 'Cost' },

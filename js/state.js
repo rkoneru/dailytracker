@@ -1,4 +1,5 @@
 import { TEMPLATES, DEFAULT_TEMPLATE_KEY } from './sampleData.js';
+import { migrateMeeting, MEETING_LISTS } from './meetingModel.js';
 import { REGISTER_KEYS, LEGACY_REGISTER_KEYS, CHARTER_FIELDS } from './registerDefs.js';
 import { newResource, resourceIdFor } from './resourceModel.js';
 import { snapshotOf, diffSnapshots } from './changeLog.js';
@@ -218,6 +219,11 @@ function migrateProject(data) {
   // are project rows so they sync; the people they point at are not.
   if (!Array.isArray(data.allocations)) data.allocations = [];
   if (!Array.isArray(data.timesheets)) data.timesheets = [];
+  // Meetings, with their agenda, attendees, decisions, actions, follow-ups
+  // and transcript nested inside each one — see meetingModel.js for why those
+  // are not six more row kinds.
+  if (!Array.isArray(data.meetings)) data.meetings = [];
+  data.meetings.forEach(migrateMeeting);
   migrateRegisters(data);
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are
@@ -333,6 +339,7 @@ const TRASH_LABELS = {
   knownErrors: 'Known error',
   allocations: 'Allocation',
   timesheets: 'Timesheet entry',
+  meetings: 'Meeting',
   project: 'Project',
 };
 
@@ -924,6 +931,17 @@ function regenerateRowIds(project) {
   });
   (project.timesheets || []).forEach((entry) => {
     if (entry.taskId) entry.taskId = swap(entry.taskId);
+  });
+  // A meeting's nested rows carry their own ids for the same reason a
+  // checklist item does, and an action item can point at the task it became —
+  // which has just been renumbered.
+  (project.meetings || []).forEach((meeting) => {
+    MEETING_LISTS.forEach((key) => {
+      (meeting[key] || []).forEach((row) => { row.id = uid(); });
+    });
+    (meeting.actions || []).forEach((action) => {
+      if (action.taskId) action.taskId = swap(action.taskId);
+    });
   });
 }
 

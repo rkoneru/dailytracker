@@ -1,10 +1,12 @@
-import { listFullProjects } from './state.js';
+import { downloadDeck } from './reportDeck.js';
+import { listFullProjects, getState, listResources, listAbsences } from './state.js';
 import { parseDate, daysBetween } from './charts.js';
 import { buildMailtoUrl } from './export.js';
 import { projectTrend, portfolioTrend, portfolioPctTrend } from './history.js';
 import { raidCounts, openItemsByType, raidScore } from './raid.js';
 import { scheduleSummary } from './schedule.js';
 import { el } from './dom.js';
+import { toast } from './dialog.js';
 import {
   sheet, ragChips, bulletBox, listBox, boxRow, fieldStrip, milestoneGrid,
   milestoneTimeline, issuesTable,
@@ -869,6 +871,24 @@ export function initReports() {
   });
 
   document.getElementById('btn-report-print').addEventListener('click', () => window.print());
+
+  document.getElementById('btn-report-deck').addEventListener('click', () => {
+    const report = renderReport();
+    try {
+      // The KPI slides are about the project that is open, because the twenty
+      // indicators are per project — a portfolio average of SPI would be a
+      // number with no owner and no meaning.
+      const count = downloadDeck(report, {
+        project: getState(),
+        resources: listResources(),
+        absences: listAbsences(),
+      });
+      toast(`${count} slides downloaded.`);
+    } catch (err) {
+      console.error('Could not build the deck.', err);
+      toast('Could not build the slide pack.', 'error');
+    }
+  });
 
   document.getElementById('btn-report-copy').addEventListener('click', (e) => copyReportText(e.currentTarget));
 

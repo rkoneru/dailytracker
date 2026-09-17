@@ -139,6 +139,23 @@ export const NAV_TREE = [
     label: 'Report & Share',
     children: [
       {
+        id: 'tab-meetings',
+        label: 'Meetings',
+        icon: '🗒',
+        page: 'page-meetings',
+        title: 'Meetings',
+        children: [
+          { id: 'nav-meeting-overview', label: 'Overview', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-overview' },
+          { id: 'nav-meeting-agenda', label: 'Agenda', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-agenda' },
+          { id: 'nav-meeting-attendees', label: 'Attendees', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-attendees' },
+          { id: 'nav-meeting-notes', label: 'Discussion Notes', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-notes' },
+          { id: 'nav-meeting-decisions', label: 'Decisions', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-decisions' },
+          { id: 'nav-meeting-actions', label: 'Action Items', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-actions' },
+          { id: 'nav-meeting-followups', label: 'Follow-up', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-followups' },
+          { id: 'nav-meeting-transcript', label: 'Recording & Transcript', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-transcript' },
+        ],
+      },
+      {
         id: 'tab-kpis',
         label: 'KPIs',
         icon: '📐',

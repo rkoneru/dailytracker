@@ -712,6 +712,255 @@
       </div>
     </section>
 
+    <!-- Meeting minutes, in the house format: prepare, discuss, follow up. -->
+    <section id="page-meetings" class="page" role="region" aria-label="Meetings">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title">
+            <span>Meetings</span>
+            <span class="dash-header__badge" id="meeting-status-badge">&mdash;</span>
+          </div>
+          <p class="hint report-subtitle">
+            Prepare &middot; discuss &middot; follow up. One record per meeting: the agenda you
+            planned, who actually came, what was decided, and what somebody owes by when.
+            Action items become tasks on the Task Tracker, so nothing agreed here has to be
+            retyped to be tracked.
+          </p>
+        </header>
+
+        <div class="meeting-controls no-print">
+          <label class="field-label field-label--grow">Meeting
+            <select class="field-input" id="meeting-picker" aria-label="Which meeting"></select>
+          </label>
+          <button type="button" class="btn btn-small btn-primary" id="btn-add-meeting">+ New Meeting</button>
+          <button type="button" class="btn btn-small btn-ghost" id="btn-delete-meeting">Delete</button>
+        </div>
+
+        <p class="hint callout" id="meeting-none" hidden>
+          No meetings yet. Create one to plan an agenda, take the minutes and record the actions.
+        </p>
+
+        <section class="kpi-row" aria-label="Meeting health">
+          <div class="kpi" id="meeting-count-attendance">
+            <span class="kpi__label">Attendance</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="meeting-count-agenda">
+            <span class="kpi__label">Agenda</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="meeting-count-decisions">
+            <span class="kpi__label">Decisions</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="meeting-count-actions">
+            <span class="kpi__label">Open actions</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+        </section>
+
+        <section class="card" id="sec-meeting-overview">
+          <div class="card__head"><h2>Meeting Overview</h2></div>
+          <div class="charter-grid" id="meeting-overview-fields"></div>
+        </section>
+
+        <section class="card" id="sec-meeting-agenda">
+          <div class="card__head">
+            <h2>Agenda &amp; Time Blocks</h2>
+            <span class="hint" id="agenda-load"></span>
+            <button type="button" class="btn btn-small btn-primary no-print" data-meeting-add="agenda">+ Add Topic</button>
+          </div>
+          <p class="hint">
+            Each topic starts when the one before it finishes, so changing a duration re-times
+            the rest. Give a topic its own time to re-anchor everything after it.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table" id="agenda-table">
+              <thead>
+                <tr>
+                  <th class="col-drag no-print"></th>
+                  <th class="col-time">Time</th>
+                  <th>Agenda topic</th>
+                  <th class="col-assignee">Lead</th>
+                  <th class="col-num">Minutes</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="agenda-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="agenda-empty" hidden>No agenda yet.</p>
+        </section>
+
+        <section class="card" id="sec-meeting-attendees">
+          <div class="card__head">
+            <h2>Attendees</h2>
+            <span class="hint" id="attendee-count"></span>
+            <button type="button" class="btn btn-small btn-primary no-print" data-meeting-add="attendees">+ Add Attendee</button>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-invite-team">Invite the team</button>
+          </div>
+          <p class="hint">
+            &ldquo;Invite the team&rdquo; pulls everyone allocated to this project from Resources,
+            so the list matches who is actually booked rather than who was on the last invite.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table" id="attendee-table">
+              <thead>
+                <tr>
+                  <th class="col-drag no-print"></th>
+                  <th class="col-name">Attendee</th>
+                  <th>Role</th>
+                  <th>Department</th>
+                  <th class="col-check">Attended</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="attendee-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="attendee-empty" hidden>Nobody listed yet.</p>
+        </section>
+
+        <section class="card" id="sec-meeting-notes">
+          <div class="card__head"><h2>Discussion Notes</h2></div>
+          <p class="hint">What was actually said, in your words. The transcript is kept separately.</p>
+          <textarea class="field-input meeting-notes" id="meeting-notes" rows="14"
+                    placeholder="Quarterly results: Q1 revenue up 8% YoY&#10;Budget review: reallocate 10% from discretionary spend&#10;&#10;One line per point reads best in the minutes."></textarea>
+        </section>
+
+        <section class="card" id="sec-meeting-decisions">
+          <div class="card__head">
+            <h2>Decisions Made</h2>
+            <button type="button" class="btn btn-small btn-primary no-print" data-meeting-add="decisions">+ Add Decision</button>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="decision-table">
+              <thead>
+                <tr>
+                  <th class="col-drag no-print"></th>
+                  <th>Decision</th>
+                  <th class="col-status">Tag</th>
+                  <th class="col-status">Impact</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="decision-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="decision-empty" hidden>Nothing decided yet.</p>
+        </section>
+
+        <section class="card" id="sec-meeting-actions">
+          <div class="card__head">
+            <h2>Action Items</h2>
+            <span class="hint" id="action-count"></span>
+            <button type="button" class="btn btn-small btn-primary no-print" data-meeting-add="actions">+ Add Action</button>
+          </div>
+          <p class="hint">
+            Send an action to the Task Tracker and it becomes a real task with an owner and a due
+            date. The two stay linked, so ticking it off there closes it here.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table" id="action-table">
+              <thead>
+                <tr>
+                  <th class="col-drag no-print"></th>
+                  <th>Action item</th>
+                  <th class="col-assignee">Owner</th>
+                  <th class="col-date">Due date</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-task no-print">Task</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="action-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="action-empty" hidden>No actions yet.</p>
+        </section>
+
+        <section class="card" id="sec-meeting-followups">
+          <div class="card__head">
+            <h2>Follow-up Schedule</h2>
+            <button type="button" class="btn btn-small btn-primary no-print" data-meeting-add="followUps">+ Add Follow-up</button>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="followup-table">
+              <thead>
+                <tr>
+                  <th class="col-drag no-print"></th>
+                  <th>Follow-up activity</th>
+                  <th>Purpose</th>
+                  <th class="col-assignee">Owner</th>
+                  <th class="col-date">Scheduled</th>
+                  <th class="col-status">Type</th>
+                  <th class="col-status">Reminder</th>
+                  <th class="col-action no-print"></th>
+                </tr>
+              </thead>
+              <tbody id="followup-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="followup-empty" hidden>Nothing scheduled yet.</p>
+
+          <div class="meeting-outcome">
+            <label class="field-label field-label--block">🏆 Meeting outcome summary
+              <textarea class="field-input" id="meeting-outcome" rows="3"
+                        placeholder="Aligned on priorities, approved the budget reallocation, and set clear next steps with owners and timelines."></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section class="card" id="sec-meeting-transcript">
+          <div class="card__head">
+            <h2>Recording &amp; Transcript</h2>
+            <span class="hint" id="transcript-count"></span>
+          </div>
+
+          <p class="hint callout" id="transcript-privacy"></p>
+
+          <div class="recorder no-print" id="recorder">
+            <button type="button" class="btn btn-primary" id="btn-record">● Start recording</button>
+            <span class="recorder__state" id="recorder-state">Not recording</span>
+            <span class="recorder__interim" id="recorder-interim"></span>
+          </div>
+
+          <details class="meeting-paste no-print" id="transcript-paste">
+            <summary>Paste a transcript instead</summary>
+            <p class="hint">
+              From Teams, Zoom, Meet or anywhere else. One line per utterance;
+              <code>Name: what they said</code> and <code>[00:12] Name: what they said</code>
+              are both understood.
+            </p>
+            <textarea class="field-input" id="transcript-input" rows="6"
+                      placeholder="[00:00] Jessica Morgan: Let's start with the Q1 numbers."></textarea>
+            <div class="sync-actions">
+              <button type="button" class="btn btn-small btn-primary" id="btn-import-transcript">Add to transcript</button>
+              <button type="button" class="btn btn-small btn-ghost" id="btn-copy-transcript">Copy transcript</button>
+              <button type="button" class="btn btn-small btn-ghost" id="btn-clear-transcript">Clear transcript</button>
+            </div>
+          </details>
+
+          <div class="transcript" id="transcript-lines"></div>
+          <p class="hint" id="transcript-empty" hidden>
+            Nothing recorded yet. Press record, or paste a transcript from your meeting tool.
+          </p>
+
+          <div class="card card--quiet suggestions no-print" id="transcript-suggestions" hidden>
+            <div class="card__head">
+              <h2>Worth writing up</h2>
+              <span class="hint">Suggestions from the transcript &mdash; you decide.</span>
+            </div>
+            <div id="suggestion-list"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <!-- The twenty indicators, all derived. Nothing on this page is typed in. -->
     <section id="page-kpis" class="page" role="region" aria-label="Project KPIs">
       <div class="print-page">
@@ -839,9 +1088,15 @@
           <p class="hint">Print gives you a clean PDF. Email opens your mail app with a plain-text version in the body. Copy puts the same text on your clipboard for Slack or Teams.</p>
           <div class="report-share-actions">
             <button type="button" class="btn btn-primary" id="btn-report-print">🖨 Print / Save as PDF</button>
+            <button type="button" class="btn btn-primary" id="btn-report-deck">📊 Download Slides (.pptx)</button>
             <button type="button" class="btn btn-primary" id="btn-report-email">✉ Email Summary</button>
             <button type="button" class="btn btn-ghost" id="btn-report-copy">📋 Copy Text</button>
           </div>
+          <p class="hint">
+            The slide pack is a standard <code>.pptx</code>: it opens in PowerPoint and Keynote, and
+            in <strong>Google Slides</strong> by uploading it to Drive and opening it there, which
+            converts it. There is no direct Google integration &mdash; this app talks to nobody.
+          </p>
         </section>
 
         <div id="report-project-cards" class="report-project-cards"></div>

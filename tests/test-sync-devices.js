@@ -71,9 +71,12 @@ const dashNames = (d) => d.page.evaluate(async () => (await import('/js/state.js
   // in upload beside the tasks with no special handling. `roster` is absent and
   // `allocations` present because the per-project roster became a view of the
   // central pool: the rows are the same people, carried across on load.
+  // `meetings` is one row per meeting with its agenda, attendees, decisions,
+  // actions, follow-ups and transcript nested inside it, so a whole minute
+  // travels as a unit rather than as six collections that can half-arrive.
   eq('rows carry their kind', [...new Set(dump.rows.map(r => r.kind))].sort(),
      ['allocations', 'changeRequests', 'comms', 'dashTasks', 'deliverables', 'dependencies',
-      'lessons', 'milestones', 'notes', 'raci', 'raid', 'stakeholders']);
+      'lessons', 'meetings', 'milestones', 'notes', 'raci', 'raid', 'stakeholders']);
   eq('and the migration converted rather than dropped them',
      dump.rows.filter((r) => r.kind === 'allocations').length > 0, true);
   eq('no updatedAt duplicated into the blob', 'updatedAt' in dump.projects[0].data, false);

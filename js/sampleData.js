@@ -117,6 +117,56 @@ function createMarketingCampaign() {
       { id: id('ls'), date: '2026-09-06', phase: 'Execution', category: 'Supplier', what: 'Influencer contracts went to legal without a template, so each one was reviewed from scratch.', impact: 'Four days of avoidable delay, and the contracts are still the critical path.', recommendation: 'Agree a standard influencer contract with legal before the next campaign starts.', owner: 'Priya N.', status: 'Agreed' },
       { id: id('ls'), date: '2026-09-08', phase: 'Planning', category: 'Quality', what: 'The tracking pixel was set up after the ad account rather than as part of it.', impact: 'Launch went live with unverified attribution for two days.', recommendation: 'Make verified tracking part of the ad-account deliverable, not a follow-on task.', owner: 'Jordan K.', status: 'New' },
     ],
+    meetings: [
+      {
+        id: id('mt'),
+        name: 'Weekly campaign stand-up',
+        date: '2026-09-08',
+        startTime: '09:30',
+        endTime: '10:00',
+        location: 'Virtual (Meet)',
+        purpose: 'Unblock the week and agree the paid/organic split ahead of launch.',
+        owner: 'Priya N.',
+        preparedBy: 'Priya N.',
+        status: 'Complete',
+        notes: 'Creative is signed off and the asset pack is with the agency.\n'
+          + 'Tracking pixel still not firing on checkout — Jordan has a dev ticket open.\n'
+          + 'Legal have not come back on the influencer terms; launch plan assumes organic-only fallback.',
+        outcome: 'Launch confirmed for the 8th on organic plus paid, with influencer content held back '
+          + 'until contracts land. Budget split decided after week one data.',
+        agenda: [
+          { id: id('ag'), time: '09:30', topic: 'Creative sign-off', lead: 'Marcus T.', minutes: 5 },
+          { id: id('ag'), time: '', topic: 'Tracking pixel issue', lead: 'Jordan K.', minutes: 10 },
+          { id: id('ag'), time: '', topic: 'Influencer contract status', lead: 'Priya N.', minutes: 10 },
+          { id: id('ag'), time: '', topic: 'Next steps', lead: 'Priya N.', minutes: 5 },
+        ],
+        attendees: [
+          { id: id('at'), name: 'Priya N.', role: 'Campaign Lead', department: 'Marketing', attended: true },
+          { id: id('at'), name: 'Marcus T.', role: 'Creative Director', department: 'Design', attended: true },
+          { id: id('at'), name: 'Jordan K.', role: 'Paid Media Manager', department: 'Northside Agency', attended: true },
+          { id: id('at'), name: 'Legal', role: 'Contract review', department: 'Legal', attended: false },
+        ],
+        decisions: [
+          { id: id('de'), decision: 'Launch on the 8th without influencer content if contracts have not landed.', tag: 'Operational', impact: 'High' },
+          { id: id('de'), decision: 'Hold the paid/organic split decision until week one performance data.', tag: 'Financial', impact: 'Medium' },
+        ],
+        actions: [
+          { id: id('ac'), text: 'Chase legal on the influencer terms', owner: 'Priya N.', due: '2026-09-10', status: 'In Progress', taskId: '' },
+          { id: id('ac'), text: 'Fix the checkout tracking pixel', owner: 'Jordan K.', due: '2026-09-11', status: 'In Progress', taskId: '' },
+          { id: id('ac'), text: 'Prepare organic-only fallback creative', owner: 'Marcus T.', due: '2026-09-09', status: 'Done', taskId: '' },
+        ],
+        followUps: [
+          { id: id('fu'), activity: 'Week one performance review', purpose: 'Decide the paid/organic split on real data', owner: 'Jordan K.', date: '2026-09-15', type: 'Review', reminder: '1 day before' },
+          { id: id('fu'), activity: 'Next campaign stand-up', purpose: 'Unblock the week', owner: 'Priya N.', date: '2026-09-15', type: 'Meeting', reminder: '1 day before' },
+        ],
+        transcript: [
+          { id: id('ut'), at: '00:12', speaker: 'Marcus T.', text: 'All six creative formats are approved and with the agency, so that one is done.', final: true },
+          { id: id('ut'), at: '01:40', speaker: 'Jordan K.', text: "The pixel still is not firing on checkout. I'll raise a dev ticket and chase it today.", final: true },
+          { id: id('ut'), at: '03:05', speaker: 'Priya N.', text: 'Legal have gone quiet on the influencer terms. We agreed to launch on the 8th regardless and hold that content back.', final: true },
+          { id: id('ut'), at: '04:20', speaker: 'Priya N.', text: "We'll decide the paid and organic split once we have a week of data rather than guessing now.", final: true },
+        ],
+      },
+    ],
     dashTasks: [
       { id: id('d'), name: 'Campaign strategy & brief', assigned: 'Priya N.', start: '2026-09-01', end: '2026-09-02', baseStart: '2026-09-01', baseEnd: '2026-09-02', status: 'Complete', prio: 'High', comments: 'Signed off by marketing lead.', estimate: 12, spent: 11, rework: 0 },
       { id: id('d'), name: 'Creative asset design', assigned: 'Marcus T.', start: '2026-09-02', end: '2026-09-05', baseStart: '2026-09-02', baseEnd: '2026-09-05', status: 'Complete', prio: 'High', comments: 'All variants approved.', estimate: 40, spent: 46, rework: 6 },

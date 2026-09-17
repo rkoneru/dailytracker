@@ -38,7 +38,7 @@ export const ROLES = [
     blurb: 'Plan, tasks, risks and reports, plus the change log.',
     home: 'tab-dashboard',
     nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-service', 'tab-improve', 'tab-kpis', 'tab-reports', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
+      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
   },
   {
     id: 'product-manager',
@@ -47,7 +47,7 @@ export const ROLES = [
     blurb: 'What is being delivered and why, plus what is landing when.',
     home: 'tab-dashboard',
     nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-service', 'tab-improve', 'tab-kpis', 'tab-reports', 'btn-projects', 'btn-export-panel'],
+      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'btn-projects', 'btn-export-panel'],
   },
   {
     id: 'scrum-master',
@@ -56,7 +56,7 @@ export const ROLES = [
     blurb: 'The board, the plan, what is blocking the team, and retrospectives.',
     home: 'tab-tasks',
     nav: ['tab-mywork', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-improve', 'tab-kpis', 'tab-reports', 'btn-projects', 'btn-export-panel'],
+      'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'btn-projects', 'btn-export-panel'],
   },
   {
     id: 'developer',
@@ -82,7 +82,7 @@ export const ROLES = [
     aka: 'Service delivery manager, operations, support lead',
     blurb: 'Service levels, releases, change control and known issues.',
     home: 'tab-service',
-    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-kpis', 'tab-reports',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports',
       'btn-projects', 'tab-sync', 'tab-changelog', 'btn-export-panel'],
   },
 ];

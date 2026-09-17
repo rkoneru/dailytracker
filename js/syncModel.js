@@ -30,6 +30,10 @@ export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog
   // note on migrateStore in state.js for why, and what keeps the reference
   // resolvable across devices anyway.
   'allocations', 'timesheets',
+  // A meeting is one row with its agenda, attendees, decisions, actions,
+  // follow-ups and transcript nested inside it, so the whole minute travels
+  // as a unit rather than as six collections that can half-arrive.
+  'meetings',
   ...REGISTER_KEYS];
 
 // Fields the app keeps locally that must never be pushed to the server.

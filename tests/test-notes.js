@@ -1,4 +1,4 @@
-const { APP_URL, out, launch } = require('./harness');
+const { APP_URL, out, launch, openSection } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -10,6 +10,7 @@ const { APP_URL, out, launch } = require('./harness');
   await page.goto(APP_URL + '/index.html', { waitUntil: 'networkidle' });
   await page.waitForTimeout(300);
   await page.click('#tab-planner');
+  await openSection(page, 'sec-notes');
   await page.waitForTimeout(200);
 
   const notesCount = await page.locator('#notes-list li').count();

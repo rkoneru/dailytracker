@@ -27,10 +27,10 @@ const eq = (n, got, want) => {
   // The default role is the engagement lead, who sees all of it.
   eq('groups open, pages closed at first run', await visibleLabels(),
      ['Across Projects', 'My Work', 'Portfolio', 'Resources',
-      'This Project', 'Dashboard', 'Tasks', 'Plan',
-      'Delivery', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons',
-      'Engagement', 'Scope & Contract', 'People & Stakeholders',
-      'Reporting', 'Reports', 'Manage', 'Projects', 'Sync & Team', 'Change Log', 'Trash', 'Export / Share']);
+      'Plan & Build', 'Dashboard', 'Tasks', 'Plan', 'Scope & Contract',
+      'Run & Support', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons',
+      'People & Reporting', 'People & Stakeholders', 'Reports',
+      'Manage', 'Projects', 'Sync & Team', 'Change Log', 'Trash', 'Export / Share']);
   eq('aria-level is set', await page.getAttribute('#tab-dashboard', 'aria-level'), '2');
   eq('leaf level is deeper', await page.getAttribute('#nav-ticks', 'aria-level'), '3');
 
@@ -85,10 +85,10 @@ const eq = (n, got, want) => {
   await page.waitForTimeout(300);
 
   console.log('\n--- keyboard: WAI-ARIA tree pattern ---');
-  // Walking from "This Project" rather than the first group: the arrow-key
+  // Walking from "Plan & Build" rather than the first group: the arrow-key
   // assertions below are about stepping into a node with children, and the
   // Plan subtree is the only one deep enough to test that.
-  await page.focus('#group-work');
+  await page.focus('#group-plan');
   const focused = () => page.evaluate(() => document.activeElement.id);
   await page.keyboard.press('ArrowDown');
   eq('ArrowDown moves to first child', await focused(), 'tab-dashboard');
@@ -167,7 +167,7 @@ const eq = (n, got, want) => {
   // 2. Every group heading gets its separation, not just the first.
   const groupMargins = await page.$$eval('.nav-row--group',
     els => els.map(e => getComputedStyle(e).marginTop));
-  eq('only the first group sits flush', groupMargins, ['0px', '10px', '10px', '10px', '10px', '10px']);
+  eq('only the first group sits flush', groupMargins, ['0px', '10px', '10px', '10px', '10px']);
 
   // 3. A jumped-to section must clear the sticky header.
   // The Planner subtree may be collapsed at this point, so open it first.
@@ -196,8 +196,9 @@ const eq = (n, got, want) => {
   eq('and only one row is tabbable',
      await page.locator('.nav-row[tabindex="0"]').count(), 1);
 
-  // 6. Pages are regions now, not orphaned tabpanels.
-  eq('no stale tabpanel roles', await page.locator('[role="tabpanel"]').count(), 0);
+  // 6. Pages are regions, not tabpanels — the tabpanel role belongs to the
+  // sections inside a page, which are what the in-page tab strip switches.
+  eq('no page claims the tabpanel role', await page.locator('.page[role="tabpanel"]').count(), 0);
   eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 15);
 
   // 7. Opening a report from the nav renders it once, not twice.

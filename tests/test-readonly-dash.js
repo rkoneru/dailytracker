@@ -1,4 +1,4 @@
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openSection } = require('./harness');
 const { eq, done } = createChecks();
 
 // The project-level fields — name, status, status date, budget, baseline —
@@ -41,6 +41,7 @@ const acceptDialog = async (page) => {
 
   console.log('\n--- project fields are edited on the Planner and reach the Dashboard ---');
   await page.click('#tab-planner');
+  await openSection(page, 'sec-budget');
   await page.waitForTimeout(500);
 
   await page.locator('#page-planner [data-field="dashStatus"]').fill('AT RISK');
@@ -72,6 +73,7 @@ const acceptDialog = async (page) => {
   eq('and the slip column on the Tracker says so too',
      [...new Set(await page.$$eval('#tracker-body [data-role="slip"]', (els) => els.map((e) => e.textContent)))], ['—']);
   await page.click('#tab-planner');
+  await openSection(page, 'sec-budget');
   await page.waitForTimeout(400);
 
   await page.click('#btn-set-baseline');
@@ -88,6 +90,7 @@ const acceptDialog = async (page) => {
   eq('the slipped task is flagged in its own row',
      (await page.$$eval('#tracker-body .slip-chip', (els) => els.map((e) => e.textContent))).some((t) => t.startsWith('+')), true);
   await page.click('#tab-planner');
+  await openSection(page, 'sec-budget');
   await page.waitForTimeout(500);
   eq('and the Planner note counts it', (await page.textContent('#planner-baseline-note')).includes('slipped'), true);
 
@@ -102,6 +105,7 @@ const acceptDialog = async (page) => {
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1000);
   await page.click('#tab-planner');
+  await openSection(page, 'sec-budget');
   await page.waitForTimeout(500);
   eq('budget persisted', await page.inputValue('#page-planner [data-field="budgetPlanned"]'), '40000');
   eq('status persisted', await page.inputValue('#page-planner [data-field="dashStatus"]'), 'AT RISK');

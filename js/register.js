@@ -17,6 +17,7 @@ import { makeSortable, reorderById } from './dragReorder.js';
 import { el, dragHandle } from './dom.js';
 import { currentUrl } from './router.js';
 import { toast } from './dialog.js';
+import { setTabCount } from './tabs.js';
 
 export function slug(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -189,9 +190,14 @@ function applySearch(def) {
 export function renderRegister(def) {
   const tbody = document.getElementById(`${def.id}-body`);
   if (!tbody) return;
+  const rows = rowsOf(def);
   tbody.innerHTML = '';
-  rowsOf(def).forEach((row, i) => tbody.appendChild(renderRow(def, row, i)));
+  rows.forEach((row, i) => tbody.appendChild(renderRow(def, row, i)));
   applySearch(def);
+  // Now that a register is a tab rather than the fourth table down, its count
+  // has to be on the tab: otherwise the only way to find out whether anything
+  // is in there is to click it.
+  setTabCount(`sec-${def.id}`, rows.length || '');
 }
 
 /**

@@ -1,4 +1,4 @@
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openSection } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -70,6 +70,7 @@ const { eq, done } = createChecks();
 
   console.log('\n--- tone tracks the data, it is not decoration ---');
   await page.click('#tab-planner');
+  await openSection(page, 'sec-budget');
   await page.waitForTimeout(400);
   await page.click('#btn-clear-baseline');
   await page.waitForSelector('.dialog');

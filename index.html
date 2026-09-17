@@ -252,7 +252,7 @@
           <p class="effort__caveat" id="effort-unestimated"></p>
         </section>
 
-        <section class="card card--feature">
+        <section class="card card--feature" id="sec-task-list">
           <div class="card__head">
             <h2><span class="section-number">1</span> Task Tracker</h2>
             <button type="button" class="btn btn-small btn-primary no-print" data-action="add-task-row">+ Add Task</button>
@@ -303,7 +303,7 @@
           <p class="hint schedule-note" id="tasks-schedule-note"></p>
         </section>
 
-        <section class="card card--feature">
+        <section class="card card--feature" id="sec-task-board">
           <div class="card__head">
             <h2><span class="section-number">2</span> Priority Board</h2>
             <span class="hint">Drag a card between columns to change its priority or put it on hold.</span>
@@ -311,7 +311,7 @@
           <div class="board" id="priority-board"></div>
         </section>
 
-        <div class="dash-row dash-row--2">
+        <div class="dash-row dash-row--2" id="sec-task-help">
           <section class="card card--quiet">
             <div class="card__head"><h2>Legend</h2></div>
             <ul class="legend-key" id="tasks-legend"></ul>
@@ -654,7 +654,7 @@
           <p class="hint report-subtitle">
             Everything that is in the way, in one place. The RAID log holds risks, issues,
             decisions and assumptions &mdash; risks scored severity × likelihood, the rest ranked
-            on severity. Dependencies are below it, because what you are waiting on someone
+            on severity. Dependencies sit alongside it, because what you are waiting on someone
             else for is the other half of the same question. Open items feed the Dashboard
             and the SteerCo and Executive reports.
           </p>
@@ -662,7 +662,7 @@
 
         <section class="stat-cards stat-cards--4" id="raid-summary"></section>
 
-        <section class="card">
+        <section class="card" id="sec-raid-log">
           <div class="card__head">
             <h2>Log</h2>
             <button type="button" class="btn btn-small no-print" id="btn-add-raid">+ Add Entry</button>
@@ -849,7 +849,7 @@
           </label>
         </div>
 
-        <section class="card card--feature">
+        <section class="card card--feature" id="sec-people">
           <div class="card__head">
             <h2><span class="section-number">1</span> People</h2>
             <span class="hint" id="resources-count">Nobody yet</span>
@@ -889,7 +889,7 @@
           </p>
         </section>
 
-        <section class="card card--feature">
+        <section class="card card--feature" id="sec-allocations">
           <div class="card__head">
             <h2><span class="section-number">2</span> Allocations</h2>
             <span class="hint" id="allocations-count">Nothing booked</span>
@@ -920,7 +920,7 @@
           <p class="hint" id="allocations-empty" hidden>Nobody is booked on anything yet.</p>
         </section>
 
-        <div class="dash-row dash-row--2">
+        <div class="dash-row dash-row--2" id="sec-availability">
           <section class="card">
             <div class="card__head">
               <h2><span class="section-number">3</span> Availability</h2>
@@ -956,7 +956,7 @@
           </section>
         </div>
 
-        <section class="card card--feature">
+        <section class="card card--feature" id="sec-timesheets">
           <div class="card__head">
             <h2><span class="section-number">4</span> Timesheets</h2>
             <button type="button" class="btn btn-small btn-primary no-print" id="btn-add-timesheet">+ Add Week</button>
@@ -987,7 +987,7 @@
           <p class="hint" id="timesheets-empty" hidden>No time booked yet.</p>
         </section>
 
-        <section class="card card--quiet">
+        <section class="card card--quiet" id="sec-conflicts">
           <div class="card__head">
             <h2>Worth looking at</h2>
             <span class="hint" id="conflicts-count">Nothing to flag</span>

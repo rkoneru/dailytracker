@@ -31,6 +31,7 @@ import { initChangeLog, renderChangeLog } from './changeLogPage.js';
 import { getRole, seedRoleFromMembership } from './roles.js';
 import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refreshSyncStatus } from './sync.js';
 import { initPalette } from './palette.js';
+import { mountTabs, showSection } from './tabs.js';
 import { initMyWork, renderMyWork } from './myWork.js';
 import { initPortfolio, renderPortfolio } from './portfolio.js';
 import { initResources, renderResources } from './resourcesPage.js';
@@ -126,6 +127,10 @@ function showPage(pageId, title) {
   // whatever the last render left behind.
   if (pageId === 'page-scope' || pageId === 'page-people') renderEngagement();
   if (pageId === 'page-service' || pageId === 'page-improve') renderService();
+
+  // Last, because the register pages build their own cards above and the strip
+  // can only list the sections that exist by the time it is drawn.
+  mountTabs(pageId);
 }
 
 // The node the app is currently showing, so the router can rebuild the link
@@ -146,20 +151,32 @@ function navigateTo(node, { fromRoute = false, rowId = '' } = {}) {
 
   if (!fromRoute) setRoute({ navId: node.id, projectId: getActiveProjectId() });
 
-  // The page has to be visible before anything on it can be scrolled to, and
-  // a named row wins over the section the nav row points at.
+  // A nav leaf names a section; on a tabbed page that selects a tab rather than
+  // scrolling past everything above it. Done now rather than in the frame
+  // below, so the page never paints the remembered tab on its way to this one.
   const section = node.section;
-  if (rowId || section) {
+  if (section) {
+    const tabbed = showSection(node.page, section);
     requestAnimationFrame(() => {
-      if (rowId) {
-        if (revealRow(rowId)) return;
-        // The row is genuinely not here — a different project, or someone
-        // deleted it. Landing silently on the right page with nothing
-        // highlighted looks like the link worked, which is worse than saying so.
-        toast('That link points at something this project no longer has.', 'error');
-        return;
-      }
-      if (section) document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Bring the top of the page's content into view. On a tabbed page that
+      // is the strip, not the section: scrolling the strip off the top to show
+      // what it just selected would hide the other four tabs from someone who
+      // has only just arrived.
+      const target = (tabbed && document.querySelector(`#${node.page} .page-tabs`))
+        || document.getElementById(section);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  // A row, though, has to wait for the page to be on screen before it can be
+  // scrolled to — and a named row wins over the section the nav row points at.
+  if (rowId) {
+    requestAnimationFrame(() => {
+      if (revealRow(rowId)) return;
+      // The row is genuinely not here — a different project, or someone
+      // deleted it. Landing silently on the right page with nothing
+      // highlighted looks like the link worked, which is worse than saying so.
+      toast('That link points at something this project no longer has.', 'error');
     });
   }
 }

@@ -6,7 +6,7 @@
 // allocations rather than a second copy of it, and whether the app tells you
 // the truth when a booking cannot be kept.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openSection } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -123,6 +123,7 @@ const { eq, done } = createChecks();
   console.log('\n--- removing an allocation removes it from the roster too ---');
   await page.click('#tab-resources');
   await page.waitForTimeout(700);
+  await openSection(page, 'sec-allocations');
   const allocBefore = await page.locator('#allocations-body tr').count();
   await page.click('#allocations-body tr:first-child [data-action="delete-alloc"]');
   await page.waitForTimeout(800);
@@ -187,7 +188,9 @@ const { eq, done } = createChecks();
   console.log('\n--- booking someone across leave is reported ---');
   await page.click('#tab-resources');
   await page.waitForTimeout(800);
+  await openSection(page, 'sec-conflicts');
   const conflictsBefore = await page.locator('#resource-conflicts li').count();
+  await openSection(page, 'sec-availability');
   await page.click('#btn-add-absence');
   await page.waitForTimeout(700);
   // Cover the whole window, so it necessarily collides with a booking.
@@ -206,6 +209,7 @@ const { eq, done } = createChecks();
        .some((t) => t.includes('only') && t.includes('left after')), true);
 
   console.log('\n--- a timesheet week totals and prices itself ---');
+  await openSection(page, 'sec-timesheets');
   await page.click('#btn-add-timesheet');
   await page.waitForTimeout(700);
   await page.fill('#timesheets-body tr:first-child [data-field="hours"]', '10');
@@ -241,6 +245,7 @@ const { eq, done } = createChecks();
   console.log('\n--- removing someone from the pool keeps the record of their bookings ---');
   const firstName = await page.inputValue('#resources-body tr:first-child [data-field="name"]');
   const bookedBefore = await page.locator('#allocations-body tr').count();
+  await openSection(page, 'sec-people');
   await page.click('#resources-body tr:first-child [data-action="delete-resource"]');
   await page.waitForTimeout(400);
   eq('it asks first, and says what it will and will not do',

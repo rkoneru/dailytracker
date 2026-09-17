@@ -4,7 +4,7 @@
 // point someone at something, and the log is how anyone reconstructs what
 // happened without having been there.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openSection } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -126,6 +126,7 @@ const { eq, done } = createChecks();
   console.log('\n--- it catches sign-offs, budgets and RAG ---');
   await page.click('#tab-scope');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-deliverables');
   await page.selectOption('#deliverables-body tr:nth-child(3) [data-field="status"]', 'Accepted');
   await page.waitForTimeout(800);
   await page.click('#tab-planner');

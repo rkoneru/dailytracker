@@ -168,6 +168,7 @@ button, input, textarea {
 /* Sections the sidebar jumps to must clear the sticky header, or the heading
    you navigated to ends up hidden underneath it. */
 .page .card[id] { scroll-margin-top: 72px; }
+.page .page-tabs { scroll-margin-top: 72px; }
 
 .app-header {
   position: sticky;
@@ -4010,3 +4011,82 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .rpt-list__meta { flex: 0 0 auto; color: #6b6b6b; font-size: 0.72rem; white-space: nowrap; }
 
 .rpt-boxrow--tight { grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); }
+
+/* ---------- In-page tabs ---------- */
+/* One page, one thing at a time. The strip replaces the four tables you used to
+   scroll past to reach the fifth; the sections themselves are unchanged, and
+   printing shows every one of them (see the print rules below). */
+
+.page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  /* Long strips (Service & Support has five) wrap onto a second line on a
+     phone. Scrolling them sideways would be tidier and worse: two tabs you
+     cannot see are two features someone will conclude are missing. The
+     overflow rule is the backstop for a single tab wider than the page. */
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.page-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.page-tab:hover { background: var(--color-surface); color: var(--color-text); }
+.page-tab:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.page-tab.is-active {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-primary);
+}
+
+.page-tab__count {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.page-tab.is-active .page-tab__count {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.is-tab-hidden { display: none; }
+
+/* The register pages hold their cards in a host div. Left as a block it is an
+   empty flex item once its cards are on other tabs, and the page gains a 20px
+   gap out of nowhere; `contents` hands the cards straight to the page. */
+#scope-registers,
+#people-registers,
+#service-registers,
+#improve-registers,
+#blocker-registers { display: contents; }
+
+/* A status report that quietly dropped four of five registers because of a UI
+   affordance would be data loss, not a layout choice. Print shows the lot. */
+@media print {
+  .is-tab-hidden { display: block !important; }
+}

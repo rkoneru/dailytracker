@@ -1,4 +1,4 @@
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openSection } = require('./harness');
 const { eq, done } = createChecks();
 
 const acceptDialog = async (page) => {
@@ -49,8 +49,10 @@ const acceptDialog = async (page) => {
   // Milestones and notes are still deleted from the Planner — only tasks moved.
   await page.click('#tab-planner');
   await page.waitForTimeout(400);
+  await openSection(page, 'sec-milestones');
   await page.locator('#milestones-body tr').nth(0).locator('[data-action="delete-milestone"]').click();
   await page.waitForTimeout(300);
+  await openSection(page, 'sec-notes');
   await page.locator('#notes-list li').nth(0).locator('[data-action="delete-note"]').click();
   await page.waitForTimeout(300);
   await page.click('#tab-raid');

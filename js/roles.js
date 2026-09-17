@@ -35,7 +35,7 @@ export const ROLES = [
     id: 'project-manager',
     label: 'Project Manager',
     aka: 'Delivery manager, programme manager',
-    blurb: 'Plan, tasks, risks and reports, plus the scope and change record.',
+    blurb: 'Plan, tasks, risks and reports, plus the change log.',
     home: 'tab-dashboard',
     nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
       'tab-service', 'tab-improve', 'tab-reports', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],

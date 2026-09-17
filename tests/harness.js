@@ -83,4 +83,20 @@ function createChecks() {
   return { eq, done, state };
 }
 
-module.exports = { ROOT, findChromium, APP_URL, SW_URL, API_URL, TMP, SW_COPY, OUT, out, launch, createChecks };
+/**
+ * Opens the in-page tab that holds a section.
+ *
+ * Pages show one section at a time now (js/tabs.js), so a suite that lands on
+ * a page and reaches straight for the fourth register is reaching for
+ * something display:none. Pages without a strip are left alone, so this is
+ * safe to call unconditionally.
+ */
+async function openSection(page, sectionId) {
+  const tab = page.locator(`#tab-${sectionId}`);
+  if (await tab.count()) {
+    await tab.click();
+    await page.waitForTimeout(150);
+  }
+}
+
+module.exports = { ROOT, findChromium, APP_URL, SW_URL, API_URL, TMP, SW_COPY, OUT, out, launch, createChecks, openSection };

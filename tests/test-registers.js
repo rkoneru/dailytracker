@@ -7,7 +7,7 @@
 // part that is genuinely its own — the derived counters, the ref prefixes, and
 // the vocabulary each one offers.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openSection } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -64,7 +64,9 @@ const { eq, done } = createChecks();
   // empty — one row each is enough to read the options they offer.
   await page.click('#tab-service');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-service-levels');
   await page.click('#sec-service-levels [data-action="add-row"]');
+  await openSection(page, 'sec-changes');
   await page.click('#sec-changes [data-action="add-row"]');
   await page.waitForTimeout(400);
   eq('service level agreement types',
@@ -80,6 +82,7 @@ const { eq, done } = createChecks();
   console.log('\n--- one engine: add, edit, reload, delete on a representative register ---');
   await page.click('#tab-people');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-stakeholders');
   const before = await page.locator('#stakeholders-body tr').count();
   await page.click('#sec-stakeholders [data-action="add-row"]');
   await page.waitForTimeout(300);
@@ -98,6 +101,7 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(900);
   await page.click('#tab-people');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-stakeholders');
   eq('the edit survived a reload',
      await page.inputValue('#stakeholders-body tr:last-child [data-field="name"]'), 'Renata Vance');
 
@@ -114,6 +118,7 @@ const { eq, done } = createChecks();
   console.log('\n--- search filters a register without touching its neighbours ---');
   // The roster used to be this test's subject; it is now a view of the central
   // resource pool rather than a register, so RACI stands in for it.
+  await openSection(page, 'sec-raci');
   const raciRows = await page.locator('#raci-body tr').count();
   await page.fill('#raci-search', 'Influencer');
   await page.waitForTimeout(400);
@@ -131,11 +136,13 @@ const { eq, done } = createChecks();
   console.log('\n--- refs are per-register and stable-looking ---');
   await page.click('#tab-scope');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-deliverables');
   eq('deliverables count from D-01',
      await page.$$eval('#deliverables-body .col-ref', (e) => e.map((x) => x.textContent)),
      ['D-01', 'D-02', 'D-03', 'D-04']);
   await page.click('#tab-raid');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-dependencies');
   eq('dependencies use their own prefix',
      await page.textContent('#dependencies-body tr:first-child .col-ref'), 'DEP-01');
 
@@ -191,6 +198,7 @@ const { eq, done } = createChecks();
 
   await page.click('#tab-scope');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-deliverables');
   eq('deliverables counter reads accepted over total', (await tile('scope-count-deliverables')).value, '2/4');
   await page.selectOption('#deliverables-body tr:nth-child(3) [data-field="status"]', 'Accepted');
   await page.waitForTimeout(500);
@@ -205,6 +213,7 @@ const { eq, done } = createChecks();
 
   await page.click('#tab-people');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-raci');
   const raci = await tile('people-count-raci');
   eq('every RACI row has someone accountable', raci.sub, 'Every activity has an owner');
   eq('so it reads as good', raci.tone, 'is-good');
@@ -222,6 +231,7 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(900);
   await page.click('#tab-service');
   await page.waitForTimeout(700);
+  await openSection(page, 'sec-service-levels');
 
   const sla = await tile('svc-count-sla');
   eq('a breached SLA is counted', sla.value, '1');
@@ -235,11 +245,13 @@ const { eq, done } = createChecks();
   eq('known errors count the unresolved', kedb.value, '2');
   eq('and flag the one with no workaround', kedb.sub, '1 with no workaround');
   eq('which is the bad case, not merely a warning', kedb.tone, 'is-bad');
+  await openSection(page, 'sec-known-errors');
   await page.fill('#known-errors-body tr:nth-child(3) [data-field="workaround"]', 'Suppress the duplicate in the mail gateway.');
   await page.waitForTimeout(500);
   eq('writing the workaround downgrades it', (await tile('svc-count-kedb')).tone, 'is-warn');
 
   console.log('\n--- a failed acceptance criterion blocks go-live ---');
+  await openSection(page, 'sec-sac');
   await page.selectOption('#sac-body tr:first-child [data-field="status"]', 'Failed');
   await page.waitForTimeout(500);
   const sac = await tile('svc-count-sac');
@@ -258,6 +270,7 @@ const { eq, done } = createChecks();
   console.log('\n--- the charter is fields, and they persist ---');
   await page.click('#tab-scope');
   await page.waitForTimeout(600);
+  await openSection(page, 'sec-charter');
   eq('every charter field is rendered', await page.locator('#charter-fields .charter-field').count(), 7);
   await page.fill('#charter-fields [data-field="charterScopeOut"]', 'Anything outside the UK market.');
   await page.waitForTimeout(500);
@@ -265,6 +278,7 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(900);
   await page.click('#tab-scope');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-charter');
   eq('and survives a reload',
      await page.inputValue('#charter-fields [data-field="charterScopeOut"]'), 'Anything outside the UK market.');
 

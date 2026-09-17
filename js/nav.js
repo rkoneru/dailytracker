@@ -3,10 +3,11 @@ import { roleShows, getRole, isShowingEverything } from './roles.js';
 
 // Sidebar navigation, as a real tree, filtered to the role that is looking.
 //
-// The flat list worked while there were four pages. There are now five, two
-// side panels, and a Planner long enough that its own sections are worth
-// jumping to — so the nav is a tree: top-level groups, pages under them, and
-// the sections or views of a page as leaves.
+// The flat list worked while there were four pages. There are now fifteen, two
+// side panels, and pages long enough that their own sections are worth jumping
+// to — so the nav is a tree: top-level groups, pages under them, and the tabs
+// of a page as leaves. Every leaf is a real destination: a page's sections are
+// tabs now (see tabs.js), so a leaf selects one rather than scrolling to it.
 //
 // It follows the WAI-ARIA tree pattern rather than approximating it: roving
 // tabindex, arrow keys to move and expand, aria-expanded on every parent. A
@@ -18,10 +19,10 @@ const EXPANDED_KEY = 'projectPlannerNavExpanded_v1';
 // `id` doubles as the DOM id of the row, so the ids pages already reach for
 // (tab-planner, btn-projects…) are preserved and existing wiring keeps working.
 export const NAV_TREE = [
-  // Two levels of "where am I?": the first group spans every project, the rest
-  // are surfaces onto the one that is open. Keeping the cross-project pages at
-  // the top says that plainly, and stops "My Work" (everything on you, everywhere)
-  // from reading as a sibling of "Tasks" (this project's board).
+  // Five groups, named for what you would be doing rather than for a department:
+  // everything, then planning it, then running it, then telling people about it,
+  // then the housekeeping. Each page's tabs hang off it as leaves, so the nav is
+  // a map of every surface in the app and nothing is more than two clicks away.
   {
     id: 'group-across',
     label: 'Across Projects',
@@ -35,20 +36,32 @@ export const NAV_TREE = [
         page: 'page-resources',
         title: 'Resources',
         children: [
-          { id: 'nav-pool', label: 'People', page: 'page-resources', title: 'Resources', section: 'resources-table' },
-          { id: 'nav-allocations', label: 'Allocations', page: 'page-resources', title: 'Resources', section: 'allocations-table' },
-          { id: 'nav-availability', label: 'Availability', page: 'page-resources', title: 'Resources', section: 'absences-table' },
-          { id: 'nav-timesheets', label: 'Timesheets', page: 'page-resources', title: 'Resources', section: 'timesheets-table' },
+          { id: 'nav-pool', label: 'People', page: 'page-resources', title: 'Resources', section: 'sec-people' },
+          { id: 'nav-allocations', label: 'Allocations', page: 'page-resources', title: 'Resources', section: 'sec-allocations' },
+          { id: 'nav-availability', label: 'Availability', page: 'page-resources', title: 'Resources', section: 'sec-availability' },
+          { id: 'nav-timesheets', label: 'Timesheets', page: 'page-resources', title: 'Resources', section: 'sec-timesheets' },
+          { id: 'nav-conflicts', label: 'Worth Looking At', page: 'page-resources', title: 'Resources', section: 'sec-conflicts' },
         ],
       },
     ],
   },
   {
-    id: 'group-work',
-    label: 'This Project',
+    id: 'group-plan',
+    label: 'Plan & Build',
     children: [
       { id: 'tab-dashboard', label: 'Dashboard', icon: '📊', page: 'page-dashboard', title: 'Dashboard' },
-      { id: 'tab-tasks', label: 'Tasks', icon: '✅', page: 'page-tasks', title: 'Tasks' },
+      {
+        id: 'tab-tasks',
+        label: 'Tasks',
+        icon: '✅',
+        page: 'page-tasks',
+        title: 'Tasks',
+        children: [
+          { id: 'nav-task-list', label: 'Task List', page: 'page-tasks', title: 'Tasks', section: 'sec-task-list' },
+          { id: 'nav-task-board', label: 'Priority Board', page: 'page-tasks', title: 'Tasks', section: 'sec-task-board' },
+          { id: 'nav-task-help', label: 'Legend & Tips', page: 'page-tasks', title: 'Tasks', section: 'sec-task-help' },
+        ],
+      },
       {
         id: 'tab-planner',
         label: 'Plan',
@@ -62,11 +75,23 @@ export const NAV_TREE = [
           { id: 'nav-notes', label: 'Notes', page: 'page-planner', title: 'Plan', section: 'sec-notes' },
         ],
       },
+      {
+        id: 'tab-scope',
+        label: 'Scope & Contract',
+        icon: '🤝',
+        page: 'page-scope',
+        title: 'Scope & Contract',
+        children: [
+          { id: 'nav-charter', label: 'Charter', page: 'page-scope', title: 'Scope & Contract', section: 'sec-charter' },
+          { id: 'nav-deliverables', label: 'Deliverables', page: 'page-scope', title: 'Scope & Contract', section: 'sec-deliverables' },
+          { id: 'nav-change-requests', label: 'Change Requests', page: 'page-scope', title: 'Scope & Contract', section: 'sec-change-requests' },
+        ],
+      },
     ],
   },
   {
-    id: 'group-delivery',
-    label: 'Delivery',
+    id: 'group-run',
+    label: 'Run & Support',
     children: [
       {
         id: 'tab-raid',
@@ -75,6 +100,7 @@ export const NAV_TREE = [
         page: 'page-raid',
         title: 'Risks, Issues & Dependencies',
         children: [
+          { id: 'nav-raid-log', label: 'RAID Log', page: 'page-raid', title: 'Risks, Issues & Dependencies', section: 'sec-raid-log' },
           { id: 'nav-dependencies', label: 'Dependencies', page: 'page-raid', title: 'Risks, Issues & Dependencies', section: 'sec-dependencies' },
         ],
       },
@@ -106,21 +132,12 @@ export const NAV_TREE = [
     ],
   },
   {
-    id: 'group-engagement',
-    label: 'Engagement',
+    // Stakeholder maps, the communications plan and the status reports all
+    // answer one question — who needs telling what, and when — so they sit
+    // together rather than in a governance folder and a reporting folder.
+    id: 'group-share',
+    label: 'People & Reporting',
     children: [
-      {
-        id: 'tab-scope',
-        label: 'Scope & Contract',
-        icon: '🤝',
-        page: 'page-scope',
-        title: 'Scope & Contract',
-        children: [
-          { id: 'nav-charter', label: 'Charter', page: 'page-scope', title: 'Scope & Contract', section: 'sec-charter' },
-          { id: 'nav-deliverables', label: 'Deliverables', page: 'page-scope', title: 'Scope & Contract', section: 'sec-deliverables' },
-          { id: 'nav-change-requests', label: 'Change Requests', page: 'page-scope', title: 'Scope & Contract', section: 'sec-change-requests' },
-        ],
-      },
       {
         id: 'tab-people',
         label: 'People & Stakeholders',
@@ -134,12 +151,6 @@ export const NAV_TREE = [
           { id: 'nav-comms', label: 'Communications', page: 'page-people', title: 'People & Stakeholders', section: 'sec-comms' },
         ],
       },
-    ],
-  },
-  {
-    id: 'group-reporting',
-    label: 'Reporting',
-    children: [
       {
         id: 'tab-reports',
         label: 'Reports',

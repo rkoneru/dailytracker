@@ -1,4 +1,4 @@
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openSection } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -85,6 +85,7 @@ const { eq, done } = createChecks();
 
   console.log('\n--- adding from a board column presets that column ---');
   const rowsBefore = await page.locator('#tracker-body tr').count();
+  await openSection(page, 'sec-task-board');
   await page.click('.board-col--low .board-col__add');
   await page.waitForTimeout(500);
   eq('a row was added', await page.locator('#tracker-body tr').count(), rowsBefore + 1);
@@ -100,6 +101,7 @@ const { eq, done } = createChecks();
   }), 'On Hold');
 
   console.log('\n--- deleting goes to Trash, like everywhere else ---');
+  await openSection(page, 'sec-task-list');
   const countBefore = await page.locator('#tracker-body tr').count();
   await page.locator('#tracker-body tr').last().locator('[data-action="delete-task-row"]').click();
   await page.waitForTimeout(500);
@@ -165,6 +167,7 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(400);
   eq('no page overflow at phone width',
      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false);
+  await openSection(page, 'sec-task-board');
   eq('the board scrolls inside itself instead',
      await page.evaluate(() => {
        const b = document.getElementById('priority-board');

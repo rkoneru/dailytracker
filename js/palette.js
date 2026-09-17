@@ -24,7 +24,10 @@ let cursor = 0;
 let onGo = null;
 let previouslyFocused = null;
 
-/** Pages, flattened out of the nav tree so the palette cannot list a page that no longer exists. */
+/**
+ * Pages and their tabs, flattened out of the nav tree so the palette cannot
+ * list a destination that no longer exists.
+ */
 function pageEntries() {
   const out = [];
   const walk = (nodes, trail) => {
@@ -33,7 +36,10 @@ function pageEntries() {
         out.push({
           title: node.label,
           subtitle: trail.join(' › ') || 'Go to',
-          kind: 'Page',
+          // A leaf that names a section or a report is a tab within a page,
+          // not a page: calling both "Page" makes the list read as if the app
+          // had thirty of them.
+          kind: (node.section || node.report) ? 'Section' : 'Page',
           navId: node.id,
           projectId: '',
           projectName: '',

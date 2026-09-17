@@ -1,4 +1,4 @@
-const { APP_URL, out, launch } = require('./harness');
+const { APP_URL, out, launch, openSection } = require('./harness');
 
 // The app uses in-page dialogs now, not window.confirm, so a test drives them
 // like any other UI: click the button, then the dialog's own action.
@@ -38,6 +38,7 @@ async function acceptDialog(page) {
   await page.waitForTimeout(600);
   const after = await trackerRow.locator('.slip-chip').textContent();
   await page.click('#tab-planner'); await page.waitForTimeout(400);
+  await openSection(page, 'sec-budget');
   console.log(`slip after pushing end date out: ${before} -> ${after}`);
   console.log('baseline note now:', await page.locator('#planner-baseline-note').textContent());
 
@@ -49,6 +50,7 @@ async function acceptDialog(page) {
   await page.click('#tab-tasks'); await page.waitForTimeout(400);
   const afterRebaseline = await page.locator('#tracker-body .slip-chip').allTextContents();
   await page.click('#tab-planner'); await page.waitForTimeout(400);
+  await openSection(page, 'sec-budget');
   console.log('slip chips after re-baseline:', [...new Set(afterRebaseline)].join(', '));
   console.log('baseline note:', await page.locator('#planner-baseline-note').textContent());
 

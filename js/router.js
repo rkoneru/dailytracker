@@ -18,6 +18,8 @@
 // Nav node ids double as route names, so the route vocabulary is the same list
 // the sidebar is built from and cannot drift from it.
 
+import { locate, showSection } from './tabs.js';
+
 const listeners = new Set();
 
 // Set while we are the ones writing the hash. Without it, every navigation
@@ -101,6 +103,11 @@ export function revealRow(rowId) {
   if (!rowId) return false;
   const row = document.querySelector(`[data-id="${CSS.escape(rowId)}"]`);
   if (!row) return false;
+  // The row may be on a tab that is not the one showing. Open its tab first —
+  // scrolling to a display:none element does nothing, and a link that lands on
+  // the right page with no visible highlight reads as a broken link.
+  const spot = locate(row);
+  if (spot) showSection(spot.pageId, spot.tabId);
   row.scrollIntoView({ behavior: 'smooth', block: 'center' });
   row.classList.add('is-linked');
   setTimeout(() => row.classList.remove('is-linked'), HIGHLIGHT_MS);

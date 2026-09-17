@@ -1,4 +1,4 @@
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openSection } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -20,6 +20,7 @@ const { eq, done } = createChecks();
 
   console.log('\n--- confirm: cancel leaves everything alone ---');
   await page.click('#tab-planner');
+  await openSection(page, 'sec-budget');
   await page.waitForTimeout(300);
   const noteBefore = await page.textContent('#planner-baseline-note');
   await page.click('#btn-clear-baseline');

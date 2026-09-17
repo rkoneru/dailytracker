@@ -1,5 +1,6 @@
 import { TICK_DAYS } from './taskModel.js';
 import { createServiceTransition, createServiceDeskLaunch } from './sampleServices.js';
+import { AGENTIC_DOMAINS, buildAgentic } from './sampleAgentic.js';
 
 // Starter templates for new projects. Each template is a factory function
 // (not a static object) so every project created from it gets its own
@@ -542,6 +543,16 @@ export const TEMPLATES = [
   { key: 'servicedesk', category: 'Services & Operations', label: 'Service Desk Launch', description: 'Replace mailboxes and a spreadsheet with one desk: priority model, request catalogue, pilot, and closing the old channel.', build: () => seedTicks(createServiceDeskLaunch()) },
 
   { key: 'blank', category: 'General', label: 'Blank Project', description: 'Start from an empty sheet — no sample data.', build: () => seedTicks(createBlankProject()) },
+
+  // One per industry, all off the same delivery spine — see js/agenticSpine.js
+  // for why the order of an agentic programme is not a matter of taste.
+  ...AGENTIC_DOMAINS.map((domain) => ({
+    key: domain.key,
+    category: domain.category,
+    label: domain.label,
+    description: domain.description,
+    build: () => seedTicks(buildAgentic(domain)),
+  })),
 ];
 
 export const DEFAULT_TEMPLATE_KEY = 'marketing';

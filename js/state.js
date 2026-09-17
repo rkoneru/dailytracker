@@ -1,5 +1,5 @@
 import { TEMPLATES, DEFAULT_TEMPLATE_KEY } from './sampleData.js';
-import { REGISTER_KEYS, CHARTER_FIELDS } from './registerDefs.js';
+import { REGISTER_KEYS, LEGACY_REGISTER_KEYS, CHARTER_FIELDS } from './registerDefs.js';
 import { newResource, resourceIdFor } from './resourceModel.js';
 import { snapshotOf, diffSnapshots } from './changeLog.js';
 
@@ -223,6 +223,11 @@ function buildProjectFromTemplate(templateKey, name) {
   // from the same migration that brings a saved project up to date, so a
   // freshly built project can never be a shape older than a restored one.
   const data = migrateProject(findTemplate(templateKey).build());
+  // Templates name their own row ids so a task can say what blocks it. Those
+  // ids are stable across builds by design, which makes them a collision the
+  // moment the same template is used twice — and row ids are the primary key
+  // on the server, not scoped to a project.
+  regenerateRowIds(data);
   if (name) data.projectName = name;
   data.id = uid();
   data.updatedAt = Date.now();
@@ -854,9 +859,55 @@ export function createProject({ name, templateKey } = {}) {
   return project;
 }
 
+/**
+ * Gives every row in a project a fresh id, and rewrites what pointed at them.
+ *
+ * Row ids are the primary key on the server, globally and not per project, so
+ * two projects that share a row id are two projects that overwrite each other
+ * on the next sync. Templates make that easy to hit: a template that names its
+ * own task ids — so a task can say which other task blocks it — hands the same
+ * ids to every project built from it, and creating the same template twice
+ * used to be enough.
+ *
+ * Which is why this remaps rather than just overwrites. A task's `dependsOn`,
+ * a milestone's `deliverableId` and a change-log entry's `rowId` all point at
+ * rows in the same project, and renaming the rows without renaming the
+ * pointers would quietly break the plan instead of quietly breaking sync.
+ *
+ * `resourceId` on an allocation is deliberately left alone: it points into the
+ * device's resource pool, which is not a project row and does not move.
+ */
 function regenerateRowIds(project) {
-  ['milestones', 'dashTasks', 'notes', 'raid', ...REGISTER_KEYS].forEach((key) => {
-    (project[key] || []).forEach((item) => { item.id = uid(); });
+  const collections = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog',
+    'allocations', 'timesheets', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
+
+  const remap = new Map();
+  collections.forEach((key) => {
+    (project[key] || []).forEach((item) => {
+      const fresh = uid();
+      if (item.id) remap.set(item.id, fresh);
+      item.id = fresh;
+    });
+  });
+
+  const swap = (id) => remap.get(id) || id;
+
+  (project.dashTasks || []).forEach((task) => {
+    if (Array.isArray(task.dependsOn)) task.dependsOn = task.dependsOn.map(swap);
+    // Checklist items are not project rows — they live inside the task — but
+    // they carry ids of their own and two identical tasks would share them.
+    if (Array.isArray(task.checklist)) {
+      task.checklist.forEach((item) => { item.id = uid(); });
+    }
+  });
+  (project.milestones || []).forEach((m) => {
+    if (m.deliverableId) m.deliverableId = swap(m.deliverableId);
+  });
+  (project.changeLog || []).forEach((entry) => {
+    if (entry.rowId) entry.rowId = swap(entry.rowId);
+  });
+  (project.timesheets || []).forEach((entry) => {
+    if (entry.taskId) entry.taskId = swap(entry.taskId);
   });
 }
 

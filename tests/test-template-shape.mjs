@@ -17,7 +17,16 @@ import { SKILL_LEVELS, ORG_TYPES, ONBOARDING, RESOURCE_STATUS, resourceIdFor } f
 let passed = 0;
 const failures = [];
 
+/**
+ * `ok` must be a boolean. It used to accept anything truthy, which quietly
+ * turned `check(label, list.length, 0)` — written as if it compared — into
+ * "passes whenever the list is non-empty", the exact inverse of the intent.
+ */
 function check(label, ok, detail = '') {
+  if (typeof ok !== 'boolean') {
+    failures.push(`${label} — check() needs a boolean, got ${typeof ok}. Compare explicitly.`);
+    return;
+  }
   if (ok) { passed += 1; return; }
   failures.push(`${label}${detail ? ` — ${detail}` : ''}`);
 }
@@ -151,7 +160,7 @@ TEMPLATES.forEach((template) => {
   const graph = analyse(project.dashTasks);
   check('transition has a critical path', graph.critical.length > 3);
   check('transition shows one deliberate fast-tracked overlap, no more',
-    graph.conflicts.length, 1);
+    graph.conflicts.length === 1, `got ${graph.conflicts.length}`);
   check('transition has a checklist somewhere',
     project.dashTasks.some((t) => (t.checklist || []).length > 0), true);
   check('transition estimates most of its work',
@@ -161,6 +170,31 @@ TEMPLATES.forEach((template) => {
     (project.seedResources || []).filter((p) => p.costRate && p.billRate).length >= 4);
   check('and skills, so the skill search finds somebody',
     (project.seedResources || []).every((p) => (p.skills || []).length > 0), true);
+}
+
+// Templates that name their own row ids hand the same ids to every project
+// built from them. That is intentional — a task has to be able to say which
+// other task blocks it — and it is why state.js regenerates them per project.
+// Here we only pin down that the hazard is real, so the guard cannot be
+// removed as unnecessary; the guard itself is tested in the browser, where
+// there is a store to create projects in.
+{
+  const hazardous = TEMPLATES.filter((t) => {
+    const a = t.build();
+    const b = t.build();
+    const idsB = new Set(b.dashTasks.map((x) => x.id));
+    return a.dashTasks.some((x) => idsB.has(x.id));
+  });
+  check('at least one template reuses row ids across builds', hazardous.length > 0,
+    'if this ever becomes zero, the regeneration in buildProjectFromTemplate is no longer load-bearing');
+
+  hazardous.forEach((t) => {
+    const p = t.build();
+    const ids = new Set(p.dashTasks.map((x) => x.id));
+    const dangling = p.dashTasks.flatMap((x) => (x.dependsOn || []).filter((d) => !ids.has(d)));
+    check(`${t.key}: its fixed ids are internally consistent`,
+      dangling.length === 0, `dangling: ${dangling.join(', ')}`);
+  });
 }
 
 console.log(`\n${passed} checks passed${failures.length ? `, ${failures.length} failed` : ''}`);

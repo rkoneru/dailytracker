@@ -1601,6 +1601,41 @@
           </div>
         </section>
 
+        <section class="card" id="sec-settings-workflow">
+          <div class="card__head">
+            <h2>Task Execution</h2>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-save-workflow">Save workflow</button>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-reset-workflow">Reset to the full map</button>
+          </div>
+
+          <p class="hint callout" id="workflow-denied" hidden>
+            Only an administrator can set the execution workflow for this project.
+          </p>
+
+          <div id="admin-workflow" hidden>
+            <p class="hint">
+              The wizard people get when they open a task and press <strong>Unstick</strong>. Choose
+              which of the seven steps this project walks and which methods each step offers. This is
+              a working agreement, not an access control &mdash; it changes what the wizard asks,
+              and keeps nobody out of anything.
+            </p>
+
+            <div class="workflow-limits">
+              <label class="field-label">WIP limit
+                <input type="number" class="field-input" id="wf-wip" min="1" max="20" step="1">
+              </label>
+              <label class="field-label">Big tasks a day
+                <input type="number" class="field-input" id="wf-big" min="1" max="5" step="1">
+              </label>
+              <label class="field-label">Small tasks a day
+                <input type="number" class="field-input" id="wf-small" min="0" max="10" step="1">
+              </label>
+            </div>
+
+            <div class="workflow-steps" id="workflow-steps"></div>
+          </div>
+        </section>
+
         <section class="card card--quiet" id="sec-settings-security">
           <div class="card__head"><h2>What is actually enforced</h2></div>
           <div class="security-facts" id="security-facts"></div>
@@ -1846,6 +1881,33 @@
         <p class="hint">Import a project previously exported as JSON (see Export / Share). This adds a new project — it won't overwrite anything.</p>
         <input type="file" accept="application/json" class="field-input" id="import-project-file">
       </div>
+    </div>
+  </div>
+
+  <!-- The execution wizard. Launched from a task; walks the steps an
+       administrator enabled for this project. -->
+  <div class="panel-overlay no-print" id="wizard-overlay" hidden>
+    <div class="wizard" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
+      <header class="wizard__head">
+        <div>
+          <p class="wizard__eyebrow" id="wizard-eyebrow">Task execution</p>
+          <h2 class="wizard__title" id="wizard-title">&mdash;</h2>
+        </div>
+        <button type="button" class="icon-btn" id="btn-wizard-close" aria-label="Close">&times;</button>
+      </header>
+
+      <ol class="wizard__rail" id="wizard-rail"></ol>
+
+      <div class="wizard__body" id="wizard-body"></div>
+
+      <footer class="wizard__foot">
+        <span class="wizard__note" id="wizard-note"></span>
+        <div class="wizard__actions">
+          <button type="button" class="btn btn-ghost" id="btn-wizard-skip">Skip this step</button>
+          <button type="button" class="btn btn-ghost" id="btn-wizard-back">Back</button>
+          <button type="button" class="btn btn-primary" id="btn-wizard-next">Next</button>
+        </div>
+      </footer>
     </div>
   </div>
 

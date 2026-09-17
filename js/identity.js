@@ -1,5 +1,7 @@
 import * as api from './supabase.js';
 import { setPolicy, clearPolicy, sanitisePolicy, defaultPolicy } from './policy.js';
+import { setWorkflow, clearWorkflow } from './workflow.js';
+import { defaultWorkflow, sanitiseWorkflow } from './playbook.js';
 import { setAssignedRole, clearAssignedRole } from './roles.js';
 
 // Who you are in this workspace, and what that lets you do.
@@ -126,7 +128,7 @@ export async function refreshIdentity(projectId) {
     const [projects, members, policies] = await Promise.all([
       api.select('projects', `id=eq.${projectId}&select=id,owner_id`),
       api.select('project_members', `project_id=eq.${projectId}&user_id=eq.${user.id}&select=role,job_role,can_admin`),
-      api.select('workspace_policy', `project_id=eq.${projectId}&select=pages,require_sign_in`),
+      api.select('workspace_policy', `project_id=eq.${projectId}&select=pages,require_sign_in,workflow`),
     ]);
 
     const isOwner = Array.isArray(projects) && projects.some((p) => p.owner_id === user.id);
@@ -147,8 +149,14 @@ export async function refreshIdentity(projectId) {
         requireSignIn: !!row.require_sign_in,
         projectId,
       });
+      // An empty object means the administrator has not configured the
+      // workflow, which is different from configuring it as empty: the first
+      // gets the whole map, the second would get nothing.
+      if (row.workflow && Object.keys(row.workflow).length) setWorkflow(row.workflow);
+      else clearWorkflow();
     } else {
       clearPolicy();
+      clearWorkflow();
     }
 
     // An assignment wins over whatever this device had chosen. Applying it
@@ -220,32 +228,40 @@ export async function assignMember(projectId, userId, patch) {
   await api.patch('project_members', `project_id=eq.${projectId}&user_id=eq.${userId}`, body);
 }
 
-export async function savePolicy(projectId, { pages, requireSignIn }) {
+export async function savePolicy(projectId, { pages, requireSignIn, workflow }) {
   if (!canAdminister()) throw new Error('Only an administrator can change page access.');
   const clean = sanitisePolicy(pages);
+  const cleanWorkflow = sanitiseWorkflow(workflow || {});
   await api.upsert('workspace_policy', [{
     project_id: projectId,
     pages: clean,
     require_sign_in: !!requireSignIn,
+    workflow: cleanWorkflow,
     updated_at: new Date().toISOString(),
     updated_by: current.user ? current.user.id : null,
   }], 'project_id');
   setPolicy({ pages: clean, requireSignIn, projectId });
+  setWorkflow(cleanWorkflow);
 }
 
 export async function readPolicyFor(projectId) {
+  const blank = { pages: defaultPolicy(), requireSignIn: false, workflow: defaultWorkflow(), existing: false };
   try {
-    const rows = await api.select('workspace_policy', `project_id=eq.${projectId}&select=pages,require_sign_in`);
+    const rows = await api.select('workspace_policy',
+      `project_id=eq.${projectId}&select=pages,require_sign_in,workflow`);
     const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
-    if (!row) return { pages: defaultPolicy(), requireSignIn: false, existing: false };
+    if (!row) return blank;
     return {
       pages: { ...defaultPolicy(), ...sanitisePolicy(row.pages) },
       requireSignIn: !!row.require_sign_in,
+      workflow: row.workflow && Object.keys(row.workflow).length
+        ? sanitiseWorkflow(row.workflow)
+        : defaultWorkflow(),
       existing: true,
     };
   } catch (err) {
     console.warn('Could not read the page policy.', err);
-    return { pages: defaultPolicy(), requireSignIn: false, existing: false };
+    return blank;
   }
 }
 

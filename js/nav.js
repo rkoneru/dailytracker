@@ -214,6 +214,7 @@ export const NAV_TREE = [
           { id: 'nav-settings-workspace', label: 'Workspace', page: 'page-settings', title: 'Settings', section: 'sec-settings-workspace' },
           { id: 'nav-settings-people', label: 'People & Roles', page: 'page-settings', title: 'Settings', section: 'sec-settings-people' },
           { id: 'nav-settings-pages', label: 'Page Access', page: 'page-settings', title: 'Settings', section: 'sec-settings-pages' },
+          { id: 'nav-settings-workflow', label: 'Task Execution', page: 'page-settings', title: 'Settings', section: 'sec-settings-workflow' },
           { id: 'nav-settings-security', label: 'Security', page: 'page-settings', title: 'Settings', section: 'sec-settings-security' },
           { id: 'nav-settings-data', label: 'Data', page: 'page-settings', title: 'Settings', section: 'sec-settings-data' },
         ],

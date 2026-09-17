@@ -34,6 +34,7 @@ import { initPalette } from './palette.js';
 import { mountTabs, showSection } from './tabs.js';
 import { initKpis, renderKpis } from './kpiPage.js';
 import { initSettings, refreshSettings } from './settings.js';
+import { initWizard } from './wizard.js';
 import { usePagePolicy } from './roles.js';
 import { pagesFor, onPolicyChange } from './policy.js';
 import { refreshIdentity, onIdentityChange } from './identity.js';
@@ -950,6 +951,7 @@ function init() {
     .catch((err) => console.warn('Could not read your membership.', err));
   initKpis();
   initSettings(goTo);
+  initWizard();
   initMeetings(goTo);
   setMeetingsChangedHandler(() => notifyProjectDataChanged('meetings'));
   initWhoAmI();

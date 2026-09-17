@@ -117,7 +117,7 @@ const failed = tally ? Number(tally[2]) : 1;
 if (!tally) console.log('Could not read the tally from psql — treating that as a failure.');
 // A suite that passes because it asserted nothing is the failure mode this
 // guards against: the schema could be applied and the attack file empty.
-if (passed < 40) {
+if (passed < 46) {
   console.log(`FAIL only ${passed} checks ran — the attack suite did not execute fully`);
   console.log(`${passed} passed, ${failed + 1} failed`);
   process.exit(1);

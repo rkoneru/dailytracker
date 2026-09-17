@@ -450,9 +450,21 @@ create table if not exists public.workspace_policy (
   -- the UI says so. What actually protects the data is that without an account
   -- there is nothing to sync down.
   require_sign_in boolean not null default false,
+  -- The task execution workflow this project uses: which of the seven steps
+  -- the team walks, which methods each step offers, the WIP limit. A working
+  -- agreement rather than an access control — nobody is kept out of anything
+  -- by it — but it is the administrator's to set, so it lives behind the same
+  -- policy as the page access above rather than in the project blob any
+  -- editor can write.
+  workflow    jsonb not null default '{}'::jsonb,
   updated_at  timestamptz not null default now(),
   updated_by  uuid references auth.users (id) on delete set null
 );
+
+-- Added after the table shipped, so `create table if not exists` above will
+-- not add it to an existing install.
+alter table public.workspace_policy
+  add column if not exists workflow jsonb not null default '{}'::jsonb;
 
 alter table public.workspace_policy enable row level security;
 

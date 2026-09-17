@@ -57,6 +57,7 @@ const server = http.createServer((req, res) => {
       (json.members || []).forEach((m) => db.project_members.set(`${m.project_id}:${m.user_id}`, { ...m, id: `${m.project_id}:${m.user_id}` }));
       (json.policies || []).forEach((p) => db.workspace_policy.set(p.project_id, { ...p, id: p.project_id }));
       (json.projects || []).forEach((p) => db.projects.set(p.id, p));
+      (json.rows || []).forEach((r) => db.project_rows.set(r.id, r));
       return send(res, 200, {});
     }
     if (url.pathname === '/__dump') {

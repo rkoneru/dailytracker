@@ -4406,3 +4406,191 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .security-fact.is-idle { border-left-color: var(--color-border); }
 .security-fact__title { margin: 0 0 4px; font-size: 13px; }
 .security-fact__body { margin: 0; font-size: 12px; color: var(--color-text-muted); line-height: 1.55; }
+
+/* ---------- Execution wizard ---------- */
+
+.wizard {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  max-height: min(88vh, 900px);
+  margin: auto;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+}
+
+.wizard__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.wizard__eyebrow {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+.wizard__title { margin: 0; font-size: 18px; line-height: 1.3; }
+
+/* The rail is the map's spine: seven steps, always visible, so it is obvious
+   both where you are and that there is an end. */
+.wizard__rail {
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 18px;
+  list-style: none;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+.wizard-step__n {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-border);
+  color: var(--color-surface);
+  font-size: 10px;
+  font-weight: 700;
+}
+.wizard-step.is-current { background: var(--color-primary-light); color: var(--color-primary); font-weight: 700; }
+.wizard-step.is-current .wizard-step__n { background: var(--color-primary); }
+.wizard-step.is-done .wizard-step__n { background: #16a34a; }
+.wizard-step.is-skipped { opacity: 0.55; }
+
+.wizard__body { flex: 1 1 auto; overflow-y: auto; padding: 18px; }
+
+.wizard-question__text { margin: 0 0 4px; font-size: 17px; }
+.wizard-question__blurb { margin: 0 0 14px; font-size: 13px; color: var(--color-text-muted); }
+
+.wizard-methods { display: flex; flex-direction: column; gap: 8px; }
+
+.wizard-method {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.wizard-method:hover { background: var(--color-bg); }
+.wizard-method:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.wizard-method.is-selected { border-color: var(--color-primary); background: var(--color-primary-light); }
+
+.wizard-method__icon { font-size: 19px; line-height: 1.2; }
+.wizard-method__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.wizard-method__trigger { font-size: 11px; color: var(--color-text-muted); }
+.wizard-method__name { font-size: 14px; font-weight: 700; }
+.wizard-method__how { font-size: 12px; color: var(--color-text-muted); line-height: 1.45; }
+
+.wizard-form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.wizard-field { display: flex; flex-direction: column; gap: 4px; }
+.wizard-field__label { font-size: 12px; font-weight: 600; }
+.wizard-field textarea { resize: vertical; font-family: inherit; }
+
+.wizard-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.wizard-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  cursor: pointer;
+}
+.wizard-choice:has(input:checked) { border-color: var(--color-primary); background: var(--color-primary-light); }
+
+.wizard-summary { margin: 0; padding: 0; list-style: none; }
+.wizard-summary__row {
+  display: flex;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+}
+.wizard-summary__row:last-child { border-bottom: 0; }
+.wizard-summary__step { flex: 0 0 140px; font-weight: 600; color: var(--color-text-muted); }
+.wizard-summary__what { flex: 1 1 auto; min-width: 0; }
+
+.wizard__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+.wizard__note { font-size: 12px; color: var(--color-text-muted); }
+.wizard__actions { display: flex; gap: 8px; }
+
+/* A task whose execution has been planned says so, quietly. */
+.icon-btn.is-done { color: #16a34a; }
+
+/* ---------- Workflow configuration ---------- */
+
+.workflow-limits { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0 16px; }
+.workflow-limits .field-input { max-width: 110px; }
+
+.workflow-steps { display: flex; flex-direction: column; gap: 10px; }
+
+.workflow-step {
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+/* A disabled step stays on screen, faded: removing it would hide the fact
+   that the map has seven steps and this project chose five. */
+.workflow-step.is-off { opacity: 0.55; }
+
+.workflow-step__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.workflow-step__toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.workflow-step__n {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  font-size: 11px;
+  font-weight: 700;
+}
+.workflow-step__title { font-size: 14px; font-weight: 700; }
+.workflow-step__required { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-muted); }
+.workflow-step__question { margin: 6px 0 10px; font-size: 12px; color: var(--color-text-muted); }
+
+.workflow-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
+.workflow-method { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; }
+.workflow-method__icon { font-size: 15px; line-height: 1.2; }
+.workflow-method__text { display: flex; flex-direction: column; min-width: 0; }
+.workflow-method__name { font-weight: 600; }
+.workflow-method__trigger { font-size: 11px; color: var(--color-text-muted); }
+
+body.is-modal-open { overflow: hidden; }

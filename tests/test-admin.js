@@ -27,15 +27,30 @@ async function signIn(page, { userId = ME, email = 'tester@x.test' } = {}) {
   }, { api: API_URL, id: userId, mail: email });
 }
 
-/** Points the app's active project at the one the fake server knows about. */
+/**
+ * Points the app's active project at the one the fake server knows about.
+ *
+ * The store keys projects by id, so this re-keys rather than editing a field —
+ * an earlier version assumed an array, found undefined, and silently did
+ * nothing, which made the suite pass for a reason that had nothing to do with
+ * what it claimed to test.
+ */
 async function useProject(page) {
-  await page.evaluate((id) => {
+  // The store is written on boot, and localStorage was cleared a moment ago,
+  // so the app has to run once before there is anything to point at.
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForFunction(() => {
     const raw = localStorage.getItem('projectPlannerStore_v2');
-    if (!raw) return;
-    const store = JSON.parse(raw);
-    const first = store.projects[0];
-    first.id = id;
-    store.activeId = id;
+    return !!raw && Object.keys(JSON.parse(raw).projects || {}).length > 0;
+  }, null, { timeout: 8000 });
+  await page.evaluate((id) => {
+    const store = JSON.parse(localStorage.getItem('projectPlannerStore_v2'));
+    const [oldId] = Object.keys(store.projects);
+    const project = store.projects[oldId];
+    delete store.projects[oldId];
+    project.id = id;
+    store.projects[id] = project;
+    store.activeProjectId = id;
     localStorage.setItem('projectPlannerStore_v2', JSON.stringify(store));
   }, PROJECT);
 }

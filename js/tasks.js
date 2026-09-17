@@ -4,6 +4,7 @@
 // Planner shows the same rows read-only, so there is a single surface that
 // owns task editing and no question about where a change should be made.
 
+import { openWizard } from './wizard.js';
 import { getState, scheduleSave, uid, trashRow } from './state.js';
 import { el } from './dom.js';
 import { makeSortable, reorderById } from './dragReorder.js';
@@ -343,6 +344,19 @@ function trackerRow(task, index, today) {
     checklistCell(task),
     el('td', {}, [el('input', { class: 'row-input', 'data-field': 'comments', value: task.comments || '', placeholder: 'Comments' })]),
     el('td', { class: 'col-action no-print' }, [
+      // The wizard's way in. On the row rather than in the drawer, because
+      // the moment you need it is the moment you are looking at the task and
+      // not opening it.
+      el('button', {
+        type: 'button',
+        class: `icon-btn${task.execution ? ' is-done' : ''}`,
+        'data-action': 'run-wizard',
+        title: task.execution
+          ? `Execution planned ${task.execution.at} — run it again`
+          : 'Work out how to start this one',
+        'aria-label': 'Unstick this task',
+        text: '🧭',
+      }),
       el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-task-row', 'aria-label': 'Delete task', text: '🗑' }),
     ]),
   ]);
@@ -654,6 +668,11 @@ function bindTracker() {
       const depId = e.target.closest('[data-dep]').dataset.dep;
       task.dependsOn = (task.dependsOn || []).filter((id) => id !== depId);
       commit({ rerenderTracker: true });
+      return;
+    }
+
+    if (e.target.closest('[data-action="run-wizard"]')) {
+      openWizard(taskIdOf(e.target), { onFinish: () => commit({ rerenderTracker: true }) });
       return;
     }
 

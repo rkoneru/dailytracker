@@ -394,6 +394,32 @@ call check_denied('nor delete it to remove the restriction',
   $q$delete from public.workspace_policy
      where project_id = '10000000-0000-4000-8000-000000000001'$q$);
 
+-- The execution workflow rides in the same row, so it inherits the same
+-- policy — but "inherits" is a claim worth testing rather than assuming.
+call check_allowed('an admin can set the execution workflow',
+  '00000000-0000-4000-8000-000000000002',
+  $q$update public.workspace_policy
+     set workflow = '{"steps":["choose","finish"],"wipLimit":2}'::jsonb
+     where project_id = '10000000-0000-4000-8000-000000000001'$q$);
+
+call check_denied('a contributor cannot rewrite the execution workflow',
+  '00000000-0000-4000-8000-000000000003',
+  $q$update public.workspace_policy set workflow = '{"steps":[]}'::jsonb
+     where project_id = '10000000-0000-4000-8000-000000000001'$q$);
+
+call check_denied('a viewer cannot loosen the WIP limit',
+  '00000000-0000-4000-8000-000000000004',
+  $q$update public.workspace_policy set workflow = '{"wipLimit":99}'::jsonb
+     where project_id = '10000000-0000-4000-8000-000000000001'$q$);
+
+do $$
+declare n integer;
+begin
+  n := visible_count('00000000-0000-4000-8000-000000000003',
+    'select count(*) from public.workspace_policy where workflow ? ''steps''');
+  call check_true('but a member can read the workflow they work to', n = 1, format('saw %s', n));
+end $$;
+
 call check_denied('a viewer cannot flip require_sign_in off',
   '00000000-0000-4000-8000-000000000004',
   $q$update public.workspace_policy set require_sign_in = false

@@ -8,6 +8,7 @@ import {
 import { ROLES as JOB_ROLES } from './roles.js';
 import { ROLE_LABELS, ASSIGNABLE_ROLES } from './members.js';
 import { navLabels, defaultPolicy, isManaged, getPolicy } from './policy.js';
+import { STEPS, methodsForStep, defaultWorkflow } from './playbook.js';
 import { openPanel } from './nav.js';
 import { getActiveProjectId, listProjects, buildBackup } from './state.js';
 import { exportBackupJSON } from './export.js';
@@ -24,6 +25,7 @@ import { exportBackupJSON } from './export.js';
 let members = [];
 let draftPolicy = null;
 let draftRequireSignIn = false;
+let draftWorkflow = null;
 
 // ---------- account ----------
 
@@ -216,6 +218,73 @@ function renderPolicyGrid() {
   });
 }
 
+// ---------- task execution ----------
+
+function renderWorkflow() {
+  const admin = canAdminister();
+  document.getElementById('workflow-denied').hidden = admin;
+  document.getElementById('admin-workflow').hidden = !admin;
+  if (!admin || !draftWorkflow) return;
+
+  document.getElementById('wf-wip').value = String(draftWorkflow.wipLimit);
+  document.getElementById('wf-big').value = String(draftWorkflow.dailyBig);
+  document.getElementById('wf-small').value = String(draftWorkflow.dailySmall);
+
+  const host = document.getElementById('workflow-steps');
+  host.innerHTML = '';
+  const enabled = new Set(draftWorkflow.steps);
+  const required = new Set(draftWorkflow.required || []);
+
+  STEPS.forEach((step) => {
+    const on = enabled.has(step.id);
+    const chosen = new Set(draftWorkflow.methods[step.id] || []);
+
+    const methods = el('div', { class: 'workflow-methods' });
+    methodsForStep(step.id).forEach((method) => {
+      // Deliberately not `data-method`: the wizard's own method cards use
+      // that, both are in the document at once, and a selector meant for one
+      // quietly matching the other is the kind of collision that shows up as
+      // a test clicking the wrong thing.
+      const box = el('input', {
+        type: 'checkbox',
+        id: `wf-${step.id}-${method.id}`,
+        checked: chosen.has(method.id),
+        'data-wf-step': step.id,
+        'data-wf-method': method.id,
+      });
+      methods.appendChild(el('label', { class: 'workflow-method' }, [
+        box,
+        el('span', { class: 'workflow-method__icon', 'aria-hidden': 'true', text: method.icon }),
+        el('span', { class: 'workflow-method__text' }, [
+          el('span', { class: 'workflow-method__name', text: method.name }),
+          el('span', { class: 'workflow-method__trigger', text: method.trigger }),
+        ]),
+      ]));
+    });
+
+    host.appendChild(el('div', { class: `workflow-step${on ? '' : ' is-off'}` }, [
+      el('div', { class: 'workflow-step__head' }, [
+        el('label', { class: 'workflow-step__toggle' }, [
+          el('input', { type: 'checkbox', checked: on, 'data-step-toggle': step.id }),
+          el('span', { class: 'workflow-step__n', text: String(step.n) }),
+          el('span', { class: 'workflow-step__title', text: step.title }),
+        ]),
+        el('label', { class: 'workflow-step__required' }, [
+          el('input', {
+            type: 'checkbox',
+            checked: required.has(step.id),
+            disabled: !on,
+            'data-step-required': step.id,
+          }),
+          el('span', { text: 'Required' }),
+        ]),
+      ]),
+      el('p', { class: 'workflow-step__question', text: step.question }),
+      methods,
+    ]));
+  });
+}
+
 // ---------- what is enforced ----------
 
 const FACTS = [
@@ -292,6 +361,7 @@ export function renderSettings() {
   renderWorkspace();
   renderPeople();
   renderPolicyGrid();
+  renderWorkflow();
   renderFacts();
   renderStorage();
 }
@@ -304,9 +374,11 @@ async function reload() {
     const stored = await readPolicyFor(projectId);
     draftPolicy = stored.pages;
     draftRequireSignIn = stored.requireSignIn;
+    draftWorkflow = stored.workflow;
   } else {
     members = [];
     draftPolicy = null;
+    draftWorkflow = null;
     draftRequireSignIn = getPolicy().requireSignIn;
   }
   renderSettings();
@@ -392,7 +464,9 @@ export function initSettings(goTo) {
 
   document.getElementById('btn-save-policy').addEventListener('click', async () => {
     try {
-      await savePolicy(getActiveProjectId(), { pages: draftPolicy, requireSignIn: draftRequireSignIn });
+      await savePolicy(getActiveProjectId(), {
+        pages: draftPolicy, requireSignIn: draftRequireSignIn, workflow: draftWorkflow,
+      });
       toast('Page access saved for everyone in this workspace.');
       await reload();
     } catch (err) {
@@ -405,6 +479,66 @@ export function initSettings(goTo) {
     draftPolicy = defaultPolicy();
     renderPolicyGrid();
     toast('Reset to the defaults — save to apply them.');
+  });
+
+  document.getElementById('workflow-steps').addEventListener('change', (e) => {
+    if (!draftWorkflow) return;
+    const { stepToggle, stepRequired, wfStep, wfMethod } = e.target.dataset;
+
+    if (stepToggle) {
+      const on = e.target.checked;
+      const list = new Set(draftWorkflow.steps);
+      if (on) list.add(stepToggle);
+      else list.delete(stepToggle);
+      draftWorkflow.steps = STEPS.map((s) => s.id).filter((id) => list.has(id));
+      // A step that is off cannot also be required, or saving would produce a
+      // workflow the wizard has to silently disagree with.
+      if (!on) draftWorkflow.required = (draftWorkflow.required || []).filter((id) => id !== stepToggle);
+      renderWorkflow();
+      return;
+    }
+
+    if (stepRequired) {
+      const list = new Set(draftWorkflow.required || []);
+      if (e.target.checked) list.add(stepRequired);
+      else list.delete(stepRequired);
+      draftWorkflow.required = [...list];
+      return;
+    }
+
+    if (wfStep && wfMethod) {
+      const list = new Set(draftWorkflow.methods[wfStep] || []);
+      if (e.target.checked) list.add(wfMethod);
+      else list.delete(wfMethod);
+      draftWorkflow.methods[wfStep] = [...list];
+    }
+  });
+
+  ['wf-wip', 'wf-big', 'wf-small'].forEach((id) => {
+    document.getElementById(id).addEventListener('change', (e) => {
+      if (!draftWorkflow) return;
+      const key = { 'wf-wip': 'wipLimit', 'wf-big': 'dailyBig', 'wf-small': 'dailySmall' }[id];
+      draftWorkflow[key] = Number(e.target.value);
+    });
+  });
+
+  document.getElementById('btn-save-workflow').addEventListener('click', async () => {
+    try {
+      await savePolicy(getActiveProjectId(), {
+        pages: draftPolicy, requireSignIn: draftRequireSignIn, workflow: draftWorkflow,
+      });
+      toast('Execution workflow saved for this project.');
+      await reload();
+    } catch (err) {
+      console.warn('Could not save the workflow.', err);
+      toast('The server refused that change.', 'error');
+    }
+  });
+
+  document.getElementById('btn-reset-workflow').addEventListener('click', () => {
+    draftWorkflow = defaultWorkflow();
+    renderWorkflow();
+    toast('Reset to the full map — save to apply it.');
   });
 
   document.getElementById('btn-settings-export').addEventListener('click', () => exportBackupJSON(buildBackup()));

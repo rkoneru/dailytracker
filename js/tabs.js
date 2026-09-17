@@ -82,6 +82,7 @@ export const PAGE_TABS = {
     { id: 'sec-settings-workspace', label: 'Workspace' },
     { id: 'sec-settings-people', label: 'People & Roles' },
     { id: 'sec-settings-pages', label: 'Page Access' },
+    { id: 'sec-settings-workflow', label: 'Task Execution' },
     { id: 'sec-settings-security', label: 'Security' },
     { id: 'sec-settings-data', label: 'Data' },
   ],

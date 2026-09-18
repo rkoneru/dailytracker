@@ -2,9 +2,10 @@ import { el } from './dom.js';
 import * as api from './supabase.js';
 import { toast, confirmAction } from './dialog.js';
 import {
-  getIdentity, isSignedIn, canAdminister, describeIdentity, refreshIdentity,
+  getIdentity, isSignedIn, isDemo, canAdminister, describeIdentity, refreshIdentity,
   listMembership, assignMember, savePolicy, readPolicyFor, signOut, onIdentityChange,
 } from './identity.js';
+import { openLogin, activeDemoName } from './login.js';
 import { ROLES as JOB_ROLES } from './roles.js';
 import { ROLE_LABELS, ASSIGNABLE_ROLES } from './members.js';
 import { navLabels, defaultPolicy, isManaged, getPolicy } from './policy.js';
@@ -63,11 +64,14 @@ function renderAccount() {
   const role = document.getElementById('account-role');
   const avatar = document.getElementById('account-avatar');
   if (name && role && avatar) {
-    name.textContent = signedIn ? identity.user.email : 'Signed out';
-    avatar.textContent = signedIn ? initial(identity.user.email) : '·';
-    role.textContent = signedIn
-      ? (identity.isOwner ? 'Owner' : ROLE_LABELS[identity.accessRole] || 'Member')
-      : 'On this device';
+    const demoName = isDemo() ? activeDemoName() : '';
+    name.textContent = demoName || (signedIn ? identity.user.email : 'Sign in');
+    avatar.textContent = signedIn ? initial(demoName || identity.user.email) : '·';
+    role.textContent = isDemo()
+      ? 'Demo account'
+      : (signedIn
+        ? (identity.isOwner ? 'Owner' : ROLE_LABELS[identity.accessRole] || 'Member')
+        : 'On this device — tap to sign in');
   }
 }
 
@@ -86,15 +90,21 @@ function renderWorkspace() {
   const identity = getIdentity();
   const signedIn = isSignedIn();
 
+  const demo = isDemo();
+
   tile('ws-count-mode',
-    signedIn ? 'Workspace' : 'This device',
-    signedIn ? 'Synced, and governed by its administrator' : 'Nothing leaves this browser',
-    signedIn ? 'good' : 'idle');
+    demo ? 'Demo' : (signedIn ? 'Workspace' : 'This device'),
+    demo ? 'Invented people, on this device'
+      : (signedIn ? 'Synced, and governed by its administrator' : 'Nothing leaves this browser'),
+    demo ? 'warn' : (signedIn ? 'good' : 'idle'));
 
   tile('ws-count-access',
     signedIn ? (identity.isOwner ? 'Owner' : ROLE_LABELS[identity.accessRole] || 'Unknown') : 'Full',
-    signedIn ? 'Enforced by the server' : 'It is your browser',
-    signedIn && identity.accessRole === 'viewer' ? 'warn' : 'good');
+    // The sub-line is the claim that must not be made loosely: in a demo there
+    // is no server, so saying it is enforced would be the one outright lie on
+    // a page whose whole purpose is to not tell one.
+    demo ? 'Nothing is enforced in a demo' : (signedIn ? 'Enforced by the server' : 'It is your browser'),
+    demo ? 'warn' : (signedIn && identity.accessRole === 'viewer' ? 'warn' : 'good'));
 
   const job = identity.jobRole ? JOB_ROLES.find((r) => r.id === identity.jobRole) : null;
   tile('ws-count-job',
@@ -108,7 +118,12 @@ function renderWorkspace() {
     'idle');
 
   const note = document.getElementById('workspace-note');
-  if (!signedIn) {
+  if (demo) {
+    note.textContent = 'You are looking around as somebody who does not exist. Everything below '
+      + 'behaves as it would for them, including the assignments an administrator may and may not '
+      + 'make — but it is all happening in this browser, and none of it is checked by anything. '
+      + 'Leave the demo from the banner at the top of the page.';
+  } else if (!signedIn) {
     note.textContent = 'You are working locally. Your projects live in this browser only — '
       + 'they are not on any server, nobody else can read them, and clearing site data removes them. '
       + 'Export a backup below if that matters.';
@@ -327,10 +342,27 @@ const FACTS = [
   },
 ];
 
+/**
+ * Shown above the others, and only in a demo, because it withdraws them.
+ *
+ * Every fact below it is a statement about a server that a demo does not have.
+ * Leaving them to be read as though they applied would make this page — the one
+ * page whose entire job is to be straight about what is enforced — the most
+ * misleading screen in the app.
+ */
+const DEMO_FACT = {
+  tone: 'bad',
+  title: 'You are signed in to a demo account',
+  body: 'Nothing below applies to it. There is no password, every account is offered to '
+    + 'everybody, and the roster is a key in this browser’s storage that anyone holding the '
+    + 'device can edit. It changes which screens you are shown and nothing else whatsoever. '
+    + 'Your own projects are untouched by it.',
+};
+
 function renderFacts() {
   const host = document.getElementById('security-facts');
   host.innerHTML = '';
-  FACTS.forEach((fact) => {
+  (isDemo() ? [DEMO_FACT, ...FACTS] : FACTS).forEach((fact) => {
     host.appendChild(el('div', { class: `security-fact is-${fact.tone}` }, [
       el('h3', { class: 'security-fact__title', text: fact.title }),
       el('p', { class: 'security-fact__body', text: fact.body }),
@@ -350,8 +382,11 @@ function renderStorage() {
     return;
   }
   const projects = listProjects().length;
+  const elsewhere = isSignedIn() && !isDemo()
+    ? 'Synced projects also exist on your server.'
+    : 'There is no copy anywhere else.';
   note.textContent = `${projects} project${projects === 1 ? '' : 's'} in this browser, about `
-    + `${(bytes / 1024).toFixed(0)} KB. ${isSignedIn() ? 'Synced projects also exist on your server.' : 'There is no copy anywhere else.'}`;
+    + `${(bytes / 1024).toFixed(0)} KB. ${elsewhere}`;
 }
 
 // ---------- the page ----------
@@ -442,7 +477,9 @@ export function initSettings(goTo) {
       // Re-reading rather than trusting the form is the point: the server is
       // the authority on what the assignment now is, and a refusal must not
       // leave the screen showing a change that did not happen.
-      toast('The server refused that change.', 'error');
+      toast(isDemo()
+        ? `Refused: ${err.message} The server refuses it for the same reason.`
+        : 'The server refused that change.', 'error');
       await reload();
     }
   });
@@ -545,7 +582,10 @@ export function initSettings(goTo) {
   document.getElementById('btn-settings-open-export').addEventListener('click', () => openPanel('export'));
 
   document.getElementById('btn-account').addEventListener('click', () => {
-    if (goTo) goTo({ navId: 'tab-settings' });
+    // Signed out, the useful thing behind this button is the way in; signed in,
+    // it is the page that says what you are and lets you leave.
+    if (!isSignedIn()) openLogin();
+    else if (goTo) goTo({ navId: 'tab-settings' });
   });
 
   onIdentityChange(() => renderSettings());

@@ -14,6 +14,71 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
+  <!-- The login screen. Not a gate by default: this app works with no account
+       at all and that is a deliberate property, so "Continue without an account"
+       is a first-class choice rather than a way out. It becomes a gate only when
+       an administrator turns on "Require sign-in", and even then it is a door
+       with no lock — what actually governs data is row level security. -->
+  <div class="login no-print" id="login-screen" hidden>
+    <div class="login__panel" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <div class="login__brand">
+        <img src="icons/icon-32.png" alt="" width="30" height="30">
+        <span>Project Planner</span>
+      </div>
+
+      <h1 class="login__title" id="login-title">Who are you signing in as?</h1>
+      <p class="login__lede">
+        Pick somebody to look around as, or sign in to a real workspace of your own.
+      </p>
+
+      <section class="login__section">
+        <div class="login__section-head">
+          <h2 class="login__heading">Demo accounts</h2>
+          <span class="login__tag">No password</span>
+        </div>
+        <p class="callout login__warn">
+          <strong>These five people are not real.</strong> Every account is offered to
+          everyone, there is no password, and the whole roster lives in this browser.
+          Signing in as the administrator proves nothing and unlocks nothing &mdash; it
+          shows you the screens an administrator gets. Your own data stays on this device.
+        </p>
+        <div class="login__accounts" id="login-accounts"></div>
+      </section>
+
+      <section class="login__section">
+        <div class="login__section-head">
+          <h2 class="login__heading">Your own workspace</h2>
+          <span class="login__tag login__tag--real">Real account</span>
+        </div>
+        <p class="hint">
+          A one-time link, sent to your address. No password is stored anywhere.
+          What you may then read and write is enforced by the server.
+        </p>
+        <div class="signin__form">
+          <label class="field-label field-label--grow">Email
+            <input type="email" class="field-input" id="login-email" autocomplete="email"
+                   placeholder="you@example.com">
+          </label>
+          <button type="button" class="btn btn-primary" id="btn-login-link">Email me a link</button>
+        </div>
+        <p class="hint" id="login-note"></p>
+        <p class="hint callout" id="login-unconfigured" hidden>
+          No workspace is connected yet. Connect one on <strong>Sync &amp; Team</strong> first
+          &mdash; signing in needs somewhere to sign in to.
+        </p>
+      </section>
+
+      <div class="login__foot">
+        <button type="button" class="btn btn-ghost" id="btn-login-skip">Continue without an account</button>
+        <p class="hint" id="login-forced-note" hidden>
+          An administrator has asked everyone here to sign in. This is a request the app
+          honours, not a lock it enforces &mdash; the data it protects is protected by the
+          server, not by this screen.
+        </p>
+      </div>
+    </div>
+  </div>
+
   <div class="app-shell">
     <aside class="sidebar no-print">
       <div class="sidebar__brand">
@@ -58,6 +123,14 @@
         <span class="backup-nudge__text" id="backup-nudge-text"></span>
         <button type="button" class="btn btn-small" id="btn-nudge-backup">Download Backup</button>
         <button type="button" class="btn btn-icon" id="btn-nudge-dismiss" aria-label="Dismiss">✕</button>
+      </div>
+
+      <!-- Stays up for as long as a demo account is worn. No dismiss button:
+           forgetting you are somebody invented is the whole failure mode. -->
+      <div class="backup-nudge backup-nudge--demo no-print" id="demo-banner" hidden>
+        <span class="backup-nudge__text" id="demo-banner-text"></span>
+        <button type="button" class="btn btn-small" id="btn-demo-switch">Switch account</button>
+        <button type="button" class="btn btn-small btn-ghost" id="btn-demo-leave">Leave the demo</button>
       </div>
 
       <div class="backup-nudge backup-nudge--update no-print" id="update-nudge" hidden>
@@ -1481,6 +1554,11 @@
               <button type="button" class="btn btn-primary" id="btn-signin">Email me a link</button>
             </div>
             <p class="hint" id="signin-note"></p>
+            <p class="hint">
+              Or <button type="button" class="linklike" id="btn-open-login">open the sign-in
+              screen</button> to try a demo account instead &mdash; including an administrator,
+              which is the quickest way to see the screens below.
+            </p>
             <p class="hint callout" id="signin-unconfigured" hidden>
               No workspace is connected yet. Connect one on <strong>Sync &amp; Team</strong> first &mdash;
               sign-in needs somewhere to sign in to.

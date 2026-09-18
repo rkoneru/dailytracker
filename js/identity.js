@@ -3,6 +3,9 @@ import { setPolicy, clearPolicy, sanitisePolicy, defaultPolicy } from './policy.
 import { setWorkflow, clearWorkflow } from './workflow.js';
 import { defaultWorkflow, sanitiseWorkflow } from './playbook.js';
 import { setAssignedRole, clearAssignedRole } from './roles.js';
+import {
+  activeDemo, demoMembers, assignDemoMember, demoPolicy, saveDemoPolicy, signOutDemo,
+} from './demoAccounts.js';
 
 // Who you are in this workspace, and what that lets you do.
 //
@@ -31,9 +34,17 @@ let current = {
   jobRole: null,       // assigned, or null when this device decides
   canAdmin: false,
   isOwner: false,
+  demo: false,         // a costume from demoAccounts.js rather than an account
   projectId: '',
   loaded: false,
 };
+
+function signedOut() {
+  return {
+    user: null, accessRole: null, jobRole: null, canAdmin: false, isOwner: false,
+    demo: false, projectId: '', loaded: true,
+  };
+}
 
 const listeners = new Set();
 
@@ -55,6 +66,17 @@ export function isSignedIn() {
 }
 
 /**
+ * True when "signed in" means a demo account rather than a real one.
+ *
+ * Every screen that says something reassuring about enforcement has to check
+ * this, because none of it is true in a demo: there is no server refusing
+ * anything, and the roster is a localStorage key anyone can edit.
+ */
+export function isDemo() {
+  return !!current.demo;
+}
+
+/**
  * Whether this person may administer the workspace.
  *
  * False when nobody is signed in — not because a lone user is untrusted, but
@@ -70,6 +92,10 @@ export function canAdminister() {
 export function describeIdentity() {
   if (!isSignedIn()) return 'Signed out — everything stays on this device.';
   const who = current.user.email;
+  if (current.demo) {
+    const what = current.isOwner ? 'administrator' : (current.canAdmin ? 'can administer' : current.accessRole);
+    return `Demo · ${who} · ${what}`;
+  }
   if (current.isOwner) return `${who} · owner of this project`;
   if (current.canAdmin) return `${who} · ${current.accessRole || 'member'}, can administer`;
   return `${who} · ${current.accessRole || 'member'}`;
@@ -95,6 +121,48 @@ function forget() {
 }
 
 /**
+ * Installs a demo account as though the server had described it.
+ *
+ * Deliberately the same shape and the same side effects as a real membership —
+ * the assigned job role, the page policy, the workflow — so that every screen
+ * downstream is exercising its real code path rather than a demo-shaped
+ * imitation of one. The only difference is where the facts came from, and
+ * `demo: true` is how the UI knows to stop claiming they are enforced.
+ */
+function installDemo(demo, projectId) {
+  current = {
+    user: { id: demo.id, email: demo.email },
+    accessRole: demo.accessRole,
+    jobRole: demo.jobRole || null,
+    canAdmin: !!(demo.isOwner || demo.canAdmin),
+    isOwner: !!demo.isOwner,
+    demo: true,
+    projectId: projectId || '',
+    loaded: true,
+  };
+
+  const saved = demoPolicy();
+  if (saved.pages || saved.requireSignIn) {
+    setPolicy({
+      pages: sanitisePolicy(saved.pages || {}),
+      requireSignIn: saved.requireSignIn,
+      projectId: projectId || '',
+    });
+  } else {
+    clearPolicy();
+  }
+  if (saved.workflow && Object.keys(saved.workflow).length) setWorkflow(saved.workflow);
+  else clearWorkflow();
+
+  if (current.jobRole) setAssignedRole(current.jobRole);
+  else clearAssignedRole();
+
+  remember();
+  emit();
+  return getIdentity();
+}
+
+/**
  * Reads the signed-in user's membership of a project and installs everything
  * that follows from it: access role, assigned job role, admin grant, and the
  * page policy the administrator set.
@@ -107,7 +175,12 @@ export async function refreshIdentity(projectId) {
   const user = api.getUser();
 
   if (!user || !api.isConfigured()) {
-    current = { user: null, accessRole: null, jobRole: null, canAdmin: false, isOwner: false, projectId: '', loaded: true };
+    // A real session always wins; a demo only applies when there is no account
+    // to be had, so signing in for real is never quietly overridden by a
+    // costume somebody left on.
+    const demo = activeDemo();
+    if (demo) return installDemo(demo, projectId);
+    current = signedOut();
     clearAssignedRole();
     clearPolicy();
     forget();
@@ -117,6 +190,9 @@ export async function refreshIdentity(projectId) {
 
   current.user = { id: user.id, email: user.email };
   current.projectId = projectId || '';
+  // A real account arriving takes the costume off, so a demo left on from
+  // earlier in the session cannot leave `isDemo()` true for a real sign-in.
+  current.demo = false;
 
   if (!projectId) {
     current.loaded = true;
@@ -190,6 +266,7 @@ export async function refreshIdentity(projectId) {
  * cannot manage this workspace" panel instead.
  */
 export async function listMembership(projectId) {
+  if (isDemo()) return demoMembers();
   if (!projectId || !isSignedIn()) return [];
   try {
     const [members, profiles] = await Promise.all([
@@ -221,6 +298,14 @@ export async function listMembership(projectId) {
  */
 export async function assignMember(projectId, userId, patch) {
   if (!canAdminister()) throw new Error('Only an administrator can change assignments.');
+  // The demo enforces the same three refusals in the browser. It is not a
+  // boundary and does not pretend to be one — it is there so the screen
+  // behaves the way the real thing behaves.
+  if (isDemo()) {
+    assignDemoMember(userId, patch);
+    if (userId === current.user.id) await refreshIdentity(projectId);
+    return;
+  }
   const body = {};
   if (patch.accessRole !== undefined) body.role = patch.accessRole;
   if (patch.jobRole !== undefined) body.job_role = patch.jobRole || null;
@@ -232,6 +317,14 @@ export async function savePolicy(projectId, { pages, requireSignIn, workflow }) 
   if (!canAdminister()) throw new Error('Only an administrator can change page access.');
   const clean = sanitisePolicy(pages);
   const cleanWorkflow = sanitiseWorkflow(workflow || {});
+
+  if (isDemo()) {
+    saveDemoPolicy({ pages: clean, requireSignIn, workflow: cleanWorkflow });
+    setPolicy({ pages: clean, requireSignIn, projectId });
+    setWorkflow(cleanWorkflow);
+    return;
+  }
+
   await api.upsert('workspace_policy', [{
     project_id: projectId,
     pages: clean,
@@ -246,6 +339,20 @@ export async function savePolicy(projectId, { pages, requireSignIn, workflow }) 
 
 export async function readPolicyFor(projectId) {
   const blank = { pages: defaultPolicy(), requireSignIn: false, workflow: defaultWorkflow(), existing: false };
+
+  if (isDemo()) {
+    const saved = demoPolicy();
+    if (!saved.pages && !saved.workflow && !saved.requireSignIn) return blank;
+    return {
+      pages: { ...defaultPolicy(), ...sanitisePolicy(saved.pages || {}) },
+      requireSignIn: saved.requireSignIn,
+      workflow: saved.workflow && Object.keys(saved.workflow).length
+        ? sanitiseWorkflow(saved.workflow)
+        : defaultWorkflow(),
+      existing: true,
+    };
+  }
+
   try {
     const rows = await api.select('workspace_policy',
       `project_id=eq.${projectId}&select=pages,require_sign_in,workflow`);
@@ -269,10 +376,13 @@ export async function readPolicyFor(projectId) {
 
 export async function signOut({ wipeLocal = false } = {}) {
   await api.signOut();
+  // Taking the costume off as well: leaving it on would mean "sign out" left
+  // you signed in as somebody, which is the one thing the word cannot mean.
+  signOutDemo();
   clearAssignedRole();
   clearPolicy();
   forget();
-  current = { user: null, accessRole: null, jobRole: null, canAdmin: false, isOwner: false, projectId: '', loaded: true };
+  current = signedOut();
   // Signing out of a shared computer should be able to mean it: the projects
   // are still on the server for anyone who signs back in, and leaving a copy
   // in localStorage on a machine somebody else uses is the obvious hole.

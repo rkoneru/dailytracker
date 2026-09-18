@@ -24,7 +24,7 @@ These are not preferences. Check before breaking one.
 
 ```bash
 npm start                      # python3 -m http.server 8765
-npm test                       # all 48 suites (needs chromium)
+npm test                       # all 49 suites (needs chromium)
 node tests/run.js nav sync     # only suites whose filename matches
 npm run lint                   # eslint, flat config
 ```
@@ -39,7 +39,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 
 | Path | What |
 |---|---|
-| `index.html` | every page, as a hidden `<section class="page">`; 18 of them |
+| `index.html` | every page, as a hidden `<section class="page">`; 18 of them, plus the login overlay |
 | `css/styles.css` | all of it; design tokens on `:root` at the top |
 | `js/state.js` | the store. Load, migrate, save (debounced 400 ms), trash, projects, resources |
 | `js/app.js` | boot and wiring; the only file that knows about most others |
@@ -50,6 +50,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/sync*.js` | `syncModel` (wire shape), `syncMerge` (pure three-way merge), `sync` (network) |
 | `js/supabase.js` | hand-rolled PostgREST + GoTrue over `fetch` |
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
+| `js/login.js`, `demoAccounts.js` | the sign-in screen and the five invented people behind it |
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
 | `js/kpi.js`, `kpiPage.js` | the 20 project indicators |
 | `js/zip.js`, `pptx.js`, `reportDeck.js` | slide export, written by hand |
@@ -69,6 +70,14 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 - **Page hiding is not access control** and the app says so on screen. The real
   boundary is row level security, attacked for real in `tests/rls/attack.sql`
   (46 checks, and the suite fails if fewer than 46 run).
+- **Demo accounts secure nothing** and every surface that mentions them has to
+  say so. `identity.js` treats a demo exactly like a real membership so the rest
+  of the app runs its real code path; `isDemo()` is how a screen knows to stop
+  claiming anything is enforced. The delegation fences are re-implemented in
+  `demoAccounts.js` so the demo is not misleading about the product.
+- **The login screen is not a gate by default.** Working with no account is a
+  promise the app makes; it becomes a gate only when an administrator turns on
+  "Require sign-in", and even then it is a door, not a lock.
 - **Changes propagate over pub/sub buses**, not by calling renderers directly:
   `onSaveStatusChange`, `onProjectsChange`, `onProjectDataChange`,
   `onTrashChange`, `onMembersChange`, `onSyncStatusChange`, `onRoleChange`,
@@ -111,6 +120,9 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   `registerPanel(name, open)` / `openPanel(name)`.
 - **`data-*` attribute collisions.** Every page is in the DOM at once, hidden —
   a selector without a page scope will find another screen's elements.
+- **A first-run gate would break every suite.** Each suite does its own
+  `page.goto` — there is no shared opener to dismiss one in. That is a reason to
+  keep the boot path open, not a reason to add a test-only backdoor.
 - Postgres refuses to run as root, and `/tmp/claude-*` is mode 700 root-owned,
   so the RLS suite runs the cluster as the `postgres` account under `/var/tmp`.
 

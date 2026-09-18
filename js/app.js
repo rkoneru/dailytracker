@@ -28,7 +28,7 @@ import { initService, renderService } from './service.js';
 import { initRolePicker } from './rolePicker.js';
 import { initRouter, setRoute, onRouteChange, revealRow, currentUrl } from './router.js';
 import { initChangeLog, renderChangeLog } from './changeLogPage.js';
-import { getRole, seedRoleFromMembership } from './roles.js';
+import { getRole, roleShows, seedRoleFromMembership } from './roles.js';
 import { initSync, syncNow, onSyncStatusChange, getSyncStatus, resetBase, refreshSyncStatus } from './sync.js';
 import { initPalette } from './palette.js';
 import { mountTabs, showSection } from './tabs.js';
@@ -38,6 +38,7 @@ import { initWizard } from './wizard.js';
 import { usePagePolicy } from './roles.js';
 import { pagesFor, onPolicyChange } from './policy.js';
 import { refreshIdentity, onIdentityChange } from './identity.js';
+import { initLogin, openLogin, shouldOpenOnBoot, signInRequired } from './login.js';
 import { initMeetings, renderMeetings, setMeetingsChangedHandler } from './meetings.js';
 import { initMyWork, renderMyWork } from './myWork.js';
 import { initPortfolio, renderPortfolio } from './portfolio.js';
@@ -946,11 +947,30 @@ function init() {
   // An assignment arriving mid-session redraws the sidebar immediately: being
   // told your role changed only on the next reload would leave you clicking
   // pages that are no longer yours.
-  onIdentityChange(() => renderNav());
+  onIdentityChange(() => {
+    renderNav();
+    if (!activeNode) return;
+    // A narrower role can land while the page it no longer covers is on
+    // screen. Redrawing only the sidebar would apply the policy to the menu
+    // and not to what the person is actually looking at.
+    if (roleShows(activeNode.id)) setActiveNode(activeNode.id);
+    else document.getElementById(getRole().home)?.click();
+  });
   refreshIdentity(getActiveProjectId())
     .catch((err) => console.warn('Could not read your membership.', err));
   initKpis();
   initSettings(goTo);
+  // Signing in changes who the app thinks you are, which changes the sidebar,
+  // the assigned role and the landing page — so the same four things happen
+  // here as happen on boot, rather than a reload.
+  initLogin({
+    onChange: async () => {
+      await refreshIdentity(getActiveProjectId());
+      renderNav();
+      await refreshSettings();
+      document.getElementById(getRole().home)?.click();
+    },
+  });
   initWizard();
   initMeetings(goTo);
   setMeetingsChangedHandler(() => notifyProjectDataChanged('meetings'));
@@ -966,6 +986,12 @@ function init() {
     // lands on the role's own page rather than always on the Dashboard.
     document.getElementById(getRole().home)?.click();
   }
+
+  // Last, and over the top of a built app rather than instead of one: the
+  // screen behind it is the app this device already had, which is the point —
+  // nothing here is guarding it.
+  if (signInRequired()) openLogin({ required: true });
+  else if (shouldOpenOnBoot()) openLogin();
 }
 
 if (document.readyState === 'loading') {

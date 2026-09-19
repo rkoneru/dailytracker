@@ -24,7 +24,7 @@ These are not preferences. Check before breaking one.
 
 ```bash
 npm start                      # python3 -m http.server 8765
-npm test                       # all 49 suites (needs chromium)
+npm test                       # all 50 suites (needs chromium)
 node tests/run.js nav sync     # only suites whose filename matches
 npm run lint                   # eslint, flat config
 ```
@@ -44,6 +44,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/state.js` | the store. Load, migrate, save (debounced 400 ms), trash, projects, resources |
 | `js/app.js` | boot and wiring; the only file that knows about most others |
 | `js/nav.js` | `NAV_TREE` — five groups, ARIA tree, roving tabindex |
+| `js/mobileNav.js` | the phone bottom bar; fills its slots from `NAV_TREE` + `roleShows` |
 | `js/tabs.js` | in-page tabs; `PAGE_TABS` maps a page to its sections |
 | `js/router.js` | hash routing and deep links |
 | `js/register.js` + `js/registerDefs.js` | one table engine, 14 declarative registers |
@@ -91,6 +92,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   `sw.js` whenever a cached asset changes, or installed users keep the old one.
 - **Storage keys are versioned** (`projectPlannerStore_v2`, …). Changing a shape
   means an in-place migration in `state.js`, not a new key.
+- **One breakpoint governs the shell: 900px.** Below it the sidebar becomes a
+  drawer *and* the bottom bar appears; they are the same decision and must not
+  drift apart. The content column is uncapped, so the app fills whatever window
+  it is given — `main` has a `clamp()` gutter, not a `max-width`.
+- **Every nav surface asks `roleShows`.** The bottom bar is not a second list of
+  destinations; it reads `NAV_TREE` and filters the same way the sidebar does, so
+  it cannot offer a page the policy removed.
 
 ## Conventions
 
@@ -123,6 +131,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 - **A first-run gate would break every suite.** Each suite does its own
   `page.goto` — there is no shared opener to dismiss one in. That is a reason to
   keep the boot path open, not a reason to add a test-only backdoor.
+- **`isVisible()` is true for the closed mobile drawer.** It is moved with
+  `transform`, not hidden, so Playwright still counts it. Assert on its
+  `getBoundingClientRect()` instead.
+- **Duplicated labels drift.** The bottom bar reads its names from `NAV_TREE`;
+  the only hand-written ones are the two in `SHORT` that genuinely overflow a
+  fifth of a phone. Check any new one against `scrollWidth > clientWidth` at
+  360px, which `tests/test-layout.js` does for every role.
 - Postgres refuses to run as root, and `/tmp/claude-*` is mode 700 root-owned,
   so the RLS suite runs the cluster as the `postgres` account under `/var/tmp`.
 

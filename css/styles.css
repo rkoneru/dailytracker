@@ -269,10 +269,15 @@ button, input, textarea {
 
 /* ---------- Layout ---------- */
 
-main { padding: 20px 16px 64px; }
+/* The gutter grows with the window instead of the content stopping. A fixed
+   column left ~800px of empty page either side of a dashboard on a wide
+   monitor, which is the whole complaint: the app should fill the screen it
+   was given. */
+main { padding: 20px clamp(14px, 2vw, 44px) 64px; }
 
 .print-page {
-  max-width: 1080px;
+  /* Deliberately uncapped. Print puts its own width back on, further down. */
+  max-width: none;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -4738,4 +4743,181 @@ body.login-open { overflow: hidden; }
 @media (max-width: 600px) {
   .login { padding: 0; }
   .login__panel { padding: 18px 14px; border: 0; border-radius: 0; box-shadow: none; min-height: 100vh; }
+}
+
+/* ---------- Wide screens ---------- */
+/* The content column is uncapped now, so the tile strips that were designed to
+   spread are told they may. Everything else simply gets wider, which is what
+   was wanted. */
+
+@media (min-width: 1600px) {
+  .kpi-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .dos-glance { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+}
+
+/* ---------- Phones: the app shell ---------- */
+/*
+   Below 900px the sidebar is already a drawer. What was missing is the thing
+   that makes a phone app a phone app: somewhere to tap that is not the
+   top-left corner. So the four destinations this role actually uses sit along
+   the bottom, the header shrinks to one line, and the page gets out of the way
+   of both.
+
+   Everything here is layout and spacing. No screen is removed on a phone and
+   nothing is hidden that cannot be reached another way — a small screen is a
+   reason to lay work out differently, not a reason to decide somebody is not
+   doing it.
+*/
+
+.mobile-tabs { display: none; }
+.sidebar__close { display: none; }
+
+@media (max-width: 900px) {
+  .mobile-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: flex;
+    align-items: stretch;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    /* The home indicator on a modern phone sits over the bottom of the
+       viewport; without this the last row of labels is under it. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.07);
+  }
+
+  .mobile-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    /* 56px is the smallest a tap target should be at the bottom of a screen,
+       where the thumb is least accurate. */
+    min-height: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 2px;
+    border: 0;
+    background: none;
+    color: var(--color-text-muted);
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-tab__icon { font-size: 19px; line-height: 1; }
+  .mobile-tab__label {
+    font-size: 10.5px;
+    font-weight: 600;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-tab.is-active { color: var(--color-primary); }
+  .mobile-tab.is-active .mobile-tab__icon { transform: translateY(-1px); }
+  .mobile-tab:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+
+  /* Clear the bar, or the last card on every page is unreachable. */
+  main { padding: 12px 12px calc(84px + env(safe-area-inset-bottom, 0px)); }
+
+  /* One line, and it stays one line. A header that wrapped to three rows was
+     spending a third of the screen before any content. */
+  .app-header {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 8px 12px;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  }
+  /* The title is short and names where you are, so it holds its size and the
+     project chip beside it gives way first. The other order truncated
+     "Dashboard" to "Dashbo…" while the chip kept 40% of the screen. */
+  .app-header__title {
+    flex: none;
+    font-size: 16px;
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app-header__actions { flex-wrap: nowrap; gap: 4px; }
+  .btn-project-switcher {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 34vw;
+    overflow: hidden;
+  }
+  .btn-project-switcher #active-project-label {
+    display: inline-block;
+    max-width: 20vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+  /* Both live elsewhere too — Copy link on the palette, the saved state in
+     Settings — so the header keeps the ones with nowhere else to be. */
+  #btn-copy-link { display: none; }
+  .save-indicator { min-width: 0; font-size: 11px; }
+
+  /* The drawer: full height, off the notch, and closable from inside it. */
+  .sidebar {
+    width: min(86vw, 320px);
+    height: 100dvh;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    /* The bottom bar is in front of the drawer — deliberately, so it stays
+       tappable — which means the drawer's last rows need to scroll clear of it. */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+  .sidebar__brand { padding-bottom: 14px; }
+  .sidebar__close {
+    display: inline-flex;
+    margin-left: auto;
+    font-size: 15px;
+  }
+  /* Comfortable rows for a thumb rather than a mouse. */
+  .nav-row { min-height: 44px; }
+
+  /* Tighter everywhere: a phone has one column, so the space between cards is
+     the space you scroll past. */
+  .print-page { gap: 12px; }
+  .card { padding: 13px; }
+  .dash-os { padding: 16px 14px 24px; }
+  .dos-masthead { padding-bottom: 12px; margin-bottom: 14px; column-gap: 12px; }
+  .dos-mark { width: 40px; height: 40px; font-size: 1.15rem; border-radius: 11px; }
+  .dos-title { font-size: 1.3rem; }
+  .dos-tile { padding: 12px 13px; min-height: 76px; }
+  .dos-now__time { font-size: 1.5rem; }
+  /* Two across rather than one: four stacked full-width tiles is four screens
+     of scrolling to read four numbers. */
+  .dos-glance { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .kpi-row { gap: 10px; }
+}
+
+/* Very narrow: the glance row stays two across — it is a strip of readings,
+   and one per screen defeats the point of a strip. */
+@media (max-width: 480px) {
+  .dos-glance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dos-title { font-size: 1.15rem; }
+  main { padding-left: 10px; padding-right: 10px; }
+  .card { padding: 11px; }
+}
+
+/* A five-slot bar on a very small phone: labels shrink before they truncate. */
+@media (max-width: 360px) {
+  .mobile-tab__label { font-size: 9.5px; }
+  .mobile-tab__icon { font-size: 17px; }
+}
+
+/* Installed, there is no browser chrome to scroll away, so the shell should
+   fill the window exactly rather than leaving a scrollable gap. */
+@media (display-mode: standalone) {
+  .app-shell { min-height: 100dvh; }
+}
+
+@media print {
+  .mobile-tabs { display: none !important; }
 }

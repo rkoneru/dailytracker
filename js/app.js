@@ -39,6 +39,7 @@ import { usePagePolicy } from './roles.js';
 import { pagesFor, onPolicyChange } from './policy.js';
 import { refreshIdentity, onIdentityChange } from './identity.js';
 import { initLogin, openLogin, shouldOpenOnBoot, signInRequired } from './login.js';
+import { initMobileNav, setMobileActive } from './mobileNav.js';
 import { initMeetings, renderMeetings, setMeetingsChangedHandler } from './meetings.js';
 import { initMyWork, renderMyWork } from './myWork.js';
 import { initPortfolio, renderPortfolio } from './portfolio.js';
@@ -165,6 +166,7 @@ function navigateTo(node, { fromRoute = false, rowId = '' } = {}) {
   if (node.report) setReportType(node.report, { render: false });
   showPage(node.page, node.title);
   setActiveNode(node.id);
+  setMobileActive(node.id);
   activeNode = node;
 
   if (!fromRoute) setRoute({ navId: node.id, projectId: getActiveProjectId() });
@@ -302,6 +304,11 @@ function initWhoAmI() {
 function initSidebarToggle() {
   document.getElementById('btn-sidebar-toggle').addEventListener('click', () => {
     document.body.classList.toggle('sidebar-open');
+  });
+  // On a phone the drawer covers most of the screen and the dimmed strip
+  // beside it is a thin target, so it closes from inside as well.
+  document.getElementById('btn-sidebar-close').addEventListener('click', () => {
+    document.body.classList.remove('sidebar-open');
   });
 }
 
@@ -938,6 +945,7 @@ function init() {
   initPalette(goTo);
   initMyWork(goTo);
   initPortfolio(goTo);
+  initMobileNav(goTo);
   initResources(goTo);
   // The nav asks the policy which pages a role may see. Injected rather than
   // imported by roles.js, because policy.js reads the role list from there and

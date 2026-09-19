@@ -3,6 +3,7 @@ import { migrateMeeting, MEETING_LISTS } from './meetingModel.js';
 import { REGISTER_KEYS, LEGACY_REGISTER_KEYS, CHARTER_FIELDS } from './registerDefs.js';
 import { newResource, resourceIdFor } from './resourceModel.js';
 import { snapshotOf, diffSnapshots } from './changeLog.js';
+import { sanitiseMethodology, sanitisePhase } from './methodology.js';
 
 const STORAGE_KEY = 'projectPlannerStore_v2';
 const LEGACY_STORAGE_KEY = 'projectPlannerData_v1';
@@ -211,6 +212,22 @@ function migrateProject(data) {
     // recoverable, and the due date is the only defensible stand-in — it reads
     // as "on time", which is what ticking it off already asserted.
     if (m.achieved === undefined) m.achieved = m.done ? (m.due || '') : '';
+    // Which phase of the project's method this milestone belongs to. Empty on
+    // every existing project, which is correct rather than a gap: they were
+    // planned without one, and guessing a phase from a milestone's wording
+    // would put a made-up answer where the project has a real blank.
+    if (m.phase === undefined) m.phase = '';
+  });
+  // The method this project is run by — a CPMAI or CRISP-DM phase set, or an
+  // MLOps/LLMOps capability set. Empty means "no named method", which is what
+  // most projects are and is not a deficiency. See js/methodology.js.
+  if (data.methodology === undefined) data.methodology = '';
+  data.methodology = sanitiseMethodology(data.methodology);
+  // A phase that does not belong to the method in force is dropped rather than
+  // kept: switching method must not leave milestones tagged to phases that no
+  // longer exist, pointing at a strip that cannot show them.
+  (data.milestones || []).forEach((m) => {
+    m.phase = sanitisePhase(data.methodology, m.phase);
   });
   // The change log is per project and append-only; projects made before it
   // existed simply start empty rather than inventing a history.

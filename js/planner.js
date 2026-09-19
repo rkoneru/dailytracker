@@ -7,6 +7,7 @@ import { offerUndo } from './trash.js';
 import { notifyProjectDataChanged, TICK_DAYS, tickMarker } from './taskModel.js';
 import { el } from './dom.js';
 import { refFor } from './register.js';
+import { METHODOLOGIES, methodOf, phasesOf, phaseProgress, sanitisePhase } from './methodology.js';
 
 function findById(list, id) {
   return list.find((item) => item.id === id);
@@ -20,6 +21,97 @@ function dragHandleCell() {
   return el('td', { class: 'col-drag no-print' }, [
     el('span', { class: 'drag-handle', 'aria-hidden': 'true', title: 'Drag to reorder' }, [document.createTextNode('⠿')]),
   ]);
+}
+
+// ---------- Method ----------
+//
+// The phase strip is read off the milestone list directly below it, which is
+// why the two cards sit together and why nothing here is stored. A phase's
+// state is a fact about its milestones; keeping a second copy would mean
+// ticking a milestone left the strip saying something else.
+
+function phaseCard(phase, numbered) {
+  const measured = phase.progress !== null;
+  const tone = phase.complete ? 'is-done' : (phase.started ? 'is-active' : 'is-idle');
+
+  return el('div', { class: `method-phase ${tone}${measured ? '' : ' is-unplanned'}` }, [
+    el('div', { class: 'method-phase__head' }, [
+      numbered ? el('span', { class: 'method-phase__n', text: phase.n }) : null,
+      el('h3', { class: 'method-phase__name', text: phase.label }),
+      el('span', {
+        class: 'method-phase__count',
+        // Grey and "not planned" rather than a green 0%: a phase nobody has
+        // put a milestone in has not been measured, and the app's rule is that
+        // unmeasured and zero must not look the same.
+        text: measured ? `${phase.done}/${phase.total} · ${phase.progress}%` : 'Not planned',
+      }),
+    ]),
+    el('p', { class: 'method-phase__asks', text: phase.asks }),
+    el('p', { class: 'method-phase__gate' }, [
+      el('strong', { text: 'Leaves when: ' }),
+      document.createTextNode(phase.gate),
+    ]),
+    phase.total
+      ? el('ul', { class: 'method-phase__list' }, phase.milestones.map((m) => el('li', {
+        class: `method-phase__item${m.done ? ' is-done' : ''}`,
+        text: m.text || 'Untitled milestone',
+      })))
+      : null,
+  ]);
+}
+
+function renderMethod() {
+  const state = getState();
+  const method = methodOf(state);
+
+  const picker = document.getElementById('method-select');
+  if (picker.dataset.built !== 'yes') {
+    picker.appendChild(el('option', { value: '', text: '— no method —' }));
+    // Short enough to fit the closed control, and the kind is the useful part
+    // when choosing: the full name and where it came from are in the line
+    // underneath, where there is room for them.
+    METHODOLOGIES.forEach((m) => picker.appendChild(
+      el('option', { value: m.id, text: `${m.label} (${m.kind})` })));
+    picker.dataset.built = 'yes';
+  }
+  picker.value = state.methodology || '';
+
+  document.getElementById('method-blurb').textContent = method
+    ? `${method.full}. ${method.origin} ${method.suits}`
+    : 'How this project is run. Optional, and most projects do not need one — '
+      + 'it earns its place on AI and data work, where the order of the phases is the argument.';
+
+  document.getElementById('method-empty').hidden = !!method;
+  document.getElementById('milestone-phase-head').hidden = !method;
+
+  const host = document.getElementById('method-phases');
+  host.innerHTML = '';
+  if (!method) return;
+
+  // A lifecycle is a sequence and is numbered; a practice is a set of
+  // capabilities and is not. Numbering MLOps would assert an order that does
+  // not exist — nobody finishes monitoring and moves on to the registry.
+  const numbered = method.kind === 'lifecycle';
+  host.classList.toggle('is-practice', !numbered);
+  if (!numbered) {
+    host.appendChild(el('p', { class: 'hint method-note', text:
+      'Capabilities, not stages. These are things a team has or does not have, '
+      + 'in no particular order, so they are deliberately unnumbered.' }));
+  }
+  phaseProgress(state).forEach((phase) => host.appendChild(phaseCard(phase, numbered)));
+}
+
+function bindMethod() {
+  document.getElementById('method-select').addEventListener('change', (e) => {
+    const state = getState();
+    state.methodology = e.target.value;
+    // Phases belong to a method. Switching drops the tags rather than leaving
+    // milestones pointing at phases the new method does not have.
+    state.milestones.forEach((m) => { m.phase = sanitisePhase(state.methodology, m.phase); });
+    scheduleSave();
+    renderMethod();
+    renderMilestones();
+  });
 }
 
 // ---------- Milestones ----------
@@ -45,9 +137,24 @@ function deliverableSelect(milestone) {
   return select;
 }
 
+/** Only offered once the project has a method — otherwise there is nothing to pick from. */
+function phaseSelect(milestone, phases) {
+  const select = el('select', {
+    class: 'row-select', 'data-field': 'phase', 'aria-label': 'Method phase',
+  });
+  select.appendChild(el('option', { value: '', text: '—', selected: !milestone.phase }));
+  phases.forEach((phase) => select.appendChild(el('option', {
+    value: phase.id,
+    text: phase.n ? `${phase.n}. ${phase.label}` : phase.label,
+    selected: phase.id === milestone.phase,
+  })));
+  return select;
+}
+
 function renderMilestones() {
   const state = getState();
   const tbody = document.getElementById('milestones-body');
+  const phases = phasesOf(state);
   tbody.innerHTML = '';
 
   state.milestones.forEach((m, index) => {
@@ -67,6 +174,7 @@ function renderMilestones() {
       el('td', {}, [el('input', { class: 'row-input', 'data-field': 'text', value: m.text || '', placeholder: 'Milestone name' })]),
       el('td', { class: 'col-progress' }, [segments]),
       el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'due', value: m.due || '' })]),
+      phases.length ? el('td', { class: 'col-phase' }, [phaseSelect(m, phases)]) : null,
       el('td', { class: 'col-deliverable' }, [deliverableSelect(m)]),
       el('td', { class: 'col-check' }, [el('input', { type: 'checkbox', 'data-field': 'done', checked: !!m.done })]),
       el('td', { class: 'col-action no-print' }, [el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-milestone', 'aria-label': 'Delete milestone', text: '🗑' })]),
@@ -89,7 +197,7 @@ function bindMilestones() {
 
   tbody.addEventListener('change', (e) => {
     const field = e.target.dataset.field;
-    if (field !== 'done' && field !== 'deliverableId') return;
+    if (field !== 'done' && field !== 'deliverableId' && field !== 'phase') return;
     const item = findById(getState().milestones, rowIdOf(e.target));
     if (!item) return;
     if (field === 'done') {
@@ -98,8 +206,15 @@ function bindMilestones() {
       // the milestone achievement rate knows a milestone landed but not
       // whether it landed on time, which is the only part worth measuring.
       item.achieved = e.target.checked ? (item.achieved || todayISO()) : '';
+    } else if (field === 'phase') {
+      item.phase = e.target.value;
     } else item.deliverableId = e.target.value;
     commitChange();
+    // The strip above is derived from these rows, so both of the fields that
+    // move a milestone between phases — or finish one — have to redraw it.
+    // Only the strip: rebuilding the table here would drop an edit in progress
+    // in another row, since `change` fires as focus leaves a field.
+    if (field === 'phase' || field === 'done') renderMethod();
   });
 
   tbody.addEventListener('click', (e) => {
@@ -345,6 +460,7 @@ function bindNotes() {
 }
 
 export function renderPlanner() {
+  renderMethod();
   renderMilestones();
   renderTicks();
   renderBaselineNote();
@@ -353,6 +469,7 @@ export function renderPlanner() {
 
 export function initPlanner() {
   renderPlanner();
+  bindMethod();
   bindMilestones();
   bindOpenTasks();
   bindBaseline();

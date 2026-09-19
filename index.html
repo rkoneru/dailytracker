@@ -198,6 +198,20 @@
           </div>
         </header>
 
+        <section class="card" id="sec-method">
+          <div class="card__head">
+            <h2>Method</h2>
+            <select class="field-input field-input--auto no-print" id="method-select"
+                    aria-label="How this project is run"></select>
+          </div>
+          <p class="hint" id="method-blurb"></p>
+          <div class="method-phases" id="method-phases"></div>
+          <p class="hint callout no-print" id="method-empty" hidden>
+            No method set. Pick one and each phase will show which of the milestones below
+            belong to it, and what has to be true to leave it.
+          </p>
+        </section>
+
         <section class="card" id="sec-milestones">
           <div class="card__head">
             <h2>Milestones</h2>
@@ -216,6 +230,7 @@
                   <th>Milestone</th>
                   <th class="col-progress">Progress</th>
                   <th class="col-date">Due</th>
+                  <th class="col-phase" id="milestone-phase-head" hidden>Phase</th>
                   <th class="col-deliverable">Delivers</th>
                   <th class="col-check">Done</th>
                   <th class="col-action no-print"></th>

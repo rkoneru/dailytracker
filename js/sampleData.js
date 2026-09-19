@@ -375,11 +375,19 @@ function createLLMFeatureLaunch() {
       { id: id('n'), text: 'Streaming responses are a hard requirement — p95 first-token under 800ms.' },
       { id: id('n'), text: 'Legal wants the data-retention wording finalised before dogfood widens.' },
     ],
+    // Run to CPMAI, which is CRISP-DM's six phases made iterative and
+    // data-first. Worth seeing on a feature with no trained model of its own:
+    // the data phases are about the evaluation set, and they still gate
+    // everything after them.
+    methodology: 'cpmai',
     milestones: [
-      { id: id('m'), text: 'Prompt + eval baseline set', progress: 5, due: '2026-09-18', done: true },
-      { id: id('m'), text: 'Internal dogfood open', progress: 3, due: '2026-09-28', done: false },
-      { id: id('m'), text: 'Safety & red-team sign-off', progress: 1, due: '2026-10-08', done: false },
-      { id: id('m'), text: 'GA rollout complete', progress: 0, due: '2026-10-16', done: false },
+      { id: id('m'), phase: 'business', text: 'Value case and quality bar agreed', progress: 5, due: '2026-09-12', done: true },
+      { id: id('m'), phase: 'data-understanding', text: 'Real user questions collected and sampled', progress: 5, due: '2026-09-16', done: true },
+      { id: id('m'), phase: 'data-prep', text: 'Golden eval set labelled and held out', progress: 5, due: '2026-09-18', done: true },
+      { id: id('m'), phase: 'modeling', text: 'Prompt + eval baseline set', progress: 3, due: '2026-09-28', done: false },
+      { id: id('m'), phase: 'evaluation', text: 'Internal dogfood open', progress: 3, due: '2026-09-28', done: false },
+      { id: id('m'), phase: 'evaluation', text: 'Safety & red-team sign-off', progress: 1, due: '2026-10-08', done: false },
+      { id: id('m'), phase: 'operationalize', text: 'GA rollout complete', progress: 0, due: '2026-10-16', done: false },
     ],
     dashDate: '2026-09-28',
     baselineSetAt: '2026-09-14',
@@ -403,6 +411,13 @@ function createLLMFeatureLaunch() {
       { id: id('d'), name: 'Red-team exercise', assigned: 'Priya S.', start: '2026-10-01', end: '2026-10-08', baseStart: '2026-10-01', baseEnd: '2026-10-08', status: 'Not Started', prio: 'High', comments: 'External reviewer booked.' },
       { id: id('d'), name: 'Data retention wording', assigned: 'Legal', start: '2026-09-22', end: '2026-09-29', baseStart: '2026-09-13', baseEnd: '2026-09-20', status: 'On Hold', prio: 'Medium', comments: 'Waiting on privacy counsel review.' },
       { id: id('d'), name: 'Rollout runbook & on-call', assigned: 'Marcus L.', start: '2026-10-08', end: '2026-10-14', baseStart: '2026-10-08', baseEnd: '2026-10-14', status: 'Not Started', prio: 'Medium', comments: '' },
+      // The LLMOps half. Nothing here is about shipping the feature and all of
+      // it is about still having a working feature in March: the prompt, the
+      // model version and the corpus can all move without anybody deploying.
+      { id: id('d'), name: 'Prompt & config under version control', assigned: 'Tom B.', start: '2026-09-21', end: '2026-09-25', baseStart: '2026-09-21', baseEnd: '2026-09-25', status: 'In Progress', prio: 'High', comments: 'Live set identifiable and revertible without a deploy.' },
+      { id: id('d'), name: 'Tracing, cost and latency dashboard', assigned: 'Tom B.', start: '2026-09-30', end: '2026-10-07', baseStart: '2026-09-30', baseEnd: '2026-10-07', status: 'Not Started', prio: 'High', comments: 'Cost per conversation, not just per call.' },
+      { id: id('d'), name: 'Model version pinning & upgrade regression', assigned: 'Tom B.', start: '2026-10-05', end: '2026-10-12', baseStart: '2026-10-05', baseEnd: '2026-10-12', status: 'Not Started', prio: 'High', comments: 'Provider ships a new version; the golden set decides whether we take it.' },
+      { id: id('d'), name: 'Human feedback loop into the eval set', assigned: 'Nadia R.', start: '2026-10-09', end: '2026-10-16', baseStart: '2026-10-09', baseEnd: '2026-10-16', status: 'Not Started', prio: 'Medium', comments: 'Thumbs-down becomes a labelled case, or the set stops reflecting reality.' },
     ],
   };
 }
@@ -418,11 +433,18 @@ function createRagAssistant() {
       { id: id('n'), text: 'Confluence export is messy; ~12% of pages are stale and need owner review.' },
       { id: id('n'), text: 'Reranking gave a bigger accuracy lift than a larger embedding model.' },
     ],
+    // CPMAI again, and this is the template where its data-first insistence is
+    // most obviously right: in a retrieval system the corpus *is* the product,
+    // and phases II and III are the bulk of the work rather than a preamble.
+    methodology: 'cpmai',
     milestones: [
-      { id: id('m'), text: 'Corpus ingested & indexed', progress: 5, due: '2026-10-09', done: true },
-      { id: id('m'), text: 'Retrieval baseline measured', progress: 4, due: '2026-10-16', done: false },
-      { id: id('m'), text: 'Answer accuracy ≥85%', progress: 2, due: '2026-10-28', done: false },
-      { id: id('m'), text: 'Support team pilot live', progress: 0, due: '2026-11-06', done: false },
+      { id: id('m'), phase: 'business', text: 'Questions worth answering agreed with support', progress: 5, due: '2026-10-02', done: true },
+      { id: id('m'), phase: 'data-understanding', text: 'Corpus inventoried, owners and licences known', progress: 5, due: '2026-10-07', done: true },
+      { id: id('m'), phase: 'data-prep', text: 'Corpus ingested & indexed', progress: 5, due: '2026-10-09', done: true },
+      { id: id('m'), phase: 'modeling', text: 'Retrieval baseline measured', progress: 4, due: '2026-10-16', done: false },
+      { id: id('m'), phase: 'evaluation', text: 'Answer accuracy ≥85% with citations checked', progress: 2, due: '2026-10-28', done: false },
+      { id: id('m'), phase: 'operationalize', text: 'Support team pilot live', progress: 0, due: '2026-11-06', done: false },
+      { id: id('m'), phase: 'operationalize', text: 'Index refresh running on a schedule', progress: 0, due: '2026-11-06', done: false },
     ],
     dashDate: '2026-10-16',
     baselineSetAt: '2026-10-05',
@@ -461,11 +483,18 @@ function createMLModelDevelopment() {
       { id: id('n'), text: 'Label leakage found in the first feature set — cancellation_date had to be dropped.' },
       { id: id('n'), text: 'Fairness check across tenure bands is a release gate, not a nice-to-have.' },
     ],
+    // CRISP-DM rather than CPMAI: the question is known, the data decides, and
+    // this is the shape of project the 1999 consortium actually had in mind.
+    // The loop back from Evaluation to Business Understanding is live here —
+    // the operating-point decision below is exactly that loop.
+    methodology: 'crisp-dm',
     milestones: [
-      { id: id('m'), text: 'Training data pipeline ready', progress: 5, due: '2026-10-30', done: true },
-      { id: id('m'), text: 'Baseline model trained', progress: 4, due: '2026-11-06', done: false },
-      { id: id('m'), text: 'Validation + fairness passed', progress: 1, due: '2026-11-18', done: false },
-      { id: id('m'), text: 'Deployed with monitoring', progress: 0, due: '2026-11-27', done: false },
+      { id: id('m'), phase: 'business', text: 'Baseline to beat agreed with retention', progress: 5, due: '2026-10-23', done: true },
+      { id: id('m'), phase: 'data-understanding', text: 'Sources profiled, quality problems named', progress: 5, due: '2026-10-28', done: true },
+      { id: id('m'), phase: 'data-prep', text: 'Training data pipeline ready', progress: 5, due: '2026-10-30', done: true },
+      { id: id('m'), phase: 'modeling', text: 'Baseline model trained', progress: 4, due: '2026-11-06', done: false },
+      { id: id('m'), phase: 'evaluation', text: 'Validation + fairness passed', progress: 1, due: '2026-11-18', done: false },
+      { id: id('m'), phase: 'deployment', text: 'Deployed with monitoring', progress: 0, due: '2026-11-27', done: false },
     ],
     dashDate: '2026-11-06',
     baselineSetAt: '2026-10-26',
@@ -488,6 +517,13 @@ function createMLModelDevelopment() {
       { id: id('d'), name: 'Holdout validation', assigned: 'Iris P.', start: '2026-11-16', end: '2026-11-20', baseStart: '2026-11-16', baseEnd: '2026-11-20', status: 'Not Started', prio: 'High', comments: '' },
       { id: id('d'), name: 'Serving deployment', assigned: 'Ravi M.', start: '2026-11-20', end: '2026-11-25', baseStart: '2026-11-20', baseEnd: '2026-11-25', status: 'Not Started', prio: 'High', comments: '' },
       { id: id('d'), name: 'Drift & performance monitoring', assigned: 'Ravi M.', start: '2026-11-23', end: '2026-11-27', baseStart: '2026-11-23', baseEnd: '2026-11-27', status: 'Not Started', prio: 'Medium', comments: '' },
+      // The MLOps half: the difference between a model that works on the day
+      // it ships and one that is still right in a year.
+      { id: id('d'), name: 'Reproducible training run', assigned: 'Iris P.', start: '2026-11-02', end: '2026-11-06', baseStart: '2026-11-02', baseEnd: '2026-11-06', status: 'In Progress', prio: 'High', comments: 'Data, code, params and environment versioned together; a rebuild has to match.' },
+      { id: id('d'), name: 'Model registry & lineage', assigned: 'Ravi M.', start: '2026-11-16', end: '2026-11-20', baseStart: '2026-11-16', baseEnd: '2026-11-20', status: 'Not Started', prio: 'High', comments: 'Which model is live, from what data, approved by whom.' },
+      { id: id('d'), name: 'Shadow run against the rules engine', assigned: 'Ravi M.', start: '2026-11-20', end: '2026-11-25', baseStart: '2026-11-20', baseEnd: '2026-11-25', status: 'Not Started', prio: 'High', comments: 'Both score every account; nobody acts on the model yet.' },
+      { id: id('d'), name: 'Rollback rehearsal', assigned: 'Ravi M.', start: '2026-11-24', end: '2026-11-26', baseStart: '2026-11-24', baseEnd: '2026-11-26', status: 'Not Started', prio: 'High', comments: 'Rehearsed, not assumed.' },
+      { id: id('d'), name: 'Retraining trigger & approval gate', assigned: 'Ben O.', start: '2026-11-23', end: '2026-11-27', baseStart: '2026-11-23', baseEnd: '2026-11-27', status: 'Not Started', prio: 'Medium', comments: 'Automated run, human promotion.' },
     ],
   };
 }
@@ -503,11 +539,15 @@ function createAgentAutomationPilot() {
       { id: id('n'), text: 'Escalation rules matter more than model quality — wrong-confident replies are the main risk.' },
       { id: id('n'), text: 'Measure cost per ticket alongside deflection, or the win is meaningless.' },
     ],
+    methodology: 'cpmai',
     milestones: [
-      { id: id('m'), text: 'Tool integrations working', progress: 5, due: '2026-10-07', done: true },
-      { id: id('m'), text: 'Sandbox eval passed', progress: 3, due: '2026-10-14', done: false },
-      { id: id('m'), text: 'Human-in-loop pilot live', progress: 1, due: '2026-10-21', done: false },
-      { id: id('m'), text: 'Go / no-go decision', progress: 0, due: '2026-10-30', done: false },
+      { id: id('m'), phase: 'business', text: 'Deflection target and pilot scope agreed', progress: 5, due: '2026-10-03', done: true },
+      { id: id('m'), phase: 'data-understanding', text: 'Past tickets reviewed, categories chosen', progress: 5, due: '2026-10-05', done: true },
+      { id: id('m'), phase: 'data-prep', text: 'Eval set built from resolved tickets', progress: 3, due: '2026-10-12', done: false },
+      { id: id('m'), phase: 'modeling', text: 'Tool integrations working', progress: 5, due: '2026-10-07', done: true },
+      { id: id('m'), phase: 'evaluation', text: 'Sandbox eval passed', progress: 3, due: '2026-10-14', done: false },
+      { id: id('m'), phase: 'evaluation', text: 'Human-in-loop pilot live', progress: 1, due: '2026-10-21', done: false },
+      { id: id('m'), phase: 'operationalize', text: 'Go / no-go decision', progress: 0, due: '2026-10-30', done: false },
     ],
     dashDate: '2026-10-14',
     baselineSetAt: '2026-10-01',
@@ -545,11 +585,17 @@ function createAIGovernance() {
       { id: id('n'), text: 'Risk tiering must map to the EU AI Act categories to be useful for legal.' },
       { id: id('n'), text: 'Review gate goes in the existing SDLC checklist, not a separate process nobody follows.' },
     ],
+    // A governance programme is not a model build, and mapping it to CPMAI is
+    // the point: the phases are about the inventory rather than a model, and
+    // they still fall in the same order.
+    methodology: 'cpmai',
     milestones: [
-      { id: id('m'), text: 'Model inventory complete', progress: 4, due: '2026-11-13', done: false },
-      { id: id('m'), text: 'Risk tiering framework approved', progress: 2, due: '2026-11-20', done: false },
-      { id: id('m'), text: 'Review gate live in SDLC', progress: 0, due: '2026-12-04', done: false },
-      { id: id('m'), text: 'High-risk systems assessed', progress: 0, due: '2026-12-11', done: false },
+      { id: id('m'), phase: 'business', text: 'Scope, obligations and who owns them agreed', progress: 5, due: '2026-11-06', done: true },
+      { id: id('m'), phase: 'data-understanding', text: 'Model inventory complete', progress: 4, due: '2026-11-13', done: false },
+      { id: id('m'), phase: 'data-prep', text: 'Evidence pack template agreed', progress: 2, due: '2026-11-18', done: false },
+      { id: id('m'), phase: 'modeling', text: 'Risk tiering framework approved', progress: 2, due: '2026-11-20', done: false },
+      { id: id('m'), phase: 'evaluation', text: 'High-risk systems assessed', progress: 0, due: '2026-12-11', done: false },
+      { id: id('m'), phase: 'operationalize', text: 'Review gate live in SDLC', progress: 0, due: '2026-12-04', done: false },
     ],
     dashDate: '2026-11-13',
     baselineSetAt: '2026-11-02',
@@ -578,6 +624,115 @@ function createAIGovernance() {
   };
 }
 
+/**
+ * MLOps and LLMOps are not lifecycles, so these two templates are not shaped
+ * like the ones above.
+ *
+ * There is no discovery-to-go-live arc here, because that is not what adopting
+ * a practice looks like. It looks like a team that can do four of six things
+ * reliably and wants to be able to do six, and the plan is one workstream per
+ * capability, each finished when it is true of every model or every assistant
+ * rather than when somebody has built a tool. Both templates are written that
+ * way on purpose: a "platform rollout" that ends with a platform nobody is
+ * obliged to use is the standard way this fails.
+ */
+function createMLOpsPlatform() {
+  return {
+    projectName: 'MLOps Platform Rollout',
+    objective: 'Make every production model reproducible, registered, monitored and rollback-able — measured by models meeting the bar, not by tools installed.',
+    dueDate: '2027-03-26',
+    reward: 'The on-call rota stops including the person who trained the model.',
+    notes: [
+      { id: id('n'), text: 'Eleven models in production. Four can be rebuilt from scratch today; the rest cannot.' },
+      { id: id('n'), text: 'Success is models meeting the bar, not tools installed. A platform nobody is obliged to use changes nothing.' },
+      { id: id('n'), text: 'Two models have no named owner. That is the first thing to fix and it is not a tooling problem.' },
+    ],
+    methodology: 'mlops',
+    milestones: [
+      { id: id('m'), phase: 'reproducible', text: 'Every production model rebuilds and matches', progress: 3, due: '2026-12-18', done: false },
+      { id: id('m'), phase: 'pipeline', text: 'Training runs on a trigger, not a laptop', progress: 2, due: '2027-01-15', done: false },
+      { id: id('m'), phase: 'registry', text: 'Registry holds every model with its lineage', progress: 1, due: '2027-01-29', done: false },
+      { id: id('m'), phase: 'release', text: 'Canary and rollback rehearsed on a real model', progress: 0, due: '2027-02-19', done: false },
+      { id: id('m'), phase: 'monitoring', text: 'Drift and live accuracy alerting, with owners', progress: 0, due: '2027-03-12', done: false },
+      { id: id('m'), phase: 'retraining', text: 'Retraining triggers agreed and running', progress: 0, due: '2027-03-26', done: false },
+    ],
+    dashDate: '2026-12-18',
+    baselineSetAt: '2026-11-30',
+    dashStatus: 'ON TRACK',
+    budgetPlanned: 240000,
+    budgetActual: 41000,
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'Teams adopt the tooling but not the standard', owner: 'Ravi M.', severity: 'High', likelihood: 'High', status: 'Open', due: '2027-01-29', action: 'Measure models meeting the bar, never tools installed. Report the former monthly.' },
+      { id: id('r'), type: 'Issue', title: 'Two production models have no named owner', owner: 'Ben O.', severity: 'High', likelihood: '', status: 'Open', due: '2026-12-11', action: 'Escalated to the data leadership group. Not a tooling problem.' },
+      { id: id('r'), type: 'Risk', title: 'Oldest model cannot be rebuilt — training data is gone', owner: 'Iris P.', severity: 'High', likelihood: 'Medium', status: 'In Progress', due: '2027-01-15', action: 'Decide: retrain from what exists, or retire it. Do not pretend it is reproducible.' },
+      { id: id('r'), type: 'Decision', title: 'Buy a registry or build on the artefact store', owner: 'Ravi M.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-12-18', action: 'Both costed; the deciding factor is lineage across the feature pipeline.' },
+      { id: id('r'), type: 'Assumption', title: 'Drift thresholds can be set from the last two years of data', owner: 'Iris P.', severity: 'Medium', likelihood: '', status: 'Open', due: '2027-02-26', action: 'Check against the pricing change — the distribution moved.' },
+    ],
+    dashTasks: [
+      { id: id('d'), name: 'Inventory: what is in production and who owns it', assigned: 'Ben O.', start: '2026-11-30', end: '2026-12-11', baseStart: '2026-11-30', baseEnd: '2026-12-11', status: 'Complete', prio: 'High', comments: '11 models, 2 with no owner.' },
+      { id: id('d'), name: 'Reproducibility audit against each model', assigned: 'Iris P.', start: '2026-12-07', end: '2026-12-18', baseStart: '2026-12-07', baseEnd: '2026-12-18', status: 'In Progress', prio: 'High', comments: '4 of 11 rebuild and match today.' },
+      { id: id('d'), name: 'Versioned data + environment convention', assigned: 'Iris P.', start: '2026-12-14', end: '2027-01-08', baseStart: '2026-12-14', baseEnd: '2027-01-08', status: 'In Progress', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Training pipeline on a trigger', assigned: 'Ravi M.', start: '2027-01-04', end: '2027-01-22', baseStart: '2027-01-04', baseEnd: '2027-01-22', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Model registry with lineage and approver', assigned: 'Ravi M.', start: '2027-01-18', end: '2027-02-05', baseStart: '2027-01-18', baseEnd: '2027-02-05', status: 'Not Started', prio: 'High', comments: 'Needs the buy-or-build decision.' },
+      { id: id('d'), name: 'Canary deployment path', assigned: 'Ravi M.', start: '2027-02-01', end: '2027-02-19', baseStart: '2027-02-01', baseEnd: '2027-02-19', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Rollback rehearsal on a live model', assigned: 'Ravi M.', start: '2027-02-15', end: '2027-02-19', baseStart: '2027-02-15', baseEnd: '2027-02-19', status: 'Not Started', prio: 'High', comments: 'A rollback nobody has run is a plan, not a capability.' },
+      { id: id('d'), name: 'Drift and data-quality monitors', assigned: 'Iris P.', start: '2027-02-15', end: '2027-03-12', baseStart: '2027-02-15', baseEnd: '2027-03-12', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Alert thresholds and who they page', assigned: 'Ben O.', start: '2027-03-01', end: '2027-03-12', baseStart: '2027-03-01', baseEnd: '2027-03-12', status: 'Not Started', prio: 'Medium', comments: 'An alert with no owner is a log line.' },
+      { id: id('d'), name: 'Retraining triggers and promotion gate', assigned: 'Ben O.', start: '2027-03-08', end: '2027-03-26', baseStart: '2027-03-08', baseEnd: '2027-03-26', status: 'Not Started', prio: 'Medium', comments: 'Automated run, human approves the promotion.' },
+      { id: id('d'), name: 'Migrate the eleven models onto the standard', assigned: 'Iris P.', start: '2027-01-25', end: '2027-03-26', baseStart: '2027-01-25', baseEnd: '2027-03-26', status: 'Not Started', prio: 'High', comments: 'The actual deliverable. The platform is the means.' },
+    ],
+  };
+}
+
+function createLLMOpsPractice() {
+  return {
+    projectName: 'LLMOps Practice Rollout',
+    objective: 'Bring the four shipped assistants under one operating standard: versioned prompts, a golden set that gates release, traced cost, and a plan for the day the model version changes.',
+    dueDate: '2027-02-26',
+    reward: 'Nobody finds out about a model deprecation from a customer.',
+    notes: [
+      { id: id('n'), text: 'Four assistants live. Three have prompts edited directly in a console, with no history.' },
+      { id: id('n'), text: 'The thing under change control is the prompt, the corpus and the model version — none of which we own.' },
+      { id: id('n'), text: 'Provider-neutral by design: the standard has to survive changing supplier.' },
+    ],
+    methodology: 'llmops',
+    milestones: [
+      { id: id('m'), phase: 'versioning', text: 'Every live prompt in version control', progress: 4, due: '2026-12-11', done: false },
+      { id: id('m'), phase: 'evals', text: 'Golden set gating release on all four', progress: 2, due: '2027-01-15', done: false },
+      { id: id('m'), phase: 'grounding', text: 'Index refresh scheduled and monitored', progress: 1, due: '2027-01-29', done: false },
+      { id: id('m'), phase: 'guardrails', text: 'Guardrails enforced in the runtime', progress: 0, due: '2027-02-05', done: false },
+      { id: id('m'), phase: 'observability', text: 'Cost and latency per task on one chart', progress: 1, due: '2027-02-12', done: false },
+      { id: id('m'), phase: 'model-change', text: 'Versions pinned, upgrade path rehearsed', progress: 0, due: '2027-02-26', done: false },
+    ],
+    dashDate: '2026-12-11',
+    baselineSetAt: '2026-11-23',
+    dashStatus: 'AT RISK',
+    budgetPlanned: 150000,
+    budgetActual: 34000,
+    raid: [
+      { id: id('r'), type: 'Risk', title: 'A provider deprecates a version we are pinned to', owner: 'Tom B.', severity: 'High', likelihood: 'High', status: 'In Progress', due: '2027-02-26', action: 'Track deprecation dates as dependencies. Rehearse one upgrade before we are forced into one.' },
+      { id: id('r'), type: 'Issue', title: 'Three assistants have prompts with no change history', owner: 'Nadia R.', severity: 'High', likelihood: '', status: 'Open', due: '2026-12-11', action: 'Export what is live, commit it, then close console editing.' },
+      { id: id('r'), type: 'Risk', title: 'Golden sets drift from what users actually ask', owner: 'Nadia R.', severity: 'Medium', likelihood: 'High', status: 'Open', due: '2027-01-15', action: 'Quarterly refresh from real traffic, with thumbs-down cases pulled in.' },
+      { id: id('r'), type: 'Decision', title: 'One shared eval harness or one per assistant', owner: 'Tom B.', severity: 'Medium', likelihood: '', status: 'Open', due: '2026-12-18', action: 'Shared runner, per-assistant sets, is the current proposal.' },
+      { id: id('r'), type: 'Dependency', title: 'Security review of the guardrail runtime', owner: 'Priya S.', severity: 'High', likelihood: '', status: 'Open', due: '2027-01-29', action: 'Blocks the guardrail milestone.' },
+    ],
+    dashTasks: [
+      { id: id('d'), name: 'Audit: what is live across the four assistants', assigned: 'Nadia R.', start: '2026-11-23', end: '2026-12-04', baseStart: '2026-11-23', baseEnd: '2026-12-04', status: 'Complete', prio: 'High', comments: 'Three edited in a console with no history.' },
+      { id: id('d'), name: 'Prompts and tool configs into version control', assigned: 'Tom B.', start: '2026-11-30', end: '2026-12-11', baseStart: '2026-11-30', baseEnd: '2026-12-11', status: 'In Progress', prio: 'High', comments: 'Close console editing once the export lands.' },
+      { id: id('d'), name: 'Shared eval harness', assigned: 'Tom B.', start: '2026-12-14', end: '2027-01-08', baseStart: '2026-12-07', baseEnd: '2027-01-02', status: 'In Progress', prio: 'High', comments: 'Waiting on the shared-or-separate decision.' },
+      { id: id('d'), name: 'Golden sets from real traffic, per assistant', assigned: 'Nadia R.', start: '2026-12-14', end: '2027-01-15', baseStart: '2026-12-14', baseEnd: '2027-01-15', status: 'Not Started', prio: 'High', comments: 'Real cases with real outcomes, not written examples.' },
+      { id: id('d'), name: 'Wire evals into the release gate', assigned: 'Tom B.', start: '2027-01-11', end: '2027-01-15', baseStart: '2027-01-11', baseEnd: '2027-01-15', status: 'Not Started', prio: 'High', comments: 'A harness nothing blocks on is a report.' },
+      { id: id('d'), name: 'Index refresh schedule and staleness alerts', assigned: 'Marcus L.', start: '2027-01-11', end: '2027-01-29', baseStart: '2027-01-11', baseEnd: '2027-01-29', status: 'Not Started', prio: 'Medium', comments: 'Includes what the assistant says when a source is out of date.' },
+      { id: id('d'), name: 'Citation accuracy checks', assigned: 'Nadia R.', start: '2027-01-18', end: '2027-01-29', baseStart: '2027-01-18', baseEnd: '2027-01-29', status: 'Not Started', prio: 'Medium', comments: 'A confident answer citing the wrong clause is the failure that matters.' },
+      { id: id('d'), name: 'Guardrails moved from prompt to runtime', assigned: 'Priya S.', start: '2027-01-18', end: '2027-02-05', baseStart: '2027-01-18', baseEnd: '2027-02-05', status: 'Not Started', prio: 'High', comments: 'Asked-for behaviour is not enforced behaviour.' },
+      { id: id('d'), name: 'Red-team the four assistants', assigned: 'Priya S.', start: '2027-02-01', end: '2027-02-12', baseStart: '2027-02-01', baseEnd: '2027-02-12', status: 'Not Started', prio: 'High', comments: 'Somebody who wants it to fail.' },
+      { id: id('d'), name: 'Tracing, cost and latency per task', assigned: 'Tom B.', start: '2027-01-25', end: '2027-02-12', baseStart: '2027-01-25', baseEnd: '2027-02-12', status: 'In Progress', prio: 'High', comments: 'Per resolved task, not per call — the per-call number flatters retries.' },
+      { id: id('d'), name: 'Pin model versions and track deprecations', assigned: 'Tom B.', start: '2027-02-08', end: '2027-02-19', baseStart: '2027-02-08', baseEnd: '2027-02-19', status: 'Not Started', prio: 'High', comments: '' },
+      { id: id('d'), name: 'Rehearse one model upgrade end to end', assigned: 'Nadia R.', start: '2027-02-15', end: '2027-02-26', baseStart: '2027-02-15', baseEnd: '2027-02-26', status: 'Not Started', prio: 'High', comments: 'Golden set decides whether we take it. Better rehearsed than forced.' },
+    ],
+  };
+}
+
 export const TEMPLATES = [
   { key: 'marketing', category: 'General', label: 'Social Media Marketing Campaign', description: 'A 30-day multi-channel launch campaign, from creative production through wrap-up reporting.', build: () => seedTicks(createMarketingCampaign()) },
   { key: 'software', category: 'General', label: 'Software Release Plan', description: 'A feature-freeze-to-ship release cycle with QA, regression testing, and a security review.', build: () => seedTicks(createSoftwareRelease()) },
@@ -589,6 +744,8 @@ export const TEMPLATES = [
   { key: 'ml-model', category: 'AI & Data', label: 'ML Model Development', description: 'A predictive model end to end — data pipeline, training, fairness gate, deployment and drift monitoring.', build: () => seedTicks(createMLModelDevelopment()) },
   { key: 'ai-agent', category: 'AI & Data', label: 'AI Agent Automation Pilot', description: 'Pilot an agent on a real workflow with tool integrations, guardrails, human review and a go/no-go.', build: () => seedTicks(createAgentAutomationPilot()) },
   { key: 'ai-governance', category: 'AI & Data', label: 'AI Governance & Readiness', description: 'Model inventory, risk tiering, review gates and assessments for getting AI systems audit-ready.', build: () => seedTicks(createAIGovernance()) },
+  { key: 'mlops-platform', category: 'AI & Data', label: 'MLOps Platform Rollout', description: 'Make every production model reproducible, registered, monitored and rollback-able. A capability plan, not a lifecycle — measured by models meeting the bar, not tools installed.', build: () => seedTicks(createMLOpsPlatform()) },
+  { key: 'llmops-practice', category: 'AI & Data', label: 'LLMOps Practice Rollout', description: 'Bring shipped assistants under one standard: versioned prompts, a golden set that gates release, traced cost, and a plan for the day the model version changes.', build: () => seedTicks(createLLMOpsPractice()) },
 
   { key: 'transition', category: 'Services & Operations', label: 'Managed Service Transition', description: 'Take a service over from another supplier: due diligence, knowledge transfer, service acceptance and hypercare. The one template that fills every register.', build: () => seedTicks(createServiceTransition()) },
   { key: 'servicedesk', category: 'Services & Operations', label: 'Service Desk Launch', description: 'Replace mailboxes and a spreadsheet with one desk: priority model, request catalogue, pilot, and closing the old channel.', build: () => seedTicks(createServiceDeskLaunch()) },

@@ -24,7 +24,7 @@ These are not preferences. Check before breaking one.
 
 ```bash
 npm start                      # python3 -m http.server 8765
-npm test                       # all 50 suites (needs chromium)
+npm test                       # all 52 suites (needs chromium)
 node tests/run.js nav sync     # only suites whose filename matches
 npm run lint                   # eslint, flat config
 ```
@@ -54,6 +54,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/login.js`, `demoAccounts.js` | the sign-in screen and the five invented people behind it |
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
 | `js/kpi.js`, `kpiPage.js` | the 20 project indicators |
+| `js/methodology.js` | CPMAI, CRISP-DM, MLOps, LLMOps as data; phase progress derived from milestones |
 | `js/zip.js`, `pptx.js`, `reportDeck.js` | slide export, written by hand |
 | `supabase/schema.sql` | tables, RLS policies, triggers. Idempotent; re-running it is the upgrade path |
 | `tests/harness.js` | URLs and helpers. Take them from here, never hardcode |
@@ -96,6 +97,14 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   drawer *and* the bottom bar appears; they are the same decision and must not
   drift apart. The content column is uncapped, so the app fills whatever window
   it is given — `main` has a `clamp()` gutter, not a `max-width`.
+- **A methodology is either a lifecycle or a practice, and they are not the
+  same.** CPMAI and CRISP-DM are ordered phases with gates; MLOps and LLMOps are
+  capabilities you have or do not. The UI numbers the first and refuses to number
+  the second, because numbering a practice asserts a sequence that does not
+  exist. `kind` on each entry in `methodology.js` is what decides.
+- **Phase progress is derived, never stored.** It is read off the milestones
+  tagged to each phase — one home for the number. A phase with no milestones
+  reports `null`, not `0`, and renders as "Not planned".
 - **Every nav surface asks `roleShows`.** The bottom bar is not a second list of
   destinations; it reads `NAV_TREE` and filters the same way the sidebar does, so
   it cannot offer a page the policy removed.

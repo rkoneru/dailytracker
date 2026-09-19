@@ -4921,3 +4921,67 @@ body.login-open { overflow: hidden; }
 @media print {
   .mobile-tabs { display: none !important; }
 }
+
+/* ---------- Method: the phase strip on the Plan page ---------- */
+/* Everything here is derived from the milestone table directly below it — see
+   js/methodology.js. Nothing in this card is stored. */
+
+.field-input--auto { width: auto; max-width: 260px; }
+
+.method-phases {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+.method-note { grid-column: 1 / -1; margin: 0 0 2px; }
+
+.method-phase {
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 11px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.method-phase.is-active { border-top-color: var(--color-primary); }
+.method-phase.is-done { border-top-color: #16a34a; }
+/* A phase with no milestones in it has not been measured, which is not the
+   same as being 0% done — so it is greyed rather than shown as empty progress. */
+.method-phase.is-unplanned { background: var(--color-bg); }
+.method-phase.is-unplanned .method-phase__name { color: var(--color-text-muted); }
+
+.method-phase__head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.method-phase__n {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.method-phase__name { margin: 0; font-size: 13px; flex: 1; min-width: 0; }
+.method-phase__count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.method-phase.is-done .method-phase__count { color: #15803d; font-weight: 600; }
+
+.method-phase__asks { margin: 0; font-size: 12px; color: var(--color-text); }
+.method-phase__gate { margin: 0; font-size: 11.5px; color: var(--color-text-muted); line-height: 1.5; }
+
+.method-phase__list {
+  margin: 2px 0 0;
+  padding-left: 15px;
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+.method-phase__item.is-done { text-decoration: line-through; }
+
+.col-phase { width: 170px; }

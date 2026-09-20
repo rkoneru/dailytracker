@@ -20,9 +20,12 @@
 // This module is pure: it diffs two snapshots and describes what moved.
 // js/state.js owns the storage, the ids and the cap.
 
+import { findMethod } from './methodology.js';
+
 /** Project-level fields worth accounting for, and what to call them. */
 const SCALARS = {
   projectName: 'Project name',
+  methodology: 'Methodology',
   dueDate: 'Due date',
   dashStatus: 'RAG status',
   budgetPlanned: 'Planned budget',
@@ -32,6 +35,16 @@ const SCALARS = {
   charterScopeOut: 'Charter — out of scope',
   charterSuccess: 'Charter — success criteria',
   charterSponsor: 'Charter — sponsor',
+};
+
+/**
+ * A handful of scalars are ids, not text a person typed, and an entry that
+ * reads "cpmai → sdlc" is a field path wearing a sentence's clothes. Format
+ * those through the module that owns the label rather than showing the raw
+ * value everywhere else on the log does.
+ */
+const SCALAR_FORMAT = {
+  methodology: (value) => (findMethod(value) ? findMethod(value).label : 'No method'),
 };
 
 /**
@@ -92,7 +105,9 @@ function show(value) {
 export function snapshotOf(project) {
   if (!project) return null;
   const snap = { scalars: {}, rows: {} };
-  Object.keys(SCALARS).forEach((k) => { snap.scalars[k] = norm(project[k]); });
+  Object.keys(SCALARS).forEach((k) => {
+    snap.scalars[k] = (SCALAR_FORMAT[k] || norm)(project[k]);
+  });
 
   Object.entries(COLLECTIONS).forEach(([key, spec]) => {
     const rows = {};

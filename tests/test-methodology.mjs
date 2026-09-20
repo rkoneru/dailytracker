@@ -37,10 +37,10 @@ function eq(label, got, want) {
     `got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
 }
 
-// ---------- the four methods ----------
+// ---------- the six methods ----------
 
-eq('there are four', METHODOLOGIES.map((m) => m.id),
-  ['cpmai', 'crisp-dm', 'mlops', 'llmops']);
+eq('there are six', METHODOLOGIES.map((m) => m.id),
+  ['cpmai', 'crisp-dm', 'sdlc', 'adlc', 'mlops', 'llmops']);
 
 METHODOLOGIES.forEach((m) => {
   check(`${m.id}: is a lifecycle or a practice, and says which`,

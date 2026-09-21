@@ -14,8 +14,8 @@
 // TWO KINDS, AND THEY ARE NOT INTERCHANGEABLE
 //
 // A LIFECYCLE is an ordered set of phases with gates between them. CRISP-DM,
-// CPMAI, SDLC and ADLC are lifecycles: you are in one phase at a time, and
-// leaving it means something specific.
+// CPMAI, SDLC, ADLC and the Agentic DLC are lifecycles: you are in one phase
+// at a time, and leaving it means something specific.
 //
 // A PRACTICE is a set of capabilities you either have or do not. MLOps and
 // LLMOps are practices. They are frequently drawn as a six-box cycle to make
@@ -333,7 +333,59 @@ const ADLC = {
   ],
 };
 
-export const METHODOLOGIES = [CPMAI, CRISP_DM, SDLC, ADLC, MLOPS, LLMOPS];
+/**
+ * Agentic DLC — the lifecycle for an autonomous, tool-using agent.
+ *
+ * ADLC above, CPMAI and CRISP-DM are all still about a system that answers;
+ * an agent acts — it plans, calls tools, and does things with side effects a
+ * wrong answer never had. That changes what has to be true before it ships:
+ * the gate is not "is the output good" but "what is it allowed to do on its
+ * own, and what happens when it does the wrong thing with real permissions".
+ * This is that six-beat arc, built around autonomy and blast radius rather
+ * than accuracy.
+ */
+const AGENTIC_DLC = {
+  id: 'agentic-dlc',
+  kind: 'lifecycle',
+  label: 'Agentic DLC',
+  full: 'Agentic Development Life Cycle',
+  origin: 'The shape of building an autonomous, tool-using agent — one that acts, not only answers.',
+  suits: 'Agents that plan, call tools and take actions on their own, where the risk is what it does, not just what it says.',
+  phases: [
+    {
+      id: 'scope', n: 'I', label: 'Scope & Autonomy',
+      asks: 'What is the agent allowed to decide and do on its own, and where must a human step in?',
+      gate: 'Task boundaries, the tool and action inventory, and every human-in-the-loop point agreed and written down.',
+    },
+    {
+      id: 'tooling', n: 'II', label: 'Tooling & Permissions',
+      asks: 'What can the agent actually touch, and with what access?',
+      gate: 'Every tool scoped to least privilege, its blast radius understood, and destructive actions gated.',
+    },
+    {
+      id: 'build', n: 'III', label: 'Build the Loop',
+      asks: 'How does it plan, act, observe, and decide when to stop?',
+      gate: 'A working plan-act-observe loop against a fixed set of tasks, prompts and policies under version control.',
+    },
+    {
+      id: 'evaluation', n: 'IV', label: 'Evaluation & Red-teaming',
+      asks: 'Does it complete the task, and what does it do when it is wrong, stuck, or pushed off-course?',
+      gate: 'Task success measured on a held-out set, plus adversarial and failure-mode testing by someone trying to break it.',
+    },
+    {
+      id: 'release', n: 'V', label: 'Staged Release',
+      asks: 'How does it earn more autonomy, rather than being granted all of it on day one?',
+      gate: 'Supervised or shadow runs before unsupervised ones, escalation paths tested, and a kill switch rehearsed.',
+    },
+    {
+      id: 'operate', n: 'VI', label: 'Operate & Oversight',
+      asks: 'How would we know it did something wrong, and who is watching?',
+      gate: 'Every action logged and traceable, outcomes and cost monitored, and a named owner who can revoke autonomy.',
+    },
+  ],
+};
+
+export const METHODOLOGIES = [CPMAI, CRISP_DM, SDLC, ADLC, AGENTIC_DLC, MLOPS, LLMOPS];
 
 export function findMethod(id) {
   return METHODOLOGIES.find((m) => m.id === id) || null;

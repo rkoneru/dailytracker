@@ -35,7 +35,10 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
       'Action Items', 'Follow-up', 'Recording & Transcript']);
 
   console.log('\n--- the starter project ships a worked example ---');
-  eq('a meeting is already there', await page.locator('#meeting-picker option').count(), 1);
+  // The newest of the two is the worked example these assertions walk through;
+  // sortMeetings puts it first in the picker and meetings[0] agrees, since it
+  // is also first in the array the template literal wrote it in.
+  eq('two meetings are already there', await page.locator('#meeting-picker option').count(), 2);
   const sample = await meeting();
   eq('with an agenda', sample.agenda.length, 4);
   eq('attendees', sample.attendees.length, 4);
@@ -159,14 +162,23 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await page.waitForTimeout(400);
   await page.click('.dialog .btn-danger');
   await page.waitForTimeout(600);
-  eq('it is gone from the picker', await page.locator('#meeting-picker option').count(), 0);
+  eq('one is left in the picker', await page.locator('#meeting-picker option').count(), 1);
+  eq('so the page does not yet claim there are none',
+     await page.locator('#meeting-none').isVisible(), false);
+
+  // Delete the second one too, to reach the actually-empty state.
+  await page.click('#btn-delete-meeting');
+  await page.waitForTimeout(400);
+  await page.click('.dialog .btn-danger');
+  await page.waitForTimeout(600);
+  eq('now it is gone from the picker', await page.locator('#meeting-picker option').count(), 0);
   eq('and the page says so rather than showing eight empty tabs',
      await page.locator('#meeting-none').isVisible(), true);
   await page.click('#tab-trash .nav-row__label');
   await page.waitForTimeout(500);
-  eq('it is in the Trash, named as a meeting',
+  eq('both are in the Trash, named as a meeting',
      (await page.$$eval('#trash-body .trash-item__meta', (e) => e.map((x) => x.textContent)))
-       .some((t) => t.startsWith('Meeting')), true);
+       .filter((t) => t.startsWith('Meeting')).length, 2);
 
   console.log('\n--- layout ---');
   await page.click('#tab-meetings .nav-row__label');

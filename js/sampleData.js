@@ -166,6 +166,58 @@ function createMarketingCampaign() {
           { id: id('ut'), at: '04:20', speaker: 'Priya N.', text: "We'll decide the paid and organic split once we have a week of data rather than guessing now.", final: true },
         ],
       },
+      {
+        id: id('mt'),
+        name: 'Quarterly Strategy Meeting',
+        date: '2025-05-20',
+        startTime: '09:00',
+        endTime: '12:30',
+        location: 'Virtual (Zoom)',
+        purpose: 'Review Q1 performance, align on priorities, and plan next steps for Q2.',
+        owner: 'Jessica Morgan (CEO)',
+        preparedBy: 'Alex Rivera (Strategy Manager)',
+        status: 'Complete',
+        notes: 'Quarterly results: Q1 revenue up 8% YoY; profitability impacted by higher marketing spend and supply chain costs.\n'
+          + 'Growth priorities: Focus on product innovation, customer acquisition in North America, and channel partnerships.\n'
+          + 'Budget review: Reallocate 10% from discretionary spend to growth initiatives; maintain investment in product roadmap.\n'
+          + 'Next steps: Align cross-functional teams on key initiatives, define KPIs, and establish check-ins.',
+        outcome: 'Aligned on Q2 strategic priorities, approved budget reallocations, and defined clear next steps with owners and timelines.',
+        agenda: [
+          { id: id('ag'), time: '09:00', topic: 'Quarterly results', lead: 'Michael Chen (Finance)', minutes: 45 },
+          { id: id('ag'), time: '', topic: 'Growth priorities', lead: 'Sarah Patel (Marketing)', minutes: 45 },
+          { id: id('ag'), time: '', topic: 'Budget review', lead: 'David Lee (Finance)', minutes: 45 },
+          { id: id('ag'), time: '', topic: 'Next steps', lead: 'Jessica Morgan (CEO)', minutes: 45 },
+          { id: id('ag'), time: '12:00', topic: 'Q&A & Wrap-up', lead: 'All', minutes: 30 },
+        ],
+        attendees: [
+          { id: id('at'), name: 'Jessica Morgan', role: 'CEO', department: 'Executive', attended: true },
+          { id: id('at'), name: 'Michael Chen', role: 'CFO', department: 'Finance', attended: true },
+          { id: id('at'), name: 'Sarah Patel', role: 'CMO', department: 'Marketing', attended: true },
+          { id: id('at'), name: 'David Lee', role: 'COO', department: 'Operations', attended: true },
+          { id: id('at'), name: 'Priya Nair', role: 'VP, Finance', department: 'Finance', attended: true },
+          { id: id('at'), name: 'James Wilson', role: 'Director, Operations', department: 'Operations', attended: true },
+          { id: id('at'), name: 'Emily Rogers', role: 'Marketing Manager', department: 'Marketing', attended: false },
+          { id: id('at'), name: 'Alex Rivera', role: 'Strategy Manager', department: 'Strategy', attended: true },
+        ],
+        decisions: [
+          { id: id('de'), decision: 'Increase investment in product innovation by 10%.', tag: 'Strategic', impact: 'High' },
+          { id: id('de'), decision: 'Expand marketing budget for North America growth.', tag: 'Growth', impact: 'High' },
+          { id: id('de'), decision: 'Defer office expansion to Q4 pending performance review.', tag: 'Financial', impact: 'Medium' },
+          { id: id('de'), decision: 'Implement quarterly KPI dashboard for leadership.', tag: 'Operational', impact: 'High' },
+        ],
+        actions: [
+          { id: id('ac'), text: 'Finalize Q2 growth plan and budget', owner: 'Sarah Patel (Marketing)', due: '2025-05-27', status: 'Open', taskId: '' },
+          { id: id('ac'), text: 'Provide detailed budget reallocation analysis', owner: 'Michael Chen (Finance)', due: '2025-05-23', status: 'In Progress', taskId: '' },
+          { id: id('ac'), text: 'Share Q1 financial performance report', owner: 'Michael Chen (Finance)', due: '2025-05-16', status: 'Done', taskId: '' },
+          { id: id('ac'), text: 'Define KPIs and performance requirements', owner: 'David Lee (Operations)', due: '2025-05-30', status: 'Open', taskId: '' },
+          { id: id('ac'), text: 'Schedule cross-functional workgroup', owner: 'Alex Rivera (Strategy)', due: '2025-05-26', status: 'In Progress', taskId: '' },
+        ],
+        followUps: [
+          { id: id('fu'), activity: 'Progress check-in', purpose: 'Review progress on action items', owner: 'Jessica Morgan (CEO)', date: '2025-06-10', type: 'Meeting', reminder: '1 day before' },
+          { id: id('fu'), activity: 'KPI dashboard review', purpose: 'Assess KPIs and performance trends', owner: 'David Lee (Operations)', date: '2025-06-24', type: 'Review', reminder: '2 days before' },
+          { id: id('fu'), activity: 'Q2 Strategy Update', purpose: 'Evaluate Q2 progress and adjust plan', owner: 'Jessica Morgan (CEO)', date: '2025-07-15', type: 'Meeting', reminder: '2 days before' },
+        ],
+      },
     ],
     dashTasks: [
       { id: id('d'), name: 'Campaign strategy & brief', assigned: 'Priya N.', start: '2026-09-01', end: '2026-09-02', baseStart: '2026-09-01', baseEnd: '2026-09-02', status: 'Complete', prio: 'High', comments: 'Signed off by marketing lead.', estimate: 12, spent: 11, rework: 0 },

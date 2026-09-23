@@ -13,12 +13,14 @@
 import { listFullProjects, getActiveProjectId } from './state.js';
 import { el } from './dom.js';
 import { parseDate } from './charts.js';
+import { raidCounts } from './raid.js';
 
 let onGo = null;
 let sortKey = 'due';
 let sortDir = 1;
 
 const RAG_TONE = { 'ON TRACK': 'is-good', 'AT RISK': 'is-warn', 'OFF TRACK': 'is-bad' };
+const MONTH_MS = 30.44 * 86400000;
 
 function startOfToday() {
   const d = new Date();
@@ -52,9 +54,16 @@ function summarise(project, today) {
   const actual = Number(project.budgetActual) || 0;
 
   const due = parseDate(project.dueDate);
+  // Duration is read off the project's own history rather than typed: the day
+  // it was created to the day it is due. A project with unknown provenance
+  // (createdAt 0, from before the field existed) reports none rather than a
+  // number measured from the Unix epoch.
+  const created = project.createdAt ? new Date(project.createdAt) : null;
+  const counts = raidCounts(project);
   return {
     id: project.id,
     name: project.projectName || 'Untitled project',
+    objective: project.objective || '',
     rag: (project.dashStatus || '').trim().toUpperCase(),
     total: tasks.length,
     complete,
@@ -62,11 +71,19 @@ function summarise(project, today) {
     overdue,
     risks: openRaid.length,
     critical,
+    raidRisks: counts.Risk,
+    raidIssues: counts.Issue,
+    // The roster used to be project data; it is now who the central resource
+    // pool has allocated here (see adoptLegacyRosters in state.js), so that is
+    // where headcount is read from.
+    resources: (project.allocations || []).length,
     deliverables: deliverables.length,
     accepted,
     breached,
     planned,
     actual,
+    spentPct: planned > 0 ? Math.round((actual / planned) * 100) : null,
+    durationMonths: created && due ? Math.max(1, Math.round((due - created) / MONTH_MS)) : null,
     dueDate: project.dueDate || '',
     dueSort: due ? due.getTime() : Infinity,
     daysLeft: due ? Math.round((due - today) / 86400000) : null,
@@ -125,6 +142,57 @@ function countCell(n, tone) {
   return el('td', { class: `num ${n > 0 ? tone : 'is-quiet'}`, text: String(n) });
 }
 
+/** One stat pulled out into its own small block: a number, and what it counts. */
+function stat(value, label, tone) {
+  return el('div', { class: `pf-tile__stat ${tone || ''}` }, [
+    el('span', { class: 'pf-tile__stat-value', text: value === null ? '—' : String(value) }),
+    el('span', { class: 'pf-tile__stat-label', text: label }),
+  ]);
+}
+
+function tile(row) {
+  const tone = RAG_TONE[row.rag] || 'is-idle';
+  return el('article', { class: `pf-tile ${row.id === getActiveProjectId() ? 'is-current' : ''}`, 'data-project': row.id, tabindex: '0' }, [
+    el('div', { class: 'pf-tile__head' }, [
+      el('h3', { class: 'pf-tile__name', text: row.name }),
+      el('span', { class: `pf-rag ${tone}`, text: row.rag || 'Not set' }),
+    ]),
+    el('p', { class: 'pf-tile__objective', text: row.objective || 'No objective set.' }),
+
+    el('div', { class: 'pf-tile__metric' }, [
+      el('span', { class: 'pf-tile__metric-label', text: '% Complete' }),
+      el('span', { class: 'pf-tile__metric-value', text: `${row.pct}%` }),
+    ]),
+    el('div', { class: 'pf-tile__bar' }, [el('span', { class: `pf-tile__bar-fill ${tone}`, style: `width:${row.pct}%` })]),
+
+    row.planned ? el('div', { class: 'pf-tile__metric' }, [
+      el('span', { class: 'pf-tile__metric-label', text: `${money(row.planned)} USD` }),
+      el('span', { class: 'pf-tile__metric-value', text: row.spentPct === null ? '—' : `${row.spentPct}%` }),
+    ]) : null,
+    row.planned ? el('div', { class: 'pf-tile__bar' }, [
+      el('span', { class: `pf-tile__bar-fill ${row.spentPct > 100 ? 'is-bad' : 'is-neutral'}`, style: `width:${Math.min(100, row.spentPct || 0)}%` }),
+    ]) : null,
+
+    el('div', { class: 'pf-tile__row' }, [
+      stat(row.durationMonths, row.durationMonths === 1 ? 'Month' : 'Months', 'is-primary'),
+      stat(row.resources, row.resources === 1 ? 'Member' : 'Members', 'is-primary'),
+    ]),
+    el('div', { class: 'pf-tile__row' }, [
+      stat(row.total, 'Tasks'),
+      stat(row.raidIssues, 'Issues'),
+      stat(row.raidRisks, 'Risks'),
+    ]),
+  ]);
+}
+
+function renderPortfolioTiles(rows) {
+  const host = document.getElementById('portfolio-tiles');
+  if (!host) return;
+  host.innerHTML = '';
+  rows.forEach((row) => host.appendChild(tile(row)));
+  document.getElementById('portfolio-tiles-empty').hidden = rows.length > 0;
+}
+
 export function renderPortfolio() {
   const body = document.getElementById('portfolio-body');
   if (!body) return;
@@ -137,6 +205,8 @@ export function renderPortfolio() {
     if (av === bv) return a.name.localeCompare(b.name);
     return (av > bv ? 1 : -1) * sortDir;
   });
+
+  renderPortfolioTiles(rows);
 
   const activeId = getActiveProjectId();
   body.innerHTML = '';
@@ -219,9 +289,17 @@ export function initPortfolio(go) {
   });
 
   const body = document.getElementById('portfolio-body');
-  const open = (tr) => { if (tr) onGo({ projectId: tr.dataset.project, navId: 'tab-dashboard', rowId: '' }); };
+  const open = (row) => { if (row) onGo({ projectId: row.dataset.project, navId: 'tab-dashboard', rowId: '' }); };
   body.addEventListener('click', (e) => open(e.target.closest('.pf-row')));
   body.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e.target.closest('.pf-row')); }
+  });
+
+  // The tile grid is the same rows, the same click-to-open, just a different
+  // shape — so it shares the handler rather than growing its own.
+  const tiles = document.getElementById('portfolio-tiles');
+  tiles.addEventListener('click', (e) => open(e.target.closest('.pf-tile')));
+  tiles.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e.target.closest('.pf-tile')); }
   });
 }

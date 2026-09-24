@@ -53,6 +53,12 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await page.click('#tab-capacity .nav-row__label');
   await page.waitForTimeout(400);
   eq('nor does Capacity Planning', await page.locator('#page-capacity .page-tabs').count(), 0);
+  await page.click('#tab-planning-layers .nav-row__label');
+  await page.waitForTimeout(400);
+  eq('nor Planning Layers', await page.locator('#page-planning-layers .page-tabs').count(), 0);
+  await page.click('#tab-ai-portfolio .nav-row__label');
+  await page.waitForTimeout(400);
+  eq('nor AI Portfolio', await page.locator('#page-ai-portfolio .page-tabs').count(), 0);
 
   console.log('\n--- one section at a time, and the rest are still there ---');
   await page.click('#tab-service .nav-row__label');

@@ -44,6 +44,8 @@ export const NAV_TREE = [
         ],
       },
       { id: 'tab-capacity', label: 'Capacity Planning', icon: '📐', page: 'page-capacity', title: 'Capacity Planning' },
+      { id: 'tab-planning-layers', label: 'Planning Layers', icon: '🧭', page: 'page-planning-layers', title: 'Planning Layers' },
+      { id: 'tab-ai-portfolio', label: 'AI Portfolio', icon: '🤖', page: 'page-ai-portfolio', title: 'AI Portfolio' },
     ],
   },
   {

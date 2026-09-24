@@ -2948,6 +2948,53 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 }
 .cap-guidance-list--numbered { padding-left: 20px; }
 
+/* ---------- Planning Layers ---------- */
+
+.cap-layer__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.cap-layer__n {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--color-primary-light);
+  color: var(--color-primary-hover);
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cap-layer__title-group { flex: 1; min-width: 0; }
+.cap-layer__title { margin: 0 0 2px; font-size: 17px; }
+.cap-layer__subtitle { margin: 0; font-size: 13px; color: var(--color-text-muted); }
+.cap-layer__span {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cap-layer__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+.cap-layer__col h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
 .cap-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));

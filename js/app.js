@@ -45,6 +45,7 @@ import { initMyWork, renderMyWork } from './myWork.js';
 import { initPortfolio, renderPortfolio } from './portfolio.js';
 import { initResources, renderResources } from './resourcesPage.js';
 import { initCapacity, renderCapacity } from './capacityPage.js';
+import { initAiPortfolio, renderAiPortfolio } from './aiPortfolio.js';
 import { seedMeFrom, getMe, onMeChange } from './me.js';
 import * as supabase from './supabase.js';
 
@@ -106,6 +107,7 @@ if ('serviceWorker' in navigator) {
 // ---------- Tabs ----------
 
 const PAGE_IDS = ['page-mywork', 'page-portfolio', 'page-resources', 'page-capacity',
+  'page-planning-layers', 'page-ai-portfolio',
   'page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
   'page-scope', 'page-people', 'page-service', 'page-improve',
   'page-meetings', 'page-kpis', 'page-reports', 'page-settings', 'page-sync', 'page-changelog', 'page-trash'];
@@ -133,6 +135,7 @@ function showPage(pageId, title) {
   if (pageId === 'page-portfolio') renderPortfolio();
   if (pageId === 'page-resources') renderResources();
   if (pageId === 'page-capacity') renderCapacity();
+  if (pageId === 'page-ai-portfolio') renderAiPortfolio();
   // Every indicator is derived, so the page is assembled on arrival rather
   // than kept warm: there is nothing on it that is its own to go stale.
   if (pageId === 'page-kpis') renderKpis();
@@ -950,6 +953,14 @@ function init() {
   initMobileNav(goTo);
   initResources(goTo);
   initCapacity(goTo);
+  initAiPortfolio(goTo);
+  // Planning Layers is entirely static — nothing to render on arrival — so
+  // its only wiring, and the AI Portfolio header's one link, are the inline
+  // pointers to other pages, scoped the same way the Dashboard's own kpi
+  // tiles and Capacity Planning's process card are.
+  document.querySelectorAll('#page-planning-layers [data-goto], #page-ai-portfolio [data-goto]').forEach((btn) => {
+    btn.addEventListener('click', () => goTo({ navId: btn.dataset.goto }));
+  });
   // The nav asks the policy which pages a role may see. Injected rather than
   // imported by roles.js, because policy.js reads the role list from there and
   // a cycle would leave one of them empty at load.

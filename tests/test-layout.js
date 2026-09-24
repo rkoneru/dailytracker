@@ -14,7 +14,7 @@
 const { APP_URL, launch, createChecks } = require('./harness');
 
 const ROLES = ['engagement-lead', 'project-manager', 'scrum-master',
-  'developer', 'tester', 'service-manager'];
+  'developer', 'tester', 'service-manager', 'chief-ai-officer'];
 
 (async () => {
   const browser = await launch();

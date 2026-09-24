@@ -29,7 +29,7 @@ const { eq, done } = createChecks();
   console.log('\n--- the picker offers every role and starts on the lead ---');
   eq('roles offered', await page.$$eval('#role-select option', (e) => e.map((x) => x.textContent)),
      ['Engagement Lead', 'Project Manager', 'Product Manager', 'Scrum Master',
-      'Developer', 'Tester / QA', 'Service Manager']);
+      'Developer', 'Tester / QA', 'Service Manager', 'Chief AI Officer']);
   eq('default role', await page.inputValue('#role-select'), 'engagement-lead');
   eq('and it explains itself', (await page.textContent('#role-blurb')).length > 20, true);
 
@@ -40,7 +40,7 @@ const { eq, done } = createChecks();
   eq('nothing is held back', await page.isHidden('#nav-filter-note'), true);
 
   console.log('\n--- Engagement is for the lead, and only the lead ---');
-  for (const role of ['project-manager', 'product-manager', 'scrum-master', 'developer', 'tester', 'service-manager']) {
+  for (const role of ['project-manager', 'product-manager', 'scrum-master', 'developer', 'tester', 'service-manager', 'chief-ai-officer']) {
     await setRole(role);
     const visible = await pages();
     eq(`${role} cannot see Scope & Contract`, visible.includes('Scope & Contract'), false);
@@ -87,6 +87,9 @@ const { eq, done } = createChecks();
   await setRole('project-manager');
   const pm = await pages();
   eq('a project manager has both', pm.includes('My Work') && pm.includes('Portfolio'), true);
+  eq('but AI Portfolio is for the CAIO, not every portfolio-level role', pm.includes('AI Portfolio'), false);
+  await setRole('chief-ai-officer');
+  eq('the CAIO has AI Portfolio', (await pages()).includes('AI Portfolio'), true);
 
   console.log('\n--- each role opens where it would have clicked ---');
   // Deep links made the URL the source of truth for where you are, so the
@@ -104,6 +107,7 @@ const { eq, done } = createChecks();
     developer: 'page-mywork',
     tester: 'page-mywork',
     'service-manager': 'page-service',
+    'chief-ai-officer': 'page-ai-portfolio',
   };
   for (const [role, expected] of Object.entries(landings)) {
     await setRole(role);

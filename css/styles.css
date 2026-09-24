@@ -1200,6 +1200,14 @@ body { overflow-anchor: none; }
   .stat-cards { grid-template-columns: 1fr; }
 }
 
+.stat-cards.stat-cards--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) {
+  .stat-cards.stat-cards--3 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+  .stat-cards.stat-cards--3 { grid-template-columns: 1fr; }
+}
+
 .stat-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -1224,6 +1232,7 @@ body { overflow-anchor: none; }
 .stat-card__icon--green { background: #dcfce7; }
 .stat-card__icon--amber { background: #fef3c7; }
 .stat-card__icon--purple { background: #ede9fe; }
+.stat-card__icon--red { background: #fee2e2; }
 .stat-card__body {
   display: flex;
   flex-direction: column;
@@ -2870,6 +2879,74 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 }
 .pf-tile__stat.is-primary .pf-tile__stat-value { color: var(--color-primary-hover); }
 .pf-tile__stat-label { font-size: 10px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+/* ---------- Capacity Planning ---------- */
+
+.cap-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.cap-step {
+  min-width: 0;
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cap-step__n {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.cap-step__title { margin: 0; font-size: 13.5px; }
+.cap-step__text { margin: 0; font-size: 12.5px; color: var(--color-text-muted); line-height: 1.5; }
+
+.cap-formula { display: flex; flex-direction: column; gap: 10px; }
+.cap-formula__statement {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+  background: var(--color-bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.cap-formula__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.cap-formula__row:last-child { border-bottom: none; }
+.cap-formula__label { color: var(--color-text-muted); }
+.cap-formula__value { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.cap-guidance-list {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+.cap-guidance-list--numbered { padding-left: 20px; }
 
 /* ==========================================================================
    Task depth: effort, checklists, dependencies

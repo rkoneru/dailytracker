@@ -43,6 +43,7 @@ export const NAV_TREE = [
           { id: 'nav-conflicts', label: 'Worth Looking At', page: 'page-resources', title: 'Resources', section: 'sec-conflicts' },
         ],
       },
+      { id: 'tab-capacity', label: 'Capacity Planning', icon: '📐', page: 'page-capacity', title: 'Capacity Planning' },
     ],
   },
   {

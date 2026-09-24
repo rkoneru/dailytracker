@@ -37,7 +37,7 @@ export const ROLES = [
     aka: 'Delivery manager, programme manager',
     blurb: 'Plan, tasks, risks and reports, plus the change log.',
     home: 'tab-dashboard',
-    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
       'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
   },
   {
@@ -46,7 +46,7 @@ export const ROLES = [
     aka: 'Product owner',
     blurb: 'What is being delivered and why, plus what is landing when.',
     home: 'tab-dashboard',
-    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
       'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'btn-export-panel'],
   },
   {
@@ -82,7 +82,7 @@ export const ROLES = [
     aka: 'Service delivery manager, operations, support lead',
     blurb: 'Service levels, releases, change control and known issues.',
     home: 'tab-service',
-    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports',
       'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'btn-export-panel'],
   },
 ];

@@ -1449,6 +1449,125 @@
       </div>
     </section>
 
+    <section id="page-capacity" class="page" role="region" aria-label="Capacity Planning">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Capacity Planning</span></div>
+          <p class="hint report-subtitle">
+            From demand to a plan the pool can actually deliver. The process below is a reference;
+            the numbers under it are read live off this workspace's projects, resources and bookings.
+          </p>
+        </header>
+
+        <section class="card card--quiet" id="sec-capacity-process">
+          <div class="card__head">
+            <h2><span class="section-number">1</span> The process</h2>
+            <span class="hint">From demand to balanced execution. No data on this card — it is a reference, not a form.</span>
+          </div>
+          <ol class="cap-steps">
+            <li class="cap-step">
+              <span class="cap-step__n">1</span>
+              <h3 class="cap-step__title">Capture demand</h3>
+              <p class="cap-step__text">Collect the work that wants doing: projects, tasks and the estimates behind them. This is <button type="button" class="link-btn" data-goto="tab-portfolio">Portfolio</button> and each project's own Task Tracker.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">2</span>
+              <h3 class="cap-step__title">Analyse capacity</h3>
+              <p class="cap-step__text">Understand who is available, at what capacity, and what leave and other commitments already take off the top. This is the <button type="button" class="link-btn" data-goto="tab-resources">Resources</button> pool and its Availability tab.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">3</span>
+              <h3 class="cap-step__title">Compare &amp; prioritise</h3>
+              <p class="cap-step__text">Match demand against what is actually available. Where the two do not fit, decide what defers, shrinks or gets more people rather than letting every project run 5% behind.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">4</span>
+              <h3 class="cap-step__title">Allocate resources</h3>
+              <p class="cap-step__text">Book the right people to the right work, time-phased rather than open-ended. This is <button type="button" class="link-btn" data-goto="tab-resources">Resources → Allocations</button>.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">5</span>
+              <h3 class="cap-step__title">Execute &amp; monitor</h3>
+              <p class="cap-step__text">Keep the plan honest as it runs: watch utilisation, catch overload before it becomes a missed date, adjust when the picture changes.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">6</span>
+              <h3 class="cap-step__title">Review &amp; improve</h3>
+              <p class="cap-step__text">After the fact, look at what the plan assumed against what happened, and feed it into the next round of estimates. See <button type="button" class="link-btn" data-goto="tab-improve">Improvement &amp; Lessons</button>.</p>
+            </li>
+          </ol>
+        </section>
+
+        <section class="card card--feature" id="sec-capacity-overview">
+          <div class="card__head">
+            <h2><span class="section-number">2</span> Portfolio capacity overview</h2>
+            <span class="hint">Every project's own window, coloured by RAG status. The number on each bar is its estimated effort in days.</span>
+          </div>
+          <div class="chart-scroll"><div class="gantt-chart" id="capacity-gantt"></div></div>
+          <p class="hint" id="capacity-gantt-empty" hidden>Give a project a due date to see it here — a start and a due date are all a bar needs.</p>
+        </section>
+
+        <section class="card card--feature" id="sec-capacity-metrics">
+          <div class="card__head">
+            <h2><span class="section-number">3</span> Key metrics</h2>
+            <span class="hint">Measured over the window below, across every resource in the pool.</span>
+          </div>
+          <div class="res-controls no-print">
+            <label class="field-label">From
+              <input type="date" class="field-input" id="cap-from">
+            </label>
+            <label class="field-label">To
+              <input type="date" class="field-input" id="cap-to">
+            </label>
+          </div>
+          <section class="stat-cards stat-cards--3" id="capacity-metrics"></section>
+          <p class="hint" id="capacity-metrics-empty" hidden>Add someone to the Resources pool to see utilisation and capacity numbers here.</p>
+        </section>
+
+        <section class="card card--quiet" id="sec-capacity-formula">
+          <div class="card__head">
+            <h2><span class="section-number">4</span> Capacity formula</h2>
+            <span class="hint">The arithmetic behind the numbers above, worked through for one real person.</span>
+          </div>
+          <div class="cap-formula" id="capacity-formula"></div>
+          <p class="hint" id="capacity-formula-empty" hidden>Add someone to the Resources pool to see a worked example.</p>
+        </section>
+
+        <div class="dash-row dash-row--3" id="sec-capacity-guidance">
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Common capacity gaps</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Too many projects running at once, none of them fully staffed</li>
+              <li>Estimates that assumed nobody would ever be on leave</li>
+              <li>A skill only one person has, booked on two projects at once</li>
+              <li>Allocations nobody revisits once the project is under way</li>
+              <li>Priorities that change faster than the plan can be re-run</li>
+            </ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>When demand exceeds capacity</h2></div>
+            <ol class="cap-guidance-list cap-guidance-list--numbered">
+              <li>Reassess priorities — which projects actually deliver the most value?</li>
+              <li>Reduce or split scope — can the project be smaller, or phased?</li>
+              <li>Shift timelines — can it start later, or run longer?</li>
+              <li>Add resources — internally, or from outside?</li>
+              <li>Defer or stop the lowest-value work rather than spread everyone thinner</li>
+            </ol>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Best practice</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Plan against realistic capacity, not a full week per person</li>
+              <li>Count all the work — projects, BAU and support, not just the visible plan</li>
+              <li>Book against skills, not just headcount</li>
+              <li>Revisit allocations on a schedule, not only when something breaks</li>
+              <li>Keep one shared, transparent view rather than a spreadsheet per team</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </section>
+
     <section id="page-portfolio" class="page" role="region" aria-label="Portfolio">
       <div class="print-page">
         <header class="dash-header">

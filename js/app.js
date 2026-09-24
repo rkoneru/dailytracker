@@ -44,6 +44,7 @@ import { initMeetings, renderMeetings, setMeetingsChangedHandler } from './meeti
 import { initMyWork, renderMyWork } from './myWork.js';
 import { initPortfolio, renderPortfolio } from './portfolio.js';
 import { initResources, renderResources } from './resourcesPage.js';
+import { initCapacity, renderCapacity } from './capacityPage.js';
 import { seedMeFrom, getMe, onMeChange } from './me.js';
 import * as supabase from './supabase.js';
 
@@ -104,7 +105,7 @@ if ('serviceWorker' in navigator) {
 
 // ---------- Tabs ----------
 
-const PAGE_IDS = ['page-mywork', 'page-portfolio', 'page-resources',
+const PAGE_IDS = ['page-mywork', 'page-portfolio', 'page-resources', 'page-capacity',
   'page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
   'page-scope', 'page-people', 'page-service', 'page-improve',
   'page-meetings', 'page-kpis', 'page-reports', 'page-settings', 'page-sync', 'page-changelog', 'page-trash'];
@@ -131,6 +132,7 @@ function showPage(pageId, title) {
   if (pageId === 'page-mywork') renderMyWork();
   if (pageId === 'page-portfolio') renderPortfolio();
   if (pageId === 'page-resources') renderResources();
+  if (pageId === 'page-capacity') renderCapacity();
   // Every indicator is derived, so the page is assembled on arrival rather
   // than kept warm: there is nothing on it that is its own to go stale.
   if (pageId === 'page-kpis') renderKpis();
@@ -947,6 +949,7 @@ function init() {
   initPortfolio(goTo);
   initMobileNav(goTo);
   initResources(goTo);
+  initCapacity(goTo);
   // The nav asks the policy which pages a role may see. Injected rather than
   // imported by roles.js, because policy.js reads the role list from there and
   // a cycle would leave one of them empty at load.

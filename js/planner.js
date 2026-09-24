@@ -311,8 +311,13 @@ function renderTickRow(task) {
   for (let day = 1; day <= TICK_DAYS; day += 1) {
     const date = tickDayDate(day);
     const td = el('td', {
-      class: 'tick-day-cell is-static',
+      class: 'tick-day-cell',
       'data-day': String(day),
+      tabindex: '0',
+      role: 'button',
+      'aria-label': date
+        ? `${task.name || 'Task'}, ${date.toLocaleDateString()}${cells.includes(day) ? ', in range' : ''}`
+        : `${task.name || 'Task'}, day ${day}`,
       text: cells.includes(day) ? tickMarker(task.tickType) : '',
     });
     if (date) {
@@ -339,6 +344,94 @@ function renderTicks() {
   tasks.forEach((task) => tbody.appendChild(renderTickRow(task)));
 }
 
+// ---------- Editing the timeline ----------
+//
+// Dragging across a row's days is the one place ticks and dates are
+// deliberately reunited — everywhere else the comment above renderTickRow
+// still holds, but a dragged range is unambiguously "this is when the task
+// runs": the earliest and latest day become task.start and task.end, and the
+// cells in between are ticked to match, replacing whatever sparse ticks the
+// task had before. A single click, with no drag, sets a one-day range.
+
+let tickDrag = null; // { taskId, anchorDay }
+
+/** A local calendar date as YYYY-MM-DD — never .toISOString(), which crosses
+ * the day boundary in any timezone ahead of UTC. */
+function toDateISO(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function paintDragRange(taskId, fromDay, toDay) {
+  const lo = Math.min(fromDay, toDay);
+  const hi = Math.max(fromDay, toDay);
+  const row = document.querySelector(`#tick-body tr[data-id="${taskId}"]`);
+  if (!row) return;
+  row.querySelectorAll('.tick-day-cell').forEach((td) => {
+    const day = Number(td.dataset.day);
+    td.classList.toggle('is-drag-range', day >= lo && day <= hi);
+  });
+}
+
+function applyTickRange(taskId, fromDay, toDay) {
+  const task = findById(getState().dashTasks, taskId);
+  if (!task) return;
+  const lo = Math.min(fromDay, toDay);
+  const hi = Math.max(fromDay, toDay);
+  const start = tickDayDate(lo);
+  const end = tickDayDate(hi);
+  if (!start || !end) return;
+  task.start = toDateISO(start);
+  task.end = toDateISO(end);
+  task.cells = [];
+  for (let day = lo; day <= hi; day += 1) task.cells.push(day);
+  commitChange();
+  renderTicks();
+}
+
+function bindTicks() {
+  const body = document.getElementById('tick-body');
+  if (!body) return;
+
+  body.addEventListener('mousedown', (e) => {
+    const cell = e.target.closest('.tick-day-cell');
+    if (!cell) return;
+    e.preventDefault(); // no native text-selection drag over the grid
+    const taskId = rowIdOf(cell);
+    const day = Number(cell.dataset.day);
+    tickDrag = { taskId, anchorDay: day };
+    paintDragRange(taskId, day, day);
+  });
+
+  // Delegated on the body rather than per-cell: 30 columns times however many
+  // tasks is a lot of listeners for something only the row being dragged
+  // needs to hear.
+  body.addEventListener('mouseover', (e) => {
+    if (!tickDrag) return;
+    const cell = e.target.closest('.tick-day-cell');
+    if (!cell || rowIdOf(cell) !== tickDrag.taskId) return;
+    paintDragRange(tickDrag.taskId, tickDrag.anchorDay, Number(cell.dataset.day));
+  });
+
+  // On the document, not the table: releasing outside the grid must still end
+  // the drag, or the next click anywhere would silently extend the range.
+  document.addEventListener('mouseup', (e) => {
+    if (!tickDrag) return;
+    const cell = e.target.closest?.('.tick-day-cell');
+    const endDay = cell && rowIdOf(cell) === tickDrag.taskId ? Number(cell.dataset.day) : tickDrag.anchorDay;
+    applyTickRange(tickDrag.taskId, tickDrag.anchorDay, endDay);
+    tickDrag = null;
+  });
+
+  // A drag has no keyboard equivalent, so Enter/Space on a focused cell sets
+  // the one-day range a click-with-no-movement would.
+  body.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const cell = e.target.closest('.tick-day-cell');
+    if (!cell) return;
+    e.preventDefault();
+    applyTickRange(rowIdOf(cell), Number(cell.dataset.day), Number(cell.dataset.day));
+  });
+}
 
 /** The Planner shows tasks; the Tracker is where they are changed. */
 function bindOpenTasks() {
@@ -472,6 +565,7 @@ export function initPlanner() {
   bindMethod();
   bindMilestones();
   bindOpenTasks();
+  bindTicks();
   bindBaseline();
   bindNotes();
 }

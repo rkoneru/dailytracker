@@ -40,7 +40,7 @@ const eq = (n, got, want) => {
   await page.click('#tab-planner .nav-twisty');
   await page.waitForTimeout(250);
   eq('planner expanded', await page.getAttribute('#tab-planner', 'aria-expanded'), 'true');
-  eq('sections now visible', (await visibleLabels()).includes('Tick Timeline'), true);
+  eq('sections now visible', (await visibleLabels()).includes('Edit Timeline'), true);
   eq('did not navigate', await page.textContent('#page-title'), 'Dashboard');
 
   console.log('\n--- clicking a page navigates and marks it current ---');
@@ -105,7 +105,7 @@ const eq = (n, got, want) => {
   await page.keyboard.press('ArrowLeft');
   await page.waitForTimeout(150);
   eq('ArrowLeft again collapses it', await page.getAttribute('#tab-planner', 'aria-expanded'), 'false');
-  eq('collapsed children are no longer reachable', (await visibleLabels()).includes('Tick Timeline'), false);
+  eq('collapsed children are no longer reachable', (await visibleLabels()).includes('Edit Timeline'), false);
   await page.keyboard.press('End');
   eq('End goes to the last visible row', await focused(), 'btn-export-panel');
   await page.keyboard.press('Home');

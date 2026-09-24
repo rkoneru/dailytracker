@@ -31,6 +31,12 @@ function card(def, values) {
   // rendered a real EAC in the faded "nothing here" style.
   const classes = ['kpi-card', `is-${tone}`, text === null ? 'is-unmeasured' : ''];
 
+  // A KRI here is not a second number to collect: it is what this same KPI is
+  // called the moment it turns bad. Pairing the two means the warning can
+  // never drift from the measurement it is about, which a hand-typed risk
+  // indicator eventually would.
+  const kri = tone === 'bad' && def.kri;
+
   return el('article', { class: classes.filter(Boolean).join(' '), 'data-kpi': def.id }, [
     el('div', { class: 'kpi-card__head' }, [
       el('span', { class: 'kpi-card__n', text: String(def.n) }),
@@ -44,6 +50,10 @@ function card(def, values) {
     // Only the unmeasured ones carry the prompt. On a card that has a number,
     // repeating where the number came from is noise.
     text === null ? el('p', { class: 'kpi-card__needs', text: def.needs }) : null,
+    kri ? el('p', { class: 'kpi-card__kri' }, [
+      el('span', { class: 'kpi-card__kri-tag', text: 'KRI' }),
+      document.createTextNode(def.kri),
+    ]) : null,
   ]);
 }
 

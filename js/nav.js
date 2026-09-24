@@ -43,7 +43,7 @@ export const NAV_TREE = [
           { id: 'nav-conflicts', label: 'Worth Looking At', page: 'page-resources', title: 'Resources', section: 'sec-conflicts' },
         ],
       },
-      { id: 'tab-capacity', label: 'Capacity Planning', icon: '📐', page: 'page-capacity', title: 'Capacity Planning' },
+      { id: 'tab-capacity', label: 'Capacity Planning', icon: '🧮', page: 'page-capacity', title: 'Capacity Planning' },
       { id: 'tab-planning-layers', label: 'Planning Layers', icon: '🧭', page: 'page-planning-layers', title: 'Planning Layers' },
       { id: 'tab-ai-portfolio', label: 'AI Portfolio', icon: '🤖', page: 'page-ai-portfolio', title: 'AI Portfolio' },
     ],
@@ -73,7 +73,7 @@ export const NAV_TREE = [
         title: 'Plan',
         children: [
           { id: 'nav-milestones', label: 'Milestones', page: 'page-planner', title: 'Plan', section: 'sec-milestones' },
-          { id: 'nav-ticks', label: 'Tick Timeline', page: 'page-planner', title: 'Plan', section: 'sec-ticks' },
+          { id: 'nav-ticks', label: 'Edit Timeline', page: 'page-planner', title: 'Plan', section: 'sec-ticks' },
           { id: 'nav-budget', label: 'Budget & Baseline', page: 'page-planner', title: 'Plan', section: 'sec-budget' },
           { id: 'nav-notes', label: 'Notes', page: 'page-planner', title: 'Plan', section: 'sec-notes' },
         ],
@@ -170,7 +170,9 @@ export const NAV_TREE = [
           { id: 'nav-kpi-scope', label: 'Scope & Change', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-scope' },
           { id: 'nav-kpi-risk', label: 'Risk & Issue', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-risk' },
           { id: 'nav-kpi-quality', label: 'Quality & Resource', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-quality' },
+          { id: 'nav-kpi-improvement', label: 'Improvement', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-improvement' },
           { id: 'nav-kpi-basis', label: 'How These Work', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-basis' },
+          { id: 'nav-kpi-framework', label: 'PM Framework', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-framework' },
         ],
       },
       {

@@ -30,7 +30,7 @@ const KEY = 'projectPlannerPageTab_v1';
 export const PAGE_TABS = {
   'page-planner': [
     { id: 'sec-milestones', label: 'Milestones', sections: ['sec-method', 'sec-milestones'] },
-    { id: 'sec-ticks', label: 'Tick Timeline' },
+    { id: 'sec-ticks', label: 'Edit Timeline' },
     { id: 'sec-budget', label: 'Budget & Baseline' },
     { id: 'sec-notes', label: 'Notes' },
   ],
@@ -92,7 +92,9 @@ export const PAGE_TABS = {
     { id: 'sec-kpi-scope', label: 'Scope & Change' },
     { id: 'sec-kpi-risk', label: 'Risk & Issue' },
     { id: 'sec-kpi-quality', label: 'Quality & Resource' },
+    { id: 'sec-kpi-improvement', label: 'Improvement' },
     { id: 'sec-kpi-basis', label: 'How These Work' },
+    { id: 'sec-kpi-framework', label: 'PM Framework' },
   ],
   'page-resources': [
     { id: 'sec-people', label: 'People' },

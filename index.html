@@ -246,11 +246,11 @@
 
         <section class="card" id="sec-ticks">
           <div class="card__head">
-            <h2>Tick Timeline</h2>
+            <h2>Edit Timeline</h2>
             <span class="hint">Day 1 &middot; <span id="tick-start-label">&mdash;</span></span>
             <button type="button" class="btn btn-small btn-primary no-print" data-action="open-tasks">Open Task Tracker &rarr;</button>
           </div>
-          <p class="hint">A read-only view of the task list. Marks come from each task's dates. Tasks are added and edited on the Task Tracker; the Dashboard draws the same dates as a Gantt.</p>
+          <p class="hint">Click a day to mark it, or click and drag across days to set a task's start and end in one go &mdash; the Task Tracker updates to match. Marks otherwise come from each task's dates; the Dashboard draws the same dates as a Gantt.</p>
           <div class="table-scroll">
             <table class="data-table tick-table" id="tick-table">
               <thead>
@@ -1081,10 +1081,13 @@
             <span class="dash-header__badge" id="kpi-coverage">&mdash;</span>
           </div>
           <p class="hint report-subtitle">
-            Twenty indicators for schedule, cost, scope, risk and quality &mdash; every one of them
-            worked out from the plan and the registers, none of them typed in. An indicator with
-            nothing behind it reads &ldquo;not measured&rdquo; and says which field would fill it,
-            rather than showing a number nobody earned.
+            Twenty-two indicators for schedule, cost, scope, risk, quality and improvement &mdash;
+            every one of them worked out from the plan and the registers, none of them typed in. An
+            indicator with nothing behind it reads &ldquo;not measured&rdquo; and says which field
+            would fill it, rather than showing a number nobody earned. A card whose number has
+            turned bad is also flagged with what that looks like as a risk &mdash; see
+            <button type="button" class="link-btn" data-goto="nav-kpi-framework">PM Framework</button>
+            for the wider set this app cannot measure yet.
           </p>
         </header>
 
@@ -1131,6 +1134,10 @@
           <div class="card__head"><h2>Quality &amp; Resource KPIs</h2></div>
           <div class="kpi-grid" id="kpi-grid-quality"></div>
         </section>
+        <section class="card" id="sec-kpi-improvement">
+          <div class="card__head"><h2>Improvement KPIs</h2></div>
+          <div class="kpi-grid" id="kpi-grid-improvement"></div>
+        </section>
 
         <section class="card card--quiet" id="sec-kpi-basis">
           <div class="card__head"><h2>How these are worked out</h2></div>
@@ -1146,6 +1153,86 @@
                 </tr>
               </thead>
               <tbody id="kpi-basis-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card card--quiet" id="sec-kpi-framework">
+          <div class="card__head">
+            <h2>The wider PM framework</h2>
+            <span class="hint">Twelve categories a project management practice typically tracks. Where this app has real data, the KPI links straight to it above; where it does not, that is said plainly rather than guessed at.</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="kpi-framework-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>KPIs</th>
+                  <th>KRIs</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Project Governance</td>
+                  <td><ul class="cap-guidance-list"><li>Steering committee meeting frequency <em>— not tracked</em></li><li>Project charter approval rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Delayed executive decisions</li><li>Lack of governance oversight</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Scope Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-scope">Scope change frequency</button></li><li>Requirements approval timeliness <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Scope creep incidents</li><li>Unapproved requirement changes</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Schedule Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-schedule">Schedule variance</button></li><li><button type="button" class="link-btn" data-goto="nav-kpi-schedule">Milestone completion rate</button></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Missed critical milestones</li><li>Increasing schedule slippage</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Cost Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-cost">Cost variance</button></li><li><button type="button" class="link-btn" data-goto="nav-kpi-cost">Budget utilisation rate</button></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Budget overruns</li><li>Unplanned cost escalations</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Risk Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-risk">Risk response timeliness</button></li><li>Risk register update frequency <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>High residual risk exposure</li><li>Delayed risk response actions</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Quality Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-quality">Defect density</button></li><li>Quality audit pass rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Increasing defect trends</li><li>Rework frequency</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Stakeholder Management</td>
+                  <td><ul class="cap-guidance-list"><li>Stakeholder satisfaction score <em>— not tracked</em></li><li>Communication effectiveness <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Stakeholder complaints</li><li>Escalation frequency</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Procurement Management</td>
+                  <td><ul class="cap-guidance-list"><li>Vendor on-time delivery <em>— not tracked</em></li><li>Contract compliance rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Vendor performance degradation</li><li>Contract compliance gaps</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Change Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-scope">Change approval cycle time</button></li><li><button type="button" class="link-btn" data-goto="nav-kpi-scope">Change approval rate</button> <em>— an approval rate, not a success rate; nothing tracks whether an implemented change stuck</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Failed change implementations</li><li>Emergency change frequency</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Communication Management</td>
+                  <td><ul class="cap-guidance-list"><li>Reporting timeliness <em>— not tracked</em></li><li>Status update accuracy <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Information gaps</li><li>Misaligned stakeholder expectations</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Performance Monitoring</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-schedule">Earned value performance</button> — SV, SPI, CV, CPI</li><li>Portfolio health index <em>— not a single number; read as the mix of colours across the grids above</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Declining performance trends</li><li>Uncontrolled variance growth</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Lessons Learned &amp; Improvement</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-improvement">Lessons logged</button></li><li>Process improvement adoption rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Repeated project failures</li><li>Lack of continuous improvement</li></ul></td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </section>

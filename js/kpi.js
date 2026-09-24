@@ -23,6 +23,7 @@ export const KPI_CATEGORIES = [
   { id: 'scope', label: 'Scope & Change', icon: '🎯' },
   { id: 'risk', label: 'Risk & Issue', icon: '⚠️' },
   { id: 'quality', label: 'Quality & Resource', icon: '🧪' },
+  { id: 'improvement', label: 'Improvement', icon: '💡' },
 ];
 
 /**
@@ -34,27 +35,34 @@ export const KPI_DEFS = [
   // --- Schedule ---
   { n: 1, id: 'sv', cat: 'schedule', name: 'Schedule Variance (SV)', formula: 'SV = EV − PV',
     what: 'Difference between earned value and planned value.', unit: 'hours', good: 'high',
-    needs: 'An effort estimate and a % progress on each task.' },
+    needs: 'An effort estimate and a % progress on each task.',
+    kri: 'Increasing schedule slippage' },
   { n: 2, id: 'spi', cat: 'schedule', name: 'Schedule Performance Index (SPI)', formula: 'SPI = EV / PV',
     what: 'Schedule efficiency against the plan.', unit: 'index', good: 'high',
-    needs: 'An effort estimate and a % progress on each task.' },
+    needs: 'An effort estimate and a % progress on each task.',
+    kri: 'Increasing schedule slippage' },
   { n: 3, id: 'milestoneRate', cat: 'schedule', name: 'Milestone Achievement Rate', formula: 'On-time / settled milestones',
     what: 'Percentage of milestones achieved on time.', unit: 'percent', good: 'high',
-    needs: 'A due date, and an achieved date once a milestone is ticked off.' },
+    needs: 'A due date, and an achieved date once a milestone is ticked off.',
+    kri: 'Missed critical milestones' },
   { n: 4, id: 'taskRate', cat: 'schedule', name: 'Task Completion Rate', formula: 'Completed / planned tasks',
     what: 'Percentage of planned tasks completed.', unit: 'percent', good: 'high',
-    needs: 'Tasks on the Task Tracker.' },
+    needs: 'Tasks on the Task Tracker.',
+    kri: 'Delivery pace falling behind plan' },
 
   // --- Cost ---
   { n: 5, id: 'cv', cat: 'cost', name: 'Cost Variance (CV)', formula: 'CV = EV − AC',
     what: 'Difference between earned value and actual cost.', unit: 'hours', good: 'high',
-    needs: 'An estimate and hours spent on each task, or approved timesheets.' },
+    needs: 'An estimate and hours spent on each task, or approved timesheets.',
+    kri: 'Unplanned cost escalation' },
   { n: 6, id: 'cpi', cat: 'cost', name: 'Cost Performance Index (CPI)', formula: 'CPI = EV / AC',
     what: 'Cost efficiency of delivered work.', unit: 'index', good: 'high',
-    needs: 'An estimate and hours spent on each task, or approved timesheets.' },
+    needs: 'An estimate and hours spent on each task, or approved timesheets.',
+    kri: 'Cost efficiency declining' },
   { n: 7, id: 'budgetUtilisation', cat: 'cost', name: 'Budget Utilisation', formula: 'Actual cost / budget',
     what: 'Portion of approved budget consumed.', unit: 'percent', good: 'low',
-    needs: 'Budget planned and actual, on the Plan.' },
+    needs: 'Budget planned and actual, on the Plan.',
+    kri: 'Budget overrun risk' },
   { n: 8, id: 'eac', cat: 'cost', name: 'Estimate at Completion (EAC)', formula: 'EAC = BAC / CPI',
     what: 'Forecast total cost at project completion.', unit: 'hours', good: 'low',
     needs: 'An estimate and hours spent on each task.' },
@@ -62,44 +70,64 @@ export const KPI_DEFS = [
   // --- Scope & change ---
   { n: 9, id: 'requirementsStability', cat: 'scope', name: 'Requirements Stability', formula: 'Unchanged deliverables / total',
     what: 'Degree to which requirements remain unchanged.', unit: 'percent', good: 'high',
-    needs: 'Deliverables on Scope & Contract, and change requests naming what they touch.' },
+    needs: 'Deliverables on Scope & Contract, and change requests naming what they touch.',
+    kri: 'Scope creep' },
   { n: 10, id: 'scopeChangeRate', cat: 'scope', name: 'Scope Change Rate', formula: 'Change requests / month',
     what: 'Frequency or volume of scope changes.', unit: 'rate', good: 'low',
-    needs: 'Change requests with a raised date.' },
+    needs: 'Change requests with a raised date.',
+    kri: 'Rapid, unplanned requirement changes' },
   { n: 11, id: 'changeCycleTime', cat: 'scope', name: 'Change Approval Cycle Time', formula: 'Raised → decided',
     what: 'Average time to review and approve change requests.', unit: 'days', good: 'low',
-    needs: 'A raised and a decided date on each change request.' },
+    needs: 'A raised and a decided date on each change request.',
+    kri: 'Change approvals stalling' },
   { n: 12, id: 'acceptanceRate', cat: 'scope', name: 'Deliverable Acceptance Rate', formula: 'Accepted / submitted',
     what: 'Percentage of deliverables accepted first time.', unit: 'percent', good: 'high',
-    needs: 'Deliverables that have reached review, acceptance or rejection.' },
+    needs: 'Deliverables that have reached review, acceptance or rejection.',
+    kri: 'Rework on delivered work' },
+  { n: 13, id: 'changeApprovalRate', cat: 'scope', name: 'Change Approval Rate', formula: 'Approved / decided',
+    what: 'Share of decided change requests that were approved rather than rejected.', unit: 'percent', good: 'band',
+    needs: 'Change requests with a status of Approved or Rejected.' },
 
   // --- Risk & issue ---
-  { n: 13, id: 'riskExposure', cat: 'risk', name: 'Open Risk Exposure', formula: 'Σ probability × impact',
+  { n: 14, id: 'riskExposure', cat: 'risk', name: 'Open Risk Exposure', formula: 'Σ probability × impact',
     what: 'Combined exposure of active risks.', unit: 'score', good: 'low',
-    needs: 'Open risks with a severity and a likelihood.' },
-  { n: 14, id: 'riskTimeliness', cat: 'risk', name: 'Risk Response Timeliness', formula: 'On-time actions / total',
+    needs: 'Open risks with a severity and a likelihood.',
+    kri: 'High residual risk exposure' },
+  { n: 15, id: 'riskTimeliness', cat: 'risk', name: 'Risk Response Timeliness', formula: 'On-time actions / total',
     what: 'Percentage of risk actions completed on time.', unit: 'percent', good: 'high',
-    needs: 'A due date, and a closed date once a risk is closed.' },
-  { n: 15, id: 'openIssues', cat: 'risk', name: 'Open Issue Count', formula: 'Current unresolved issues',
+    needs: 'A due date, and a closed date once a risk is closed.',
+    kri: 'Delayed risk response actions' },
+  { n: 16, id: 'openIssues', cat: 'risk', name: 'Open Issue Count', formula: 'Current unresolved issues',
     what: 'Number of unresolved issues.', unit: 'count', good: 'low',
-    needs: 'Issues on Risks & Issues.' },
-  { n: 16, id: 'issueResolution', cat: 'risk', name: 'Issue Resolution Time', formula: 'Opened → closed',
+    needs: 'Issues on Risks & Issues.',
+    kri: 'Issue backlog growing' },
+  { n: 17, id: 'issueResolution', cat: 'risk', name: 'Issue Resolution Time', formula: 'Opened → closed',
     what: 'Average time taken to close issues.', unit: 'days', good: 'low',
-    needs: 'A raised and a closed date on each issue.' },
+    needs: 'A raised and a closed date on each issue.',
+    kri: 'Issues taking longer to close' },
 
   // --- Quality & resource ---
-  { n: 17, id: 'defectDensity', cat: 'quality', name: 'Defect Density', formula: 'Defects / deliverable',
+  { n: 18, id: 'defectDensity', cat: 'quality', name: 'Defect Density', formula: 'Defects / deliverable',
     what: 'Number of defects relative to output size.', unit: 'rate', good: 'low',
-    needs: 'A defect count on each deliverable, on Scope & Contract.' },
-  { n: 18, id: 'reworkPct', cat: 'quality', name: 'Rework Percentage', formula: 'Rework / total effort',
+    needs: 'A defect count on each deliverable, on Scope & Contract.',
+    kri: 'Increasing defect trend' },
+  { n: 19, id: 'reworkPct', cat: 'quality', name: 'Rework Percentage', formula: 'Rework / total effort',
     what: 'Portion of work spent redoing completed work.', unit: 'percent', good: 'low',
-    needs: 'Rework hours on a task, beside its estimate and spend.' },
-  { n: 19, id: 'utilisation', cat: 'quality', name: 'Resource Utilisation', formula: 'Assigned / available time',
+    needs: 'Rework hours on a task, beside its estimate and spend.',
+    kri: 'Rework frequency rising' },
+  { n: 20, id: 'utilisation', cat: 'quality', name: 'Resource Utilisation', formula: 'Assigned / available time',
     what: 'Percentage of available capacity being used.', unit: 'percent', good: 'band',
-    needs: 'People and allocations on Resources.' },
-  { n: 20, id: 'productivity', cat: 'quality', name: 'Team Productivity', formula: 'Delivered hours / hours spent',
+    needs: 'People and allocations on Resources.',
+    kri: 'Team overloaded or under-used' },
+  { n: 21, id: 'productivity', cat: 'quality', name: 'Team Productivity', formula: 'Delivered hours / hours spent',
     what: 'Output delivered per unit of effort or time.', unit: 'index', good: 'high',
-    needs: 'An estimate and hours spent on completed tasks.' },
+    needs: 'An estimate and hours spent on completed tasks.',
+    kri: 'Delivery efficiency declining' },
+
+  // --- Improvement ---
+  { n: 22, id: 'lessonsRate', cat: 'improvement', name: 'Lessons Logged', formula: 'Lessons / month',
+    what: 'How often the project is capturing what it is learning.', unit: 'rate', good: 'band',
+    needs: 'Entries on Improvement & Lessons, with a date.' },
 ];
 
 export const KPI_BY_ID = new Map(KPI_DEFS.map((d) => [d.id, d]));
@@ -278,13 +306,36 @@ function scopeKpis(project, today) {
     })
     .filter((d) => d !== null);
 
+  // Rejected sits beside Approved as the other decided state; anything still
+  // under review or pending has not been decided yet and cannot count either
+  // way without pretending to know how it will land.
+  const decided = changes.filter((c) => c.status === 'Approved' || c.status === 'Rejected');
+
   return {
     requirementsStability: stability,
     scopeChangeRate,
     changeCycleTime: mean(cycles),
     acceptanceRate: submitted.length ? ratio(accepted.length, submitted.length) : null,
+    changeApprovalRate: decided.length ? ratio(approved.length, decided.length) : null,
     _scope: { deliverables: deliverables.length, submitted: submitted.length, changes: changes.length, decided: cycles.length },
   };
+}
+
+/**
+ * How often the project is writing anything down on Improvement & Lessons —
+ * the same "count since the first one, per month" shape as scopeChangeRate,
+ * because it is answering the same kind of question: is this a thing that
+ * happens routinely, or hasn't happened in months.
+ */
+function improvementKpis(project, today) {
+  const lessons = project.lessons || [];
+  const dates = lessons.map((l) => parseDate(l.date)).filter(Boolean).sort((a, b) => a - b);
+  let lessonsRate = null;
+  if (dates.length >= 1) {
+    const months = Math.max(1, daysBetween(dates[0], startOfDay(today)) / 30.44);
+    lessonsRate = lessons.length / months;
+  }
+  return { lessonsRate, _improvement: { lessons: lessons.length } };
 }
 
 function riskKpis(project, today) {
@@ -393,6 +444,7 @@ export function projectKpis(project, { resources = [], absences = [], today = ne
     ...scopeKpis(project, day),
     ...riskKpis(project, day),
     ...qualityKpis(project, resources, absences, day),
+    ...improvementKpis(project, day),
   };
 }
 

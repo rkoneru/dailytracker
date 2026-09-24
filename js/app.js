@@ -955,10 +955,10 @@ function init() {
   initCapacity(goTo);
   initAiPortfolio(goTo);
   // Planning Layers is entirely static — nothing to render on arrival — so
-  // its only wiring, and the AI Portfolio header's one link, are the inline
-  // pointers to other pages, scoped the same way the Dashboard's own kpi
-  // tiles and Capacity Planning's process card are.
-  document.querySelectorAll('#page-planning-layers [data-goto], #page-ai-portfolio [data-goto]').forEach((btn) => {
+  // its only wiring, and the header links on AI Portfolio and the KPI page,
+  // are the inline pointers to other pages, scoped the same way the
+  // Dashboard's own kpi tiles and Capacity Planning's process card are.
+  document.querySelectorAll('#page-planning-layers [data-goto], #page-ai-portfolio [data-goto], #page-kpis [data-goto]').forEach((btn) => {
     btn.addEventListener('click', () => goTo({ navId: btn.dataset.goto }));
   });
   // The nav asks the policy which pages a role may see. Injected rather than

@@ -42,14 +42,16 @@ const project = (extra = {}) => ({
 
 // ---------- the catalogue is the whole library ----------
 
-eq('twenty indicators', KPI_DEFS.length, 20);
-eq('numbered 1..20', KPI_DEFS.map((d) => d.n), Array.from({ length: 20 }, (_, i) => i + 1));
-eq('ids are unique', new Set(KPI_DEFS.map((d) => d.id)).size, 20);
-eq('five categories', KPI_CATEGORIES.map((c) => c.id),
-   ['schedule', 'cost', 'scope', 'risk', 'quality']);
-eq('four in each', KPI_CATEGORIES.map((c) => KPI_DEFS.filter((d) => d.cat === c.id).length),
-   [4, 4, 4, 4, 4]);
+eq('twenty-two indicators', KPI_DEFS.length, 22);
+eq('numbered 1..22', KPI_DEFS.map((d) => d.n), Array.from({ length: 22 }, (_, i) => i + 1));
+eq('ids are unique', new Set(KPI_DEFS.map((d) => d.id)).size, 22);
+eq('six categories', KPI_CATEGORIES.map((c) => c.id),
+   ['schedule', 'cost', 'scope', 'risk', 'quality', 'improvement']);
+eq('one home each, mostly four apiece', KPI_CATEGORIES.map((c) => KPI_DEFS.filter((d) => d.cat === c.id).length),
+   [4, 4, 5, 4, 4, 1]);
 eq('every one says what fills it in', KPI_DEFS.every((d) => d.needs && d.formula && d.what), true);
+eq('every KRI names a real, computed KPI',
+   KPI_DEFS.filter((d) => d.kri).every((d) => typeof d.kri === 'string' && d.kri.length > 0), true);
 
 // ---------- nothing measured means nothing claimed ----------
 
@@ -203,6 +205,14 @@ const scope = projectKpis(project({
 eq('acceptance counts only what reached review', scope.acceptanceRate, 1 / 3);
 eq('cycle time averages raised to decided', scope.changeCycleTime, 3);
 eq('stability discounts approved changes', scope.requirementsStability, 0.75);
+eq('approval rate is decided requests only', scope.changeApprovalRate, 0.5);
+eq('a request still under review decides neither way',
+   projectKpis(project({
+     changeRequests: [
+       { id: 'c1', status: 'Approved', raised: '2026-08-01', decided: '2026-08-05' },
+       { id: 'c2', status: 'Under Review', raised: '2026-08-10' },
+     ],
+   }), { today: TODAY }).changeApprovalRate, 1);
 
 // ---------- quality ----------
 
@@ -216,6 +226,14 @@ const quality = projectKpis(project({
 eq('defect density counts only deliverables that were checked', quality.defectDensity, 2);
 eq('rework is a share of total spend', quality.reworkPct, 0.1);
 eq('productivity compares delivered estimate to what it cost', quality.productivity, 10 / 12);
+
+// ---------- improvement ----------
+
+eq('no lessons is not measured', projectKpis(project({ lessons: [] }), { today: TODAY }).lessonsRate, null);
+close('lessons logged is a rate per month since the first one',
+  projectKpis(project({
+    lessons: [{ id: 'l1', date: '2026-08-17' }, { id: 'l2', date: '2026-09-01' }],
+  }), { today: TODAY }).lessonsRate, 2, 0.05);
 
 // ---------- tones ----------
 

@@ -28,7 +28,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
 
   console.log('\n--- every multi-section page gets a strip ---');
   const pages = {
-    'tab-planner': ['page-planner', ['Milestones', 'Tick Timeline', 'Budget & Baseline', 'Notes']],
+    'tab-planner': ['page-planner', ['Milestones', 'Edit Timeline', 'Budget & Baseline', 'Notes']],
     'tab-tasks': ['page-tasks', ['Task List', 'Priority Board', 'Legend & Tips']],
     'tab-raid': ['page-raid', ['Risks & Issues', 'Dependencies']],
     'tab-scope': ['page-scope', ['Charter', 'Deliverables', 'Change Requests']],

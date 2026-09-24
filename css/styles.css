@@ -1637,6 +1637,7 @@ body { overflow-anchor: none; }
 }
 .tick-day-cell:hover { background: rgba(124, 92, 252, 0.10); }
 .tick-day-cell:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.tick-day-cell.is-drag-range { background: var(--color-primary); color: #fff; }
 
 /* Weekends and month boundaries keep 30 bare numbers legible as a calendar. */
 .tick-day-head.is-weekend, .tick-day-cell.is-weekend { background: rgba(100, 116, 139, 0.07); }
@@ -2201,8 +2202,6 @@ body { overflow-anchor: none; }
 
 /* Read-only task views (Planner) */
 .progress-static { font-size: 12px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
-.tick-day-cell.is-static { cursor: default; }
-.tick-day-cell.is-static:hover { background: transparent; }
 .tick-type-mark { flex: none; width: 18px; text-align: center; color: var(--color-text-muted); }
 
 /* Dashboard task jump-list, which replaced the task table */
@@ -4486,8 +4485,29 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   color: var(--color-text-muted);
 }
 .kpi-card__needs { margin: 0; font-size: 11px; color: var(--color-text-muted); font-style: italic; }
+.kpi-card__kri {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #991b1b;
+}
+.kpi-card__kri-tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
 
 .kpi-basis__formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+
+#kpi-framework-table td { vertical-align: top; }
+#kpi-framework-table em { color: var(--color-text-muted); font-style: italic; }
 #kpi-basis-body tr.is-unmeasured { color: var(--color-text-muted); }
 .tone-idle { background: var(--color-bg); color: var(--color-text-muted); }
 

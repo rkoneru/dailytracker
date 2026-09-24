@@ -11,7 +11,7 @@ import { makeSortable, reorderById } from './dragReorder.js';
 import { parseDate } from './charts.js';
 import {
   STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS,
-  newTask, notifyProjectDataChanged, progressForStatus, clampProgress, taskRef,
+  newTask, notifyProjectDataChanged, progressForStatus, clampProgress, taskRef, isOverdue,
   newChecklistItem, checklistProgress, effortTotals, formatHours, hours,
 } from './taskModel.js';
 import { analyse, wouldCycle } from './critical.js';
@@ -64,12 +64,6 @@ function taskIdOf(target) {
 
 function findTask(id) {
   return getState().dashTasks.find((t) => t.id === id);
-}
-
-function isOverdue(task, today) {
-  if (task.status === 'Complete') return false;
-  const end = parseDate(task.end);
-  return !!(end && end < today);
 }
 
 function startOfToday() {

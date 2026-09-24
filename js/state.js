@@ -39,6 +39,28 @@ function earliestStart(data) {
   return starts[0] || '';
 }
 
+/**
+ * The old tick grid kept its own day numbers beside each task's dates. The
+ * Edit Timeline now draws only from start/end, so a task that was ticked but
+ * never dated gets the dates its ticks meant rather than vanishing from the
+ * timeline. Tasks that already have dates keep them: those were always the
+ * ones every other page believed. With no saved anchor, day 1 was the
+ * earliest task start, as the old grid had it.
+ */
+function datesFromLegacyTicks(task, anchorISO) {
+  const days = Array.isArray(task.cells) ? task.cells.filter((d) => Number.isInteger(d) && d > 0) : [];
+  if (task.start || task.end || !days.length || !anchorISO) return;
+  const anchor = new Date(`${anchorISO}T00:00:00`);
+  if (Number.isNaN(anchor.getTime())) return;
+  const at = (day) => {
+    const d = new Date(anchor);
+    d.setDate(d.getDate() + day - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  task.start = at(Math.min(...days));
+  task.end = at(Math.max(...days));
+}
+
 function normalisePriority(value) {
   const match = PRIORITIES.find((p) => p.toLowerCase() === String(value || '').trim().toLowerCase());
   return match || 'Medium';
@@ -179,7 +201,7 @@ function migrateProject(data) {
   (data.dashTasks || []).forEach((t) => {
     if (t.baseStart === undefined) t.baseStart = '';
     if (t.baseEnd === undefined) t.baseEnd = '';
-    // Tick-timeline state, added after the task lists were unified.
+    datesFromLegacyTicks(t, data.tickStart || earliestStart(data) || data.dashDate);
     // The account a task is assigned to, as opposed to the free-text name.
     // Empty means "not linked to anyone" — the text still shows.
     if (t.assigneeUserId === undefined) t.assigneeUserId = '';
@@ -188,8 +210,6 @@ function migrateProject(data) {
     if (t.progress === undefined) {
       t.progress = t.status === 'Complete' ? 100 : 0;
     }
-    if (!Array.isArray(t.cells)) t.cells = [];
-    if (t.tickType !== 'diamond') t.tickType = 'check';
     // Checklist, effort and dependencies, added together. Estimate and spent
     // stay empty strings rather than becoming 0: an unestimated task and a
     // task estimated at nothing are different claims, and a migration that
@@ -246,9 +266,6 @@ function migrateProject(data) {
   // Projects that predate this field have unknown provenance, so they are
   // never treated as untouched starters — 0 can't equal a real updatedAt.
   if (data.createdAt === undefined) data.createdAt = 0;
-  // Day 1 of the tick timeline. Stored rather than derived, so adding a task
-  // that starts earlier doesn't silently shift what every existing tick means.
-  if (!data.tickStart) data.tickStart = earliestStart(data) || data.dashDate || todayISO();
   return data;
 }
 

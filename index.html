@@ -247,21 +247,38 @@
         <section class="card" id="sec-ticks">
           <div class="card__head">
             <h2>Edit Timeline</h2>
-            <span class="hint">Day 1 &middot; <span id="tick-start-label">&mdash;</span></span>
+            <span class="hint tl-range" id="tick-start-label">&mdash;</span>
             <button type="button" class="btn btn-small btn-primary no-print" data-action="open-tasks">Open Task Tracker &rarr;</button>
           </div>
-          <p class="hint">Click a day to mark it, or click and drag across days to set a task's start and end in one go &mdash; the Task Tracker updates to match. Marks otherwise come from each task's dates; the Dashboard draws the same dates as a Gantt.</p>
+          <p class="hint">Drag a bar to move a task, drag either end to change its start or end, or drag across empty days to schedule one. The Task Tracker, Dashboard and reports change with it, and every edit can be undone.</p>
+          <div class="tl-toolbar no-print">
+            <div class="tl-nav" role="group" aria-label="Which days to show">
+              <button type="button" class="btn btn-small" data-tl="prev">&lsaquo; Week</button>
+              <button type="button" class="btn btn-small" data-tl="today">Today</button>
+              <button type="button" class="btn btn-small" data-tl="fit">Whole project</button>
+              <button type="button" class="btn btn-small" data-tl="next">Week &rsaquo;</button>
+            </div>
+            <ul class="tl-legend" aria-label="Bar colours">
+              <li><span class="tl-key tl-row--todo"></span>Not started</li>
+              <li><span class="tl-key tl-row--active"></span>In progress</li>
+              <li><span class="tl-key tl-row--hold"></span>On hold</li>
+              <li><span class="tl-key tl-row--late"></span>Late</li>
+              <li><span class="tl-key tl-row--done"></span>Complete</li>
+              <li><span class="tl-key tl-key--base"></span>Baseline</li>
+            </ul>
+          </div>
+          <p class="tl-live" id="tl-live" aria-live="polite"></p>
+          <p class="sr-only" id="tl-keys">Left and right arrows move the task a day. Shift with an arrow changes the end date, Alt with an arrow the start date. Enter schedules an undated task for today. Up and down move between tasks.</p>
           <div class="table-scroll">
             <table class="data-table tick-table" id="tick-table">
               <thead>
-                <tr id="tick-head-row">
-                  <th class="col-tickname">Task</th>
-                </tr>
+                <tr id="tick-month-row"></tr>
+                <tr id="tick-head-row"></tr>
               </thead>
               <tbody id="tick-body"></tbody>
             </table>
           </div>
-          <p class="hint" id="tick-empty" hidden>Add a task below and it appears here.</p>
+          <p class="hint" id="tick-empty" hidden>No tasks yet. Add one on the Task Tracker and it appears here.</p>
         </section>
 
         <section class="card" id="sec-budget">

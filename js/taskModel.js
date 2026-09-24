@@ -19,15 +19,15 @@ export const STATUS_COLORS = {
 
 export const PRIORITY_COLORS = { High: '#ef4444', Medium: '#f59e0b', Low: '#22c55e' };
 
-// The tick timeline's window, in days. Each task carries the days it is ticked
-// on plus the marker drawn in them, kept separate from start/end so a task
-// worked on in bursts (days 9, 16 and 23) can say so — something a single
-// contiguous date range cannot express.
-export const TICK_DAYS = 30;
-export const TICK_TYPES = ['check', 'diamond'];
-
-export function tickMarker(type) {
-  return type === 'diamond' ? '◆' : '✓';
+/**
+ * Late means unfinished and past its end date. Derived, never stored: the
+ * Task Tracker, the Board and the Edit Timeline all colour a task by this,
+ * so it lives here rather than in any one of them.
+ */
+export function isOverdue(task, today) {
+  if (task.status === 'Complete') return false;
+  const end = parseDate(task.end);
+  return !!(end && end < today);
 }
 
 /** A blank task, so every page adds rows of exactly the same shape. */
@@ -35,7 +35,6 @@ export function newTask() {
   return {
     name: '', assigned: '', assigneeUserId: '', start: '', end: '', baseStart: '', baseEnd: '',
     status: 'Not Started', prio: 'Medium', comments: '', progress: 0,
-    tickType: 'check', cells: [],
     // The three below are held on the task rather than as their own row kinds.
     // A checklist item, an estimate and an edge all belong to exactly one task
     // and are meaningless without it, so making them separate synced rows would

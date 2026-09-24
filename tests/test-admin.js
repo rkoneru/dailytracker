@@ -246,7 +246,7 @@ async function useProject(page) {
     console.log('\n--- setting page access ---');
     await openSection(page, 'sec-settings-pages');
     eq('the policy editor is there', await page.locator('#admin-pages').isVisible(), true);
-    eq('with a column per job role', await page.locator('.policy-role').count(), 7);
+    eq('with a column per job role', await page.locator('.policy-role').count(), 8);
     // Defaults rather than a blank sheet: saving an empty policy would leave
     // every role with nothing.
     const ticked = await page.locator('.policy-page input:checked').count();

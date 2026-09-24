@@ -1586,62 +1586,223 @@ body { overflow-anchor: none; }
 .sync-pill.is-error { color: #b91c1c; }
 .sync-pill.is-signed-out { color: var(--color-text-muted); }
 
-/* ---------- Tick timeline ---------- */
+/* ---------- Edit Timeline ---------- */
 
-.tick-anchor { flex-direction: row; align-items: center; gap: 8px; }
-.tick-anchor .field-input { min-height: 32px; width: 150px; }
+.tl-range { font-variant-numeric: tabular-nums; }
+.tl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin: 6px 0 4px;
+}
+.tl-nav { display: flex; flex-wrap: wrap; gap: 6px; }
+.tl-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.tl-legend li { display: flex; align-items: center; gap: 6px; }
+.tl-key {
+  width: 20px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--bar-done) 50%, var(--bar) 50%);
+}
+.tl-key--base { height: 3px; border-radius: 2px; background: #94a3b8; }
+.tl-live { min-height: 1.5em; margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--color-primary); }
 
-.tick-table th, .tick-table td { padding: 4px 6px; }
-.col-tickname { width: 220px; }
+/* One colour pair per state: the lighter is the bar, the stronger the part
+   already done (from the task's progress). Late is derived, as on the Tracker. */
+.tl-row--todo { --bar: #c7d2fe; --bar-done: #6366f1; }
+.tl-row--active { --bar: #ddd6fe; --bar-done: #7c5cfc; }
+.tl-row--hold { --bar: #e2e8f0; --bar-done: #94a3b8; }
+.tl-row--late { --bar: #fecaca; --bar-done: #ef4444; }
+.tl-row--done { --bar: #86efac; --bar-done: #16a34a; }
 
-.tick-row-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tick-table { border-collapse: separate; border-spacing: 0; }
+.tick-table th, .tick-table td { padding: 0; }
+
+.tick-table .col-tickname {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  padding: 6px 10px 6px 6px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  text-align: left;
+}
+.tick-table thead .col-tickname { vertical-align: bottom; }
+.tl-corner { border-bottom: none !important; }
+.tl-month {
+  position: relative;
+  height: 24px;
+  overflow: hidden;
+  border-bottom: none !important;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.tl-month span { position: absolute; left: 6px; bottom: 2px; white-space: nowrap; }
+.tl-month + .tl-month { box-shadow: inset 1px 0 0 var(--color-border); }
+
+.tick-day-head {
+  width: 28px;
+  min-width: 28px;
+  padding: 2px 0 6px !important;
+  text-align: center !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+.tl-dow, .tl-dom { display: block; line-height: 1.35; }
+.tl-dow { font-size: 9px; }
+.tl-dom { font-size: 11px; font-weight: 700; color: var(--color-text); }
+.tick-day-head.is-today .tl-dom {
+  width: 22px;
+  margin: 0 auto;
+  border-radius: var(--radius-pill);
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.tick-table .tl-name { cursor: default; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.tl-name:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-primary); }
+.tl-name__inner { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tl-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--bar-done); }
+.tl-name__text { display: flex; flex-direction: column; min-width: 0; }
 .tick-row-label {
-  flex: 1;
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
-}
-
-.tick-type-btn {
-  flex: none;
-  width: 24px;
-  height: 24px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-surface);
+  font-weight: 600;
   color: var(--color-text);
-  cursor: pointer;
-  line-height: 1;
 }
-.tick-type-btn:hover { border-color: var(--color-primary); }
-.tick-type-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-
-.tick-day-head {
-  width: 26px;
-  text-align: center !important;
-  font-size: 10px;
-  padding: 4px 0 !important;
+.tl-name__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--color-text-muted);
 }
 
 .tick-day-cell {
-  width: 26px;
-  text-align: center;
-  cursor: pointer;
-  color: var(--color-primary);
-  font-size: 13px;
-  line-height: 1.4;
+  position: relative;
+  width: 28px;
+  min-width: 28px;
+  height: 46px;
+  cursor: crosshair;
   user-select: none;
-  border-left: 1px solid transparent;
+  -webkit-user-select: none;
+  /* Empty days still scroll the grid on a phone; bars and handles claim the
+     gesture instead (below), so dragging one doesn't scroll the page. */
+  touch-action: pan-x pan-y;
 }
-.tick-day-cell:hover { background: rgba(124, 92, 252, 0.10); }
-.tick-day-cell:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.tick-day-cell.is-drag-range { background: var(--color-primary); color: #fff; }
+.tick-day-cell:hover { background-color: rgba(124, 92, 252, 0.08); }
+.tick-day-head.is-weekend, .tick-day-cell.is-weekend { background-color: rgba(100, 116, 139, 0.06); }
+.tick-day-head.is-month-start, .tick-day-cell.is-month-start { box-shadow: inset 1px 0 0 var(--color-border); }
+.tick-day-cell.is-today::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 1;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(239, 68, 68, 0.5);
+  pointer-events: none;
+}
+/* The baseline, as a thin rule under the bar: where the task was meant to
+   run, so a slip is visible where it is edited, not only on the Dashboard. */
+.tick-day-cell.in-base {
+  background-image: linear-gradient(#94a3b8, #94a3b8);
+  background-repeat: no-repeat;
+  background-size: 100% 3px;
+  background-position: 0 calc(100% - 5px);
+}
 
-/* Weekends and month boundaries keep 30 bare numbers legible as a calendar. */
-.tick-day-head.is-weekend, .tick-day-cell.is-weekend { background: rgba(100, 116, 139, 0.07); }
-.tick-day-head.is-month-start, .tick-day-cell.is-month-start { border-left: 1px solid var(--color-border); }
+.tick-day-cell.in-bar { cursor: grab; touch-action: none; }
+.tick-day-cell.in-bar::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  background: var(--bar);
+  pointer-events: none;
+}
+.tick-day-cell.in-bar.is-progress::before { background: var(--bar-done); }
+.tick-day-cell.bar-start::before { left: 3px; border-radius: 8px 0 0 8px; }
+.tick-day-cell.bar-end::before { right: 3px; border-radius: 0 8px 8px 0; }
+.tick-day-cell.bar-start.bar-end::before { border-radius: 8px; }
+/* A bar that runs off the window fades out rather than ending, so it is not
+   mistaken for the task's real start or end. */
+.tick-day-cell.bar-clip-start::before { -webkit-mask-image: linear-gradient(90deg, transparent, #000); mask-image: linear-gradient(90deg, transparent, #000); }
+.tick-day-cell.bar-clip-end::before { -webkit-mask-image: linear-gradient(90deg, #000, transparent); mask-image: linear-gradient(90deg, #000, transparent); }
+
+.tl-handle {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  z-index: 2;
+  width: 10px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.tl-handle--start { left: 0; }
+.tl-handle--end { right: 0; }
+.tl-handle::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: #fff;
+  opacity: 0;
+}
+.tl-row:hover .tl-handle::after { opacity: 0.9; }
+
+.tl-row.is-dragging .tick-day-cell.in-bar::before { opacity: 0.3; }
+.tl-row.is-dragging .tick-day-cell.is-preview::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  border-radius: 0;
+  background: var(--color-primary);
+  opacity: 0.85;
+  -webkit-mask-image: none;
+  mask-image: none;
+  pointer-events: none;
+}
+.tl-row.is-dragging { cursor: grabbing; }
+
+@media (hover: none) {
+  .tl-handle { width: 12px; }
+  .tl-handle::after { opacity: 0.9; }
+}
+
+@media (max-width: 600px) {
+  .tick-table .col-tickname { width: 150px; min-width: 150px; max-width: 150px; }
+  .tl-legend { gap: 4px 10px; }
+}
 
 @media print {
   .tick-day-cell { cursor: default; }
@@ -2202,7 +2363,6 @@ body { overflow-anchor: none; }
 
 /* Read-only task views (Planner) */
 .progress-static { font-size: 12px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
-.tick-type-mark { flex: none; width: 18px; text-align: center; color: var(--color-text-muted); }
 
 /* Dashboard task jump-list, which replaced the task table */
 

@@ -722,12 +722,33 @@ function initSharedDataSync() {
     if (source !== 'planner') renderPlannerShared();
     if (source !== 'tasks') renderTasksPage();
     renderDashboardShared();
+    refreshOpenReadOnlyPage();
 
     // The report spans every project and is rebuilt from scratch, so it is
     // only worth recomputing while it is actually on screen; opening the tab
     // refreshes it anyway.
     if (document.getElementById('page-reports').classList.contains('is-active')) refreshReport();
   });
+}
+
+/**
+ * The cross-project pages are assembled on arrival (see showPage), which
+ * keeps them right as you move around. But data can also change while one is
+ * open — a sync pull, a playbook step, a meeting action — so the page being
+ * looked at rebuilds then too. Only read-only pages are listed: rebuilding a
+ * page with inputs on it would drop an edit in progress.
+ */
+const READ_ONLY_PAGES = {
+  'page-mywork': () => renderMyWork(),
+  'page-portfolio': () => renderPortfolio(),
+  'page-capacity': () => renderCapacity(),
+  'page-ai-portfolio': () => renderAiPortfolio(),
+  'page-kpis': () => renderKpis(),
+};
+
+function refreshOpenReadOnlyPage() {
+  const open = PAGE_IDS.find((id) => document.getElementById(id).classList.contains('is-active'));
+  READ_ONLY_PAGES[open]?.();
 }
 
 // ---------- Full re-render (project switched, cloned, created, imported, or reset) ----------
@@ -741,6 +762,7 @@ function refreshActiveProjectView() {
   renderEngagement();
   renderService();
   refreshReport();
+  refreshOpenReadOnlyPage();
   // The project is half of every link, so switching one has to move the
   // address with it — otherwise Copy link quietly hands out the project
   // someone was looking at a minute ago. Replace rather than push: switching

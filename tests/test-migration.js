@@ -60,6 +60,12 @@ const legacy = {
   eq('planner-only task kept', names.includes('ONLY IN PLANNER'), true);
   eq('undated planner-only task kept', names.includes('ALSO ONLY IN PLANNER'), true);
   eq('timeline-only row kept', names.includes('ONLY IN TIMELINE'), true);
+  // The timeline now draws from dates alone, so ticks that were never dated
+  // become the dates they meant: day 7 counted from the earliest start, 1 Sep.
+  const onlyTicked = state.dashTasks.find(t => t.name === 'ONLY IN TIMELINE');
+  eq('its tick became a date', [onlyTicked.start, onlyTicked.end], ['2026-09-07', '2026-09-07']);
+  const sharedTask = state.dashTasks.find(t => t.name === 'Shared task');
+  eq('a task that already had dates keeps them', [sharedTask.start, sharedTask.end], ['2026-09-01', '2026-09-15']);
   eq('dashboard-only task kept', names.includes('Dashboard only'), true);
   eq('blank rows dropped', names.filter(n => !n.trim()).length, 0);
 

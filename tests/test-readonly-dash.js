@@ -94,11 +94,12 @@ const acceptDialog = async (page) => {
   await page.waitForTimeout(500);
   eq('and the Planner note counts it', (await page.textContent('#planner-baseline-note')).includes('slipped'), true);
 
-  console.log('\n--- the edit timeline reflects the dates, and is editable ---');
-  const ticked = () => page.locator('#tick-body tr:first-child .tick-day-cell').evaluateAll(
-    (c) => c.filter((x) => x.textContent.trim()).map((x) => Number(x.dataset.day)));
-  eq('marks still come from the dates', (await ticked()).length > 0, true);
-  eq('cells are interactive', await page.locator('#tick-body .tick-day-cell[role="button"]').count() > 0, true);
+  console.log('\n--- the edit timeline draws the task dates ---');
+  const ticked = () => page.locator('#tick-body tr:first-child .tick-day-cell.in-bar').evaluateAll(
+    (c) => c.map((x) => Number(x.dataset.i)));
+  eq('bars come from the dates', (await ticked()).length > 0, true);
+  eq('each task is one tab stop, not thirty', await page.locator('#tick-body [tabindex="0"]').count(),
+     await page.locator('#tick-body tr').count());
   eq('and there is no anchor input', await page.locator('#tick-start').count(), 0);
 
   console.log('\n--- everything survives a reload ---');

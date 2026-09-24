@@ -182,6 +182,8 @@ function kpiSlides(project, { resources, absences }) {
     ];
   });
 
+  // Two even halves, so neither slide is the crowded one as indicators are added.
+  const half = Math.ceil(rows.length / 2);
   return [
     {
       kind: 'table',
@@ -189,7 +191,7 @@ function kpiSlides(project, { resources, absences }) {
       subtitle: `${project.projectName || 'Project'} · ${measured} of ${total} measured`,
       columns: ['#', 'Indicator', 'Value', 'Formula'],
       widths: [0.5, 4, 1.6, 3.4],
-      rows: rows.slice(0, 10),
+      rows: rows.slice(0, half),
     },
     {
       kind: 'table',
@@ -197,7 +199,7 @@ function kpiSlides(project, { resources, absences }) {
       subtitle: `${project.projectName || 'Project'} · ${measured} of ${total} measured`,
       columns: ['#', 'Indicator', 'Value', 'Formula'],
       widths: [0.5, 4, 1.6, 3.4],
-      rows: rows.slice(10),
+      rows: rows.slice(half),
     },
   ];
 }

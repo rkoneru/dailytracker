@@ -29,8 +29,8 @@ const { APP_URL, launch, createChecks } = require('./harness');
   eq('and the row is marked current', await page.getAttribute('#tab-capacity', 'aria-current'), 'page');
 
   console.log('\n--- the process card is a reference, not a form ---');
-  eq('six steps', await page.locator('.cap-step').count(), 6);
-  eq('numbered one to six', await page.$$eval('.cap-step__n', (e) => e.map((x) => x.textContent)),
+  eq('six steps', await page.locator('#page-capacity .cap-step').count(), 6);
+  eq('numbered one to six', await page.$$eval('#page-capacity .cap-step__n', (e) => e.map((x) => x.textContent)),
     ['1', '2', '3', '4', '5', '6']);
 
   console.log('\n--- its links actually go where they say ---');

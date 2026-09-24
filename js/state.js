@@ -4,6 +4,7 @@ import { REGISTER_KEYS, LEGACY_REGISTER_KEYS, CHARTER_FIELDS } from './registerD
 import { newResource, resourceIdFor } from './resourceModel.js';
 import { snapshotOf, diffSnapshots } from './changeLog.js';
 import { sanitiseMethodology, sanitisePhase } from './methodology.js';
+import { todayISO, toLocalISO } from './dates.js';
 
 const STORAGE_KEY = 'projectPlannerStore_v2';
 const LEGACY_STORAGE_KEY = 'projectPlannerData_v1';
@@ -30,9 +31,7 @@ export function uid() {
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
 
-export function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+export { todayISO };
 
 function earliestStart(data) {
   const starts = (data.dashTasks || []).map((t) => t.start).filter(Boolean).sort();
@@ -55,7 +54,7 @@ function datesFromLegacyTicks(task, anchorISO) {
   const at = (day) => {
     const d = new Date(anchor);
     d.setDate(d.getDate() + day - 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return toLocalISO(d);
   };
   task.start = at(Math.min(...days));
   task.end = at(Math.max(...days));

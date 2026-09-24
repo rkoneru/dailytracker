@@ -14,6 +14,7 @@ import { listFullProjects, getActiveProjectId } from './state.js';
 import { el } from './dom.js';
 import { parseDate } from './charts.js';
 import { raidCounts } from './raid.js';
+import { formatDate } from './dates.js';
 
 let onGo = null;
 let sortKey = 'due';
@@ -123,7 +124,7 @@ function dueCell(row) {
   const late = row.daysLeft !== null && row.daysLeft < 0;
   const soon = row.daysLeft !== null && row.daysLeft >= 0 && row.daysLeft <= 14;
   return el('td', { class: `num pf-due ${late ? 'is-late' : soon ? 'is-soon' : ''}` }, [
-    el('span', { text: parseDate(row.dueDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) }),
+    el('span', { text: formatDate(row.dueDate, 'day') }),
     row.daysLeft !== null
       ? el('span', { class: 'pf-due__rel', text: late ? `${Math.abs(row.daysLeft)}d over` : `${row.daysLeft}d` })
       : null,
@@ -236,7 +237,7 @@ export function renderPortfolio() {
       dueCell(row),
       el('td', { class: 'col-wide pf-next' }, [
         el('span', { text: row.nextMilestone || '—' }),
-        row.nextMilestoneDue ? el('span', { class: 'pf-sub', text: row.nextMilestoneDue }) : null,
+        row.nextMilestoneDue ? el('span', { class: 'pf-sub', text: formatDate(row.nextMilestoneDue) }) : null,
       ]),
     ]));
   });

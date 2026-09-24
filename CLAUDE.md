@@ -24,7 +24,7 @@ These are not preferences. Check before breaking one.
 
 ```bash
 npm start                      # python3 -m http.server 8765
-npm test                       # all 52 suites (needs chromium)
+npm test                       # every suite, 4 at a time (needs chromium); JOBS=1 for serial
 node tests/run.js nav sync     # only suites whose filename matches
 npm run lint                   # eslint, flat config
 ```
@@ -56,6 +56,8 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/kpi.js`, `kpiPage.js` | the 20 project indicators |
 | `js/methodology.js` | CPMAI, CRISP-DM, MLOps, LLMOps as data; phase progress derived from milestones |
 | `js/zip.js`, `pptx.js`, `reportDeck.js` | slide export, written by hand |
+| `js/dates.js` | local calendar dates and the one display formatter. Never `toISOString()` for a day |
+| `js/tableLabels.js` | labels every data table's cells and fields from its header: phone cards and screen-reader names |
 | `supabase/schema.sql` | tables, RLS policies, triggers. Idempotent; re-running it is the upgrade path |
 | `tests/harness.js` | URLs and helpers. Take them from here, never hardcode |
 | `SECURITY.md` | what Postgres enforces vs what is only the app being tidy |
@@ -140,6 +142,10 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 - **A first-run gate would break every suite.** Each suite does its own
   `page.goto` — there is no shared opener to dismiss one in. That is a reason to
   keep the boot path open, not a reason to add a test-only backdoor.
+- **Only the page on screen is kept built.** Shared-data changes rebuild the
+  visible page and mark the rest stale; they rebuild on arrival (`renderWhenShown`
+  in `js/app.js`, the tab-level equivalent in `tasks.js` and `planner.js`). A test
+  that reads a hidden page or tab must open it first.
 - **`isVisible()` is true for the closed mobile drawer.** It is moved with
   `transform`, not hidden, so Playwright still counts it. Assert on its
   `getBoundingClientRect()` instead.

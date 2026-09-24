@@ -40,11 +40,14 @@ async function toastText(page) {
     s.ts = monday.getTime();
     s.weekKey = '2000-01-01'; // guaranteed to sort before the current week
     const pid = Object.keys(s.projects)[0];
-    s.projects[pid].pctComplete = 10;   // was lower last week -> completion should show ▲
-    s.projects[pid].overdue = 4;        // was higher last week -> overdue should show ▼
-    s.projects[pid].taskTotal = 9;
-    s.projects[pid].taskComplete = 1;
-    s.projects[pid].milestonesDone = 0;
+    // Relative to what this week's boot just measured, not fixed numbers: the
+    // sample's tasks go overdue as the calendar moves, and "4 overdue last
+    // week" stopped being a change the day the sample reached 4 overdue.
+    const now = s.projects[pid];
+    now.pctComplete = Math.max(0, now.pctComplete - 12); // was lower last week -> completion should show ▲
+    now.overdue += 2;                                    // was higher last week -> overdue should show ▼
+    now.taskComplete = Math.max(0, now.taskComplete - 1);
+    now.milestonesDone = 0;
     localStorage.setItem('projectPlannerHistory_v1', JSON.stringify(h));
     return pid;
   });

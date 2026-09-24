@@ -1,13 +1,24 @@
 :root {
+  /* Lets checkboxes, date pickers, selects and scrollbars follow the scheme. */
+  color-scheme: light dark;
   --color-bg: #f6f4fd;
   --color-surface: #ffffff;
   --color-border: #ece7fb;
   --color-text: #241f3d;
-  --color-text-muted: #8b87a8;
-  --color-primary: #7c5cfc;
-  --color-primary-hover: #6a45e8;
+  /* Muted and primary are text colours as often as fills, so both are held
+     to 4.5:1 on white, on the page tint and on the pale primary fill. */
+  --color-text-muted: #6b6689;
+  --color-primary: #6d4aeb;
+  --color-primary-hover: #5f3dd6;
   --color-primary-light: #efeafe;
   --color-danger: #ef4444;
+  /* Red as text, not as a fill: #ef4444 is 3.8:1 on white and dark red is
+     2.6:1 on the dark surface, so text takes its own shade per scheme. */
+  --color-danger-text: #b91c1c;
+  --color-warn-text: #b45309;
+  --color-success-text: #15803d;
+  --color-info-text: #0369a1;
+  --color-on-primary: #ffffff;
 
   --status-not-started: #e1e6ff;
   --status-not-started-text: #38408b;
@@ -38,8 +49,14 @@
     --color-text: #ede9fe;
     --color-text-muted: #a9a3c4;
     --color-primary: #a78bfa;
-    --color-primary-hover: #8b5cf6;
+    --color-primary-hover: #c4b5fd;
     --color-primary-light: #2c2542;
+    --color-danger-text: #f87171;
+    --color-warn-text: #fbbf24;
+    --color-success-text: #4ade80;
+    --color-info-text: #7dd3fc;
+    /* The dark primary is a light violet, so what sits on it is dark. */
+    --color-on-primary: #161320;
   }
 }
 
@@ -80,7 +97,7 @@ html, body {
   left: -9999px;
   top: 0;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   padding: 8px 16px;
   z-index: 100;
 }
@@ -238,8 +255,8 @@ button, input, textarea {
   min-width: 60px;
 }
 .save-indicator.is-saving { color: var(--color-primary); }
-.save-indicator.is-saved { color: #16a34a; }
-.save-indicator.is-error { color: #b91c1c; font-weight: 600; }
+.save-indicator.is-saved { color: var(--color-success-text); }
+.save-indicator.is-error { color: var(--color-danger-text); font-weight: 600; }
 
 .btn {
   min-height: 40px;
@@ -258,7 +275,7 @@ button, input, textarea {
 }
 .btn-primary {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 .btn-primary:hover { background: var(--color-primary-hover); }
 .btn-ghost {
@@ -276,7 +293,7 @@ button, input, textarea {
   border-color: transparent;
 }
 .btn-danger {
-  color: var(--color-danger);
+  color: var(--color-danger-text);
 }
 .btn-icon {
   min-width: 40px;
@@ -420,7 +437,14 @@ main { padding: 20px clamp(14px, 2vw, 44px) 64px; }
   letter-spacing: 0.03em;
 }
 .field-label--block { display: flex; width: 100%; margin-top: 10px; }
-.field-label--block .editable { text-transform: none; }
+/* The label is small caps-style text; what someone typed inside it is not. */
+.field-label .editable {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text);
+}
 
 .field-input {
   min-height: 40px;
@@ -549,7 +573,7 @@ li.is-drop-target { box-shadow: inset 0 2px 0 var(--color-primary); }
   border-radius: 8px;
   font-size: 16px;
 }
-.icon-btn:hover { background: rgba(220, 38, 38, 0.08); color: var(--color-danger); }
+.icon-btn:hover { background: rgba(220, 38, 38, 0.08); color: var(--color-danger-text); }
 .icon-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 /* Milestone progress: 5 clickable segments */
@@ -1026,7 +1050,7 @@ body { overflow-anchor: none; }
   height: 100%;
   border-radius: 6px;
   font-size: 11px;
-  color: rgba(0,0,0,0.65);
+  color: rgba(0, 0, 0, 0.82);
   display: flex;
   align-items: center;
   padding: 0 6px;
@@ -1580,10 +1604,10 @@ body { overflow-anchor: none; }
   border-radius: 50%;
   background: currentColor;
 }
-.sync-pill.is-synced { color: #16a34a; }
+.sync-pill.is-synced { color: var(--color-success-text); }
 .sync-pill.is-syncing { color: var(--color-primary); }
-.sync-pill.is-offline { color: #b45309; }
-.sync-pill.is-error { color: #b91c1c; }
+.sync-pill.is-offline { color: var(--color-warn-text); }
+.sync-pill.is-error { color: var(--color-danger-text); }
 .sync-pill.is-signed-out { color: var(--color-text-muted); }
 
 /* ---------- Edit Timeline ---------- */
@@ -1672,7 +1696,7 @@ body { overflow-anchor: none; }
   width: 22px;
   margin: 0 auto;
   border-radius: var(--radius-pill);
-  background: var(--color-danger);
+  background: #dc2626;
   color: #fff;
 }
 
@@ -1995,13 +2019,13 @@ body { overflow-anchor: none; }
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--color-border);
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font-size: 11px;
   font-weight: 700;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.nav-row.is-active .nav-row__badge { background: var(--color-primary); color: #fff; }
+.nav-row.is-active .nav-row__badge { background: var(--color-primary); color: var(--color-on-primary); }
 
 .toast__action {
   flex: none;
@@ -2125,8 +2149,8 @@ body { overflow-anchor: none; }
 .kpi.is-warn { border-left-color: #d97706; }
 .kpi.is-bad  { border-left-color: #dc2626; }
 .kpi.is-idle { border-left-color: var(--color-border); }
-.kpi.is-bad .kpi__value  { color: #b91c1c; }
-.kpi.is-warn .kpi__value { color: #b45309; }
+.kpi.is-bad .kpi__value  { color: var(--color-danger-text); }
+.kpi.is-warn .kpi__value { color: var(--color-warn-text); }
 
 /* The weekly bars sat in a fixed 160px well that was mostly empty at the small
    counts a single project produces. */
@@ -2143,7 +2167,7 @@ body { overflow-anchor: none; }
   margin-right: 6px;
   border-radius: 5px;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   font-size: 11px;
   font-weight: 700;
 }
@@ -2202,7 +2226,7 @@ body { overflow-anchor: none; }
 .col-owner { width: 138px; }
 .col-progress { width: 156px; }
 
-#tracker-body tr.is-late .col-ref { color: #b91c1c; font-weight: 700; }
+#tracker-body tr.is-late .col-ref { color: var(--color-danger-text); font-weight: 700; }
 #tracker-body tr.is-flash { background: #fef9c3; transition: background 0.6s ease; }
 
 .progress-cell { display: flex; align-items: center; gap: 8px; }
@@ -2327,7 +2351,7 @@ body { overflow-anchor: none; }
   font-size: 10px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
 }
-.board-card__tick { margin-left: auto; color: #16a34a; font-weight: 700; font-size: 12px; }
+.board-card__tick { margin-left: auto; color: var(--color-success-text); font-weight: 700; font-size: 12px; }
 .board-card__title { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.3; }
 .board-card__meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .board-card__date { font-size: 11px; color: var(--color-text-muted); }
@@ -2335,7 +2359,7 @@ body { overflow-anchor: none; }
   flex: none;
   width: 21px; height: 21px;
   border-radius: 50%;
-  background: var(--color-primary); color: #fff;
+  background: var(--color-primary); color: var(--color-on-primary);
   font-size: 9px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
 }
@@ -2586,8 +2610,8 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .setup-check__item.is-ok { border-left-color: #16a34a; }
 .setup-check__item.is-bad { border-left-color: #dc2626; }
 .setup-check__mark { font-weight: 700; line-height: 1.5; }
-.setup-check__item.is-ok .setup-check__mark { color: #16a34a; }
-.setup-check__item.is-bad .setup-check__mark { color: #dc2626; }
+.setup-check__item.is-ok .setup-check__mark { color: var(--color-success-text); }
+.setup-check__item.is-bad .setup-check__mark { color: var(--color-danger-text); }
 .setup-check__label { display: block; font-weight: 700; }
 .setup-check__detail { display: block; color: var(--color-text-muted); }
 
@@ -2855,7 +2879,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .work-row__project.is-current { visibility: hidden; }
 
 .work-row__due { flex: 0 0 110px; text-align: right; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
-.work-row--overdue .work-row__due { color: var(--color-danger); font-weight: 600; }
+.work-row--overdue .work-row__due { color: var(--color-danger-text); font-weight: 600; }
 
 /* ==========================================================================
    Portfolio
@@ -2880,7 +2904,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .pf-rag {
@@ -2899,12 +2923,12 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .pf-rag.is-bad { background: #fee2e2; color: #991b1b; }
 
 .portfolio-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-.portfolio-table .num.is-bad { color: var(--color-danger); font-weight: 600; }
-.portfolio-table .num.is-warn { color: #b45309; font-weight: 600; }
+.portfolio-table .num.is-bad { color: var(--color-danger-text); font-weight: 600; }
+.portfolio-table .num.is-warn { color: var(--color-warn-text); font-weight: 600; }
 .portfolio-table .num.is-quiet { color: var(--color-text-muted); }
 
 .pf-sub { display: block; font-size: 0.72rem; color: var(--color-text-muted); }
-.pf-sub.is-bad { color: var(--color-danger); }
+.pf-sub.is-bad { color: var(--color-danger-text); }
 
 .pf-progress { min-width: 110px; }
 
@@ -2922,8 +2946,8 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .pf-bar__fill { display: block; height: 100%; background: var(--color-primary); }
 .pf-bar__label { font-size: 0.78rem; }
 
-.pf-due.is-late { color: var(--color-danger); font-weight: 600; }
-.pf-due.is-soon { color: #b45309; }
+.pf-due.is-late { color: var(--color-danger-text); font-weight: 600; }
+.pf-due.is-soon { color: var(--color-warn-text); }
 .pf-due__rel { display: block; font-size: 0.72rem; color: var(--color-text-muted); }
 
 .pf-next { font-size: 0.85rem; }
@@ -3063,7 +3087,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   height: 22px;
   border-radius: 50%;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   font-size: 11px;
   font-weight: 800;
   display: flex;
@@ -3232,8 +3256,8 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 
 /* Over is not automatically bad and under is not automatically good, so these
    are warm and cool rather than red and green. */
-.effort__value.is-over { color: #b45309; }
-.effort__value.is-under { color: #0369a1; }
+.effort__value.is-over { color: var(--color-warn-text); }
+.effort__value.is-under { color: var(--color-info-text); }
 
 .effort__caveat {
   margin: 0;
@@ -3255,7 +3279,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .crit-dot {
   margin-left: 5px;
   font-size: 0.6rem;
-  color: var(--color-danger);
+  color: var(--color-danger-text);
   vertical-align: middle;
 }
 
@@ -3265,7 +3289,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   border-top: 1px dashed var(--color-border);
 }
 
-.schedule-note.is-warn { color: #b45309; font-weight: 500; }
+.schedule-note.is-warn { color: var(--color-warn-text); font-weight: 500; }
 
 /* ---- what a task waits for ---- */
 
@@ -3358,7 +3382,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 }
 
 .dep-list__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dep-list__warn { font-size: 0.75rem; color: var(--color-danger); white-space: nowrap; }
+.dep-list__warn { font-size: 0.75rem; color: var(--color-danger-text); white-space: nowrap; }
 .dep-list__item.is-clash .dep-list__ref { background: #fee2e2; color: #991b1b; }
 
 .dep-picker { max-width: 320px; font-size: 0.85rem; }
@@ -3436,8 +3460,8 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 }
 
 .util-figure { font-size: 0.8rem; font-variant-numeric: tabular-nums; }
-.util-figure.is-over { color: var(--color-danger); font-weight: 600; }
-.util-figure.is-full { color: #b45309; font-weight: 600; }
+.util-figure.is-over { color: var(--color-danger-text); font-weight: 600; }
+.util-figure.is-full { color: var(--color-warn-text); font-weight: 600; }
 .util-figure.is-free { color: var(--color-text-muted); }
 
 /* ---- skill matching ---- */
@@ -3449,8 +3473,8 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   color: var(--color-text-muted);
 }
 
-.skill-match.is-full { color: #15803d; font-weight: 600; }
-.skill-match.is-partial { color: #b45309; }
+.skill-match.is-full { color: var(--color-success-text); font-weight: 600; }
+.skill-match.is-partial { color: var(--color-warn-text); }
 
 .resources-table tr.is-match td { background: #f0fdf4; }
 
@@ -3516,7 +3540,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   white-space: nowrap;
 }
 
-.bench-free { flex: 0 0 auto; font-size: 0.82rem; font-weight: 600; color: #15803d; }
+.bench-free { flex: 0 0 auto; font-size: 0.82rem; font-weight: 600; color: var(--color-success-text); }
 
 /* ---- conflicts ---- */
 
@@ -3546,8 +3570,8 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   color: var(--color-text-muted);
 }
 
-.conflict--high .conflict__tag { color: var(--color-danger); }
-.conflict--medium .conflict__tag { color: #b45309; }
+.conflict--high .conflict__tag { color: var(--color-danger-text); }
+.conflict--medium .conflict__tag { color: var(--color-warn-text); }
 
 /* ---- staffing a new project ---- */
 
@@ -3612,14 +3636,14 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 }
 
 .staffing__util { flex: 0 0 auto; font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--color-text-muted); }
-.staffing__util.is-full { color: #b45309; font-weight: 600; }
-.staffing__util.is-over { color: var(--color-danger); font-weight: 600; }
+.staffing__util.is-full { color: var(--color-warn-text); font-weight: 600; }
+.staffing__util.is-over { color: var(--color-danger-text); font-weight: 600; }
 .staffing__member.is-over { background: #fef2f2; }
 
 /* ---- the roster, as a view ---- */
 
 .roster-view-table td { vertical-align: middle; }
-.roster-view-table .is-bad { color: var(--color-danger); font-weight: 600; }
+.roster-view-table .is-bad { color: var(--color-danger-text); font-weight: 600; }
 .roster-view-table .col-skills { font-size: 0.82rem; color: var(--color-text-muted); }
 
 /* ==========================================================================
@@ -3632,7 +3656,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 
 .dash-os {
   --dos-ink: #1c2024;
-  --dos-muted: #71767d;
+  --dos-muted: #62666d;
   --dos-line: rgba(15, 23, 42, 0.07);
   --dos-surface: rgba(255, 255, 255, 0.72);
   --dos-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.14);
@@ -3777,9 +3801,9 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 
 /* Tone still carries the reading; it just does it with the number rather than
    by repainting the whole tile, which the wash already owns. */
-.dash-os .kpi.is-good .kpi__value { color: #15803d; }
-.dash-os .kpi.is-warn .kpi__value { color: #b45309; }
-.dash-os .kpi.is-bad .kpi__value { color: #b91c1c; }
+.dash-os .kpi.is-good .kpi__value { color: var(--color-success-text); }
+.dash-os .kpi.is-warn .kpi__value { color: var(--color-warn-text); }
+.dash-os .kpi.is-bad .kpi__value { color: var(--color-danger-text); }
 .dash-os .kpi.is-idle .kpi__value { color: var(--dos-muted); }
 
 .dos-tile--kpi:hover { transform: translateY(-1px); }
@@ -4545,7 +4569,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   padding: 0 5px;
   border-radius: 9px;
   background: var(--color-border);
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font-size: 11px;
   font-weight: 700;
   text-align: center;
@@ -4632,8 +4656,8 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   font-weight: 600;
   color: var(--color-text-muted);
 }
-.kpi-card.is-bad .kpi-card__number  { color: #b91c1c; }
-.kpi-card.is-warn .kpi-card__number { color: #b45309; }
+.kpi-card.is-bad .kpi-card__number  { color: var(--color-danger-text); }
+.kpi-card.is-warn .kpi-card__number { color: var(--color-warn-text); }
 
 .kpi-card__formula {
   margin: 0;
@@ -4651,7 +4675,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #991b1b;
+  color: var(--color-danger-text);
 }
 .kpi-card__kri-tag {
   flex: none;
@@ -4695,7 +4719,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   font-variant-numeric: tabular-nums;
 }
 
-.hint.is-over { color: #b91c1c; font-weight: 600; }
+.hint.is-over { color: var(--color-danger-text); font-weight: 600; }
 
 .meeting-notes { width: 100%; resize: vertical; font-family: inherit; line-height: 1.6; }
 .meeting-outcome { margin-top: 16px; }
@@ -4715,7 +4739,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .recorder.is-live { border-color: #dc2626; }
 
 .recorder__state { font-size: 13px; font-weight: 600; color: var(--color-text-muted); }
-.recorder__state.is-live { color: #dc2626; }
+.recorder__state.is-live { color: var(--color-danger-text); }
 /* A recording indicator that does not move is easy to leave running by
    mistake, so the live state pulses. */
 .recorder__state.is-live::before {
@@ -5052,7 +5076,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 .wizard__actions { display: flex; gap: 8px; }
 
 /* A task whose execution has been planned says so, quietly. */
-.icon-btn.is-done { color: #16a34a; }
+.icon-btn.is-done { color: var(--color-success-text); }
 
 /* ---------- Workflow configuration ---------- */
 
@@ -5177,7 +5201,7 @@ body.login-open { overflow: hidden; }
   place-items: center;
   border-radius: 50%;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   font-weight: 700;
 }
 .login-account__body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -5468,7 +5492,7 @@ body.login-open { overflow: hidden; }
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.method-phase.is-done .method-phase__count { color: #15803d; font-weight: 600; }
+.method-phase.is-done .method-phase__count { color: var(--color-success-text); font-weight: 600; }
 
 .method-phase__asks { margin: 0; font-size: 12px; color: var(--color-text); }
 .method-phase__gate { margin: 0; font-size: 11.5px; color: var(--color-text-muted); line-height: 1.5; }
@@ -5482,3 +5506,103 @@ body.login-open { overflow: hidden; }
 .method-phase__item.is-done { text-decoration: line-through; }
 
 .col-phase { width: 170px; }
+
+/* The Dashboard carries its own palette, so it needs its own dark one — the
+   shared tokens alone left it a light panel in a dark app. Screen only, and
+   last in the file, so it wins over the light rules and never reaches print. */
+@media screen and (prefers-color-scheme: dark) {
+  .dash-os {
+    --dos-ink: var(--color-text);
+    --dos-muted: var(--color-text-muted);
+    --dos-line: rgba(255, 255, 255, 0.08);
+    --dos-surface: rgba(31, 27, 46, 0.86);
+    --dos-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    background: #1b1728;
+  }
+  .dos-tile--now::before { background: linear-gradient(115deg, var(--color-surface) 40%, rgba(245, 158, 11, 0.16) 100%); }
+  #kpi-status::before { background: linear-gradient(115deg, var(--color-surface) 35%, rgba(59, 130, 246, 0.16) 100%); }
+  #kpi-schedule::before { background: linear-gradient(115deg, var(--color-surface) 35%, rgba(34, 197, 94, 0.14) 100%); }
+  #kpi-risk::before { background: linear-gradient(115deg, var(--color-surface) 35%, rgba(239, 68, 68, 0.14) 100%); }
+  #kpi-budget::before { background: linear-gradient(115deg, var(--color-surface) 35%, rgba(167, 139, 250, 0.16) 100%); }
+  .dos-card--today { background: linear-gradient(170deg, rgba(59, 130, 246, 0.12), var(--dos-surface)); }
+  .dos-card--goals { background: linear-gradient(170deg, rgba(245, 158, 11, 0.1), var(--dos-surface)); }
+  .dos-card--glow { background: linear-gradient(170deg, rgba(99, 102, 241, 0.14), var(--dos-surface)); }
+  .dos-board__col { background: rgba(255, 255, 255, 0.03); }
+  .dos-project { background: var(--color-surface); }
+}
+
+/* Tinted cards and rows set their own light fills; in the dark they become
+   washes of the same hue, so the light text on them stays readable. */
+@media screen and (prefers-color-scheme: dark) {
+  .board-col--high .board-card   { background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.3); }
+  .board-col--medium .board-card { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); }
+  .board-col--low .board-card    { background: rgba(34, 197, 94, 0.08); border-color: rgba(34, 197, 94, 0.28); }
+  .board-col--hold .board-card   { background: rgba(167, 139, 250, 0.08); border-color: rgba(167, 139, 250, 0.3); }
+  .board-col--done .board-card   { background: rgba(255, 255, 255, 0.03); }
+  .conflict--high { background: rgba(239, 68, 68, 0.1); }
+  .conflict--medium { background: rgba(245, 158, 11, 0.1); }
+}
+
+/* ---------- Tables on phones ----------
+   Below 600px a row is a card: one field per line, its column name beside it
+   (data-label, written by js/tableLabels.js from the table's own header).
+   Squeezing fifteen columns into 360px cut names to three letters, and
+   scrolling sideways hid the columns that matter behind the ones that don't.
+   The Edit Timeline is a grid of days, not a list of fields, so it stays. */
+@media (max-width: 600px) {
+  /* !important because several tables pin a desktop width by id
+     (#raid-table is 1400px), which would otherwise outrank this. */
+  table.data-table:not(.tick-table) { display: block; width: 100% !important; min-width: 0 !important; table-layout: auto !important; }
+  table.data-table:not(.tick-table) thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  table.data-table:not(.tick-table) tbody,
+  table.data-table:not(.tick-table) tfoot { display: block; }
+  table.data-table:not(.tick-table) tfoot tr { background: var(--color-bg); font-weight: 600; }
+  table.data-table:not(.tick-table) tr {
+    display: block;
+    margin: 0 0 10px;
+    padding: 4px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-surface);
+  }
+  table.data-table:not(.tick-table) tbody tr:hover { background: var(--color-surface); }
+  table.data-table:not(.tick-table) td,
+  table.data-table:not(.tick-table) tfoot th {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+  }
+  table.data-table:not(.tick-table) td:last-child { border-bottom: 0; }
+  table.data-table:not(.tick-table) :is(td, th)[data-label]::before {
+    content: attr(data-label);
+    flex: 0 0 min(34%, 120px);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+  table.data-table:not(.tick-table) td > * { flex: 1 1 0; min-width: 0; }
+  table.data-table:not(.tick-table) td > input[type="checkbox"],
+  table.data-table:not(.tick-table) td > .icon-btn,
+  table.data-table:not(.tick-table) td > .drag-handle { flex: 0 0 auto; }
+  table.data-table:not(.tick-table) td input:not([type="checkbox"]):not([type="radio"]),
+  table.data-table:not(.tick-table) td select,
+  table.data-table:not(.tick-table) td textarea { width: 100% !important; min-width: 0 !important; }
+  table.data-table:not(.tick-table) .col-drag { display: none; }
+  table.data-table:not(.tick-table) .col-action { justify-content: flex-end; }
+}

@@ -277,9 +277,16 @@ function readExpanded() {
   }
 }
 
+// Pages the app opened because they were navigated to, as opposed to ones the
+// person opened with the twisty. Only these are closed again on the way to
+// another page — otherwise every page visited stayed open, and after four the
+// sidebar had grown from 28 rows to 48. They are not saved either: a reload
+// opens only the page it lands on.
+const autoOpened = new Set();
+
 function saveExpanded() {
   try {
-    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...expanded]));
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...expanded].filter((id) => !autoOpened.has(id))));
   } catch (err) {
     console.warn('Could not save the nav state.', err);
   }
@@ -385,9 +392,13 @@ export function renderNav() {
 
 const render = renderNav;
 
-/** Rows inside a collapsed parent are skipped by the keyboard and by tabbing. */
+/**
+ * Rows inside a collapsed parent are skipped by the keyboard and by tabbing.
+ * Asked of the markup, not of layout: reading offsetParent here forced a full
+ * layout of whatever page had just been built, before it was ever painted.
+ */
 function visibleRows() {
-  return rows.filter((row) => row.offsetParent !== null || !row.closest('[hidden]'));
+  return rows.filter((row) => !row.closest('[hidden]'));
 }
 
 /**
@@ -419,7 +430,24 @@ function setExpanded(row, open) {
 }
 
 function toggle(row) {
+  autoOpened.delete(row._node.id);
   setExpanded(row, row.getAttribute('aria-expanded') !== 'true');
+}
+
+/** Opens a page's sections for arriving at it, closing the last one so opened. */
+function openForArrival(row, keep = new Set()) {
+  const id = row._node.id;
+  rows.forEach((other) => {
+    const otherId = other._node.id;
+    if (otherId !== id && !keep.has(otherId) && autoOpened.has(otherId)) {
+      autoOpened.delete(otherId);
+      setExpanded(other, false);
+    }
+  });
+  if (row.getAttribute('aria-expanded') !== 'true') {
+    autoOpened.add(id);
+    setExpanded(row, true);
+  }
 }
 
 // ---------- selection ----------
@@ -439,12 +467,21 @@ export function setActiveNode(id) {
 
   const row = rows.find((r) => r.id === id);
   if (row) {
+    const chain = [];
     let parentGroup = row.closest('.nav-group');
     while (parentGroup) {
       const parentRow = parentGroup.parentElement.querySelector(':scope > .nav-row');
-      if (parentRow) setExpanded(parentRow, true);
+      if (parentRow) chain.push(parentRow);
       parentGroup = parentGroup.parentElement.closest('.nav-group');
     }
+    const keep = new Set(chain.map((r) => r._node.id));
+    chain.forEach((parentRow) => {
+      // Groups are the map and stay as they are; a page among the ancestors
+      // is opened the way arriving at it opens it.
+      if (parentRow._node.page) openForArrival(parentRow, keep);
+      else setExpanded(parentRow, true);
+    });
+    if (row._node.page && row._node.children?.length) openForArrival(row, keep);
   }
   refreshTabStops();
 }
@@ -465,7 +502,7 @@ function activate(row) {
   // Opening a page reveals what's inside it. Activating never collapses —
   // use the twisty for that — so clicking the page you're already on doesn't
   // hide the section you were aiming for.
-  if (node.children && node.children.length) setExpanded(row, true);
+  if (node.children && node.children.length) openForArrival(row);
 
   if (onActivate) onActivate(node);
 }

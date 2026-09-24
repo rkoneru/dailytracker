@@ -7,6 +7,7 @@
 import { listChangeLog, clearChangeLog, onChangeLogChange } from './state.js';
 import { el } from './dom.js';
 import { confirmAction, toast } from './dialog.js';
+import { formatDate } from './dates.js';
 
 let filter = '';
 
@@ -14,7 +15,7 @@ function whenLabel(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return { day: '—', time: '' };
   return {
-    day: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }),
+    day: formatDate(d),
     time: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
   };
 }

@@ -16,6 +16,7 @@ import { el } from './dom.js';
 import { parseDate } from './charts.js';
 import { getMe, setMe, isMine, onMeChange } from './me.js';
 import { WORK_REGISTERS, isOpenRow } from './registerDefs.js';
+import { formatDate } from './dates.js';
 
 let onGo = null;
 let scope = 'mine';       // 'mine' | 'everyone'
@@ -115,7 +116,7 @@ function dueLabel(row) {
   if (!row.due) return '—';
   const d = parseDate(row.due);
   if (!d) return row.due;
-  const nice = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const nice = formatDate(d, 'day');
   if (row.days === 0) return 'Today';
   if (row.days === 1) return 'Tomorrow';
   if (row.days < 0) return `${nice} · ${Math.abs(row.days)}d late`;

@@ -40,7 +40,10 @@ const { eq, done } = createChecks();
 
   const status = await tile('kpi-status');
   eq('status is the one the Planner set', status.value, 'ON TRACK');
-  eq('and carries its date', status.sub, 'as at 2026-09-08');
+  eq('and carries its date', status.sub, `as at ${await page.evaluate(async () => {
+    const { formatDate } = await import('./js/dates.js');
+    return formatDate((await import('./js/state.js')).getState().dashDate);
+  })}`);
   eq('and reads as good', status.tone, 'is-good');
   eq('and links to the page that sets it', status.goto, 'tab-planner');
 

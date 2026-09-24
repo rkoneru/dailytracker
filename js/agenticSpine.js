@@ -10,15 +10,16 @@
 // its regulator, the decision its agent may not make, the failure that would
 // end the programme — lives in js/sampleAgentic.js, and is merged on top.
 
-const DAY_MS = 86400000;
+import { toLocalISO } from './dates.js';
 
 /** Every template runs from the same Monday, so two opened side by side line up. */
 export const PROGRAMME_START = new Date('2026-10-05T00:00:00');
 
 /** ISO date n weeks (and optionally d days) after the programme start. */
 export function wk(weeks, days = 0) {
-  return new Date(PROGRAMME_START.getTime() + (weeks * 7 + days) * DAY_MS)
-    .toISOString().slice(0, 10);
+  const d = new Date(PROGRAMME_START);
+  d.setDate(d.getDate() + weeks * 7 + days);
+  return toLocalISO(d);
 }
 
 let counter = 0;

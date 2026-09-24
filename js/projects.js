@@ -8,6 +8,7 @@ import { KEY_ROLES, rankBySkill, utilisation, skillMatch, toISO, weekStart, addD
 import { readJSONFile } from './export.js';
 import { confirmAction, promptText, toast } from './dialog.js';
 import { el } from './dom.js';
+import { formatDate } from './dates.js';
 
 function formatUpdatedAt(ts) {
   if (!ts) return 'never';
@@ -17,7 +18,7 @@ function formatUpdatedAt(ts) {
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.round(mins / 60);
   if (hours < 24) return `${hours}h ago`;
-  return new Date(ts).toLocaleDateString();
+  return formatDate(new Date(ts));
 }
 
 export function initProjects({ onProjectChange }) {
@@ -42,7 +43,7 @@ export function initProjects({ onProjectChange }) {
       list.appendChild(el('li', { class: `project-list__item${isActive ? ' is-active' : ''}`, 'data-id': p.id }, [
         el('div', { class: 'project-list__info' }, [
           el('strong', { text: p.name }),
-          el('span', { class: 'hint', text: `${p.dueDate ? `Due ${p.dueDate} · ` : ''}Updated ${formatUpdatedAt(p.updatedAt)}${isActive ? ' · Current' : ''}` }),
+          el('span', { class: 'hint', text: `${p.dueDate ? `Due ${formatDate(p.dueDate)} · ` : ''}Updated ${formatUpdatedAt(p.updatedAt)}${isActive ? ' · Current' : ''}` }),
         ]),
         el('div', { class: 'project-list__actions' }, [
           ...(isActive ? [] : [el('button', { type: 'button', class: 'btn btn-small', 'data-action': 'open-project', text: 'Open' })]),

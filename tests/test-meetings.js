@@ -101,7 +101,14 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
     return tasks[tasks.length - 1];
   });
   eq('it carries the owner', made.assigned, 'Priya N.');
-  eq('and the due date', made.end, '2026-09-10');
+  // The template is moved to sit on today (js/sampleData.js), so the due
+  // date is read from the action the task was made from, not written in.
+  const actionDue = await page.evaluate(async (taskId) => {
+    const { getState } = await import('/js/state.js');
+    const action = (getState().meetings || []).flatMap((m) => m.actions || []).find((a) => a.taskId === taskId);
+    return action ? action.due : null;
+  }, made.id);
+  eq('and the due date', made.end, actionDue);
   eq('and says where it came from', made.comments.includes('stand-up'), true);
 
   // Closing the action closes the task: one state, two places that show it.

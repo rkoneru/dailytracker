@@ -11,6 +11,8 @@
 // overlapping date windows, part-time capacity, leave in the middle of an
 // allocation — testable without a browser.
 
+import { toLocalISO } from './dates.js';
+
 const DAY_MS = 86400000;
 
 // ---------- vocabulary ----------
@@ -46,7 +48,7 @@ export function parseDate(value) {
 }
 
 export function toISO(date) {
-  return date.toISOString().slice(0, 10);
+  return toLocalISO(date);
 }
 
 /** Monday of the week a date falls in, so every week-based figure agrees. */

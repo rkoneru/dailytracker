@@ -1,5 +1,6 @@
 import { buildPptx, RAG_COLOURS, PPTX_MIME } from './pptx.js';
 import { KPI_DEFS, projectKpis, formatKpi, kpiTone, coverage } from './kpi.js';
+import { formatDate } from './dates.js';
 
 // A status report, as slides.
 //
@@ -34,7 +35,7 @@ function titleSlide(report, title) {
     subtitle: report.periodLabel,
     meta: [
       `${report.summary.totalProjects} project${report.summary.totalProjects === 1 ? '' : 's'}`,
-      `Prepared ${new Date().toISOString().slice(0, 10)}`,
+      `Prepared ${formatDate(new Date())}`,
     ],
   };
 }

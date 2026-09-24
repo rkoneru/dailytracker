@@ -12,6 +12,7 @@ import {
   milestoneTimeline, issuesTable,
 } from './reportFormat.js';
 import { KEY_ROLES } from './resourceModel.js';
+import { formatDate } from './dates.js';
 
 // ---------- Report types ----------
 
@@ -56,18 +57,18 @@ function addDays(date, n) {
 }
 
 function fmtDate(d) {
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return formatDate(d, 'day');
 }
 
 function fmtDateFull(d) {
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatDate(d);
 }
 
 function periodFor(type, anchor) {
   const kind = REPORT_TYPES[type].period;
   if (kind === 'day') {
     const start = startOfDay(anchor);
-    return { start, end: start, label: start.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }) };
+    return { start, end: start, label: formatDate(start, 'long') };
   }
   if (kind === 'week') {
     const start = startOfWeek(anchor);
@@ -76,7 +77,7 @@ function periodFor(type, anchor) {
   }
   const start = startOfMonth(anchor);
   const end = endOfMonth(anchor);
-  return { start, end, label: start.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) };
+  return { start, end, label: formatDate(start, 'month') };
 }
 
 function shiftAnchor(type, anchor, direction) {
@@ -332,7 +333,7 @@ function statCard(icon, tone, value, label, trend, goodDirection) {
         chip,
       ]),
       el('span', { class: 'stat-card__label', text: label }),
-      trend ? el('span', { class: 'stat-card__sub', text: `vs ${trend.previous} on ${trend.since.toLocaleDateString()}` }) : null,
+      trend ? el('span', { class: 'stat-card__sub', text: `vs ${trend.previous} on ${formatDate(trend.since)}` }) : null,
     ]),
   ]);
 }
@@ -355,7 +356,7 @@ function trendChip(trend, goodDirection) {
   const sign = up ? '+' : '−';
   return el('span', {
     class: `trend ${tone}`,
-    title: `Was ${trend.previous} on ${trend.since.toLocaleDateString()}`,
+    title: `Was ${trend.previous} on ${formatDate(trend.since)}`,
     text: `${up ? '▲' : '▼'} ${sign}${Math.abs(trend.delta)}`,
   });
 }
@@ -711,7 +712,7 @@ const RENDERERS = { daily: renderDaily, weekly: renderWeekly, steerco: renderSte
 
 function trendText(trend) {
   if (!trend || trend.delta === 0) return '';
-  return ` (${trend.delta > 0 ? '+' : '\u2212'}${Math.abs(trend.delta)} since ${trend.since.toLocaleDateString()})`;
+  return ` (${trend.delta > 0 ? '+' : '\u2212'}${Math.abs(trend.delta)} since ${formatDate(trend.since)})`;
 }
 
 function buildReportText(report) {

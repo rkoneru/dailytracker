@@ -197,6 +197,25 @@ TEMPLATES.forEach((template) => {
   });
 }
 
+// ---------- the templates open on today ----------
+// A template written against a fixed calendar decays into "everything is
+// overdue". Each is moved, in whole weeks, so its status date sits near today.
+{
+  const day = (iso) => new Date(`${iso}T00:00:00`);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  TEMPLATES.forEach((t) => {
+    const p = t.build();
+    const anchor = p.dashDate || p.dashTasks.map((x) => x.start).filter(Boolean).sort()[0];
+    if (!anchor) return;
+    const gap = Math.round((day(anchor) - today) / 86400000);
+    check(`${t.key}: its status date is within three days of today`, Math.abs(gap) <= 3, `${anchor} is ${gap} days off`);
+  });
+  // Whole weeks, so a Monday in the template is still a Monday.
+  const raw = TEMPLATES.find((t) => t.key === 'marketing').build();
+  const weekdays = raw.dashTasks.map((x) => day(x.start).getDay());
+  check('marketing: weekdays survive the move', weekdays.join() === ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-08', '2026-09-09', '2026-09-12', '2026-09-14', '2026-09-27'].map((d) => day(d).getDay()).join(), weekdays.join());
+}
+
 console.log(`\n${passed} checks passed${failures.length ? `, ${failures.length} failed` : ''}`);
 if (failures.length) {
   failures.forEach((f) => console.log(`  FAIL ${f}`));

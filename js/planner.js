@@ -6,8 +6,10 @@ import { confirmAction, toast } from './dialog.js';
 import { offerUndo, offerUndoAction } from './trash.js';
 import { notifyProjectDataChanged, isOverdue, clampProgress } from './taskModel.js';
 import { el } from './dom.js';
+import { onSectionShown } from './tabs.js';
 import { refFor } from './register.js';
 import { METHODOLOGIES, methodOf, phasesOf, phaseProgress, sanitisePhase } from './methodology.js';
+import { toLocalISO, formatDate } from './dates.js';
 
 function findById(list, id) {
   return list.find((item) => item.id === id);
@@ -285,12 +287,7 @@ function addDays(d, n) {
   return x;
 }
 
-/** Local YYYY-MM-DD — never .toISOString(), which shifts the day east of UTC. */
-function toDateISO(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-const fmtDay = (d) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+const fmtDay = (d) => formatDate(d, 'day');
 
 function spanText(start, end) {
   const days = daysBetween(start, end) + 1;
@@ -348,7 +345,7 @@ function renderTickHead(today) {
   let group = null;
   for (let i = 0; i < view.days; i += 1) {
     const date = addDays(view.start, i);
-    const label = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const label = formatDate(date, 'month');
     if (!group || group.label !== label) {
       group = { label, short: date.toLocaleDateString(undefined, { month: 'short' }), th: el('th', { class: 'tl-month', scope: 'colgroup', title: label }) };
       group.th.colSpan = 0;
@@ -360,7 +357,7 @@ function renderTickHead(today) {
     const th = el('th', {
       class: 'tick-day-head',
       scope: 'col',
-      title: date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+      title: formatDate(date, 'long'),
     }, [
       el('span', { class: 'tl-dow', text: date.toLocaleDateString(undefined, { weekday: 'narrow' }) }),
       el('span', { class: 'tl-dom', text: String(date.getDate()) }),
@@ -383,10 +380,10 @@ function renderTickHead(today) {
 
   const end = addDays(view.start, view.days - 1);
   document.getElementById('tick-start-label').textContent =
-    `${fmtDay(view.start)} – ${end.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    `${fmtDay(view.start)} – ${formatDate(end)}`;
 }
 
-function renderTickRow(task, today) {
+function renderTickRow(task, cols, today) {
   const span = taskSpan(task);
   const tone = toneOf(task, today);
   const name = task.name || 'Untitled task';
@@ -414,44 +411,78 @@ function renderTickRow(task, today) {
   ]);
 
   const tr = el('tr', { class: `tl-row tl-row--${tone}`, 'data-id': task.id }, [nameCell]);
-  const baseStart = parseDate(task.baseStart);
-  const baseEnd = parseDate(task.baseEnd) || baseStart;
-  const spanDays = span ? daysBetween(span.start, span.end) + 1 : 0;
 
-  for (let i = 0; i < view.days; i += 1) {
-    const date = addDays(view.start, i);
-    const td = el('td', { class: 'tick-day-cell', 'data-i': String(i) });
-    const weekday = date.getDay();
-    if (weekday === 0 || weekday === 6) td.classList.add('is-weekend');
-    if (date.getDate() === 1 && i > 0) td.classList.add('is-month-start');
-    if (date.getTime() === today.getTime()) td.classList.add('is-today');
-    if (baseStart && date >= baseStart && date <= baseEnd) td.classList.add('in-base');
+  // Day columns as column indexes, so each cell is integer comparisons, and
+  // written as markup: they carry no user text, and at a thousand tasks by
+  // five weeks that is 35,000 cells, which DOM calls one at a time made slow.
+  const at = (date) => (date ? daysBetween(view.start, date) : null);
+  const first = span ? at(span.start) : null;
+  const last = span ? at(span.end) : null;
+  const doneUpTo = span ? first + Math.floor(((last - first + 1) * progress) / 100) - 1 : null;
+  const baseFirst = at(parseDate(task.baseStart));
+  const baseLast = at(parseDate(task.baseEnd)) ?? baseFirst;
 
-    if (span && date >= span.start && date <= span.end) {
-      td.classList.add('in-bar');
-      const nth = daysBetween(span.start, date) + 1;
-      if (nth / spanDays <= progress / 100) td.classList.add('is-progress');
-      if (date.getTime() === span.start.getTime()) {
-        td.classList.add('bar-start');
-        td.appendChild(el('span', { class: 'tl-handle tl-handle--start', title: 'Drag to change the start date' }));
-      } else if (i === 0) td.classList.add('bar-clip-start');
-      if (date.getTime() === span.end.getTime()) {
-        td.classList.add('bar-end');
-        td.appendChild(el('span', { class: 'tl-handle tl-handle--end', title: 'Drag to change the end date' }));
-      } else if (i === view.days - 1) td.classList.add('bar-clip-end');
+  let html = '';
+  for (let i = 0; i < cols.length; i += 1) {
+    let cls = cols[i];
+    let inner = '';
+    if (baseFirst !== null && i >= baseFirst && i <= baseLast) cls += ' in-base';
+    if (span && i >= first && i <= last) {
+      cls += ' in-bar';
+      if (i <= doneUpTo) cls += ' is-progress';
+      if (i === first) {
+        cls += ' bar-start';
+        inner += '<span class="tl-handle tl-handle--start" title="Drag to change the start date"></span>';
+      } else if (i === 0) cls += ' bar-clip-start';
+      if (i === last) {
+        cls += ' bar-end';
+        inner += '<span class="tl-handle tl-handle--end" title="Drag to change the end date"></span>';
+      } else if (i === cols.length - 1) cls += ' bar-clip-end';
     }
-    tr.appendChild(td);
+    html += `<td class="${cls}" data-i="${i}">${inner}</td>`;
   }
+  tr.insertAdjacentHTML('beforeend', html);
   return tr;
 }
 
+/** The classes every cell in a column shares, worked out once per render. */
+function columnClasses(today) {
+  const cols = [];
+  for (let i = 0; i < view.days; i += 1) {
+    const date = addDays(view.start, i);
+    let cls = 'tick-day-cell';
+    const weekday = date.getDay();
+    if (weekday === 0 || weekday === 6) cls += ' is-weekend';
+    if (date.getDate() === 1 && i > 0) cls += ' is-month-start';
+    if (date.getTime() === today.getTime()) cls += ' is-today';
+    cols.push(cls);
+  }
+  return cols;
+}
+
+let ticksStale = false;
+
+/** Draws the timeline if its tab is on screen, else leaves it for when it is. */
 function renderTicks() {
+  const section = document.getElementById('sec-ticks');
+  const onScreen = document.getElementById('page-planner').classList.contains('is-active')
+    && !section.classList.contains('is-tab-hidden');
+  if (!onScreen) {
+    ticksStale = true;
+    return;
+  }
+  ticksStale = false;
+  drawTicks();
+}
+
+function drawTicks() {
   ensureView();
   const tasks = getState().dashTasks;
   const today = startOfDay(new Date());
+  const cols = columnClasses(today);
   document.getElementById('tick-empty').hidden = tasks.length > 0;
   renderTickHead(today);
-  document.getElementById('tick-body').replaceChildren(...tasks.map((task) => renderTickRow(task, today)));
+  document.getElementById('tick-body').replaceChildren(...tasks.map((task) => renderTickRow(task, cols, today)));
   // .data-table is width:100%, which would otherwise squeeze the day columns
   // instead of letting the wrapper scroll.
   document.getElementById('tick-table').style.minWidth = `${220 + view.days * 28}px`;
@@ -482,7 +513,7 @@ function applySpan(taskId, start, end, { undoable = true } = {}) {
   const task = findById(getState().dashTasks, taskId);
   if (!task) return;
   const prev = { start: task.start, end: task.end };
-  const next = { start: toDateISO(start), end: toDateISO(end) };
+  const next = { start: toLocalISO(start), end: toLocalISO(end) };
   if (prev.start === next.start && prev.end === next.end) {
     renderTicks();
     return;
@@ -742,7 +773,7 @@ function bindBaseline() {
 function renderNoteItem(note) {
   return el('li', { 'data-id': note.id, class: 'notes-list__item', draggable: true }, [
     el('span', { class: 'drag-handle', 'aria-hidden': 'true', title: 'Drag to reorder' }, [document.createTextNode('⠿')]),
-    el('input', { class: 'row-input', 'data-field': 'text', value: note.text || '', placeholder: 'Add a note...' }),
+    el('input', { class: 'row-input', 'data-field': 'text', value: note.text || '', placeholder: 'Add a note...', 'aria-label': 'Note' }),
     el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-note', 'aria-label': 'Delete note', text: '🗑' }),
   ]);
 }
@@ -803,6 +834,9 @@ export function initPlanner() {
   bindMilestones();
   bindOpenTasks();
   bindTicks();
+  onSectionShown((pageId, ids) => {
+    if (pageId === 'page-planner' && ids.includes('sec-ticks') && ticksStale) renderTicks();
+  });
   bindBaseline();
   bindNotes();
 }

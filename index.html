@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Project Planner</title>
   <meta name="description" content="Offline-first project planning tool with a planner sheet and a live dashboard.">
-  <meta name="theme-color" content="#1d4ed8">
+  <meta name="theme-color" content="#6d4aeb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161320" media="(prefers-color-scheme: dark)">
   <!-- Standalone on iOS too, where the manifest's display mode is ignored. -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -386,8 +387,8 @@
             <button type="button" class="btn btn-small btn-primary no-print" data-action="add-task-row">+ Add Task</button>
           </div>
           <div class="filter-bar no-print">
-            <input type="search" class="field-input" id="tasks-search" placeholder="Search tasks, owner, comments...">
-            <select class="field-input" id="tasks-status-filter">
+            <input type="search" class="field-input" id="tasks-search" aria-label="Search tasks" placeholder="Search tasks, owner, comments...">
+            <select class="field-input" id="tasks-status-filter" aria-label="Filter by status">
               <option value="">All statuses</option>
               <option>Not Started</option>
               <option>In Progress</option>
@@ -395,7 +396,7 @@
               <option>Overdue</option>
               <option>On Hold</option>
             </select>
-            <select class="field-input" id="tasks-prio-filter">
+            <select class="field-input" id="tasks-prio-filter" aria-label="Filter by priority">
               <option value="">All priorities</option>
               <option>High</option>
               <option>Medium</option>
@@ -797,15 +798,15 @@
             <button type="button" class="btn btn-small no-print" id="btn-add-raid">+ Add Entry</button>
           </div>
           <div class="filter-bar no-print">
-            <input type="search" class="field-input" id="raid-search" placeholder="Search title, owner, next step...">
-            <select class="field-input" id="raid-type-filter">
+            <input type="search" class="field-input" id="raid-search" aria-label="Search the log" placeholder="Search title, owner, next step...">
+            <select class="field-input" id="raid-type-filter" aria-label="Filter by type">
               <option value="">All types</option>
               <option>Risk</option>
               <option>Issue</option>
               <option>Decision</option>
               <option>Assumption</option>
             </select>
-            <select class="field-input" id="raid-status-filter">
+            <select class="field-input" id="raid-status-filter" aria-label="Filter by status">
               <option value="open" selected>Open only</option>
               <option value="">All statuses</option>
               <option value="closed">Closed only</option>
@@ -956,7 +957,7 @@
         <section class="card" id="sec-meeting-notes">
           <div class="card__head"><h2>Discussion Notes</h2></div>
           <p class="hint">What was actually said, in your words. The transcript is kept separately.</p>
-          <textarea class="field-input meeting-notes" id="meeting-notes" rows="14"
+          <textarea class="field-input meeting-notes" id="meeting-notes" aria-label="Discussion notes" rows="14"
                     placeholder="Quarterly results: Q1 revenue up 8% YoY&#10;Budget review: reallocate 10% from discretionary spend&#10;&#10;One line per point reads best in the minutes."></textarea>
         </section>
 
@@ -1064,7 +1065,7 @@
               <code>Name: what they said</code> and <code>[00:12] Name: what they said</code>
               are both understood.
             </p>
-            <textarea class="field-input" id="transcript-input" rows="6"
+            <textarea class="field-input" id="transcript-input" aria-label="Transcript to import" rows="6"
                       placeholder="[00:00] Jessica Morgan: Let's start with the Q1 numbers."></textarea>
             <div class="sync-actions">
               <button type="button" class="btn btn-small btn-primary" id="btn-import-transcript">Add to transcript</button>
@@ -2457,7 +2458,7 @@
       <div class="panel__section">
         <h3>Import project</h3>
         <p class="hint">Import a project previously exported as JSON (see Export / Share). This adds a new project — it won't overwrite anything.</p>
-        <input type="file" accept="application/json" class="field-input" id="import-project-file">
+        <input type="file" accept="application/json" class="field-input" id="import-project-file" aria-label="Project file to import">
       </div>
     </div>
   </div>
@@ -2493,7 +2494,7 @@
     <div class="palette" role="dialog" aria-modal="true" aria-label="Search everything">
       <div class="palette__inputrow">
         <span class="palette__icon" aria-hidden="true">🔍</span>
-        <input type="text" class="palette__input" id="palette-input" role="combobox"
+        <input type="text" class="palette__input" id="palette-input" aria-label="Search everything" role="combobox"
                aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list"
                autocomplete="off" spellcheck="false"
                placeholder="Search tasks, risks, deliverables, releases, people&hellip;">

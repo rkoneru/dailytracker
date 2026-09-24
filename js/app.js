@@ -48,6 +48,8 @@ import { initCapacity, renderCapacity } from './capacityPage.js';
 import { initAiPortfolio, renderAiPortfolio } from './aiPortfolio.js';
 import { seedMeFrom, getMe, onMeChange } from './me.js';
 import * as supabase from './supabase.js';
+import { formatDate } from './dates.js';
+import { watchTables } from './tableLabels.js';
 
 // ---------- Service worker ----------
 
@@ -128,7 +130,6 @@ function showPage(pageId, title) {
   if (pageId === 'page-sync') renderSyncPage();
   if (pageId === 'page-trash') renderTrash();
   if (pageId === 'page-changelog') renderChangeLog();
-  if (pageId === 'page-tasks') renderTasksPage();
   // Both of these read every project, so they are assembled on arrival rather
   // than kept warm — there is nothing on them that is theirs to go stale.
   if (pageId === 'page-mywork') renderMyWork();
@@ -155,6 +156,11 @@ function showPage(pageId, title) {
   // Last, because the register pages build their own cards above and the strip
   // can only list the sections that exist by the time it is drawn.
   mountTabs(pageId);
+
+  // After the tabs, not before: these build only the tab that is on screen,
+  // and on a first visit no tab has been hidden yet.
+  if (pageId === 'page-tasks') renderTasksPage();
+  renderIfStale(pageId);
 }
 
 // The node the app is currently showing, so the router can rebuild the link
@@ -710,8 +716,9 @@ function initTeam() {
 
 /**
  * Tasks and milestones appear on the Planner, the Dashboard and the reports at
- * once. Whichever page an edit came from, the others have to catch up
- * immediately rather than on the next tab switch.
+ * once. Whichever page an edit came from, the one on screen catches up at once
+ * and the rest are rebuilt as they are opened (renderWhenShown, below) — only
+ * one page is ever visible, and export and print only read that one.
  *
  * The originating page is skipped: it has already applied its own targeted
  * update, and rebuilding the table under the user's cursor would drop focus
@@ -719,9 +726,11 @@ function initTeam() {
  */
 function initSharedDataSync() {
   onProjectDataChanged((source) => {
-    if (source !== 'planner') renderPlannerShared();
-    if (source !== 'tasks') renderTasksPage();
-    renderDashboardShared();
+    if (source !== 'planner') renderWhenShown('page-planner', renderPlannerShared);
+    // These two rebuild on every arrival anyway (showPage), so off screen
+    // there is nothing to remember.
+    if (source !== 'tasks' && isPageActive('page-tasks')) renderTasksPage();
+    if (isPageActive('page-dashboard')) renderDashboardShared();
     refreshOpenReadOnlyPage();
 
     // The report spans every project and is rebuilt from scratch, so it is
@@ -729,6 +738,34 @@ function initSharedDataSync() {
     // refreshes it anyway.
     if (document.getElementById('page-reports').classList.contains('is-active')) refreshReport();
   });
+}
+
+/**
+ * Only the page on screen is rebuilt when shared data changes; the others are
+ * marked stale and rebuilt as they are opened. Rebuilding every page on every
+ * keystroke is what made typing in a big project lag — the Plan timeline alone
+ * cost 600 ms per key at a thousand tasks, for a page nobody was looking at.
+ */
+const stalePages = new Map();
+
+function isPageActive(pageId) {
+  return document.getElementById(pageId).classList.contains('is-active');
+}
+
+function renderWhenShown(pageId, render) {
+  if (isPageActive(pageId)) {
+    stalePages.delete(pageId);
+    render();
+  } else {
+    stalePages.set(pageId, render);
+  }
+}
+
+function renderIfStale(pageId) {
+  const render = stalePages.get(pageId);
+  if (!render) return;
+  stalePages.delete(pageId);
+  render();
 }
 
 /**
@@ -747,7 +784,7 @@ const READ_ONLY_PAGES = {
 };
 
 function refreshOpenReadOnlyPage() {
-  const open = PAGE_IDS.find((id) => document.getElementById(id).classList.contains('is-active'));
+  const open = PAGE_IDS.find(isPageActive);
   READ_ONLY_PAGES[open]?.();
 }
 
@@ -792,7 +829,7 @@ function updateLastBackupLabel() {
   }
   const days = daysAgo(last);
   const when = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
-  label.textContent = `Last backup: ${when} (${new Date(last).toLocaleDateString()}).`;
+  label.textContent = `Last backup: ${when} (${formatDate(new Date(last))}).`;
 }
 
 function downloadBackup() {
@@ -954,6 +991,8 @@ function init() {
   initInstallPrompt();
   initExportPanel();
   initBackup();
+  // Before any table is built, so every one of them is labelled as it appears.
+  watchTables();
   initPlanner();
   initDashboard({ onProjectSwitch: refreshActiveProjectView });
   initProjects({ onProjectChange: refreshActiveProjectView });

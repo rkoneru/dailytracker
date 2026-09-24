@@ -180,6 +180,17 @@ function present(pageId) {
   return (PAGE_TABS[pageId] || []).filter((tab) => sectionsOf(tab).length > 0);
 }
 
+const sectionListeners = new Set();
+
+/**
+ * Called with (pageId, sectionIds) whenever a tab's sections come into view,
+ * so a page can leave a hidden tab stale and build it only when it is opened.
+ */
+export function onSectionShown(listener) {
+  sectionListeners.add(listener);
+  return () => sectionListeners.delete(listener);
+}
+
 function apply(pageId, tabId) {
   const tabs = present(pageId);
   tabs.forEach((tab) => {
@@ -196,6 +207,11 @@ function apply(pageId, tabId) {
       button.classList.toggle('is-active', on);
     }
   });
+  const shown = tabs.find((tab) => tab.id === tabId);
+  if (shown) {
+    const ids = sectionsOf(shown).map((section) => section.id);
+    sectionListeners.forEach((listener) => listener(pageId, ids));
+  }
 }
 
 /**

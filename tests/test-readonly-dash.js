@@ -45,20 +45,21 @@ const acceptDialog = async (page) => {
   await page.waitForTimeout(500);
 
   await page.locator('#page-planner [data-field="dashStatus"]').fill('AT RISK');
-  await page.waitForTimeout(400);
-  eq('status tile followed', await page.textContent('#kpi-status-value'), 'AT RISK');
-
   await page.locator('#page-planner [data-field="dashDate"]').fill('2026-09-25');
-  await page.waitForTimeout(400);
-  eq('status date followed', await page.textContent('#kpi-status-sub'), 'as at 2026-09-25');
-
   await page.locator('#page-planner [data-field="budgetPlanned"]').fill('40000');
-  await page.waitForTimeout(400);
-  eq('budget followed', await page.textContent('#dash-budget-planned'), '40,000');
-
   await page.locator('#page-planner [data-field="projectName"]').fill('Renamed on Planner');
   await page.waitForTimeout(400);
+  // Off-screen pages are rebuilt as they are opened, not on every keystroke,
+  // so this is checked the way anyone would see it: by going there.
+  await page.click('#tab-dashboard');
+  await page.waitForTimeout(400);
+  eq('status tile followed', await page.textContent('#kpi-status-value'), 'AT RISK');
+  eq('status date followed', await page.textContent('#kpi-status-sub'), `as at ${await page.evaluate((iso) => import('./js/dates.js').then((m) => m.formatDate(iso)), '2026-09-25')}`);
+  eq('budget followed', await page.textContent('#dash-budget-planned'), '40,000');
   eq('project name followed', await page.textContent('#dash-project-name'), 'Renamed on Planner');
+  await page.click('#tab-planner');
+  await openSection(page, 'sec-budget');
+  await page.waitForTimeout(300);
 
   console.log('\n--- baseline is set from the Planner and read everywhere ---');
   await page.click('#btn-clear-baseline');
@@ -66,6 +67,8 @@ const acceptDialog = async (page) => {
   await page.waitForTimeout(400);
   eq('planner note cleared', await page.textContent('#planner-baseline-note'),
      'No baseline set — set one to start tracking slippage.');
+  await page.click('#tab-dashboard');
+  await page.waitForTimeout(300);
   eq('dashboard note agrees', await page.textContent('#baseline-note'),
      'No baseline set — set one to start tracking slippage.');
   await page.click('#tab-tasks');
@@ -95,6 +98,7 @@ const acceptDialog = async (page) => {
   eq('and the Planner note counts it', (await page.textContent('#planner-baseline-note')).includes('slipped'), true);
 
   console.log('\n--- the edit timeline draws the task dates ---');
+  await openSection(page, 'sec-ticks');
   const ticked = () => page.locator('#tick-body tr:first-child .tick-day-cell.in-bar').evaluateAll(
     (c) => c.map((x) => Number(x.dataset.i)));
   eq('bars come from the dates', (await ticked()).length > 0, true);
@@ -110,6 +114,7 @@ const acceptDialog = async (page) => {
   await page.waitForTimeout(500);
   eq('budget persisted', await page.inputValue('#page-planner [data-field="budgetPlanned"]'), '40000');
   eq('status persisted', await page.inputValue('#page-planner [data-field="dashStatus"]'), 'AT RISK');
+  await openSection(page, 'sec-ticks');
   eq('ticks still render', (await ticked()).length > 0, true);
 
   console.log('\nerrors:', errors.length ? errors.join('\n') : '(none)');

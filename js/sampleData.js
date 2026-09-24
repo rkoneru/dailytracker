@@ -1,5 +1,6 @@
 import { createServiceTransition, createServiceDeskLaunch } from './sampleServices.js';
 import { AGENTIC_DOMAINS, buildAgentic } from './sampleAgentic.js';
+import { todayISO, toLocalISO, parseDate } from './dates.js';
 
 // Starter templates for new projects. Each template is a factory function
 // (not a static object) so every project created from it gets its own
@@ -27,6 +28,42 @@ function seedProgress(project) {
     } else task.progress = 0;
   });
   return project;
+}
+
+// The templates were written against a fixed calendar, and a demo pinned to
+// dates in the past reads as a project where everything is overdue — the red
+// is the calendar moving, not the story. So each template is moved as it is
+// created, keeping every date's distance from its status date: a campaign
+// written as "a week in" is a week in on whatever day it is opened. The move
+// is in whole weeks, so a Monday stays a Monday (timesheet weeks and the
+// agentic programme start depend on it) and the status date lands within
+// three days of today.
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function shiftDates(value, days) {
+  if (typeof value === 'string') {
+    if (!ISO_DAY.test(value)) return value;
+    const d = parseDate(value);
+    if (!d) return value;
+    d.setDate(d.getDate() + days);
+    return toLocalISO(d);
+  }
+  if (Array.isArray(value)) return value.map((item) => shiftDates(item, days));
+  if (value && typeof value === 'object') {
+    const out = {};
+    Object.keys(value).forEach((key) => { out[key] = shiftDates(value[key], days); });
+    return out;
+  }
+  return value;
+}
+
+function onToday(project) {
+  const starts = (project.dashTasks || []).map((t) => t.start).filter(Boolean).sort();
+  const anchor = parseDate(project.dashDate || starts[0]);
+  if (!anchor) return project;
+  const today = parseDate(todayISO());
+  const weeks = Math.round(Math.round((today - anchor) / DAY_MS) / 7);
+  return weeks ? shiftDates(project, weeks * 7) : project;
 }
 
 let idCounter = 0;
@@ -382,7 +419,7 @@ function createPersonalGoals() {
 }
 
 function createBlankProject() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   return {
     projectName: 'Untitled Project',
     objective: '',
@@ -769,7 +806,7 @@ function createLLMOpsPractice() {
   };
 }
 
-export const TEMPLATES = [
+const RAW_TEMPLATES = [
   { key: 'marketing', category: 'General', label: 'Social Media Marketing Campaign', description: 'A 30-day multi-channel launch campaign, from creative production through wrap-up reporting.', build: () => seedProgress(createMarketingCampaign()) },
   { key: 'software', category: 'General', label: 'Software Release Plan', description: 'A feature-freeze-to-ship release cycle with QA, regression testing, and a security review.', build: () => seedProgress(createSoftwareRelease()) },
   { key: 'event', category: 'General', label: 'Event Planning', description: 'Venue, catering, invitations, and day-of logistics for an in-person event.', build: () => seedProgress(createEventPlanning()) },
@@ -798,5 +835,7 @@ export const TEMPLATES = [
     build: () => seedProgress(buildAgentic(domain)),
   })),
 ];
+
+export const TEMPLATES = RAW_TEMPLATES.map((template) => ({ ...template, build: () => onToday(template.build()) }));
 
 export const DEFAULT_TEMPLATE_KEY = 'marketing';

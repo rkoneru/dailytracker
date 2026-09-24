@@ -2,8 +2,10 @@
 // end, edited by dragging, and kept in step with every other page that shows
 // the same task — in both directions.
 //
-// The sample project's window opens one day before its first task, on
-// 31 Aug 2026, so column i is 31 Aug + i days: 1 Sep is i=1, 8 Sep is i=8.
+// The sample project's window opens one day before its first task, so column
+// i is that day + i: the first task starts in column 1. The template is moved
+// to sit on today when it is created (js/sampleData.js), so dates are worked
+// out from the project, never written in.
 
 const { APP_URL, launch, createChecks, openSection } = require('./harness');
 
@@ -56,15 +58,24 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   };
 
   await openTimeline();
+  const firstStart = await page.evaluate(async () => (await import('./js/state.js')).getState()
+    .dashTasks.map((t) => t.start).filter(Boolean).sort()[0]);
+  // Plain calendar arithmetic, so UTC is safe here: no local clock is involved.
+  const col = (i) => {
+    const d = new Date(`${firstStart}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + i - 1);
+    return d.toISOString().slice(0, 10);
+  };
+  const shown = (iso, style) => page.evaluate(([v, st]) => import('./js/dates.js').then((m) => m.formatDate(v, st)), [iso, style]);
 
   console.log('\n--- bars come straight from the task dates ---');
-  eq('one row per task, the same rows as the Tracker', await page.locator('#tick-body tr').count(),
-     await page.locator('#tracker-body tr[data-id]').count());
+  eq('one row per task', await page.locator('#tick-body tr').count(),
+     await page.evaluate(async () => (await import('./js/state.js')).getState().dashTasks.length));
   const launchId = await rowIdNamed('Paid ad launch');
   const launchDays = await barDays(launchId);
-  eq('Paid ad launch (8–26 Sep) is a bar from column 8 to 26',
+  eq('Paid ad launch is a bar from column 8 to 26',
      [launchDays[0], launchDays[launchDays.length - 1], launchDays.length], [8, 26, 19]);
-  eq('the window says which days it shows', /Aug 31.*2026/.test(await page.textContent('#tick-start-label')), true);
+  eq('the window says which days it shows', (await page.textContent('#tick-start-label')).startsWith(await shown(col(0), 'day')), true);
   eq('there is a month row over the days', await page.locator('#tick-month-row .tl-month').count() >= 2, true);
   eq('a late task is coloured as late, as the Tracker derives it',
      await page.locator(`#tick-body tr[data-id="${await rowIdNamed('Ad account & tracking setup')}"].tl-row--late`).count(), 1);
@@ -79,7 +90,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
 
   console.log('\n--- the Task Tracker has the new dates ---');
   await openTracker();
-  eq('start and end moved together', await trackerDates(launchId), ['2026-09-10', '2026-09-28']);
+  eq('start and end moved together', await trackerDates(launchId), [col(10), col(28)]);
 
   console.log('\n--- Undo puts it back, everywhere ---');
   await openTimeline();
@@ -89,7 +100,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   const undone = await barDays(launchId);
   eq('the bar is back', [undone[0], undone[undone.length - 1]], [10, 28]);
   await openTracker();
-  eq('and so is the Tracker', await trackerDates(launchId), ['2026-09-10', '2026-09-28']);
+  eq('and so is the Tracker', await trackerDates(launchId), [col(10), col(28)]);
 
   console.log('\n--- dragging an end changes only that date ---');
   await openTimeline();
@@ -97,13 +108,13 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await dragFrom(await centre(`#tick-body tr[data-id="${wrapId}"] .tl-handle--end`), await centre(cell(wrapId, 21)));
   await dragFrom(await centre(`#tick-body tr[data-id="${wrapId}"] .tl-handle--start`), await centre(cell(wrapId, 12)));
   await openTracker();
-  eq('end pulled out to 21 Sep, start back to 12 Sep', await trackerDates(wrapId), ['2026-09-12', '2026-09-21']);
+  eq('end pulled out to column 21, start back to column 12', await trackerDates(wrapId), [col(12), col(21)]);
 
   console.log('\n--- an end cannot be dragged past the other end ---');
   await openTimeline();
   await dragFrom(await centre(`#tick-body tr[data-id="${wrapId}"] .tl-handle--end`), await centre(cell(wrapId, 3)));
   await openTracker();
-  eq('it stops at a one-day task', await trackerDates(wrapId), ['2026-09-12', '2026-09-12']);
+  eq('it stops at a one-day task', await trackerDates(wrapId), [col(12), col(12)]);
 
   console.log('\n--- a stray click on an empty day does not wipe a schedule ---');
   await openTimeline();
@@ -136,10 +147,10 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await page.waitForTimeout(300);
   eq('one click schedules it for that day', await barDays(newId), [20]);
   await openTracker();
-  eq('and the Tracker has the date', await trackerDates(newId), ['2026-09-20', '2026-09-20']);
+  eq('and the Tracker has the date', await trackerDates(newId), [col(20), col(20)]);
 
   console.log('\n--- an edit on the Tracker redraws the timeline ---');
-  await page.locator(`#tracker-body tr[data-id="${newId}"] [data-field="end"]`).fill('2026-09-24');
+  await page.locator(`#tracker-body tr[data-id="${newId}"] [data-field="end"]`).fill(col(24));
   await page.locator(`#tracker-body tr[data-id="${newId}"] [data-field="end"]`).press('Tab');
   await page.waitForTimeout(300);
   await openTimeline();
@@ -162,11 +173,11 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await page.waitForTimeout(200);
   await openTracker();
   const [, lateEnd] = await trackerDates(lateId);
-  eq('the end moved three days', lateEnd, '2026-09-09');
+  eq('the end moved three days', lateEnd, col(9));
   await page.click('#tab-dashboard .nav-row__label');
   await page.waitForTimeout(400);
   eq('the Dashboard shows the new due date',
-     (await page.textContent('#upcoming-deadlines')).includes('9/9/2026'), true);
+     (await page.textContent('#upcoming-deadlines')).includes(await shown(col(9))), true);
 
   console.log('\n--- moving the window does not change any data ---');
   await openTimeline();
@@ -175,7 +186,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await page.waitForTimeout(200);
   eq('the window moved', (await page.textContent('#tick-start-label')) !== range, true);
   await openTracker();
-  eq('the task did not', await trackerDates(newId), ['2026-09-21', '2026-09-24']);
+  eq('the task did not', await trackerDates(newId), [col(21), col(24)]);
 
   console.log('\n--- everything survives a reload ---');
   await page.reload({ waitUntil: 'networkidle' });

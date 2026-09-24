@@ -140,6 +140,14 @@ const eq = (n, got, want) => {
   eq('the Dashboard link moved the page', await page.textContent('#page-title'), 'Tasks');
   eq('and the tree followed', await page.getAttribute('#tab-tasks', 'aria-current'), 'page');
 
+  console.log('\n--- the sidebar opens the page you are on, not every page you have been on ---');
+  // Reports was opened with the twisty above, so it is the person's to close.
+  for (const id of ['tab-planner', 'tab-raid', 'tab-kpis']) {
+    await page.click(`#${id} .nav-row__label`); await page.waitForTimeout(250);
+  }
+  eq('only the current page opened itself',
+     await page.$$eval('.nav-row[id^="tab-"][aria-expanded="true"]', (els) => els.map((e) => e.id).sort()), ['tab-kpis', 'tab-reports']);
+
   console.log('\n--- narrow viewport ---');
   await page.setViewportSize({ width: 400, height: 900 });
   await page.waitForTimeout(300);

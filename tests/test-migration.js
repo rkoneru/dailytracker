@@ -1,4 +1,4 @@
-const { APP_URL, launch } = require('./harness');
+const { APP_URL, launch, openSection } = require('./harness');
 let pass = 0, fail = 0;
 const eq = (n, got, want) => {
   const g = JSON.stringify(got), w = JSON.stringify(want);
@@ -100,6 +100,7 @@ const legacy = {
   eq('tracker shows every migrated task',
      await page.locator('#tracker-body tr').count(), state.dashTasks.length);
   await page.click('#tab-planner'); await page.waitForTimeout(400);
+  await openSection(page, 'sec-ticks');
   eq('the planner tick grid shows the same count',
      await page.locator('#tick-body tr').count(), state.dashTasks.length);
 

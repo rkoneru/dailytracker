@@ -2948,6 +2948,51 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
 }
 .cap-guidance-list--numbered { padding-left: 20px; }
 
+.cap-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.cap-kpi {
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cap-kpi__head { display: flex; align-items: center; gap: 10px; }
+.cap-kpi__icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.cap-kpi__title { margin: 0; font-size: 13.5px; }
+.cap-kpi__desc { margin: 0; font-size: 12px; color: var(--color-text-muted); line-height: 1.4; min-height: 2.8em; }
+.cap-kpi__metric { display: flex; flex-direction: column; gap: 6px; }
+.cap-kpi__value { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cap-kpi__target {
+  align-self: flex-start;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.cap-kpi__target--good { background: #dcfce7; color: #14532d; }
+.cap-kpi__target--warn { background: #fef3c7; color: #854d0e; }
+.cap-kpi__target--bad { background: #fee2e2; color: #991b1b; }
+.cap-kpi__target--idle { background: var(--color-bg); color: var(--color-text-muted); }
+
 /* ==========================================================================
    Task depth: effort, checklists, dependencies
    ========================================================================== */

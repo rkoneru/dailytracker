@@ -48,9 +48,19 @@ const { APP_URL, launch, createChecks } = require('./harness');
   // rounded — pinned so a change to the template is caught here too.
   eq('the bar carries a real effort-days figure, not a placeholder', /^\d+d$/.test(barLabel.trim()), true);
 
-  eq('three metric tiles', await page.locator('#capacity-metrics .stat-card').count(), 3);
-  const metricValues = await page.$$eval('#capacity-metrics .stat-card__value', (e) => e.map((x) => x.textContent));
-  eq('every metric is a percentage, not a dash', metricValues.every((v) => /^\d+%$/.test(v)), true);
+  eq('eight KPI tiles', await page.locator('#capacity-metrics .cap-kpi').count(), 8);
+  eq('every tile has a target band', await page.locator('#capacity-metrics .cap-kpi__target').count(), 8);
+  const titles = await page.$$eval('#capacity-metrics .cap-kpi__title', (e) => e.map((x) => x.textContent));
+  eq('all eight from the reference dashboard', titles, [
+    'Resource utilisation', 'Demand vs capacity gap', 'On-time delivery', 'Overloaded roles',
+    'Forecast accuracy', 'Strategic alignment', 'Throughput', 'Buffer capacity',
+  ]);
+  eq('strategic alignment says plainly that it is not tracked, rather than guessing a number',
+    await page.$eval('#capacity-metrics .cap-kpi:nth-child(6) .cap-kpi__value', (e) => e.textContent), '—');
+  eq('and its target band agrees',
+    await page.$eval('#capacity-metrics .cap-kpi:nth-child(6) .cap-kpi__target', (e) => e.textContent), 'no data');
+  const throughputValue = await page.$eval('#capacity-metrics .cap-kpi:nth-child(7) .cap-kpi__value', (e) => e.textContent);
+  eq('throughput is a count, not dressed up as a percentage', /^\d+$/.test(throughputValue), true);
 
   eq('the formula box is filled in', await page.locator('#capacity-formula .cap-formula__row').count(), 6);
   eq('naming a real person from the pool',
@@ -73,7 +83,7 @@ const { APP_URL, launch, createChecks } = require('./harness');
   await page.waitForTimeout(300);
   await page.click('#tab-capacity .nav-row__label');
   await page.waitForTimeout(600);
-  eq('no metric tiles', await page.locator('#capacity-metrics .stat-card').count(), 0);
+  eq('no metric tiles', await page.locator('#capacity-metrics .cap-kpi').count(), 0);
   eq('the empty hint says so', await page.locator('#capacity-metrics-empty').isVisible(), true);
   eq('same for the formula box', await page.locator('#capacity-formula-empty').isVisible(), true);
   eq('and it does not draw a fake worked example',

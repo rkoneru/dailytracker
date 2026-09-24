@@ -1509,8 +1509,8 @@
 
         <section class="card card--feature" id="sec-capacity-metrics">
           <div class="card__head">
-            <h2><span class="section-number">3</span> Key metrics</h2>
-            <span class="hint">Measured over the window below, across every resource in the pool.</span>
+            <h2><span class="section-number">3</span> KPI dashboard</h2>
+            <span class="hint">Measured over the window below, across every resource and project in the workspace.</span>
           </div>
           <div class="res-controls no-print">
             <label class="field-label">From
@@ -1520,7 +1520,7 @@
               <input type="date" class="field-input" id="cap-to">
             </label>
           </div>
-          <section class="stat-cards stat-cards--3" id="capacity-metrics"></section>
+          <section class="cap-kpis" id="capacity-metrics"></section>
           <p class="hint" id="capacity-metrics-empty" hidden>Add someone to the Resources pool to see utilisation and capacity numbers here.</p>
         </section>
 
@@ -1531,6 +1531,48 @@
           </div>
           <div class="cap-formula" id="capacity-formula"></div>
           <p class="hint" id="capacity-formula-empty" hidden>Add someone to the Resources pool to see a worked example.</p>
+        </section>
+
+        <div class="dash-row dash-row--3" id="sec-capacity-signals">
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Overload</h2></div>
+            <ul class="cap-guidance-list">
+              <li>High resource utilisation (over 85%)</li>
+              <li>Demand running ahead of capacity (gap over +10%)</li>
+              <li>Overloaded roles climbing</li>
+              <li>On-time delivery falling</li>
+            </ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Underutilisation</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Low resource utilisation (under 70%)</li>
+              <li>Demand running behind capacity (gap under -10%)</li>
+              <li>Buffer capacity high (over 20%)</li>
+              <li>Throughput falling with people still free</li>
+            </ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Healthy balance</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Utilisation in the 70–85% band</li>
+              <li>Demand-vs-capacity gap within ±10%</li>
+              <li>On-time delivery in the 85–95% band</li>
+              <li>Buffer capacity in the 10–20% band</li>
+            </ul>
+          </section>
+        </div>
+
+        <section class="card card--quiet" id="sec-capacity-checklist">
+          <div class="card__head"><h2>Monthly review checklist</h2></div>
+          <p class="hint">A five-step check to keep the portfolio on track. Look at these together — one number out of band is a watch item, several moving the same way is the thing to act on.</p>
+          <ol class="cap-guidance-list cap-guidance-list--numbered">
+            <li>Review utilisation by person, not just the average</li>
+            <li>Compare demand against capacity for the weeks ahead, not just now</li>
+            <li>Check on-time delivery and throughput together</li>
+            <li>Look at forecast accuracy — is the plan learning from what actually happened?</li>
+            <li>Confirm buffer capacity is enough to absorb the next surprise</li>
+          </ol>
         </section>
 
         <div class="dash-row dash-row--3" id="sec-capacity-guidance">

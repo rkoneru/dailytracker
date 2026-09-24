@@ -5,8 +5,9 @@
 // own projects, and the Resources pool's own allocations and absences. There
 // is no capacity data that belongs to this page; it borrows all of it, the
 // same way the Portfolio page borrows each project's own Dashboard numbers.
-// A metric with nothing behind it yet (this app tracks no "strategic
-// alignment" score) is left off rather than invented.
+// One tile (Strategic Alignment) has nothing behind it — this app tracks no
+// per-project strategic score — and says so plainly rather than fabricating a
+// number, the same "grey, not green, when unmeasured" rule the KPI page uses.
 
 import { listFullProjects, listResources, listAllAllocations, listAbsences } from './state.js';
 import { utilisation, weekStart, toISO, addDays, DEFAULT_CAPACITY } from './resourceModel.js';
@@ -59,29 +60,48 @@ function renderOverview() {
   renderGanttChart(host, items, new Date());
 }
 
-// ---------- 3. Key metrics ----------
+// ---------- 3. KPI dashboard ----------
 
-/** A count that is zero is good news — see js/portfolio.js for the same rule. */
-function tone(pct, { good, warn }) {
-  if (pct === null) return 'idle';
-  if (pct > 100) return 'bad';
-  if (pct >= good) return 'good';
-  if (pct >= warn) return 'warn';
-  return 'bad';
+/** In band is good; outside it is a watch item. Null means unmeasured. */
+function bandTone(value, lo, hi) {
+  if (value === null) return 'idle';
+  if (value >= lo && value <= hi) return 'good';
+  return 'warn';
 }
 
-function metricCard(value, label, note, iconTone, icon) {
-  return el('div', { class: 'stat-card' }, [
-    el('div', { class: `stat-card__icon stat-card__icon--${iconTone}`, 'aria-hidden': 'true', text: icon }),
-    el('div', { class: 'stat-card__body' }, [
-      el('span', { class: 'stat-card__value', text: value }),
-      el('span', { class: 'stat-card__label', text: label }),
-      note ? el('span', { class: 'stat-card__sub', text: note }) : null,
+function kpiTile({
+  icon, iconTone, title, desc, value, pct, targetLabel, targetTone,
+}) {
+  return el('article', { class: 'cap-kpi' }, [
+    el('div', { class: 'cap-kpi__head' }, [
+      el('span', { class: `cap-kpi__icon stat-card__icon--${iconTone}`, 'aria-hidden': 'true', text: icon }),
+      el('h3', { class: 'cap-kpi__title', text: title }),
     ]),
+    el('p', { class: 'cap-kpi__desc', text: desc }),
+    el('div', { class: 'cap-kpi__metric' }, [
+      pct === null ? null : el('div', { class: 'progress-bar' }, [
+        el('span', { class: 'progress-bar__fill', style: `width:${Math.max(0, Math.min(100, pct))}%` }),
+      ]),
+      el('span', { class: 'cap-kpi__value', text: value }),
+    ]),
+    el('span', { class: `cap-kpi__target cap-kpi__target--${targetTone}`, text: targetLabel }),
   ]);
 }
 
-const TONE_ICON = { good: 'green', warn: 'amber', bad: 'red', idle: 'blue' };
+/**
+ * How close finished work landed to what it was estimated at, 0–100.
+ *
+ * Only tasks that are actually done are counted — comparing spent-so-far
+ * against an estimate for work still in flight would be measuring the wrong
+ * thing, since it is expected to keep moving until the task closes.
+ */
+function forecastAccuracy(projects) {
+  const done = projects.flatMap((p) => p.dashTasks || [])
+    .filter((t) => t.status === 'Complete' && Number(t.estimate) > 0 && t.spent !== undefined && t.spent !== '');
+  if (!done.length) return null;
+  const errors = done.map((t) => Math.min(1, Math.abs(Number(t.spent) - Number(t.estimate)) / Number(t.estimate)));
+  return Math.round(100 * (1 - errors.reduce((n, e) => n + e, 0) / errors.length));
+}
 
 function renderMetrics() {
   const host = document.getElementById('capacity-metrics');
@@ -97,43 +117,85 @@ function renderMetrics() {
   let totalCapacityHours = 0;
   let totalDemandHours = 0;
   let allocatedSum = 0;
+  let bufferSum = 0;
+  let overloaded = 0;
   resources.forEach((r) => {
     const u = utilisation(r, allocations, absences, view.from, view.to);
     const hours = Number(r.capacityHours) || DEFAULT_CAPACITY;
     totalCapacityHours += (u.effectiveCapacity / 100) * hours;
     totalDemandHours += u.hoursCommitted;
     allocatedSum += u.allocated;
+    bufferSum += u.bench;
+    if (u.over > 0) overloaded += 1;
   });
   const utilPct = Math.round(allocatedSum / resources.length);
   const demandPct = totalCapacityHours > 0 ? Math.round((totalDemandHours / totalCapacityHours) * 100) : null;
+  const gapPct = demandPct === null ? null : demandPct - 100;
+  const overloadedPct = Math.round(100 * (overloaded / resources.length));
+  const bufferPct = Math.round(bufferSum / resources.length);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const withTasks = listFullProjects().filter((p) => (p.dashTasks || []).length > 0);
+  const allProjects = listFullProjects();
+  const withTasks = allProjects.filter((p) => (p.dashTasks || []).length > 0);
   const overdueProjects = withTasks.filter((p) => (p.dashTasks || []).some((t) => {
     if (t.status === 'Complete') return false;
     const end = parseDate(t.end);
     return !!(end && end < today);
   }));
   const onTimePct = withTasks.length ? Math.round(100 * (1 - overdueProjects.length / withTasks.length)) : null;
+  const completedCount = allProjects.reduce((n, p) =>
+    n + (p.dashTasks || []).filter((t) => t.status === 'Complete').length, 0);
+  const forecastPct = forecastAccuracy(allProjects);
 
-  const utilTone = tone(utilPct, { good: 70, warn: 50 });
-  const onTimeTone = tone(onTimePct, { good: 90, warn: 70 });
-
-  host.appendChild(metricCard(
-    `${utilPct}%`, 'Resource utilisation', `${resources.length} ${resources.length === 1 ? 'person' : 'people'} · target 70–85%`,
-    TONE_ICON[utilTone], '📈',
-  ));
-  host.appendChild(metricCard(
-    demandPct === null ? '—' : `${demandPct}%`, 'Capacity vs demand',
-    demandPct === null ? 'No capacity hours in this window' : `${Math.round(totalDemandHours)}h booked of ${Math.round(totalCapacityHours)}h available`,
-    TONE_ICON[demandPct === null ? 'idle' : demandPct > 100 ? 'bad' : 'good'], '⚖️',
-  ));
-  host.appendChild(metricCard(
-    onTimePct === null ? '—' : `${onTimePct}%`, 'Project on-time rate',
-    onTimePct === null ? 'No projects with tasks yet' : `${withTasks.length - overdueProjects.length} of ${withTasks.length} projects with nothing overdue`,
-    TONE_ICON[onTimeTone], '🗓',
-  ));
+  host.appendChild(kpiTile({
+    icon: '👥', iconTone: 'green', title: 'Resource utilisation',
+    desc: 'Percentage of available capacity that is assigned to work.',
+    value: `${utilPct}%`, pct: utilPct,
+    targetLabel: '70–85%', targetTone: utilPct > 100 ? 'bad' : bandTone(utilPct, 70, 85),
+  }));
+  host.appendChild(kpiTile({
+    icon: '⚖️', iconTone: 'blue', title: 'Demand vs capacity gap',
+    desc: 'Difference between committed demand and available capacity.',
+    value: gapPct === null ? '—' : `${gapPct >= 0 ? '+' : ''}${gapPct}%`, pct: null,
+    targetLabel: '−10% to +10%', targetTone: bandTone(gapPct, -10, 10),
+  }));
+  host.appendChild(kpiTile({
+    icon: '🗓', iconTone: 'green', title: 'On-time delivery',
+    desc: 'Percentage of projects with nothing overdue right now.',
+    value: onTimePct === null ? '—' : `${onTimePct}%`, pct: onTimePct,
+    targetLabel: '85–95%', targetTone: bandTone(onTimePct, 85, 95),
+  }));
+  host.appendChild(kpiTile({
+    icon: '🧑', iconTone: 'amber', title: 'Overloaded roles',
+    desc: 'Share of the pool committed above what leave has left them.',
+    value: `${overloadedPct}%`, pct: overloadedPct,
+    targetLabel: '< 10%', targetTone: overloadedPct > 25 ? 'bad' : overloadedPct < 10 ? 'good' : 'warn',
+  }));
+  host.appendChild(kpiTile({
+    icon: '📈', iconTone: 'blue', title: 'Forecast accuracy',
+    desc: 'How close finished tasks landed to their own estimate.',
+    value: forecastPct === null ? '—' : `${forecastPct}%`, pct: forecastPct,
+    targetLabel: '75–90%', targetTone: bandTone(forecastPct, 75, 90),
+  }));
+  host.appendChild(kpiTile({
+    icon: '🔷', iconTone: 'purple', title: 'Strategic alignment',
+    desc: 'Not tracked yet — this app has no project-level strategic score to measure.',
+    value: '—', pct: null,
+    targetLabel: 'no data', targetTone: 'idle',
+  }));
+  host.appendChild(kpiTile({
+    icon: '📊', iconTone: 'blue', title: 'Throughput',
+    desc: 'Tasks completed across the portfolio so far.',
+    value: String(completedCount), pct: null,
+    targetLabel: 'higher is better', targetTone: 'idle',
+  }));
+  host.appendChild(kpiTile({
+    icon: '🛡', iconTone: 'green', title: 'Buffer capacity',
+    desc: 'Capacity left unallocated, for flexibility and risk.',
+    value: `${bufferPct}%`, pct: bufferPct,
+    targetLabel: '10–20%', targetTone: bandTone(bufferPct, 10, 20),
+  }));
 }
 
 // ---------- 4. Capacity formula ----------

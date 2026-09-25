@@ -16,6 +16,10 @@ import { SCOPE_REGISTERS, PEOPLE_REGISTERS, CHARTER_FIELDS } from './registerDef
 import { KEY_ROLES, utilisation } from './resourceModel.js';
 import { notifyProjectDataChanged } from './taskModel.js';
 import { priorityOf, priorityLabel, SCORE_MIN, SCORE_MAX } from './priority.js';
+import { isApprovedChange, scopeDrift } from './changeControl.js';
+import { initScopeControl, renderScopeControl, afterRegisterEdit, renderBaseline } from './scopeControlPage.js';
+
+const SCOPE_FIELDS = ['charterScopeIn', 'charterScopeOut', 'charterSuccess'];
 
 // ---------- Charter ----------
 
@@ -85,6 +89,8 @@ function bindCharter() {
     getState()[field] = e.target.value;
     renderPriority();
     scheduleSave();
+    // The scope statement is half of what the baseline froze.
+    if (SCOPE_FIELDS.includes(field)) { renderCounters(); renderBaseline(); }
   });
   // A select reports through `change`, and nothing here re-renders the grid,
   // so listening to both cannot drop an edit in progress.
@@ -121,12 +127,29 @@ const COUNTERS = [
       const list = s.changeRequests || [];
       if (list.length === 0) return 'None raised yet';
       const days = list
-        .filter((c) => c.status === 'Approved')
+        .filter(isApprovedChange)
         .reduce((sum, c) => sum + (Number(c.scheduleImpact) || 0), 0);
       return days === 0 ? 'No approved schedule impact' : `${days > 0 ? '+' : ''}${days}d approved so far`;
     },
     tone: (s) => ((s.changeRequests || []).some((c) => c.status === 'Submitted' || c.status === 'Under Review')
       ? 'is-warn' : 'is-idle'),
+  },
+  {
+    // Scope that moved with nobody's approval. Grey before a baseline: without
+    // one there is nothing for scope to have crept away from.
+    id: 'scope-count-creep',
+    value: (s) => { const d = scopeDrift(s); return d ? d.unapproved.length : '—'; },
+    sub: (s) => {
+      const d = scopeDrift(s);
+      if (!d) return 'Not baselined yet';
+      if (d.unapproved.length) return `${d.unapproved.length === 1 ? 'change' : 'changes'} since v${s.scopeBaseline.version} nobody approved`;
+      return d.items.length ? 'Every change is covered by an approved request' : 'Matches the baseline';
+    },
+    tone: (s) => {
+      const d = scopeDrift(s);
+      if (!d) return 'is-idle';
+      return d.unapproved.length ? 'is-bad' : 'is-good';
+    },
   },
   {
     id: 'people-count-roster',
@@ -256,6 +279,7 @@ export function renderEngagement() {
   renderAll([...SCOPE_REGISTERS, ...PEOPLE_REGISTERS]);
   renderRosterView();
   renderRosterOptions();
+  renderScopeControl();
   renderCounters();
 }
 
@@ -263,11 +287,15 @@ export function initEngagement() {
   renderCharter();
   bindCharter();
   const onChanged = (def) => {
+    afterRegisterEdit(def);
     renderCounters();
     // Deliverable dates reach the Dashboard and the roster feeds every owner
     // field in the app, so an edit here has to travel like a task edit does.
     notifyProjectDataChanged(`engagement:${def.id}`);
   };
+  // First: it gives the deliverables register its sign-off cell, which has to
+  // exist before the register draws its first row.
+  initScopeControl({ onChange: renderCounters });
   mountRegisters('scope-registers', SCOPE_REGISTERS, onChanged);
   mountRegisters('people-registers', PEOPLE_REGISTERS, onChanged);
   document.getElementById('btn-open-resources')?.addEventListener('click', () => {

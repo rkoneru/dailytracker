@@ -55,8 +55,9 @@ export const PAGE_TABS = {
   ],
   'page-scope': [
     { id: 'sec-charter', label: 'Charter' },
+    { id: 'sec-scope-baseline', label: 'Scope Baseline' },
     { id: 'sec-deliverables', label: 'Deliverables' },
-    { id: 'sec-change-requests', label: 'Change Requests' },
+    { id: 'sec-change-requests', label: 'Change Requests', sections: ['sec-change-requests', 'sec-cr-workflow', 'sec-cr-route'] },
     { id: 'sec-documents', label: 'Documents' },
   ],
   'page-people': [

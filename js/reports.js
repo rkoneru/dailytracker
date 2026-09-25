@@ -15,6 +15,7 @@ import { KEY_ROLES, labourEstimate } from './resourceModel.js';
 import { formatDate, toLocalISO } from './dates.js';
 import { projectWindow } from './ganttModel.js';
 import { priorityOf, priorityLabel } from './priority.js';
+import { isApprovedChange, scopeDrift, signOffState } from './changeControl.js';
 
 // ---------- Report types ----------
 
@@ -145,11 +146,13 @@ function ragDimensions({ project, rag, overdue, pctComplete, burnPct, budgetPlan
   // Scope: approved changes that moved the date are the ones that matter; a
   // pile of drafts nobody has decided on is an amber, not a red.
   const approvedDays = changeRequests
-    .filter((c) => c.status === 'Approved')
+    .filter(isApprovedChange)
     .reduce((n, c) => n + (Number(c.scheduleImpact) || 0), 0);
   const pending = changeRequests.filter((c) => c.status === 'Submitted' || c.status === 'Under Review').length;
-  const scope = changeRequests.length === 0 ? 'green'
-    : approvedDays > 10 ? 'red' : pending > 0 || approvedDays > 0 ? 'amber' : 'green';
+  // Scope that moved with nobody's approval is creep, and never reads green.
+  const creep = scopeDrift(project)?.unapproved.length || 0;
+  const scope = approvedDays > 10 ? 'red'
+    : creep > 0 || pending > 0 || approvedDays > 0 ? 'amber' : 'green';
 
   // Costs: burn against progress, not against the calendar. Spending 60% to
   // deliver 60% is on plan; spending 60% to deliver 20% is not.
@@ -310,7 +313,7 @@ function computeClosure(project, p, today) {
   const finish = parseDate(lastEnd);
 
   const changeRequests = project.changeRequests || [];
-  const approved = changeRequests.filter((c) => c.status === 'Approved');
+  const approved = changeRequests.filter(isApprovedChange);
   const sum = (rows, f) => rows.reduce((n, r) => n + (Number(r[f]) || 0), 0);
 
   const win = projectWindow(project);
@@ -360,6 +363,15 @@ function computeClosure(project, p, today) {
 function money(n) {
   return `$${Math.round(n).toLocaleString()}`;
 }
+
+// How a deliverable's acceptance reads on a closure pack: a signature that
+// still matches, one voided by a later edit, or a decision nobody signed.
+const SIGN_OFF_NOTE = {
+  signed: (d) => ` \u00b7 signed by ${d.signature.name}, ${formatDate(new Date(d.signature.at))}`,
+  changed: () => ' \u00b7 signature void: changed since signed',
+  unsigned: (d) => (d.signedOffBy ? ` \u00b7 recorded by hand as ${d.signedOffBy}, not signed` : ' \u00b7 not signed'),
+  none: () => '',
+};
 
 // Worst first: a missed dependency outranks one merely at risk.
 const DEP_ORDER = ['Missed', 'At Risk', 'Open'];
@@ -819,7 +831,7 @@ function renderClosure(report, cards, summaryEl) {
         ], { stacked: true }),
         listBox('Delivered', c.deliverables.map((d) => ({
           label: d.name || '(untitled deliverable)',
-          meta: `${d.status}${d.signedOffBy ? ` \u00b7 signed off by ${d.signedOffBy}${d.signOffDate ? `, ${formatDate(d.signOffDate)}` : ''}` : ''}`,
+          meta: `${d.status}${SIGN_OFF_NOTE[signOffState(d)](d)}`,
         })), { empty: 'No deliverables were listed.' }),
       ]),
       boxRow([

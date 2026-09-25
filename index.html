@@ -655,6 +655,11 @@
             <span class="kpi__value">0</span>
             <span class="kpi__sub">&mdash;</span>
           </div>
+          <div class="kpi" id="scope-count-creep">
+            <span class="kpi__label">Scope creep</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
         </section>
 
         <section class="card" id="sec-charter">
@@ -666,7 +671,35 @@
           <div class="charter-grid" id="charter-fields"></div>
         </section>
 
+        <section class="card" id="sec-scope-baseline">
+          <div class="card__head"><h2>Scope Baseline &amp; Creep</h2></div>
+          <p class="hint">
+            The scope as it was agreed and signed: the charter&rsquo;s scope statement and the deliverables.
+            Anything that has moved since, and is not covered by an approved change request, is scope creep.
+          </p>
+          <div id="scope-baseline-body"></div>
+        </section>
+
         <div id="scope-registers"></div>
+
+        <section class="card" id="sec-cr-workflow">
+          <div class="card__head"><h2>Change Request Workflow</h2></div>
+          <p class="hint">
+            Raised, impact assessed, decided by the approvers its size calls for, then implemented. Each decision
+            is signed against the change as it stands; edit the change afterwards and those signatures stop counting.
+            This is a record the app keeps, not a lock &mdash; anyone who can edit the project can edit it.
+          </p>
+          <div id="cr-workflow-body"></div>
+        </section>
+
+        <section class="card" id="sec-cr-route">
+          <div class="card__head"><h2>Approval Route</h2></div>
+          <p class="hint">
+            Who has to approve a change, by its size. Every change goes to the project manager; the sponsor and the
+            change board join once either threshold, cost or days, is reached. Applied when a change is assessed.
+          </p>
+          <div class="cr-route" id="cr-route-fields"></div>
+        </section>
       </div>
     </section>
 

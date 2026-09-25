@@ -32,7 +32,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
     'tab-planner': ['page-planner', ['Milestones', 'Timeline', 'Gantt', 'Budget & Notes']],
     'tab-tasks': ['page-tasks', ['Task List', 'Priority Board']],
     'tab-raid': ['page-raid', ['Log', 'Dependencies']],
-    'tab-scope': ['page-scope', ['Charter', 'Deliverables', 'Change Requests', 'Documents']],
+    'tab-scope': ['page-scope', ['Charter', 'Scope Baseline', 'Deliverables', 'Change Requests', 'Documents']],
     'tab-people': ['page-people', ['Team', 'Who Does What', 'Stakeholders & Comms', 'Vendors']],
     'tab-service': ['page-service', ['Service Levels', 'Go-Live', 'Releases & Change', 'Known Issues']],
     'tab-improve': ['page-improve', ['Improvements', 'Lessons']],

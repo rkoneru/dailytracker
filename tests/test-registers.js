@@ -28,7 +28,8 @@ const { eq, done } = createChecks();
   await page.click('#tab-scope');
   await page.waitForTimeout(600);
   eq('scope & contract', await page.$$eval('#page-scope .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Charter', 'Deliverables', 'Change Requests (Scope, Time, Cost)', 'Documents (Repository Index)']);
+     ['Charter', 'Scope Baseline & Creep', 'Deliverables', 'Change Requests (Scope, Time, Cost)', 'Documents (Repository Index)',
+      'Change Request Workflow', 'Approval Route']);
 
   await page.click('#tab-people');
   await page.waitForTimeout(600);

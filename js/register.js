@@ -18,6 +18,7 @@ import { el, dragHandle } from './dom.js';
 import { currentUrl } from './router.js';
 import { toast } from './dialog.js';
 import { setTabCount } from './tabs.js';
+import { formatDate } from './dates.js';
 
 export function slug(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -92,8 +93,28 @@ function linkOpener(value) {
   });
 }
 
+/**
+ * A value the table shows but does not let you type: a change request's status
+ * is the result of its workflow, not a choice from a list. Marked so it can be
+ * refreshed in place when an edit elsewhere in the row changes it.
+ */
+function readonlyNode(col, value) {
+  const text = value === '' || value === undefined || value === null ? '—' : String(value);
+  const shown = col.type === 'date' && value ? formatDate(value) : text;
+  return el('span', {
+    class: col.tone ? `status-badge tone-${slug(value) || 'none'}` : 'readonly-value',
+    'data-readonly': col.field,
+    text: shown,
+  });
+}
+
 function buildCell(col, row, index, def) {
   const cls = ['register-cell', col.cls].filter(Boolean).join(' ');
+
+  if (col.readonly) return el('td', { class: cls }, [readonlyNode(col, row[col.field])]);
+  // A cell the page draws itself — a signature, say — through the def's own
+  // renderCell, which the page that mounts the register supplies.
+  if (col.type === 'custom') return el('td', { class: `${cls} col-custom` }, [def.renderCell?.(col, row) || '']);
 
   if (col.type === 'ref') {
     // The reference is the address. Clicking D-03 copies a link that opens
@@ -185,6 +206,13 @@ function renderRow(def, row, index) {
     el('td', { class: 'col-drag no-print' }, [dragHandle()]),
     ...def.columns.map((col) => buildCell(col, row, index, def)),
     el('td', { class: 'col-action no-print' }, [
+      ...(def.rowActions || []).map((a) => el('button', {
+        type: 'button',
+        class: 'btn btn-small btn-ghost row-action',
+        'data-row-action': a.action,
+        'aria-label': `${a.label} ${def.rowLabel || 'row'}`,
+        text: a.text || a.label,
+      })),
       el('button', {
         type: 'button',
         class: 'icon-btn',
@@ -259,6 +287,27 @@ export function renderRosterOptions() {
   listResources().forEach((r) => add(r.name));
 }
 
+/**
+ * Rewrites the read-only cells from the rows, without touching any input — so
+ * a status that an edit in the same row changed updates under the caret
+ * rather than by rebuilding the table the caret is in.
+ */
+export function refreshDerivedCells(def) {
+  const tbody = document.getElementById(`${def.id}-body`);
+  if (!tbody) return;
+  const rows = new Map(rowsOf(def).map((r) => [r.id, r]));
+  tbody.querySelectorAll('[data-readonly]').forEach((node) => {
+    const row = rows.get(rowIdOf(node));
+    const col = def.columns.find((c) => c.field === node.dataset.readonly);
+    if (row && col) node.replaceWith(readonlyNode(col, row[col.field]));
+  });
+  tbody.querySelectorAll('td.col-custom').forEach((td) => {
+    const row = rows.get(rowIdOf(td));
+    const col = def.columns.filter((c) => c.type === 'custom')[0];
+    if (row && col && def.renderCell) td.replaceChildren(def.renderCell(col, row));
+  });
+}
+
 // ---------- Binding ----------
 
 function bindRegister(def, onChanged) {
@@ -302,6 +351,11 @@ function bindRegister(def, onChanged) {
   });
 
   tbody.addEventListener('click', async (e) => {
+    const action = e.target.closest('[data-row-action], [data-cell-action]');
+    if (action) {
+      def.onRowAction?.(action.dataset.rowAction || action.dataset.cellAction, rowIdOf(action), action);
+      return;
+    }
     if (e.target.closest('[data-action="copy-row-link"]')) {
       const url = currentUrl({ navId: def.navId, projectId: getActiveProjectId(), rowId: rowIdOf(e.target) });
       try {

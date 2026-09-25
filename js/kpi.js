@@ -16,6 +16,7 @@ import { parseDate, daysBetween } from './charts.js';
 import { hours } from './taskModel.js';
 import { raidScore } from './raid.js';
 import { utilisation } from './resourceModel.js';
+import { isApprovedChange, isDecidedChange } from './changeControl.js';
 
 export const KPI_CATEGORIES = [
   { id: 'schedule', label: 'Schedule', icon: '📅' },
@@ -282,13 +283,19 @@ function scopeKpis(project, today) {
   const submitted = deliverables.filter((d) => ['In Review', 'Accepted', 'Rejected'].includes(d.status));
   const accepted = deliverables.filter((d) => d.status === 'Accepted');
 
-  const approved = changes.filter((c) => c.status === 'Approved');
+  const approved = changes.filter(isApprovedChange);
   // Stability is the share of deliverables an approved change has not moved.
-  // Without a per-change link to a deliverable the honest proxy is volume:
-  // approved changes against the size of the scope they are changing.
-  const stability = deliverables.length
-    ? Math.max(0, 1 - ratio(approved.length, deliverables.length))
-    : null;
+  // Changes now name what they touch, so once every approved change does, it
+  // is counted exactly (a charter edit moves no deliverable). Older changes
+  // that name nothing fall back to the volume proxy: approved changes against
+  // the size of the scope they are changing.
+  let stability = null;
+  if (deliverables.length) {
+    if (approved.every((c) => c.touches)) {
+      const moved = new Set(approved.map((c) => c.touches));
+      stability = ratio(deliverables.filter((d) => !moved.has(d.id)).length, deliverables.length);
+    } else stability = Math.max(0, 1 - ratio(approved.length, deliverables.length));
+  }
 
   const raisedDates = changes.map((c) => parseDate(c.raised)).filter(Boolean).sort((a, b) => a - b);
   let scopeChangeRate = null;
@@ -309,7 +316,7 @@ function scopeKpis(project, today) {
   // Rejected sits beside Approved as the other decided state; anything still
   // under review or pending has not been decided yet and cannot count either
   // way without pretending to know how it will land.
-  const decided = changes.filter((c) => c.status === 'Approved' || c.status === 'Rejected');
+  const decided = changes.filter(isDecidedChange);
 
   return {
     requirementsStability: stability,

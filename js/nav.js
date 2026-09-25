@@ -101,6 +101,7 @@ export const NAV_TREE = [
         title: 'Scope & Contract',
         children: [
           { id: 'nav-charter', label: 'Charter', page: 'page-scope', title: 'Scope & Contract', section: 'sec-charter' },
+          { id: 'nav-scope-baseline', label: 'Scope Baseline', page: 'page-scope', title: 'Scope & Contract', section: 'sec-scope-baseline' },
           { id: 'nav-deliverables', label: 'Deliverables', page: 'page-scope', title: 'Scope & Contract', section: 'sec-deliverables' },
           { id: 'nav-change-requests', label: 'Change Requests', page: 'page-scope', title: 'Scope & Contract', section: 'sec-change-requests' },
           { id: 'nav-documents', label: 'Documents', page: 'page-scope', title: 'Scope & Contract', section: 'sec-documents' },

@@ -16,6 +16,7 @@ import { el } from './dom.js';
 import { parseDate } from './charts.js';
 import { getMe, setMe, isMine, onMeChange } from './me.js';
 import { WORK_REGISTERS, isOpenRow } from './registerDefs.js';
+import { effectiveDecision } from './changeControl.js';
 import { formatDate } from './dates.js';
 
 let onGo = null;
@@ -85,6 +86,20 @@ function gather(me) {
         ...base, title: r.title || '(untitled entry)', kind: r.type || 'RAID', owner: r.owner,
         due: r.due, status: r.status, navId: 'tab-raid', rowId: r.id, done,
       }));
+    });
+
+    // A decision someone is waiting on is work too, and it belongs to the
+    // named approver rather than to whoever raised the change.
+    (project.changeRequests || []).forEach((cr) => {
+      if (cr.stage !== 'review') return;
+      (cr.approvals || []).forEach((ap) => {
+        if (effectiveDecision(ap, cr) !== 'Pending') return;
+        if (mineOnly && !isMine(ap.name, me)) return;
+        rows.push(item({
+          ...base, title: `Decide: ${cr.title || 'untitled change'}`, kind: `Approval · ${ap.role}`, owner: ap.name,
+          due: '', status: 'Awaiting decision', navId: 'tab-scope', rowId: cr.id, done: false,
+        }));
+      });
     });
 
     WORK_REGISTERS.forEach((def) => {

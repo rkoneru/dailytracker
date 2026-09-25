@@ -92,6 +92,7 @@ export const DELIVERABLES = {
   rowLabel: 'deliverable',
   addLabel: '+ Add Deliverable',
   refPrefix: 'D',
+  hiddenFields: ['signedOffBy', 'signOffDate', 'signature'],
   blurb: 'What the client actually receives, and what has to be true for them to accept it. A deliverable with no acceptance criteria is an argument waiting to happen.',
   emptyText: 'No deliverables listed yet.',
   searchFields: ['name', 'owner', 'acceptance'],
@@ -104,8 +105,11 @@ export const DELIVERABLES = {
     { field: 'due', label: 'Due', type: 'date' },
     { field: 'acceptance', label: 'Acceptance criteria', placeholder: 'What "done" means to the client', cls: 'col-wide' },
     { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Not Started', 'In Progress', 'In Review', 'Accepted', 'Rejected'] },
-    { field: 'signedOffBy', label: 'Signed off by', type: 'person', placeholder: 'Who accepted it' },
-    { field: 'signOffDate', label: 'Sign-off', type: 'date' },
+    // Accepting or rejecting is signed, against the name and the criteria as
+    // they stand; the page draws the cell (js/scopeControlPage.js). The old
+    // typed "signed off by" and date fields are still kept, filled from the
+    // signature, because reports and the closure summary read them.
+    { field: '_signoff', label: 'Sign-off', type: 'custom' },
     // Defects found against this deliverable. The denominator of defect
     // density, which without it is an indicator the app can define and never
     // answer — so it is a field on the thing defects are found in, rather than
@@ -191,7 +195,9 @@ export const CHANGE_REQUESTS = {
   rowLabel: 'change request',
   addLabel: '+ Add Change Request',
   refPrefix: 'CR',
-  blurb: 'Changes to what was agreed: scope, timeline or money. A change to how the live service runs is a different thing with a different approval path — that is Change Control, on Service & Support.',
+  // The workflow's own state, kept on the row and drawn by the review panel.
+  hiddenFields: ['stage', 'reason', 'touches', 'approvals', 'history', 'implemented'],
+  blurb: 'Changes to what was agreed: scope, timeline or money. Each one is raised, has its impact assessed, is decided by the approvers its size calls for, and is then implemented — use Review to move it along; the status follows. A change to how the live service runs is Change Control, on Service & Support.',
   emptyText: 'No change requests raised yet.',
   searchFields: ['title', 'raisedBy', 'scopeImpact'],
   searchPlaceholder: 'Search title or requester…',
@@ -203,11 +209,16 @@ export const CHANGE_REQUESTS = {
     { field: 'scopeImpact', label: 'Scope impact', placeholder: 'What it adds or removes', cls: 'col-wide' },
     { field: 'scheduleImpact', label: 'Days', type: 'number', step: 1 },
     { field: 'costImpact', label: 'Cost', type: 'number', step: 100 },
-    { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Draft', 'Submitted', 'Under Review', 'Approved', 'Rejected', 'Deferred'] },
-    { field: 'decidedBy', label: 'Decided by', type: 'person', placeholder: 'Approver' },
-    { field: 'decided', label: 'Decided', type: 'date' },
+    // Read-only: the workflow sets these, from the stage and the signatures.
+    { field: 'status', label: 'Status', type: 'select', tone: true, readonly: true, options: ['Draft', 'Submitted', 'Under Review', 'Approved', 'Rejected', 'Deferred', 'Implemented', 'Withdrawn'] },
+    { field: 'decidedBy', label: 'Decided by', type: 'person', readonly: true },
+    { field: 'decided', label: 'Decided', type: 'date', readonly: true },
   ],
-  newRow: () => ({ title: '', raisedBy: '', raised: '', scopeImpact: '', scheduleImpact: '', costImpact: '', status: 'Draft', decidedBy: '', decided: '' }),
+  rowActions: [{ action: 'review', label: 'Review', text: 'Review ▸' }],
+  newRow: () => ({
+    title: '', raisedBy: '', raised: '', scopeImpact: '', scheduleImpact: '', costImpact: '', status: 'Draft', decidedBy: '', decided: '',
+    stage: 'draft', reason: '', touches: '', approvals: [], history: [],
+  }),
 };
 
 export const LESSONS = {
@@ -509,7 +520,8 @@ export const LEGACY_REGISTER_KEYS = ['roster'];
 const WORK_SHAPE = {
   deliverables: { ownerField: 'owner', dueField: 'due', closed: ['Accepted', 'Rejected'] },
   dependencies: { ownerField: 'owner', dueField: 'neededBy', closed: ['Met', 'Missed'] },
-  changeRequests: { ownerField: 'raisedBy', dueField: '', closed: ['Approved', 'Rejected', 'Deferred'] },
+  // Approved is not finished: somebody still has to implement it.
+  changeRequests: { ownerField: 'raisedBy', dueField: '', closed: ['Implemented', 'Rejected', 'Deferred', 'Withdrawn'] },
   // An SLA is a standing promise, so only a promise in trouble is work.
   serviceLevels: { ownerField: 'owner', dueField: '', closed: ['Met', 'Not measured'] },
   sac: { ownerField: 'owner', dueField: '', closed: ['Met', 'Waived'] },

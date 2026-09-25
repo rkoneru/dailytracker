@@ -47,7 +47,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/mobileNav.js` | the phone bottom bar; fills its slots from `NAV_TREE` + `roleShows` |
 | `js/tabs.js` | in-page tabs; `PAGE_TABS` maps a page to its sections |
 | `js/router.js` | hash routing and deep links |
-| `js/register.js` + `js/registerDefs.js` | one table engine, 16 declarative registers (Documents and Vendors among them); a `link` column opens only http(s) |
+| `js/register.js` + `js/registerDefs.js` | one table engine, 16 declarative registers (Documents and Vendors among them); a `link` column opens only http(s); `readonly` columns, `custom` cells and `rowActions` for pages that draw their own |
 | `js/sync*.js` | `syncModel` (wire shape), `syncMerge` (pure three-way merge), `sync` (network) |
 | `js/supabase.js` | hand-rolled PostgREST + GoTrue over `fetch` |
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
@@ -57,6 +57,8 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
 | `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks; WBS codes derived from the order |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
+| `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
+| `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
 | `js/reports.js`, `reportFormat.js` | five report types; Closure is whole-project and reads only the open project |
 | `js/zip.js`, `pptx.js`, `reportDeck.js` | slide export, written by hand |
 | `js/dates.js` | local calendar dates and the one display formatter. Never `toISOString()` for a day |
@@ -118,6 +120,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   unless all three are set. WBS codes number lifecycles only, for the same reason
   practices are not numbered. The labour estimate prices allocations at cost
   rates, names whoever has no rate, and is `null` — grey — when nobody can be priced.
+- **A change request's status is derived, not typed.** `stage` records the steps
+  taken; `derivedStatus` works the status out from it and the approvals. An
+  approval whose signature no longer matches `crContent` counts as Pending, so
+  editing an approved change un-approves it. Implementing a change moves the
+  scope baseline only by what that change `touches` (`baselineAfter`), never by
+  every edit made since — that would launder creep through someone's approval.
+  Signatures are records, not locks; SECURITY.md says what they do not secure.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

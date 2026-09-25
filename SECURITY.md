@@ -79,6 +79,43 @@ job role, and set page access. They deliberately **cannot**:
 Without the third, delegation would be one UPDATE away from a handover. All
 three are enforced by the `project_members_write` policy, not by the UI.
 
+## Signatures and approvals
+
+Change requests, the scope baseline and deliverable sign-off are **signed**, and
+the signature is an attestation, not cryptography. It records the typed name,
+the account signed in at the time (if any, and whether it was a demo), the
+moment, the sentence agreed to, a fingerprint of exactly what was signed, and
+optionally a drawn mark.
+
+What that gives you:
+
+- **Edits are caught.** Change a signed change request's cost, or a signed
+  deliverable's acceptance criteria, and the fingerprint stops matching. The
+  signature then counts for nothing: the change drops back to Under Review, the
+  deliverable to In Review, and the screen says "changed since signed".
+- **The status is never typed.** A change request's status comes from the
+  workflow and the signatures; the table does not offer it as a field.
+- **Scope creep is visible.** Anything that differs from the signed scope
+  baseline and is not covered by an approved change is counted and named.
+
+What it does **not** give you:
+
+- **It is not tamper-proof.** The records live in the project data, which any
+  editor can write. Someone determined can rewrite a signature and its
+  fingerprint together; the fingerprint (FNV-1a) is for noticing change, not
+  for resisting forgery.
+- **It does not prove who signed.** Signed out, the name is only what was
+  typed. On a demo account it is an invented person. On a real account it is
+  whoever was using that browser. The app says which, on the dialog and on the
+  signature.
+- **Postgres does not enforce any of it.** Row level security decides who may
+  write the project; it does not know what an approval is, so a contributor
+  with write access can record an approval in the sponsor's name.
+
+If approvals need to bind, they need a separate append-only table that only the
+named approver's account can insert into. That is a schema change, not built
+yet.
+
 ## Checking it yourself
 
 The policies are executed and attacked against a real Postgres:

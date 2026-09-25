@@ -40,7 +40,9 @@ TEMPLATES.forEach((template) => {
     const rows = project[key];
     if (!Array.isArray(rows) || rows.length === 0) return;
 
-    const allowed = new Set(['id', ...def.columns.map((c) => c.field).filter((f) => f !== '_ref')]);
+    // `hiddenFields` are data a register keeps without a column of their own —
+    // a deliverable's typed sign-off, filled from its signature.
+    const allowed = new Set(['id', ...def.columns.map((c) => c.field).filter((f) => !f.startsWith('_')), ...(def.hiddenFields || [])]);
     const selects = def.columns.filter((c) => c.type === 'select');
 
     rows.forEach((row, i) => {

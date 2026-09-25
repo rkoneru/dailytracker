@@ -10,7 +10,7 @@ import {
   isShowingEverything, setShowEverything, roleShows,
   roleIsAssigned, canShowEverything,
 } from './roles.js';
-import { renderNav, NAV_TREE } from './nav.js';
+import { renderNav, NAV_TREE, goToNode } from './nav.js';
 
 function describe(role) {
   return role.aka ? `${role.blurb} Also: ${role.aka.toLowerCase()}.` : role.blurb;
@@ -32,7 +32,7 @@ function goHomeIfStranded(activePageId) {
     return [n, ...(n.children || []).flatMap(flat)];
   }).find((n) => n.page === activePageId);
   if (node && roleShows(node.id)) return;
-  document.getElementById(getRole().home)?.click();
+  goToNode(getRole().home);
 }
 
 /**

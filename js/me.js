@@ -6,7 +6,7 @@
 // missing piece: a name, held on the device, matched against the names already
 // written into the rows.
 //
-// It is deliberately not an account. Sign-in exists on Sync & Team and governs
+// It is deliberately not an account. Sign-in exists in Settings → Sync and governs
 // what may be written; this governs what gets shown first. Someone reviewing a
 // colleague's workload can set it to their colleague's name, and should be
 // able to — it is a lens, not a login.

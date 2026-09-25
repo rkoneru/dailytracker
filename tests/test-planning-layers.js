@@ -3,7 +3,7 @@
 // each with its four columns, and that its inline pointers to other pages
 // actually go where they say.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openDestination } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -19,10 +19,11 @@ const { APP_URL, launch, createChecks } = require('./harness');
   await page.waitForTimeout(900);
 
   console.log('\n--- the nav reaches it ---');
-  await page.click('#tab-planning-layers .nav-row__label');
+  await openDestination(page, 'tab-planning-layers');
   await page.waitForTimeout(600);
-  eq('landed on Planning Layers', await page.textContent('#page-title'), 'Planning Layers');
-  eq('and the row is marked current', await page.getAttribute('#tab-planning-layers', 'aria-current'), 'page');
+  eq('landed on Portfolio', await page.textContent('#page-title'), 'Portfolio');
+  eq('on its Planning layers tab', await page.getAttribute('#tab-sec-planning-layers', 'aria-selected'), 'true');
+  eq('and its page, Portfolio, is marked current', await page.getAttribute('#tab-portfolio', 'aria-current'), 'page');
 
   console.log('\n--- three layers, in order ---');
   eq('three layer cards', await page.locator('.cap-layer').count(), 3);
@@ -43,14 +44,14 @@ const { APP_URL, launch, createChecks } = require('./harness');
   await page.click('#page-planning-layers button[data-goto="tab-kpis"]');
   await page.waitForTimeout(500);
   eq('the KPIs link opens KPIs', await page.textContent('#page-title'), 'Project KPIs');
-  await page.click('#tab-planning-layers .nav-row__label');
+  await openDestination(page, 'tab-planning-layers');
   await page.waitForTimeout(500);
   await page.click('#page-planning-layers button[data-goto="tab-capacity"]');
   await page.waitForTimeout(500);
-  eq('the Capacity Planning link opens it', await page.textContent('#page-title'), 'Capacity Planning');
+  eq('the Capacity Planning link opens it, on Resources', [await page.textContent('#page-title'), await page.getAttribute('#tab-sec-capacity', 'aria-selected')], ['Resources', 'true']);
 
   console.log('\n--- layout ---');
-  await page.click('#tab-planning-layers .nav-row__label');
+  await openDestination(page, 'tab-planning-layers');
   await page.waitForTimeout(400);
   await page.setViewportSize({ width: 360, height: 900 });
   await page.waitForTimeout(400);

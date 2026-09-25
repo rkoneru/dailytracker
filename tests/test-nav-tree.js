@@ -34,12 +34,11 @@ const eq = (n, got, want) => {
   eq('only the five groups have child lists', await page.locator('.nav-tree [role="group"]').count(), 5);
   // The default role is the engagement lead, who sees all of it.
   eq('groups and their pages, nothing deeper', await visibleLabels(),
-     ['Across Projects', 'My Work', 'Portfolio', 'Resources', 'Capacity Planning',
-      'Planning Layers', 'AI Portfolio',
-      'Plan & Build', 'Dashboard', 'Tasks', 'Plan', 'Scope & Contract',
+     ['Across Projects', 'My Work', 'Portfolio', 'Resources',
+      'Plan & Build', 'Dashboard', 'Tasks', 'Plan', 'Scope & Contract', 'People & Stakeholders',
       'Run & Support', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons',
-      'Report & Share', 'Meetings', 'KPIs', 'People & Stakeholders', 'Reports',
-      'Manage', 'Projects', 'Settings', 'Sync & Team', 'Change Log', 'Trash', 'Export / Share']);
+      'Report & Share', 'Meetings', 'KPIs', 'Reports',
+      'Manage', 'Projects', 'Settings', 'History', 'Export / Share']);
   eq('aria-level is set', await page.getAttribute('#tab-dashboard', 'aria-level'), '2');
   eq('no row is deeper than a page', await page.$$eval('.nav-row', (els) => [...new Set(els.map((e) => e.getAttribute('aria-level')))]), ['1', '2']);
   eq('a page is not expandable', await page.getAttribute('#tab-planner', 'aria-expanded'), null);
@@ -192,7 +191,7 @@ const eq = (n, got, want) => {
   // 6. Pages are regions, not tabpanels — the tabpanel role belongs to the
   // sections inside a page, which are what the in-page tab strip switches.
   eq('no page claims the tabpanel role', await page.locator('.page[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 21);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 16);
 
   // 7. Opening a report from a link renders it once, not twice.
   await openLink('tab-dashboard');

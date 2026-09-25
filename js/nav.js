@@ -30,7 +30,21 @@ export const NAV_TREE = [
     label: 'Across Projects',
     children: [
       { id: 'tab-mywork', label: 'My Work', icon: '🎯', page: 'page-mywork', title: 'My Work' },
-      { id: 'tab-portfolio', label: 'Portfolio', icon: '🗂', page: 'page-portfolio', title: 'Portfolio' },
+      {
+        id: 'tab-portfolio',
+        label: 'Portfolio',
+        icon: '🗂',
+        page: 'page-portfolio',
+        title: 'Portfolio',
+        // AI Portfolio and Planning Layers were menu entries of their own; they
+        // are views of the portfolio, so they are its tabs now. The ids stay,
+        // so a saved link, a role's home and a page-access policy still resolve.
+        children: [
+          { id: 'nav-portfolio-all', label: 'All projects', page: 'page-portfolio', title: 'Portfolio', section: 'sec-portfolio-all' },
+          { id: 'tab-ai-portfolio', label: 'AI initiatives', page: 'page-portfolio', title: 'Portfolio', section: 'page-ai-portfolio' },
+          { id: 'tab-planning-layers', label: 'Planning layers', page: 'page-portfolio', title: 'Portfolio', section: 'page-planning-layers' },
+        ],
+      },
       {
         id: 'tab-resources',
         label: 'Resources',
@@ -43,11 +57,9 @@ export const NAV_TREE = [
           { id: 'nav-availability', label: 'Availability', page: 'page-resources', title: 'Resources', section: 'sec-availability' },
           { id: 'nav-timesheets', label: 'Timesheets', page: 'page-resources', title: 'Resources', section: 'sec-timesheets' },
           { id: 'nav-conflicts', label: 'Worth Looking At', page: 'page-resources', title: 'Resources', section: 'sec-conflicts' },
+          { id: 'tab-capacity', label: 'Capacity', page: 'page-resources', title: 'Resources', section: 'page-capacity' },
         ],
       },
-      { id: 'tab-capacity', label: 'Capacity Planning', icon: '🧮', page: 'page-capacity', title: 'Capacity Planning' },
-      { id: 'tab-planning-layers', label: 'Planning Layers', icon: '🧭', page: 'page-planning-layers', title: 'Planning Layers' },
-      { id: 'tab-ai-portfolio', label: 'AI Portfolio', icon: '🤖', page: 'page-ai-portfolio', title: 'AI Portfolio' },
     ],
   },
   {
@@ -91,6 +103,19 @@ export const NAV_TREE = [
           { id: 'nav-charter', label: 'Charter', page: 'page-scope', title: 'Scope & Contract', section: 'sec-charter' },
           { id: 'nav-deliverables', label: 'Deliverables', page: 'page-scope', title: 'Scope & Contract', section: 'sec-deliverables' },
           { id: 'nav-change-requests', label: 'Change Requests', page: 'page-scope', title: 'Scope & Contract', section: 'sec-change-requests' },
+        ],
+      },
+      {
+        id: 'tab-people',
+        label: 'People & Stakeholders',
+        icon: '👥',
+        page: 'page-people',
+        title: 'People & Stakeholders',
+        children: [
+          { id: 'nav-roster', label: 'Team Roster', page: 'page-people', title: 'People & Stakeholders', section: 'sec-roster' },
+          { id: 'nav-raci', label: 'Who Does What', page: 'page-people', title: 'People & Stakeholders', section: 'sec-raci' },
+          { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-people', title: 'People & Stakeholders', section: 'sec-stakeholders' },
+          { id: 'nav-comms', label: 'Communications', page: 'page-people', title: 'People & Stakeholders', section: 'sec-comms' },
         ],
       },
     ],
@@ -138,9 +163,9 @@ export const NAV_TREE = [
     ],
   },
   {
-    // What the numbers say, the pack that says it, and who gets told. The
-    // stakeholder map and the communications plan belong here for the same
-    // reason the reports do: they all answer "who needs telling what".
+    // What the numbers say, and the pack that says it. The team, the
+    // stakeholder map and the communications plan moved to Plan & Build:
+    // they are set up with the scope, before there is anything to report.
     id: 'group-share',
     label: 'Report & Share',
     children: [
@@ -179,19 +204,6 @@ export const NAV_TREE = [
         ],
       },
       {
-        id: 'tab-people',
-        label: 'People & Stakeholders',
-        icon: '👥',
-        page: 'page-people',
-        title: 'People & Stakeholders',
-        children: [
-          { id: 'nav-roster', label: 'Team Roster', page: 'page-people', title: 'People & Stakeholders', section: 'sec-roster' },
-          { id: 'nav-raci', label: 'Who Does What', page: 'page-people', title: 'People & Stakeholders', section: 'sec-raci' },
-          { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-people', title: 'People & Stakeholders', section: 'sec-stakeholders' },
-          { id: 'nav-comms', label: 'Communications', page: 'page-people', title: 'People & Stakeholders', section: 'sec-comms' },
-        ],
-      },
-      {
         id: 'tab-reports',
         label: 'Reports',
         icon: '📈',
@@ -225,11 +237,23 @@ export const NAV_TREE = [
           { id: 'nav-settings-workflow', label: 'Task Execution', page: 'page-settings', title: 'Settings', section: 'sec-settings-workflow' },
           { id: 'nav-settings-security', label: 'Security', page: 'page-settings', title: 'Settings', section: 'sec-settings-security' },
           { id: 'nav-settings-data', label: 'Data', page: 'page-settings', title: 'Settings', section: 'sec-settings-data' },
+          { id: 'tab-sync', label: 'Sync & Team', page: 'page-settings', title: 'Settings', section: 'page-sync' },
         ],
       },
-      { id: 'tab-sync', label: 'Sync & Team', icon: '🔄', page: 'page-sync', title: 'Sync & Team' },
-      { id: 'tab-changelog', label: 'Change Log', icon: '🕓', page: 'page-changelog', title: 'Change Log' },
-      { id: 'tab-trash', label: 'Trash', icon: '🗑', page: 'page-trash', title: 'Trash', badge: 'trash-count' },
+      {
+        // What changed, and what was deleted: one question, "what happened
+        // here", so one page with the trash count on its row.
+        id: 'tab-changelog',
+        label: 'History',
+        icon: '🕓',
+        page: 'page-changelog',
+        title: 'History',
+        badge: 'trash-count',
+        children: [
+          { id: 'nav-changelog', label: 'Change Log', page: 'page-changelog', title: 'History', section: 'sec-changelog' },
+          { id: 'tab-trash', label: 'Trash', page: 'page-changelog', title: 'History', section: 'page-trash' },
+        ],
+      },
       { id: 'btn-export-panel', label: 'Export / Share', icon: '📤', panel: 'export' },
     ],
   },
@@ -518,6 +542,43 @@ function onKeyDown(e) {
 }
 
 // ---------- boot ----------
+
+function findNode(id, nodes = NAV_TREE) {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    const hit = node.children && findNode(id, node.children);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** The page a destination belongs to: itself, or the page whose tab it is. */
+export function pageNodeOf(id) {
+  const node = findNode(id);
+  if (!node || !node.page) return node;
+  const walk = (nodes) => {
+    for (const n of nodes) {
+      if (n.page === node.page && !n.section && !n.report) return n;
+      const hit = n.children && walk(n.children);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  return walk(NAV_TREE) || node;
+}
+
+/**
+ * Goes to a destination by id, whether or not it has a sidebar row. A role's
+ * home can be a tab (the Chief AI Officer lands on Portfolio's AI tab), and a
+ * tab has no row to click.
+ */
+export function goToNode(id) {
+  const node = findNode(id);
+  if (!node) return false;
+  if (node.panel) return openPanel(node.panel);
+  if (onActivate) onActivate(node);
+  return true;
+}
 
 export function initNav({ onActivate: handler }) {
   onActivate = handler;

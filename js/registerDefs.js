@@ -42,7 +42,7 @@ export const ROSTER = {
   title: 'Team Roster',
   rowLabel: 'person',
   addLabel: '+ Add Person',
-  blurb: 'Who is on the engagement, in what role, and for how much of their time. Names here are offered wherever the app asks who owns something. Sign-in accounts and who may edit what are separate, on Sync & Team.',
+  blurb: 'Who is on the engagement, in what role, and for how much of their time. Names here are offered wherever the app asks who owns something. Sign-in accounts and who may edit what are separate, in Settings under Sync.',
   emptyText: 'No one on the roster yet. Add the people working on this engagement.',
   searchFields: ['name', 'role', 'org'],
   searchPlaceholder: 'Search name, role or organisation…',

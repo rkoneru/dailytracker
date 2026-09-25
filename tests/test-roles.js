@@ -87,9 +87,10 @@ const { eq, done } = createChecks();
   await setRole('project-manager');
   const pm = await pages();
   eq('a project manager has both', pm.includes('My Work') && pm.includes('Portfolio'), true);
-  eq('but AI Portfolio is for the CAIO, not every portfolio-level role', pm.includes('AI Portfolio'), false);
+  // AI initiatives is a tab of Portfolio now, so it has no menu row of its own.
+  eq('AI initiatives is not a menu row', pm.includes('AI Portfolio'), false);
   await setRole('chief-ai-officer');
-  eq('the CAIO has AI Portfolio', (await pages()).includes('AI Portfolio'), true);
+  eq('the CAIO has the Portfolio it lives on', (await pages()).includes('Portfolio'), true);
 
   console.log('\n--- each role opens where it would have clicked ---');
   // Deep links made the URL the source of truth for where you are, so the
@@ -107,13 +108,17 @@ const { eq, done } = createChecks();
     developer: 'page-mywork',
     tester: 'page-mywork',
     'service-manager': 'page-service',
-    'chief-ai-officer': 'page-ai-portfolio',
+    // Portfolio, on its AI initiatives tab (checked below).
+    'chief-ai-officer': 'page-portfolio',
   };
   for (const [role, expected] of Object.entries(landings)) {
     await setRole(role);
     await page.goto(`${APP_URL}/index.html`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1100);
     eq(`${role} opens on ${expected}`, await activePage(), expected);
+    if (role === 'chief-ai-officer') {
+      eq('on its AI initiatives tab', await page.getAttribute('#tab-sec-ai-portfolio', 'aria-selected'), 'true');
+    }
   }
 
   console.log('\n--- but a route wins over the role default ---');

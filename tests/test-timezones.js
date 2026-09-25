@@ -5,7 +5,7 @@
 // give the right answer. This one pins the clock to the hours where it does
 // not: just after midnight east of Greenwich, and the evening west of it.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openDestination } = require('./harness');
 
 const CASES = [
   // 00:30 on 25 Sep in India is still 24 Sep in UTC.
@@ -43,7 +43,7 @@ const CASES = [
     eq('the week starts on the local Monday', r.monday, c.monday);
     eq('template dates do not slip a day', [r.programme, r.nextWeek], ['2026-10-05', '2026-10-12']);
 
-    await page.click('#tab-capacity .nav-row__label');
+    await openDestination(page, 'tab-capacity');
     await page.clock.runFor(500);
     const from = await page.inputValue('#cap-from');
     eq('the capacity window opens on that Monday', from, c.monday);

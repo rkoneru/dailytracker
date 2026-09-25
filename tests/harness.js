@@ -96,7 +96,25 @@ async function openSection(page, sectionId) {
   if (await tab.count()) {
     await tab.click();
     await page.waitForTimeout(150);
+    return;
   }
+  // A section that shares a tab with others (Notes sits under Budget & Notes)
+  // has no button of its own: select the tab that holds it.
+  await page.evaluate(async (id) => {
+    const host = document.getElementById(id)?.closest('.page');
+    if (host) (await import('./js/tabs.js')).showSection(host.id, id);
+  }, sectionId);
+  await page.waitForTimeout(150);
+}
+
+/**
+ * Goes to a destination by its nav id — a page, or a tab of one. AI Portfolio,
+ * Capacity, Sync and Trash are tabs of other pages now and have no sidebar row
+ * to click, but their ids still name where they are.
+ */
+async function openDestination(page, navId) {
+  await page.evaluate(async (id) => (await import('./js/nav.js')).goToNode(id), navId);
+  await page.waitForTimeout(400);
 }
 
 /**
@@ -108,4 +126,4 @@ async function chooseLifecycle(page, id = 'project') {
   if (!(await page.inputValue('#new-project-lifecycle'))) await page.selectOption('#new-project-lifecycle', id);
 }
 
-module.exports = { ROOT, findChromium, APP_URL, SW_URL, API_URL, TMP, SW_COPY, OUT, out, launch, createChecks, openSection, chooseLifecycle };
+module.exports = { ROOT, findChromium, APP_URL, SW_URL, API_URL, TMP, SW_COPY, OUT, out, launch, createChecks, openSection, openDestination, chooseLifecycle };

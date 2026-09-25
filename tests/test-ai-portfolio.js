@@ -6,7 +6,7 @@
 // practice are told apart correctly, and that the counts agree with what
 // methodology.js and raid.js would say directly.
 
-const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
+const { APP_URL, launch, createChecks, chooseLifecycle, openDestination } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -22,9 +22,10 @@ const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
   await page.waitForTimeout(900);
 
   console.log('\n--- the starter project names no method, so the page says so plainly ---');
-  await page.click('#tab-ai-portfolio .nav-row__label');
+  await openDestination(page, 'tab-ai-portfolio');
   await page.waitForTimeout(600);
-  eq('landed on AI Portfolio', await page.textContent('#page-title'), 'AI Portfolio');
+  eq('landed on Portfolio', await page.textContent('#page-title'), 'Portfolio');
+  eq('on its AI initiatives tab', await page.getAttribute('#tab-sec-ai-portfolio', 'aria-selected'), 'true');
   eq('no tiles', await page.locator('#ai-portfolio-tiles .pf-tile').count(), 0);
   eq('the empty hint is shown', await page.locator('#ai-portfolio-empty').isVisible(), true);
   const zeroValues = await page.$$eval('#ai-portfolio-stats .stat-card__value', (e) => e.map((x) => x.textContent));
@@ -42,7 +43,7 @@ const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
   await newProject('ml-model');
   await newProject('llmops-practice');
 
-  await page.click('#tab-ai-portfolio .nav-row__label');
+  await openDestination(page, 'tab-ai-portfolio');
   await page.waitForTimeout(600);
   eq('two tiles', await page.locator('#ai-portfolio-tiles .pf-tile').count(), 2);
   eq('the summary counts both', await page.$eval('#ai-portfolio-stats .stat-card:first-child .stat-card__value', (e) => e.textContent), '2');
@@ -59,7 +60,7 @@ const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
   eq('landed on Plan', await page.textContent('#page-title'), 'Plan');
 
   console.log('\n--- layout ---');
-  await page.click('#tab-ai-portfolio .nav-row__label');
+  await openDestination(page, 'tab-ai-portfolio');
   await page.waitForTimeout(400);
   await page.setViewportSize({ width: 360, height: 900 });
   await page.waitForTimeout(400);

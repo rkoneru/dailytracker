@@ -2,7 +2,7 @@
 // activities with their own dates, laid out from the lifecycle a project must
 // choose when it is created, and edited without touching the tasks.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, openDestination } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -41,7 +41,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   console.log('\n--- an older project with no lifecycle is asked for one, not given one ---');
   await openGantt();
   eq('the tab sits next to the Timeline', await page.$$eval('#page-planner .page-tab', (els) => els.map((e) => e.textContent.replace(/\d+$/, ''))),
-     ['Milestones', 'Timeline', 'Gantt', 'Budget & Baseline', 'Notes']);
+     ['Milestones', 'Timeline', 'Gantt', 'Budget & Notes']);
   eq('the starter project has no lifecycle', (await state()).methodology, '');
   eq('so the Gantt offers to choose one', await page.isVisible('#gantt-empty-choose'), true);
   await page.click('#sec-gantt [data-gantt="layout"]');
@@ -195,7 +195,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
 
   console.log('\n--- the general lifecycle is not an AI initiative ---');
   await setMethod('project');
-  await page.click('#tab-ai-portfolio .nav-row__label').catch(() => {});
+  await openDestination(page, 'tab-ai-portfolio').catch(() => {});
   await page.waitForTimeout(300);
   eq('no project here counts as AI', await page.evaluate(async () => {
     const { METHODOLOGIES } = await import('./js/methodology.js');

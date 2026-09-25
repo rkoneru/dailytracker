@@ -5,7 +5,7 @@
 // action that never became a task, a transcript that swallowed the first half
 // of a sentence because it looked like a speaker label.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, openDestination } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -31,8 +31,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   eq('landed on Meetings', await page.textContent('#page-title'), 'Meetings');
   eq('the sections are the meeting, in the order it happens',
      await page.$$eval('#page-meetings .page-tab', (e) => e.map((x) => x.firstChild.textContent.trim())),
-     ['Overview', 'Agenda', 'Attendees', 'Discussion Notes', 'Decisions',
-      'Action Items', 'Follow-up', 'Recording & Transcript']);
+     ['Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']);
 
   console.log('\n--- the starter project ships a worked example ---');
   // The newest of the two is the worked example these assertions walk through;
@@ -181,7 +180,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   eq('now it is gone from the picker', await page.locator('#meeting-picker option').count(), 0);
   eq('and the page says so rather than showing eight empty tabs',
      await page.locator('#meeting-none').isVisible(), true);
-  await page.click('#tab-trash .nav-row__label');
+  await openDestination(page, 'tab-trash');
   await page.waitForTimeout(500);
   eq('both are in the Trash, named as a meeting',
      (await page.$$eval('#trash-body .trash-item__meta', (e) => e.map((x) => x.textContent)))

@@ -92,9 +92,10 @@ const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require(
   // Sections are the page's tab strip, not sidebar rows; a link reaches them.
   await page.evaluate(() => { window.location.hash = '#/nav-kpi-quality'; });
   await page.waitForTimeout(500);
-  eq('the quality tab is the one showing', await page.evaluate(() =>
+  // The six categories share the Indicators tab, so a link to one opens it.
+  eq('the indicators tab is the one showing, quality included', await page.evaluate(() =>
     !document.getElementById('sec-kpi-quality').classList.contains('is-tab-hidden')
-    && document.getElementById('sec-kpi-schedule').classList.contains('is-tab-hidden')), true);
+    && document.getElementById('sec-kpi-framework').classList.contains('is-tab-hidden')), true);
 
   console.log('\n--- the wider framework says what is and is not tracked ---');
   await openSection(page, 'sec-kpi-framework');

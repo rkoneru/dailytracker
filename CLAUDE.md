@@ -39,7 +39,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 
 | Path | What |
 |---|---|
-| `index.html` | every page, as a hidden `<section class="page">`; 18 of them, plus the login overlay |
+| `index.html` | every page, as a hidden `<section class="page">`; 16 of them, plus the login overlay. AI Portfolio, Planning Layers, Capacity, Sync and Trash are `.merged-page` blocks inside their host page, keeping their old ids |
 | `css/styles.css` | all of it; design tokens on `:root` at the top |
 | `js/state.js` | the store. Load, migrate, save (debounced 400 ms), trash, projects, resources |
 | `js/app.js` | boot and wiring; the only file that knows about most others |
@@ -53,7 +53,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
 | `js/login.js`, `demoAccounts.js` | the sign-in screen and the five invented people behind it |
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
-| `js/kpi.js`, `kpiPage.js` | the 20 project indicators |
+| `js/kpi.js`, `kpiPage.js` | the 22 project indicators |
 | `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
 | `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks |
 | `js/zip.js`, `pptx.js`, `reportDeck.js` | slide export, written by hand |
@@ -114,6 +114,11 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".
+- **Merged pages keep their ids.** `tab-ai-portfolio`, `tab-capacity`, `tab-sync`,
+  `tab-trash`, `tab-planning-layers` are tab destinations under their host page, so
+  links, role homes and saved page policies still resolve. Go to one with
+  `goToNode(id)`, never by clicking a row: it has none. Tabs are not role-filtered,
+  so AI initiatives is visible to anyone who sees Portfolio.
 - **Every nav surface asks `roleShows`.** The bottom bar is not a second list of
   destinations; it reads `NAV_TREE` and filters the same way the sidebar does, so
   it cannot offer a page the policy removed.

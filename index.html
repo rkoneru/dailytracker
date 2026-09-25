@@ -74,7 +74,7 @@
         </div>
         <p class="hint" id="login-note"></p>
         <p class="hint callout" id="login-unconfigured" hidden>
-          No workspace is connected yet. Connect one on <strong>Sync &amp; Team</strong> first
+          No workspace is connected yet. Connect one under <strong>Settings &rarr; Sync</strong> first
           &mdash; signing in needs somewhere to sign in to.
         </p>
       </section>
@@ -693,7 +693,7 @@
             Who decides, who needs telling, and who is booked on this engagement. The team
             itself is allocated from the central pool on Resources, so one person exists once
             across every project rather than once per project. Accounts and who may edit what
-            are on Sync &amp; Team.
+            are in Settings, under Sync.
           </p>
         </header>
 
@@ -1589,11 +1589,7 @@
             No over-allocation, no bookings across leave, and every project has its key roles filled.
           </p>
         </section>
-      </div>
-    </section>
-
-    <section id="page-capacity" class="page" role="region" aria-label="Capacity Planning">
-      <div class="print-page">
+        <div class="merged-page" id="page-capacity" role="region" aria-label="Capacity Planning">
         <header class="dash-header">
           <div class="dash-header__title"><span>Capacity Planning</span></div>
           <p class="hint report-subtitle">
@@ -1750,11 +1746,71 @@
             </ul>
           </section>
         </div>
+        </div>
       </div>
     </section>
 
-    <section id="page-planning-layers" class="page" role="region" aria-label="Planning Layers">
+    <section id="page-portfolio" class="page" role="region" aria-label="Portfolio">
       <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Portfolio</span></div>
+          <p class="hint report-subtitle">
+            Every project on one line, totalled at the bottom. Sort by any column;
+            click a row to open that project. These are the same numbers each project&rsquo;s
+            own Dashboard shows &mdash; side by side rather than one at a time.
+          </p>
+        </header>
+        <div id="sec-portfolio-all">
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Project tiles</h2>
+            <span class="hint">The same rows as the table below, one card per project. Click a tile to open it.</span>
+          </div>
+          <div class="pf-tiles" id="portfolio-tiles"></div>
+          <p class="hint" id="portfolio-tiles-empty" hidden>No projects yet.</p>
+        </section>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>All projects</h2>
+            <span class="hint">Click a column heading to sort, a row to open.</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table portfolio-table" id="portfolio-table">
+              <thead id="portfolio-head"></thead>
+              <tbody id="portfolio-body"></tbody>
+              <tfoot id="portfolio-foot"></tfoot>
+            </table>
+          </div>
+          <p class="hint" id="portfolio-empty" hidden>No projects yet.</p>
+        </section>
+        </div>
+        <div class="merged-page" id="page-ai-portfolio" role="region" aria-label="AI Portfolio">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>AI Portfolio</span></div>
+          <p class="hint report-subtitle">
+            Every project running an AI or ML methodology, in one place. A project lands here the moment
+            it names one on its <button type="button" class="link-btn" data-goto="tab-planner">Plan</button>
+            page — nothing else to maintain.
+          </p>
+        </header>
+
+        <section class="stat-cards" id="ai-portfolio-stats"></section>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Initiatives</h2>
+            <span class="hint">Click a card to open that project's Plan page.</span>
+          </div>
+          <div class="pf-tiles" id="ai-portfolio-tiles"></div>
+          <p class="hint" id="ai-portfolio-empty" hidden>
+            No project has an AI or ML methodology set yet. Give one a method on its Plan page — CPMAI,
+            CRISP-DM, ADLC, Agentic DLC, MLOps or LLMOps — and it appears here.
+          </p>
+        </section>
+        </div>
+        <div class="merged-page" id="page-planning-layers" role="region" aria-label="Planning Layers">
         <header class="dash-header">
           <div class="dash-header__title"><span>Planning Layers</span></div>
           <p class="hint report-subtitle">
@@ -1922,77 +1978,14 @@
             </li>
           </ol>
         </section>
+        </div>
       </div>
     </section>
 
-    <section id="page-ai-portfolio" class="page" role="region" aria-label="AI Portfolio">
+    <section id="page-changelog" class="page" role="region" aria-label="History">
       <div class="print-page">
         <header class="dash-header">
-          <div class="dash-header__title"><span>AI Portfolio</span></div>
-          <p class="hint report-subtitle">
-            Every project running an AI or ML methodology, in one place. A project lands here the moment
-            it names one on its <button type="button" class="link-btn" data-goto="tab-planner">Plan</button>
-            page — nothing else to maintain.
-          </p>
-        </header>
-
-        <section class="stat-cards" id="ai-portfolio-stats"></section>
-
-        <section class="card">
-          <div class="card__head">
-            <h2>Initiatives</h2>
-            <span class="hint">Click a card to open that project's Plan page.</span>
-          </div>
-          <div class="pf-tiles" id="ai-portfolio-tiles"></div>
-          <p class="hint" id="ai-portfolio-empty" hidden>
-            No project has an AI or ML methodology set yet. Give one a method on its Plan page — CPMAI,
-            CRISP-DM, ADLC, Agentic DLC, MLOps or LLMOps — and it appears here.
-          </p>
-        </section>
-      </div>
-    </section>
-
-    <section id="page-portfolio" class="page" role="region" aria-label="Portfolio">
-      <div class="print-page">
-        <header class="dash-header">
-          <div class="dash-header__title"><span>Portfolio</span></div>
-          <p class="hint report-subtitle">
-            Every project on one line, totalled at the bottom. Sort by any column;
-            click a row to open that project. These are the same numbers each project&rsquo;s
-            own Dashboard shows &mdash; side by side rather than one at a time.
-          </p>
-        </header>
-
-        <section class="card">
-          <div class="card__head">
-            <h2>Project tiles</h2>
-            <span class="hint">The same rows as the table below, one card per project. Click a tile to open it.</span>
-          </div>
-          <div class="pf-tiles" id="portfolio-tiles"></div>
-          <p class="hint" id="portfolio-tiles-empty" hidden>No projects yet.</p>
-        </section>
-
-        <section class="card">
-          <div class="card__head">
-            <h2>All projects</h2>
-            <span class="hint">Click a column heading to sort, a row to open.</span>
-          </div>
-          <div class="table-scroll">
-            <table class="data-table portfolio-table" id="portfolio-table">
-              <thead id="portfolio-head"></thead>
-              <tbody id="portfolio-body"></tbody>
-              <tfoot id="portfolio-foot"></tfoot>
-            </table>
-          </div>
-          <p class="hint" id="portfolio-empty" hidden>No projects yet.</p>
-        </section>
-      </div>
-    </section>
-
-    <section id="page-changelog" class="page" role="region" aria-label="Change log">
-      <div class="print-page">
-        <header class="dash-header">
-          <div class="dash-header__title"><span>Change Log</span></div>
+          <div class="dash-header__title"><span>History</span></div>
           <p class="hint report-subtitle">
             Statuses, dates, sign-offs, owners and budgets, recorded as they move.
             Deliberately not a keystroke log &mdash; only the changes someone could be asked
@@ -2000,6 +1993,7 @@
             keeps the record of what happened either way.
           </p>
         </header>
+        <div id="sec-changelog">
 
         <section class="card">
           <div class="card__head">
@@ -2027,11 +2021,8 @@
           </div>
           <p class="hint" id="changelog-empty" hidden></p>
         </section>
-      </div>
-    </section>
-
-    <section id="page-trash" class="page" role="region" aria-label="Trash">
-      <div class="print-page">
+        </div>
+        <div class="merged-page" id="page-trash" role="region" aria-label="Trash">
         <header class="dash-header">
           <div class="dash-header__title"><span>Trash</span></div>
           <p class="hint report-subtitle">
@@ -2060,6 +2051,7 @@
             </table>
           </div>
         </section>
+        </div>
       </div>
     </section>
 
@@ -2099,7 +2091,7 @@
               which is the quickest way to see the screens below.
             </p>
             <p class="hint callout" id="signin-unconfigured" hidden>
-              No workspace is connected yet. Connect one on <strong>Sync &amp; Team</strong> first &mdash;
+              No workspace is connected yet. Connect one under <strong>Settings &rarr; Sync</strong> first &mdash;
               sign-in needs somewhere to sign in to.
             </p>
           </div>
@@ -2266,11 +2258,7 @@
             <button type="button" class="btn btn-ghost" id="btn-settings-open-export">Export &amp; share options</button>
           </div>
         </section>
-      </div>
-    </section>
-
-    <section id="page-sync" class="page" role="region" aria-label="Sync and team">
-      <div class="print-page">
+        <div class="merged-page" id="page-sync" role="region" aria-label="Sync and team">
         <header class="dash-header">
           <div class="dash-header__title"><span>Sync &amp; Team</span></div>
           <p class="hint report-subtitle">
@@ -2382,6 +2370,7 @@
               stops them being sent anywhere.
             </p>
           </section>
+        </div>
         </div>
       </div>
     </section>

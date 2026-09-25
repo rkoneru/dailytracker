@@ -7,7 +7,7 @@
 // honest when there is nothing to show yet, rather than a zero that looks
 // like a measurement.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openDestination } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -23,10 +23,11 @@ const { APP_URL, launch, createChecks } = require('./harness');
   await page.waitForTimeout(900);
 
   console.log('\n--- the nav reaches it, and the page names itself ---');
-  await page.click('#tab-capacity .nav-row__label');
+  await openDestination(page, 'tab-capacity');
   await page.waitForTimeout(600);
-  eq('landed on Capacity Planning', await page.textContent('#page-title'), 'Capacity Planning');
-  eq('and the row is marked current', await page.getAttribute('#tab-capacity', 'aria-current'), 'page');
+  eq('landed on Resources', await page.textContent('#page-title'), 'Resources');
+  eq('on its Capacity tab', await page.getAttribute('#tab-sec-capacity', 'aria-selected'), 'true');
+  eq('and its page, Resources, is marked current', await page.getAttribute('#tab-resources', 'aria-current'), 'page');
 
   console.log('\n--- the process card is a reference, not a form ---');
   eq('six steps', await page.locator('#page-capacity .cap-step').count(), 6);
@@ -37,7 +38,7 @@ const { APP_URL, launch, createChecks } = require('./harness');
   await page.click('#page-capacity button[data-goto="tab-resources"]');
   await page.waitForTimeout(500);
   eq('the Resources link opens Resources', await page.textContent('#page-title'), 'Resources');
-  await page.click('#tab-capacity .nav-row__label');
+  await openDestination(page, 'tab-capacity');
   await page.waitForTimeout(500);
 
   console.log('\n--- the starter project ships with a pool, so the numbers are real from the first run ---');
@@ -81,7 +82,7 @@ const { APP_URL, launch, createChecks } = require('./harness');
   });
   await page.click('#tab-dashboard .nav-row__label');
   await page.waitForTimeout(300);
-  await page.click('#tab-capacity .nav-row__label');
+  await openDestination(page, 'tab-capacity');
   await page.waitForTimeout(600);
   eq('no metric tiles', await page.locator('#capacity-metrics .cap-kpi').count(), 0);
   eq('the empty hint says so', await page.locator('#capacity-metrics-empty').isVisible(), true);

@@ -1,4 +1,4 @@
-const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle, openDestination } = require('./harness');
 const { eq, done } = createChecks();
 
 const acceptDialog = async (page) => {
@@ -60,7 +60,7 @@ const acceptDialog = async (page) => {
   await page.locator('#raid-body tr').nth(0).locator('[data-action="delete-raid"]').click();
   await page.waitForTimeout(300);
 
-  await page.click('#tab-trash');
+  await openDestination(page, 'tab-trash');
   await page.waitForTimeout(400);
   const kinds = await page.$$eval('#trash-body .trash-item__meta', (els) => els.map((e) => e.textContent.split(' · ')[0]));
   eq('all four kinds are recoverable', kinds.sort(), ['Milestone', 'Note', 'RAID entry', 'Task']);
@@ -95,7 +95,7 @@ const acceptDialog = async (page) => {
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
 
-  await page.click('#tab-trash');
+  await openDestination(page, 'tab-trash');
   await page.waitForTimeout(400);
   eq('the project is in Trash', (await trashRows()).includes(doomed), true);
   const projectRow = page.locator('#trash-body tr', { hasText: doomed }).first();
@@ -109,7 +109,7 @@ const acceptDialog = async (page) => {
   await page.waitForTimeout(300);
 
   console.log('\n--- purge is the only irreversible path, and says so ---');
-  await page.click('#tab-trash');
+  await openDestination(page, 'tab-trash');
   await page.waitForTimeout(400);
   const remaining = (await trashRows()).length;
   await page.locator('#trash-body tr').first().locator('[data-action="purge"]').click();
@@ -140,7 +140,7 @@ const acceptDialog = async (page) => {
   await page.waitForTimeout(400);
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
-  await page.click('#tab-trash');
+  await openDestination(page, 'tab-trash');
   await page.waitForTimeout(400);
   eq('still there after reload', (await trashRows()).length, 1);
 

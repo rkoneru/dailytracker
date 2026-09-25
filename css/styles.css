@@ -4529,7 +4529,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-bg);
-  /* Long strips (Service & Support has five) wrap onto a second line on a
+  /* Long strips wrap onto a second line on a
      phone. Scrolling them sideways would be tidier and worse: two tabs you
      cannot see are two features someone will conclude are missing. The
      overflow rule is the backstop for a single tab wider than the page. */
@@ -4553,13 +4553,18 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   white-space: nowrap;
   cursor: pointer;
 }
-.page-tab:hover { background: var(--color-surface); color: var(--color-text); }
+.page-tab:hover { background: var(--color-primary-light); color: var(--color-primary); }
 .page-tab:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* The tab you are on is filled, not merely outlined: a white pill on a pale
+   strip read as "slightly different", and people lost track of which of four
+   tabs the page below belonged to. */
 .page-tab.is-active {
-  background: var(--color-surface);
-  border-color: var(--color-border);
-  color: var(--color-primary);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: 0 1px 2px rgba(76, 29, 149, 0.18), 0 6px 14px -6px rgba(109, 74, 235, 0.55);
 }
+.page-tab.is-active:hover { background: var(--color-primary-hover); color: var(--color-on-primary); }
 
 .page-tab__count {
   display: inline-block;
@@ -4573,7 +4578,7 @@ tr.is-linked > td { animation: row-linked 2.6s ease-out forwards; }
   text-align: center;
 }
 .page-tab.is-active .page-tab__count {
-  background: var(--color-primary-light);
+  background: var(--color-on-primary);
   color: var(--color-primary);
 }
 
@@ -5761,3 +5766,9 @@ body.login-open { overflow: hidden; }
   .gantt-row [data-gantt="delete"] { grid-area: act; }
   .gantt-row__track { grid-area: track; }
 }
+
+/* A page that used to stand alone and is now a tab of another (AI Portfolio,
+   Capacity, Sync, Trash) keeps its own heading, but as a section heading: the
+   page title above it already says where you are. */
+.merged-page > .dash-header { margin: 0 0 12px; padding: 0; border: 0; background: none; box-shadow: none; }
+.merged-page > .dash-header .dash-header__title { font-size: 20px; }

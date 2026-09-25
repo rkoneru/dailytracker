@@ -283,14 +283,10 @@ const { eq, done } = createChecks();
      await page.inputValue('#charter-fields [data-field="charterScopeOut"]'), 'Anything outside the UK market.');
 
   console.log('\n--- nav reaches every register ---');
-  // The tree remembers what was open, so toggle only if it is currently shut.
-  if (await page.getAttribute('#tab-improve', 'aria-expanded') === 'false') {
-    await page.click('#tab-improve .nav-twisty');
-    await page.waitForTimeout(300);
-  }
-  await page.click('#nav-lessons .nav-row__label');
+  // Sections are the page's tab strip, not sidebar rows; a link reaches them.
+  await page.evaluate(() => { window.location.hash = '#/nav-lessons'; });
   await page.waitForTimeout(500);
-  eq('a section leaf opens its page', await page.textContent('#page-title'), 'Improvement & Lessons');
+  eq('a link to a section opens its page', await page.textContent('#page-title'), 'Improvement & Lessons');
   // The jump is a smooth scroll, so wait for it to land rather than guessing.
   const onScreen = await page.waitForFunction(() => {
     const r = document.getElementById('sec-lessons').getBoundingClientRect();

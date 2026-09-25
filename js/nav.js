@@ -3,11 +3,13 @@ import { roleShows, getRole, isShowingEverything } from './roles.js';
 
 // Sidebar navigation, as a real tree, filtered to the role that is looking.
 //
-// The flat list worked while there were four pages. There are now fifteen, two
-// side panels, and pages long enough that their own sections are worth jumping
-// to — so the nav is a tree: top-level groups, pages under them, and the tabs
-// of a page as leaves. Every leaf is a real destination: a page's sections are
-// tabs now (see tabs.js), so a leaf selects one rather than scrolling to it.
+// The flat list worked while there were four pages. There are now twenty, so
+// the nav is a tree — but only two levels of it: groups, and the pages in them.
+// A page's own sections are also in NAV_TREE, as leaves under the page, because
+// links, the router and the command palette name them ("open the Edit
+// Timeline"); the sidebar just doesn't draw them. They are the tab strip at the
+// top of the page, and a third level repeating that strip beside it was what
+// made the menu feel clumsy. Arriving at a section marks its page current.
 //
 // It follows the WAI-ARIA tree pattern rather than approximating it: roving
 // tabindex, arrow keys to move and expand, aria-expanded on every parent. A
@@ -21,8 +23,8 @@ const EXPANDED_KEY = 'projectPlannerNavExpanded_v1';
 export const NAV_TREE = [
   // Five groups, named for what you would be doing rather than for a department:
   // everything, then planning it, then running it, then telling people about it,
-  // then the housekeeping. Each page's tabs hang off it as leaves, so the nav is
-  // a map of every surface in the app and nothing is more than two clicks away.
+  // then the housekeeping. Each page's tabs hang off it as leaves: the sidebar
+  // draws only groups and pages, but links and the palette can name a tab.
   {
     id: 'group-across',
     label: 'Across Projects',
@@ -232,6 +234,9 @@ export const NAV_TREE = [
   },
 ];
 
+// Groups, then pages. Deeper nodes are destinations, not rows (see above).
+const SIDEBAR_LEVELS = 2;
+
 let onActivate = null;
 let expanded = null;
 let rows = [];            // every rendered row, in document order
@@ -277,16 +282,9 @@ function readExpanded() {
   }
 }
 
-// Pages the app opened because they were navigated to, as opposed to ones the
-// person opened with the twisty. Only these are closed again on the way to
-// another page — otherwise every page visited stayed open, and after four the
-// sidebar had grown from 28 rows to 48. They are not saved either: a reload
-// opens only the page it lands on.
-const autoOpened = new Set();
-
 function saveExpanded() {
   try {
-    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...expanded].filter((id) => !autoOpened.has(id))));
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...expanded]));
   } catch (err) {
     console.warn('Could not save the nav state.', err);
   }
@@ -294,13 +292,17 @@ function saveExpanded() {
 
 // ---------- rendering ----------
 
+function sidebarChildren(node, level) {
+  return level < SIDEBAR_LEVELS ? (node.children || []).filter(visible) : [];
+}
+
 function buildRow(node, level) {
-  const hasChildren = (node.children || []).some(visible);
+  const hasChildren = sidebarChildren(node, level).length > 0;
   const isGroup = !node.page && !node.panel;
 
   const row = el('div', {
     id: node.id,
-    class: `nav-row${isGroup ? ' nav-row--group' : ''}${level > 2 ? ' nav-row--leaf' : ''}`,
+    class: `nav-row${isGroup ? ' nav-row--group' : ''}`,
     role: 'treeitem',
     tabindex: '-1',
     'aria-level': String(level),
@@ -313,11 +315,9 @@ function buildRow(node, level) {
     row.setAttribute('aria-owns', `${node.id}-group`);
   }
 
-  row.appendChild(el('span', {
-    class: `nav-twisty${hasChildren ? '' : ' is-empty'}`,
-    'aria-hidden': 'true',
-    text: hasChildren ? '▸' : '',
-  }));
+  // Only a group can open, so only a group carries the arrow; a page row
+  // spends that width on its label instead.
+  if (hasChildren) row.appendChild(el('span', { class: 'nav-twisty', 'aria-hidden': 'true', text: '▸' }));
   if (node.icon) row.appendChild(el('span', { class: 'nav-row__icon', 'aria-hidden': 'true', text: node.icon }));
   row.appendChild(el('span', { class: 'nav-row__label', text: node.label }));
   if (node.badge) row.appendChild(el('span', { id: node.badge, class: 'nav-row__badge', hidden: true }));
@@ -347,7 +347,7 @@ function buildBranch(node, level, list) {
   li.appendChild(row);
   list.push(row);
 
-  const children = (node.children || []).filter(visible);
+  const children = sidebarChildren(node, level);
   if (children.length) {
     const group = el('ul', { id: `${node.id}-group`, role: 'group', class: 'nav-group' });
     group.hidden = !expanded.has(node.id);
@@ -430,59 +430,29 @@ function setExpanded(row, open) {
 }
 
 function toggle(row) {
-  autoOpened.delete(row._node.id);
   setExpanded(row, row.getAttribute('aria-expanded') !== 'true');
-}
-
-/** Opens a page's sections for arriving at it, closing the last one so opened. */
-function openForArrival(row, keep = new Set()) {
-  const id = row._node.id;
-  rows.forEach((other) => {
-    const otherId = other._node.id;
-    if (otherId !== id && !keep.has(otherId) && autoOpened.has(otherId)) {
-      autoOpened.delete(otherId);
-      setExpanded(other, false);
-    }
-  });
-  if (row.getAttribute('aria-expanded') !== 'true') {
-    autoOpened.add(id);
-    setExpanded(row, true);
-  }
 }
 
 // ---------- selection ----------
 
 /**
- * Marks one row current and opens every ancestor so it is actually on screen.
+ * Marks one row current and opens its group so it is actually on screen.
  * Called by the app after a page change, including changes the nav didn't
- * cause (a button elsewhere, restoring state on boot).
+ * cause (a button elsewhere, restoring state on boot). A section has no row of
+ * its own, so its page is the one marked.
  */
 export function setActiveNode(id) {
-  rows.forEach((row) => {
-    const active = row.id === id;
-    row.classList.toggle('is-active', active);
-    if (active) row.setAttribute('aria-current', 'page');
-    else row.removeAttribute('aria-current');
+  const row = rows.find((r) => r.id === id)
+    || rows.find((r) => (r._node.children || []).some((child) => child.id === id));
+  rows.forEach((r) => {
+    const active = r === row;
+    r.classList.toggle('is-active', active);
+    if (active) r.setAttribute('aria-current', 'page');
+    else r.removeAttribute('aria-current');
   });
 
-  const row = rows.find((r) => r.id === id);
-  if (row) {
-    const chain = [];
-    let parentGroup = row.closest('.nav-group');
-    while (parentGroup) {
-      const parentRow = parentGroup.parentElement.querySelector(':scope > .nav-row');
-      if (parentRow) chain.push(parentRow);
-      parentGroup = parentGroup.parentElement.closest('.nav-group');
-    }
-    const keep = new Set(chain.map((r) => r._node.id));
-    chain.forEach((parentRow) => {
-      // Groups are the map and stay as they are; a page among the ancestors
-      // is opened the way arriving at it opens it.
-      if (parentRow._node.page) openForArrival(parentRow, keep);
-      else setExpanded(parentRow, true);
-    });
-    if (row._node.page && row._node.children?.length) openForArrival(row, keep);
-  }
+  const groupRow = row?.closest('.nav-group')?.parentElement.querySelector(':scope > .nav-row');
+  if (groupRow) setExpanded(groupRow, true);
   refreshTabStops();
 }
 
@@ -498,11 +468,6 @@ function activate(row) {
     if (open) open();
     return;
   }
-
-  // Opening a page reveals what's inside it. Activating never collapses —
-  // use the twisty for that — so clicking the page you're already on doesn't
-  // hide the section you were aiming for.
-  if (node.children && node.children.length) openForArrival(row);
 
   if (onActivate) onActivate(node);
 }

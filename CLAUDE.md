@@ -43,7 +43,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `css/styles.css` | all of it; design tokens on `:root` at the top |
 | `js/state.js` | the store. Load, migrate, save (debounced 400 ms), trash, projects, resources |
 | `js/app.js` | boot and wiring; the only file that knows about most others |
-| `js/nav.js` | `NAV_TREE` — five groups, ARIA tree, roving tabindex |
+| `js/nav.js` | `NAV_TREE` — five groups, ARIA tree, roving tabindex. The sidebar draws two levels (groups, pages); sections stay in the tree for links and the palette but are the page's tab strip, not rows |
 | `js/mobileNav.js` | the phone bottom bar; fills its slots from `NAV_TREE` + `roleShows` |
 | `js/tabs.js` | in-page tabs; `PAGE_TABS` maps a page to its sections |
 | `js/router.js` | hash routing and deep links |

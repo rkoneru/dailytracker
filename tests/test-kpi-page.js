@@ -87,19 +87,16 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
     return blank.every((c) => !c.classList.contains('is-good') && !c.classList.contains('is-warn'));
   }), true);
 
-  console.log('\n--- the nav reaches each category ---');
-  if (await page.getAttribute('#tab-kpis', 'aria-expanded') === 'false') {
-    await page.click('#tab-kpis .nav-twisty');
-    await page.waitForTimeout(300);
-  }
-  await page.click('#nav-kpi-quality .nav-row__label');
+  console.log('\n--- a link reaches each category ---');
+  // Sections are the page's tab strip, not sidebar rows; a link reaches them.
+  await page.evaluate(() => { window.location.hash = '#/nav-kpi-quality'; });
   await page.waitForTimeout(500);
   eq('the quality tab is the one showing', await page.evaluate(() =>
     !document.getElementById('sec-kpi-quality').classList.contains('is-tab-hidden')
     && document.getElementById('sec-kpi-schedule').classList.contains('is-tab-hidden')), true);
 
   console.log('\n--- the wider framework says what is and is not tracked ---');
-  await page.click('#nav-kpi-framework .nav-row__label');
+  await openSection(page, 'sec-kpi-framework');
   await page.waitForTimeout(500);
   eq('twelve categories', await page.locator('#kpi-framework-table tbody tr').count(), 12);
   eq('a tracked one links back to its live section',
@@ -108,7 +105,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await page.waitForTimeout(500);
   eq('clicking it actually lands there', await page.evaluate(() =>
     !document.getElementById('sec-kpi-schedule').classList.contains('is-tab-hidden')), true);
-  await page.click('#nav-kpi-framework .nav-row__label');
+  await openSection(page, 'sec-kpi-framework');
   await page.waitForTimeout(500);
   eq('an untracked one says so rather than being silently absent',
      (await page.textContent('#kpi-framework-table')).includes('not tracked'), true);

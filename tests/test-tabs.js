@@ -99,12 +99,9 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
      await page.textContent('#tab-sec-dependencies .page-tab__count'),
      String(await page.locator('#dependencies-body tr').count()));
 
-  console.log('\n--- a nav leaf selects a tab rather than scrolling past four tables ---');
-  if (await page.getAttribute('#tab-service', 'aria-expanded') === 'false') {
-    await page.click('#tab-service .nav-twisty');
-    await page.waitForTimeout(300);
-  }
-  await page.click('#nav-known-errors .nav-row__label');
+  console.log('\n--- a link to a section selects its tab rather than scrolling past four tables ---');
+  // Sections are the page's tab strip, not sidebar rows; a link reaches them.
+  await page.evaluate(() => { window.location.hash = '#/nav-known-errors'; });
   await page.waitForTimeout(600);
   eq('it landed on the page', await page.textContent('#page-title'), 'Service & Support');
   eq('and opened the section it names',

@@ -1875,7 +1875,7 @@ body { overflow-anchor: none; }
   align-items: center;
   gap: 8px;
   min-height: 38px;
-  padding: 0 10px 0 6px;
+  padding: 0 6px 0 6px;
   border-radius: 12px;
   cursor: pointer;
   color: var(--color-text);
@@ -1901,11 +1901,6 @@ body { overflow-anchor: none; }
    its own <li>, so :first-child would match every one of them. */
 .nav-tree > li:first-child > .nav-row--group { margin-top: 0; }
 
-/* Leaves are a page's own sections, so they read as secondary. */
-.nav-row--leaf { min-height: 32px; font-weight: 500; font-size: 13px; color: var(--color-text-muted); }
-.nav-row--leaf:hover { color: var(--color-text); }
-.nav-row--leaf.is-active { color: var(--color-primary-hover); font-weight: 600; }
-
 .nav-twisty {
   flex: none;
   width: 14px;
@@ -1914,7 +1909,6 @@ body { overflow-anchor: none; }
   color: var(--color-text-muted);
   transition: transform 0.15s ease;
 }
-.nav-twisty.is-empty { visibility: hidden; }
 .nav-row[aria-expanded="true"] > .nav-twisty { transform: rotate(90deg); }
 .nav-row.is-active > .nav-twisty { color: inherit; }
 
@@ -1922,9 +1916,11 @@ body { overflow-anchor: none; }
 .nav-row__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* A guide line makes the nesting visible without deep indentation. */
+/* Pages sit one step in from their group and no further — there is no third
+   level to leave room for, so the width goes to the labels. */
 .nav-group {
-  margin-left: 13px;
-  padding-left: 5px;
+  margin-left: 6px;
+  padding-left: 2px;
   border-left: 1px solid var(--color-border);
 }
 

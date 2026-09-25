@@ -38,7 +38,7 @@ export const ROLES = [
     blurb: 'Plan, tasks, risks and reports, plus the change log.',
     home: 'tab-dashboard',
     nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-planning-layers', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
+      'tab-service', 'tab-customers', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
   },
   {
     id: 'product-manager',
@@ -47,7 +47,7 @@ export const ROLES = [
     blurb: 'What is being delivered and why, plus what is landing when.',
     home: 'tab-dashboard',
     nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-planning-layers', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'btn-export-panel'],
+      'tab-service', 'tab-customers', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'btn-export-panel'],
   },
   {
     id: 'scrum-master',
@@ -82,8 +82,17 @@ export const ROLES = [
     aka: 'Service delivery manager, operations, support lead',
     blurb: 'Service levels, releases, change control and known issues.',
     home: 'tab-service',
-    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-planning-layers', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-planning-layers', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-customers', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports',
       'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'btn-export-panel'],
+  },
+  {
+    id: 'customer-success-manager',
+    label: 'Customer Success Manager',
+    aka: 'CSM, account manager, client success lead',
+    blurb: 'Your accounts, where each is in the lifecycle, how healthy it is, and what renews next.',
+    home: 'tab-customers',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-dashboard', 'tab-customers', 'tab-raid', 'tab-service', 'tab-improve',
+      'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'btn-export-panel'],
   },
   {
     id: 'chief-ai-officer',

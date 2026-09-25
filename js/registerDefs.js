@@ -452,6 +452,46 @@ export const VENDORS = {
   newRow: () => ({ name: '', service: '', contract: '', value: '', start: '', end: '', owner: '', status: 'Onboarding', performance: 'Not reviewed' }),
 };
 
+// A customer success manager's book of business. One row per account, with
+// the lifecycle stage it is in; the health score beside it is worked out from
+// adoption, NPS, how recently anyone spoke to them and how close the renewal
+// is (js/customerSuccess.js), and is drawn by the page, never typed.
+// `startArr` is what the account was worth when the period began — without it
+// revenue retention has nothing to be a percentage of.
+export const CUSTOMERS = {
+  key: 'customers',
+  id: 'customers',
+  title: 'Accounts',
+  rowLabel: 'account',
+  addLabel: '+ Add Account',
+  refPrefix: 'AC',
+  hiddenFields: ['stageHistory'],
+  blurb: 'Every customer account, where it is in the lifecycle, and the signals its health is read from. Health is worked out, not typed: it needs at least two of adoption, NPS and last touch.',
+  emptyText: 'No accounts yet.',
+  searchFields: ['name', 'csm', 'segment'],
+  searchPlaceholder: 'Search account, CSM or segment…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'name', label: 'Account', placeholder: 'Customer name' },
+    { field: 'segment', label: 'Segment', type: 'select', options: ['Enterprise', 'Mid-market', 'SMB'] },
+    { field: 'csm', label: 'CSM', type: 'person', placeholder: 'Who owns the relationship' },
+    { field: 'stage', label: 'Stage', type: 'select', tone: true, options: ['Onboard', 'Adopt', 'Realise value', 'Renew', 'Expand', 'Advocate', 'Churned'] },
+    { field: '_health', label: 'Health', type: 'custom' },
+    { field: 'arr', label: 'ARR', type: 'number', step: 1000 },
+    { field: 'startArr', label: 'ARR at start', type: 'number', step: 1000 },
+    { field: 'start', label: 'Customer since', type: 'date' },
+    { field: 'renewal', label: 'Renewal', type: 'date' },
+    { field: 'adoption', label: 'Adoption %', type: 'number', min: 0, max: 100, step: 5 },
+    { field: 'nps', label: 'NPS (0–10)', type: 'number', min: 0, max: 10, step: 1 },
+    { field: 'lastTouch', label: 'Last touch', type: 'date' },
+    { field: 'acquisitionCost', label: 'Cost to acquire', type: 'number', step: 500 },
+  ],
+  newRow: () => ({
+    name: '', segment: 'Mid-market', csm: '', stage: 'Onboard', arr: '', startArr: '', start: '', renewal: '',
+    adoption: '', nps: '', lastTouch: '', acquisitionCost: '', stageHistory: [],
+  }),
+};
+
 // Grouped by who needs them rather than by which body of practice they came
 // from. A tester and a service manager both want the go-live checklist and the
 // known errors; neither opens a stakeholder map. Splitting PMP from ITIL made
@@ -466,6 +506,9 @@ export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS, DOCUMENTS];
 // roster typed separately into each project cannot answer the question a
 // roster exists for: whether this person has the time.
 export const PEOPLE_REGISTERS = [RACI, STAKEHOLDERS, COMMS, VENDORS];
+
+/** Customer success: the accounts and where each is in its lifecycle. */
+export const CUSTOMER_REGISTERS = [CUSTOMERS];
 
 /** Blockers, alongside the RAID log — the other half of "what is in our way". */
 export const BLOCKER_REGISTERS = [DEPENDENCIES];
@@ -489,12 +532,13 @@ const PAGE_OF = [
   [BLOCKER_REGISTERS, 'tab-raid'],
   [SERVICE_REGISTERS, 'tab-service'],
   [IMPROVE_REGISTERS, 'tab-improve'],
+  [CUSTOMER_REGISTERS, 'tab-customers'],
 ];
 PAGE_OF.forEach(([group, navId]) => group.forEach((def) => { def.navId = navId; }));
 
 export const ALL_REGISTERS = [
   ...SCOPE_REGISTERS, ...PEOPLE_REGISTERS, ...BLOCKER_REGISTERS,
-  ...SERVICE_REGISTERS, ...IMPROVE_REGISTERS,
+  ...SERVICE_REGISTERS, ...IMPROVE_REGISTERS, ...CUSTOMER_REGISTERS,
 ];
 
 /** Every collection these pages own, for migrations, sync and cloning. */
@@ -530,6 +574,8 @@ const WORK_SHAPE = {
   csi: { ownerField: 'owner', dueField: 'target', closed: ['Done', 'Rejected'] },
   knownErrors: { ownerField: 'owner', dueField: '', closed: ['Resolved'] },
   lessons: { ownerField: 'owner', dueField: '', closed: ['Applied', 'Rejected'] },
+  // An account is standing work for its CSM, due at its renewal.
+  customers: { ownerField: 'csm', dueField: 'renewal', closed: ['Churned'] },
 };
 
 ALL_REGISTERS.forEach((def) => {

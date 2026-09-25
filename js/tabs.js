@@ -72,6 +72,11 @@ export const PAGE_TABS = {
     { id: 'sec-releases', label: 'Releases & Change', sections: ['sec-releases', 'sec-changes'] },
     { id: 'sec-known-errors', label: 'Known Issues' },
   ],
+  'page-customers': [
+    { id: 'sec-customers', label: 'Accounts', sections: ['sec-customers', 'sec-cs-economics'] },
+    { id: 'sec-cs-lifecycle', label: 'Lifecycle' },
+    { id: 'sec-cs-renewals', label: 'Renewals' },
+  ],
   'page-improve': [
     { id: 'sec-csi', label: 'Improvements' },
     { id: 'sec-lessons', label: 'Lessons' },
@@ -96,10 +101,11 @@ export const PAGE_TABS = {
     {
       id: 'sec-kpi-schedule',
       label: 'Indicators',
-      sections: ['sec-kpi-schedule', 'sec-kpi-cost', 'sec-kpi-scope', 'sec-kpi-risk', 'sec-kpi-quality', 'sec-kpi-improvement'],
+      sections: ['sec-kpi-schedule', 'sec-kpi-cost', 'sec-kpi-scope', 'sec-kpi-risk', 'sec-kpi-quality', 'sec-kpi-improvement', 'sec-kpi-customer'],
     },
     { id: 'sec-kpi-basis', label: 'How They Work' },
     { id: 'sec-kpi-framework', label: 'PM Framework' },
+    { id: 'sec-kpi-ceo', label: 'Business & Leadership' },
   ],
   'page-resources': [
     { id: 'sec-people', label: 'People' },

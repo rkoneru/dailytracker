@@ -34,7 +34,7 @@ const { eq, done } = createChecks();
   console.log('\n--- the picker offers every role and starts on the lead ---');
   eq('roles offered', await page.$$eval('#role-select option', (e) => e.map((x) => x.textContent)),
      ['Engagement Lead', 'Project Manager', 'Product Manager', 'Scrum Master',
-      'Developer', 'Tester / QA', 'Service Manager', 'Chief AI Officer']);
+      'Developer', 'Tester / QA', 'Service Manager', 'Customer Success Manager', 'Chief AI Officer']);
   eq('default role', await page.inputValue('#role-select'), 'engagement-lead');
   eq('and it explains itself', (await page.textContent('#role-blurb')).length > 20, true);
 

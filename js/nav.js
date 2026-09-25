@@ -163,6 +163,18 @@ export const NAV_TREE = [
           { id: 'nav-lessons', label: 'Lessons Learned', page: 'page-improve', title: 'Improvement & Lessons', section: 'sec-lessons' },
         ],
       },
+      {
+        id: 'tab-customers',
+        label: 'Customer Success',
+        icon: '⭐',
+        page: 'page-customers',
+        title: 'Customer Success',
+        children: [
+          { id: 'nav-accounts', label: 'Accounts', page: 'page-customers', title: 'Customer Success', section: 'sec-customers' },
+          { id: 'nav-cs-lifecycle', label: 'CSM Lifecycle', page: 'page-customers', title: 'Customer Success', section: 'sec-cs-lifecycle' },
+          { id: 'nav-cs-renewals', label: 'Renewals', page: 'page-customers', title: 'Customer Success', section: 'sec-cs-renewals' },
+        ],
+      },
     ],
   },
   {
@@ -202,8 +214,10 @@ export const NAV_TREE = [
           { id: 'nav-kpi-risk', label: 'Risk & Issue', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-risk' },
           { id: 'nav-kpi-quality', label: 'Quality & Resource', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-quality' },
           { id: 'nav-kpi-improvement', label: 'Improvement', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-improvement' },
+          { id: 'nav-kpi-customer', label: 'Customer Success', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-customer' },
           { id: 'nav-kpi-basis', label: 'How These Work', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-basis' },
           { id: 'nav-kpi-framework', label: 'PM Framework', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-framework' },
+          { id: 'nav-kpi-ceo', label: 'Business & Leadership', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-ceo' },
         ],
       },
       {

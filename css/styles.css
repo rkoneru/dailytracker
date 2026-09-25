@@ -5990,3 +5990,49 @@ body.login-open { overflow: hidden; }
 @media (max-width: 600px) {
   .cr-fields { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- Customer success ---------- */
+
+/* Lifecycle stages share the register tone scale by value. */
+.tone-onboard, .tone-adopt { background: #dbeafe; color: #1e3a8a; }
+.tone-realise-value, .tone-renew { background: #fef3c7; color: #78350f; }
+.tone-expand, .tone-advocate { background: #dcfce7; color: #14532d; }
+.tone-churned { background: #fee2e2; color: #7f1d1d; }
+
+.health { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+.health--good { background: #dcfce7; color: #14532d; }
+.health--warn { background: #fef3c7; color: #78350f; }
+.health--bad { background: #fee2e2; color: #7f1d1d; }
+.health--none, .health--gone { background: var(--color-bg); color: var(--color-text-muted); font-weight: 400; }
+
+.cs-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.cs-stage { border: 1px solid var(--color-border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.cs-stage__head { display: flex; align-items: center; gap: 8px; }
+.cs-stage__n {
+  min-width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; background: var(--color-primary-light); color: var(--color-primary);
+}
+.cs-stage__name { margin: 0; font-size: 0.95rem; flex: 1 1 auto; }
+.cs-stage__count { font-size: 0.78rem; color: var(--color-text-muted); white-space: nowrap; }
+.cs-stage__purpose { margin: 0; font-size: 0.82rem; color: var(--color-text-muted); }
+.cs-stage__detail { font-size: 0.8rem; }
+.cs-stage__gate { margin: 6px 0; }
+.cs-stage__plays { margin: 0; padding-left: 18px; }
+.cs-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cs-chip { padding: 6px 9px; border-radius: 8px; border-left: 3px solid var(--color-border); background: var(--color-bg); display: flex; flex-direction: column; }
+.cs-chip--good { border-left-color: var(--color-success-text); }
+.cs-chip--warn { border-left-color: var(--color-warn-text); }
+.cs-chip--bad { border-left-color: var(--color-danger); }
+.cs-chip--gone { opacity: 0.75; }
+.cs-chip__name { font-weight: 600; font-size: 0.85rem; }
+.cs-chip__meta { font-size: 0.75rem; color: var(--color-text-muted); }
+.cs-loop { margin: 10px 0; }
+.cs-exit h3 { font-size: 0.9rem; margin: 12px 0 8px; }
+.cs-exit .cs-chips { flex-direction: row; flex-wrap: wrap; }
+
+.cs-margin { max-width: 220px; margin: 8px 0 12px; }
+.cs-economics { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; margin: 0; font-size: 0.9rem; }
+.cs-economics dt { color: var(--color-text-muted); }
+.cs-economics dd { margin: 0; font-weight: 600; }
+.cs-economics dd.is-unmeasured { color: var(--color-text-muted); font-weight: 400; }
+#cs-renewals-table tr.is-late td { color: var(--color-danger-text); }

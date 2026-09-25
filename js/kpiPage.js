@@ -3,9 +3,11 @@ import { getState, listResources, listAbsences } from './state.js';
 import {
   KPI_CATEGORIES, KPI_DEFS, projectKpis, formatKpi, kpiTone, coverage,
 } from './kpi.js';
+import { CEO_KPIS, FIT_LABEL } from './ceoKpis.js';
+import { goToNode } from './nav.js';
 
-// The KPI page: five categories, twenty cards, and a table that admits what
-// the app cannot answer yet.
+// The KPI page: a card per indicator, grouped by category, and a table that
+// admits what the app cannot answer yet.
 //
 // The last part is the point. A KPI dashboard that silently drops the six
 // indicators it has no data for looks complete and is not — you would never
@@ -94,6 +96,29 @@ function renderBasis(values) {
   });
 }
 
+function renderCeoMap(values) {
+  const body = document.getElementById('kpi-ceo-body');
+  if (!body) return;
+  body.replaceChildren(...CEO_KPIS.map((row) => {
+    const def = row.kpi ? KPI_DEFS.find((d) => d.id === row.kpi) : null;
+    const text = def ? formatKpi(def, values[def.id]) : null;
+    const fit = row.fit === 'same' ? 'tone-met' : row.fit === 'project' ? 'tone-agreed' : 'tone-idle';
+    return el('tr', { class: row.fit === 'none' ? 'is-unmeasured' : '' }, [
+      el('td', { text: row.area }),
+      el('td', { text: row.name }),
+      el('td', {}, [el('span', { class: `tone-chip ${fit}`, text: FIT_LABEL[row.fit] })]),
+      el('td', {}, [def
+        ? el('button', { type: 'button', class: 'link-btn', 'data-ceo-kpi': def.cat, title: `${def.name} — open its card`, text: text === null ? 'Not measured' : text })
+        : document.createTextNode('—')]),
+      el('td', { text: row.why || (def ? `${def.name}: ${def.formula}.` : '') }),
+    ]);
+  }));
+  const counts = { same: 0, project: 0, none: 0 };
+  CEO_KPIS.forEach((r) => { counts[r.fit] += 1; });
+  const summary = document.getElementById('kpi-ceo-summary');
+  if (summary) summary.textContent = `${counts.same} measured here, ${counts.project} at project level, ${counts.none} not held — of ${CEO_KPIS.length}`;
+}
+
 export function renderKpis() {
   const project = getState();
   if (!project) return;
@@ -111,6 +136,7 @@ export function renderKpis() {
 
   renderHeadline(values);
   renderBasis(values);
+  renderCeoMap(values);
 
   const { measured, total } = coverage(values);
   const badge = document.getElementById('kpi-coverage');
@@ -118,5 +144,9 @@ export function renderKpis() {
 }
 
 export function initKpis() {
+  document.getElementById('kpi-ceo-body')?.addEventListener('click', (e) => {
+    const cat = e.target.closest('[data-ceo-kpi]')?.dataset.ceoKpi;
+    if (cat) goToNode(`nav-kpi-${cat}`);
+  });
   renderKpis();
 }

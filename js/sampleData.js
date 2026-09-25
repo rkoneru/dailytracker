@@ -1,4 +1,5 @@
 import { createServiceTransition, createServiceDeskLaunch } from './sampleServices.js';
+import { createCustomerSuccessProgramme } from './sampleCustomers.js';
 import { AGENTIC_DOMAINS, buildAgentic } from './sampleAgentic.js';
 import { todayISO, toLocalISO, parseDate } from './dates.js';
 
@@ -831,6 +832,8 @@ const RAW_TEMPLATES = [
 
   { key: 'transition', category: 'Services & Operations', label: 'Managed Service Transition', description: 'Take a service over from another supplier: due diligence, knowledge transfer, service acceptance and hypercare. The one template that fills every register.', build: () => seedProgress(createServiceTransition()) },
   { key: 'servicedesk', category: 'Services & Operations', label: 'Service Desk Launch', description: 'Replace mailboxes and a spreadsheet with one desk: priority model, request catalogue, pilot, and closing the old channel.', build: () => seedProgress(createServiceDeskLaunch()) },
+
+  { key: 'customer-success', category: 'Services & Operations', label: 'Customer Success Programme', description: 'A CSM team\u2019s book of business across the whole lifecycle — onboarding to advocacy, one churned — with health scores, renewals, NPS and revenue retention.', build: () => seedProgress(createCustomerSuccessProgramme()) },
 
   { key: 'blank', category: 'General', label: 'Blank Project', description: 'Start from an empty sheet — no sample data.', build: () => seedProgress(createBlankProject()) },
 

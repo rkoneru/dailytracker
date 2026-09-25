@@ -832,6 +832,79 @@
       </div>
     </section>
 
+    <section id="page-customers" class="page" role="region" aria-label="Customer success">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Customer Success</span></div>
+          <p class="hint report-subtitle">
+            Every account, where it is in the customer lifecycle, how healthy it is, and when it renews.
+            Health and the numbers above are worked out from the accounts, never typed.
+          </p>
+        </header>
+
+        <section class="kpi-row" aria-label="Customer health">
+          <div class="kpi" id="cs-tile-retention">
+            <span class="kpi__label">Customer retention</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="cs-tile-nrr">
+            <span class="kpi__label">Net revenue retention</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="cs-tile-nps">
+            <span class="kpi__label">Net Promoter Score</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="cs-tile-risk">
+            <span class="kpi__label">ARR at risk</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+        </section>
+
+        <div id="customers-registers"></div>
+
+        <section class="card" id="sec-cs-economics">
+          <div class="card__head"><h2>Unit Economics</h2></div>
+          <p class="hint">
+            Lifetime value needs the one figure an account cannot supply: the gross margin you make on it.
+            LTV is average ARR &times; gross margin &divide; the churn rate of the last twelve months; CAC is the average
+            cost to acquire an account, from the accounts that record one.
+          </p>
+          <label class="field-label cs-margin">Gross margin %
+            <input type="number" class="field-input" id="cs-gross-margin" min="0" max="100" step="1" placeholder="e.g. 75">
+          </label>
+          <dl class="cs-economics" id="cs-economics-read"></dl>
+        </section>
+
+        <section class="card" id="sec-cs-lifecycle">
+          <div class="card__head"><h2>CSM Lifecycle</h2></div>
+          <p class="hint">
+            Six stages, in order, each with the gate that lets an account leave it and the plays a CSM runs in it.
+            Move an account by changing its stage on Accounts; the day it moved is kept, which is how time to value is measured.
+          </p>
+          <div id="cs-lifecycle-body"></div>
+        </section>
+
+        <section class="card" id="sec-cs-renewals">
+          <div class="card__head">
+            <h2>Renewals</h2>
+            <span class="hint" id="cs-renewals-summary"></span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="cs-renewals-table">
+              <thead><tr><th>Account</th><th>CSM</th><th class="col-date">Renewal</th><th class="col-num">In</th><th class="col-num">ARR</th><th>Health</th><th>Stage</th></tr></thead>
+              <tbody id="cs-renewals-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="cs-renewals-empty" hidden>No renewals in the next six months.</p>
+        </section>
+      </div>
+    </section>
+
     <section id="page-raid" class="page" role="region" aria-label="Risks issues and dependencies">
       <div class="print-page">
         <header class="dash-header">
@@ -1156,7 +1229,7 @@
             <span class="dash-header__badge" id="kpi-coverage">&mdash;</span>
           </div>
           <p class="hint report-subtitle">
-            Twenty-two indicators for schedule, cost, scope, risk, quality and improvement &mdash;
+            Indicators for schedule, cost, scope, risk, quality, improvement and customer success &mdash;
             every one of them worked out from the plan and the registers, none of them typed in. An
             indicator with nothing behind it reads &ldquo;not measured&rdquo; and says which field
             would fill it, rather than showing a number nobody earned. A card whose number has
@@ -1213,6 +1286,13 @@
           <div class="card__head"><h2>Improvement KPIs</h2></div>
           <div class="kpi-grid" id="kpi-grid-improvement"></div>
         </section>
+        <section class="card" id="sec-kpi-customer">
+          <div class="card__head">
+            <h2>Customer Success KPIs</h2>
+            <span class="hint">Read from the accounts on Customer Success.</span>
+          </div>
+          <div class="kpi-grid" id="kpi-grid-customer"></div>
+        </section>
 
         <section class="card card--quiet" id="sec-kpi-basis">
           <div class="card__head"><h2>How these are worked out</h2></div>
@@ -1228,6 +1308,25 @@
                 </tr>
               </thead>
               <tbody id="kpi-basis-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card card--quiet" id="sec-kpi-ceo">
+          <div class="card__head">
+            <h2>Business &amp; leadership KPIs</h2>
+            <span class="hint" id="kpi-ceo-summary"></span>
+          </div>
+          <p class="hint">
+            A company-level KPI set &mdash; business, leadership and personal &mdash; against what this app can answer.
+            Where it measures the same thing, or its project-level equivalent, the value is live and links to its card.
+            Where it cannot, the reason is given: most company finance needs a ledger or a balance sheet, and this app
+            will not invent one.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table" id="kpi-ceo-table">
+              <thead><tr><th>Area</th><th>KPI</th><th>In this app</th><th>Now</th><th>How, or why not</th></tr></thead>
+              <tbody id="kpi-ceo-body"></tbody>
             </table>
           </div>
         </section>

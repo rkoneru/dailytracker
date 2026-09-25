@@ -161,6 +161,13 @@ const SPINE_VENDORS = (d) => [
   { name: 'Model provider', service: 'Hosted foundation model API, under an enterprise agreement', contract: 'Enterprise agreement', value: 120000, start: wk(0), end: wk(52), owner: d.roleNames.engineer, status: 'Active', performance: 'Not reviewed' },
 ];
 
+// The business unit the agent is built for is its customer, and adoption is
+// the thing these programmes most often fail on — so it is tracked through
+// the same lifecycle as an external account.
+const SPINE_CUSTOMERS = (d) => [
+  { name: 'Pilot business unit', segment: 'Enterprise', csm: d.roleNames.owner, stage: 'Onboard', arr: '', startArr: '', start: wk(18), renewal: '', adoption: '', nps: '', lastTouch: wk(18), acquisitionCost: '', stageHistory: [{ stage: 'Onboard', at: wk(18) }] },
+];
+
 const SPINE_STAKEHOLDERS = (d) => [
   { name: 'Delivery team', org: 'Internal', role: 'Build and run', influence: 'Medium', interest: 'High', attitude: 'Champion', approach: 'Closest to what the agent actually does. Their disagreements with the eval result are usually right.', owner: d.roleNames.lead },
 ];
@@ -259,6 +266,7 @@ export function agenticSpine(d) {
     comms: [...SPINE_COMMS(d), ...(d.comms || [])].map((x) => ({ id: uid('cm'), ...x })),
     documents: [...SPINE_DOCUMENTS(d), ...(d.documents || [])].map((x) => ({ id: uid('doc'), ...x })),
     vendors: [...SPINE_VENDORS(d), ...(d.vendors || [])].map((x) => ({ id: uid('vn'), ...x })),
+    customers: [...SPINE_CUSTOMERS(d), ...(d.customers || [])].map((x) => ({ id: uid('ac'), ...x })),
     dependencies: [...SPINE_DEPENDENCIES(d), ...(d.dependencies || [])].map((x) => ({ id: uid('dp'), ...x })),
     serviceLevels: [...SPINE_SLA(d), ...(d.serviceLevels || [])].map((x) => ({ id: uid('sl'), ...x })),
     sac: [...SPINE_SAC(d), ...(d.sac || [])].map((x) => ({ verified: '', ...x, id: uid('sa') })),

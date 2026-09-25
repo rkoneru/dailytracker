@@ -167,6 +167,8 @@ function decisionSlide(report) {
  * that silently omits the six things nobody is recording is the reason nobody
  * starts recording them.
  */
+const KPI_ROWS_PER_SLIDE = 12;
+
 function kpiSlides(project, { resources, absences }) {
   if (!project) return [];
   const values = projectKpis(project, { resources, absences });
@@ -183,26 +185,18 @@ function kpiSlides(project, { resources, absences }) {
     ];
   });
 
-  // Two even halves, so neither slide is the crowded one as indicators are added.
-  const half = Math.ceil(rows.length / 2);
-  return [
-    {
-      kind: 'table',
-      title: 'Project KPIs',
-      subtitle: `${project.projectName || 'Project'} · ${measured} of ${total} measured`,
-      columns: ['#', 'Indicator', 'Value', 'Formula'],
-      widths: [0.5, 4, 1.6, 3.4],
-      rows: rows.slice(0, half),
-    },
-    {
-      kind: 'table',
-      title: 'Project KPIs (continued)',
-      subtitle: `${project.projectName || 'Project'} · ${measured} of ${total} measured`,
-      columns: ['#', 'Indicator', 'Value', 'Formula'],
-      widths: [0.5, 4, 1.6, 3.4],
-      rows: rows.slice(half),
-    },
-  ];
+  // At most twelve rows a slide, split evenly, so the table stays legible as
+  // indicators are added and no slide is the crowded one.
+  const pages = Math.ceil(rows.length / KPI_ROWS_PER_SLIDE);
+  const per = Math.ceil(rows.length / pages);
+  return Array.from({ length: pages }, (_, i) => ({
+    kind: 'table',
+    title: i === 0 ? 'Project KPIs' : 'Project KPIs (continued)',
+    subtitle: `${project.projectName || 'Project'} · ${measured} of ${total} measured`,
+    columns: ['#', 'Indicator', 'Value', 'Formula'],
+    widths: [0.5, 4, 1.6, 3.4],
+    rows: rows.slice(i * per, (i + 1) * per),
+  }));
 }
 
 const TITLES = {

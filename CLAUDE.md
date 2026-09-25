@@ -39,7 +39,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 
 | Path | What |
 |---|---|
-| `index.html` | every page, as a hidden `<section class="page">`; 16 of them, plus the login overlay. AI Portfolio, Planning Layers, Capacity, Sync and Trash are `.merged-page` blocks inside their host page, keeping their old ids |
+| `index.html` | every page, as a hidden `<section class="page">`; 17 of them, plus the login overlay. AI Portfolio, Planning Layers, Capacity, Sync and Trash are `.merged-page` blocks inside their host page, keeping their old ids |
 | `css/styles.css` | all of it; design tokens on `:root` at the top |
 | `js/state.js` | the store. Load, migrate, save (debounced 400 ms), trash, projects, resources |
 | `js/app.js` | boot and wiring; the only file that knows about most others |
@@ -53,9 +53,10 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
 | `js/login.js`, `demoAccounts.js` | the sign-in screen and the five invented people behind it |
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
-| `js/kpi.js`, `kpiPage.js` | the 22 project indicators |
+| `js/kpi.js`, `kpiPage.js` | the 35 indicators in seven categories, numbered in display order; `ceoKpis.js` maps a company-level (CEO) KPI set onto them and says why the rest are not held |
 | `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
 | `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks; WBS codes derived from the order |
+| `js/customerSuccess.js`, `customerSuccessPage.js`, `sampleCustomers.js` | the CSM lifecycle (six ordered stages with gates, Churned as an exit), health score, retention/NRR/NPS/LTV/CAC, and the Customer Success page over the `customers` register |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
 | `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
@@ -127,6 +128,11 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   scope baseline only by what that change `touches` (`baselineAfter`), never by
   every edit made since — that would launder creep through someone's approval.
   Signatures are records, not locks; SECURITY.md says what they do not secure.
+- **Customer health and the customer KPIs are derived, never stored.** Health
+  needs at least two signals or it is `null`; a churned account has none. LTV
+  is `null` until the book has lost a customer in the last twelve months, since
+  an unbounded lifetime is not a number. Time to value is read off each
+  account's `stageHistory`, which `recordStageChanges` appends to on every edit.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

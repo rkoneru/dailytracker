@@ -1,4 +1,4 @@
-// The twenty project indicators, computed from what the app already holds.
+// The project indicators, computed from what the app already holds.
 //
 // Every one of these is derived. None of them is a number somebody types in,
 // because a KPI you can type is a KPI you can wish into being green — the
@@ -15,7 +15,8 @@
 import { parseDate, daysBetween } from './charts.js';
 import { hours } from './taskModel.js';
 import { raidScore } from './raid.js';
-import { utilisation } from './resourceModel.js';
+import { utilisation, timesheetValue } from './resourceModel.js';
+import { customerMetrics } from './customerSuccess.js';
 import { isApprovedChange, isDecidedChange } from './changeControl.js';
 
 export const KPI_CATEGORIES = [
@@ -25,6 +26,7 @@ export const KPI_CATEGORIES = [
   { id: 'risk', label: 'Risk & Issue', icon: '⚠️' },
   { id: 'quality', label: 'Quality & Resource', icon: '🧪' },
   { id: 'improvement', label: 'Improvement', icon: '💡' },
+  { id: 'customer', label: 'Customer Success', icon: '⭐' },
 ];
 
 /**
@@ -67,6 +69,10 @@ export const KPI_DEFS = [
   { n: 8, id: 'eac', cat: 'cost', name: 'Estimate at Completion (EAC)', formula: 'EAC = BAC / CPI',
     what: 'Forecast total cost at project completion.', unit: 'hours', good: 'low',
     needs: 'An estimate and hours spent on each task.' },
+  { n: 0, id: 'grossMargin', cat: 'cost', name: 'Delivery Gross Margin', formula: '(Billed − cost) / billed',
+    what: 'Share of billed time left after paying for the people who did it.', unit: 'percent', good: 'high',
+    needs: 'Approved timesheets, and a cost and a bill rate for the people on them, on Resources.',
+    kri: 'Margin erosion' },
 
   // --- Scope & change ---
   { n: 9, id: 'requirementsStability', cat: 'scope', name: 'Requirements Stability', formula: 'Unchanged deliverables / total',
@@ -106,6 +112,10 @@ export const KPI_DEFS = [
     what: 'Average time taken to close issues.', unit: 'days', good: 'low',
     needs: 'A raised and a closed date on each issue.',
     kri: 'Issues taking longer to close' },
+  { n: 0, id: 'decisionSpeed', cat: 'risk', name: 'Decision-Making Speed', formula: 'Raised → closed (decisions)',
+    what: 'Average time from a decision being needed to it being made.', unit: 'days', good: 'low',
+    needs: 'Decision items on the RAID log with a raised and a closed date.',
+    kri: 'Delayed executive decisions' },
 
   // --- Quality & resource ---
   { n: 18, id: 'defectDensity', cat: 'quality', name: 'Defect Density', formula: 'Defects / deliverable',
@@ -124,12 +134,58 @@ export const KPI_DEFS = [
     what: 'Output delivered per unit of effort or time.', unit: 'index', good: 'high',
     needs: 'An estimate and hours spent on completed tasks.',
     kri: 'Delivery efficiency declining' },
+  { n: 0, id: 'talentRetention', cat: 'quality', name: 'Talent Retention', formula: 'Staying / people booked here',
+    what: 'Share of the people allocated to this project who are not leaving or gone.', unit: 'percent', good: 'high',
+    needs: 'People allocated here, with a status on Resources.',
+    kri: 'Key people leaving' },
 
   // --- Improvement ---
   { n: 22, id: 'lessonsRate', cat: 'improvement', name: 'Lessons Logged', formula: 'Lessons / month',
     what: 'How often the project is capturing what it is learning.', unit: 'rate', good: 'band',
     needs: 'Entries on Improvement & Lessons, with a date.' },
+  { n: 0, id: 'improvementDelivery', cat: 'improvement', name: 'Improvement Delivery Rate', formula: 'Done / committed improvements',
+    what: 'Share of improvements that were actually delivered rather than left as ideas: the innovation index, for a project.', unit: 'percent', good: 'high',
+    needs: 'Improvements on Improvement & Lessons with a status.' },
+
+  // --- Customer success (read from the accounts on Customer Success) ---
+  { n: 0, id: 'customerRetention', cat: 'customer', name: 'Customer Retention Rate', formula: 'Accounts kept / all accounts',
+    what: 'Share of customers still customers.', unit: 'percent', good: 'high',
+    needs: 'Accounts on Customer Success, with a lifecycle stage.',
+    kri: 'Customers leaving' },
+  { n: 0, id: 'churnRate', cat: 'customer', name: 'Churn Rate', formula: 'Churned / all accounts',
+    what: 'Share of customers lost.', unit: 'percent', good: 'low',
+    needs: 'Accounts on Customer Success, with a lifecycle stage.',
+    kri: 'Churn rising' },
+  { n: 0, id: 'grr', cat: 'customer', name: 'Gross Revenue Retention', formula: 'Kept ARR (no expansion) / starting ARR',
+    what: 'Revenue kept from existing customers, before any growth.', unit: 'percent', good: 'high',
+    needs: 'ARR and ARR at start on each account.' },
+  { n: 0, id: 'nrr', cat: 'customer', name: 'Net Revenue Retention', formula: 'Current ARR / starting ARR',
+    what: 'Revenue kept and grown from existing customers.', unit: 'percent', good: 'high',
+    needs: 'ARR and ARR at start on each account.',
+    kri: 'Installed base shrinking' },
+  { n: 0, id: 'nps', cat: 'customer', name: 'Net Promoter Score (NPS)', formula: '% promoters − % detractors',
+    what: 'Willingness of customers to recommend you, from each account\u2019s latest 0–10 score.', unit: 'score', good: 'high',
+    needs: 'An NPS score (0–10) on each account.',
+    kri: 'Detractors outnumber promoters' },
+  { n: 0, id: 'ltv', cat: 'customer', name: 'Lifetime Value (LTV)', formula: 'ARR × gross margin ÷ annual churn',
+    what: 'Gross profit a customer is expected to bring over the whole relationship.', unit: 'money', good: 'high',
+    needs: 'ARR on accounts, a gross margin under Unit Economics, and at least one churn in the last twelve months.' },
+  { n: 0, id: 'cac', cat: 'customer', name: 'Customer Acquisition Cost (CAC)', formula: 'Average cost to acquire',
+    what: 'What it cost to win a customer.', unit: 'money', good: 'low',
+    needs: 'A cost to acquire on each account.' },
+  { n: 0, id: 'ltvCac', cat: 'customer', name: 'LTV : CAC Ratio', formula: 'LTV / CAC',
+    what: 'Value earned per unit spent acquiring customers. Three to one is the usual bar.', unit: 'ratio', good: 'high',
+    needs: 'Both LTV and CAC.',
+    kri: 'Acquisition not paying back' },
+  { n: 0, id: 'timeToValue', cat: 'customer', name: 'Time to Value', formula: 'Customer since → Realise value',
+    what: 'How long a new customer waits for the outcome they bought.', unit: 'days', good: 'low',
+    needs: 'Accounts that have reached Realise value, with a customer-since date.' },
 ];
+
+// Numbered in the order the page shows them, category by category, so the
+// cards read 1, 2, 3 however many are added to any one category.
+KPI_DEFS.sort((a, b) => KPI_CATEGORIES.findIndex((c) => c.id === a.cat) - KPI_CATEGORIES.findIndex((c) => c.id === b.cat));
+KPI_DEFS.forEach((def, i) => { def.n = i + 1; });
 
 export const KPI_BY_ID = new Map(KPI_DEFS.map((d) => [d.id, d]));
 
@@ -342,7 +398,36 @@ function improvementKpis(project, today) {
     const months = Math.max(1, daysBetween(dates[0], startOfDay(today)) / 30.44);
     lessonsRate = lessons.length / months;
   }
-  return { lessonsRate, _improvement: { lessons: lessons.length } };
+  const csi = (project.csi || []).filter((c) => c.status && c.status !== 'Rejected');
+  const improvementDelivery = csi.length ? ratio(csi.filter((c) => c.status === 'Done').length, csi.length) : null;
+  return { lessonsRate, improvementDelivery, _improvement: { lessons: lessons.length, csi: csi.length } };
+}
+
+/** The accounts' numbers, from js/customerSuccess.js, so this page and Customer Success agree. */
+function customerKpis(project, today) {
+  const m = customerMetrics(project.customers || [], { grossMargin: project.csGrossMargin, today });
+  return {
+    customerRetention: m.customerRetention,
+    churnRate: m.churnRate,
+    grr: m.grr,
+    nrr: m.nrr,
+    nps: m.nps,
+    ltv: m.ltv,
+    cac: m.cac,
+    ltvCac: m.ltvCac,
+    timeToValue: m.timeToValue,
+  };
+}
+
+/**
+ * Margin on delivered time: approved timesheets priced at each person's bill
+ * and cost rate. Hours whose person has no rates are left out rather than
+ * counted as free, and with no priced hours there is no margin to report.
+ */
+function marginKpis(project, resources) {
+  const approved = (project.timesheets || []).filter((t) => t.status === 'Approved');
+  const value = timesheetValue(approved, resources || []);
+  return { grossMargin: value.revenue > 0 ? ratio(value.margin, value.revenue) : null };
 }
 
 function riskKpis(project, today) {
@@ -382,6 +467,14 @@ function riskKpis(project, today) {
     riskTimeliness: judged.length ? ratio(onTime.length, judged.length) : null,
     openIssues: issues.length ? openIssues.length : null,
     issueResolution: mean(durations),
+    decisionSpeed: mean(raid
+      .filter((r) => r.type === 'Decision' && r.status === 'Closed')
+      .map((r) => {
+        const raised = parseDate(r.raised);
+        const closed = parseDate(r.closed);
+        return raised && closed && closed >= raised ? daysBetween(raised, closed) : null;
+      })
+      .filter((d) => d !== null)),
     _risk: { risks: risks.length, judged: judged.length, closedIssues: durations.length },
   };
 }
@@ -426,7 +519,13 @@ function qualityKpis(project, resources, absences, today) {
     .map((u) => (u && u.effectiveCapacity > 0 ? u.allocated / u.effectiveCapacity : null))
     .filter((v) => v !== null);
 
+  // Of the people booked here, how many are staying. Someone on notice counts
+  // as leaving: by the time the status says Left it is too late to act.
+  const booked = (resources || []).filter((person) => allocations.some((a) => a.resourceId === person.id));
+  const staying = booked.filter((person) => !['Left', 'Notice'].includes(person.status));
+
   return {
+    talentRetention: booked.length ? ratio(staying.length, booked.length) : null,
     defectDensity: counted.length ? ratio(defects, counted.length) : null,
     reworkPct: reworkKnown && spentKnown && spent > 0 ? ratio(rework, spent) : null,
     utilisation: rates.length ? mean(rates) : null,
@@ -452,6 +551,8 @@ export function projectKpis(project, { resources = [], absences = [], today = ne
     ...riskKpis(project, day),
     ...qualityKpis(project, resources, absences, day),
     ...improvementKpis(project, day),
+    ...marginKpis(project, resources),
+    ...customerKpis(project, day),
   };
 }
 
@@ -468,6 +569,8 @@ export function formatKpi(def, value) {
     case 'rate': return value.toFixed(2);
     case 'count': return String(Math.round(value));
     case 'score': return String(Math.round(value));
+    case 'money': return `$${Math.round(value).toLocaleString()}`;
+    case 'ratio': return `${value.toFixed(1)} : 1`;
     default: return String(value);
   }
 }
@@ -494,7 +597,20 @@ export function kpiTone(def, value) {
     case 'riskTimeliness':
     case 'requirementsStability': return band(0.9, 0.7);
     case 'budgetUtilisation': return value <= 0.9 ? 'good' : value <= 1 ? 'warn' : 'bad';
-    case 'eac': return 'idle';
+    case 'eac':
+    case 'ltv':
+    case 'cac': return 'idle';
+    case 'grossMargin': return value >= 0.35 ? 'good' : value >= 0.2 ? 'warn' : 'bad';
+    case 'talentRetention': return band(0.95, 0.85);
+    case 'decisionSpeed': return value <= 5 ? 'good' : value <= 10 ? 'warn' : 'bad';
+    case 'improvementDelivery': return band(0.6, 0.3);
+    case 'customerRetention':
+    case 'grr': return band(0.9, 0.8);
+    case 'churnRate': return value <= 0.1 ? 'good' : value <= 0.2 ? 'warn' : 'bad';
+    case 'nrr': return band(1, 0.9);
+    case 'nps': return value >= 30 ? 'good' : value >= 0 ? 'warn' : 'bad';
+    case 'ltvCac': return band(3, 1);
+    case 'timeToValue': return value <= 90 ? 'good' : value <= 150 ? 'warn' : 'bad';
     case 'scopeChangeRate': return value <= 2 ? 'good' : value <= 5 ? 'warn' : 'bad';
     case 'changeCycleTime': return value <= 5 ? 'good' : value <= 10 ? 'warn' : 'bad';
     case 'riskExposure': return value <= 12 ? 'good' : value <= 30 ? 'warn' : 'bad';
@@ -510,7 +626,7 @@ export function kpiTone(def, value) {
   }
 }
 
-/** How many of the twenty this project can actually answer. */
+/** How many of the indicators this project can actually answer. */
 export function coverage(values) {
   const measured = KPI_DEFS.filter((def) => {
     const value = values[def.id];

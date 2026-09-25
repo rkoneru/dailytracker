@@ -156,6 +156,12 @@ export function createServiceTransition() {
       { id: id('dl'), name: 'Knowledge transfer record', type: 'Document', owner: 'Tom Byrne', due: '2026-11-14', acceptance: 'Session log, recordings and a competency check signed by both leads.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
     ],
 
+    // The client whose service this is: the account the transition is, in
+    // the end, meant to keep.
+    customers: [
+      { id: id('ac'), name: 'Orders platform client', segment: 'Enterprise', csm: 'Dev Raman', stage: 'Onboard', arr: 420000, startArr: 420000, start: '2026-09-21', renewal: '2029-12-31', adoption: '', nps: 7, lastTouch: '2026-10-02', acquisitionCost: 38000, stageHistory: [{ stage: 'Onboard', at: '2026-09-21' }] },
+    ],
+
     documents: [
       { id: id('doc'), title: 'Master services agreement and service schedule', type: 'Contract', link: '', version: 'v3.0', owner: 'Helen Ward', status: 'Approved', review: '2026-12-01' },
       { id: id('doc'), title: 'Incumbent exit plan', type: 'Plan', link: '', version: 'v1.2', owner: 'Dev Raman', status: 'Approved', review: '' },
@@ -327,6 +333,11 @@ export function createServiceDeskLaunch() {
       { id: id('dl'), name: 'Request catalogue', type: 'Service', owner: 'Sara Boyd', due: '2026-10-24', acceptance: 'Twelve request types, each with an owner, a target and a form that does not ask for what IT already knows.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Configured service desk', type: 'Software', owner: 'Ben Iqbal', due: '2026-10-31', acceptance: 'Routing, escalation and reporting work end to end on the pilot data.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Weekly service report', type: 'Report', owner: 'Owen Clarke', due: '2026-11-30', acceptance: 'Volumes, first-response and breaches, produced by the tool rather than by hand.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
+    ],
+
+    // The desk's customers are the departments it serves.
+    customers: [
+      { id: id('ac'), name: 'Finance department', segment: 'Mid-market', csm: 'Owen Clarke', stage: 'Adopt', arr: '', startArr: '', start: '2026-10-05', renewal: '', adoption: 40, nps: 6, lastTouch: '2026-10-02', acquisitionCost: '', stageHistory: [{ stage: 'Onboard', at: '2026-10-05' }, { stage: 'Adopt', at: '2026-10-19' }] },
     ],
 
     documents: [

@@ -36,7 +36,7 @@ const eq = (n, got, want) => {
   eq('groups and their pages, nothing deeper', await visibleLabels(),
      ['Across Projects', 'My Work', 'Portfolio', 'Resources',
       'Plan & Build', 'Dashboard', 'Tasks', 'Plan', 'Scope & Contract', 'People & Stakeholders',
-      'Run & Support', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons',
+      'Run & Support', 'Risks & Issues', 'Service & Support', 'Improvement & Lessons', 'Customer Success',
       'Report & Share', 'Meetings', 'KPIs', 'Reports',
       'Manage', 'Projects', 'Settings', 'History', 'Export / Share']);
   eq('aria-level is set', await page.getAttribute('#tab-dashboard', 'aria-level'), '2');
@@ -191,7 +191,7 @@ const eq = (n, got, want) => {
   // 6. Pages are regions, not tabpanels — the tabpanel role belongs to the
   // sections inside a page, which are what the in-page tab strip switches.
   eq('no page claims the tabpanel role', await page.locator('.page[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 16);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 17);
 
   // 7. Opening a report from a link renders it once, not twice.
   await openLink('tab-dashboard');

@@ -247,7 +247,7 @@
 
         <section class="card" id="sec-ticks">
           <div class="card__head">
-            <h2>Edit Timeline</h2>
+            <h2>Timeline</h2>
             <span class="hint tl-range" id="tick-start-label">&mdash;</span>
             <button type="button" class="btn btn-small btn-primary no-print" data-action="open-tasks">Open Task Tracker &rarr;</button>
           </div>
@@ -280,6 +280,44 @@
             </table>
           </div>
           <p class="hint" id="tick-empty" hidden>No tasks yet. Add one on the Task Tracker and it appears here.</p>
+        </section>
+
+        <section class="card" id="sec-gantt">
+          <div class="card__head">
+            <h2>Gantt</h2>
+            <span class="hint gantt-method" id="gantt-method"></span>
+          </div>
+          <p class="hint">The project&rsquo;s lifecycle as activities with their own dates, kept apart from the tasks: moving a phase moves the plan, not forty tasks. Drag a bar to move it, drag either end to change a date, or type the dates in.</p>
+          <div class="gantt-empty" id="gantt-empty" hidden>
+            <p id="gantt-empty-text"></p>
+            <div class="gantt-empty__choose" id="gantt-empty-choose" hidden>
+              <label class="field-label">Lifecycle
+                <select class="field-input" id="gantt-lifecycle"></select>
+              </label>
+            </div>
+            <button type="button" class="btn btn-primary btn-small no-print" data-gantt="layout">Lay out the phases</button>
+          </div>
+          <div class="gantt-toolbar no-print" id="gantt-toolbar">
+            <label class="field-label gantt-toolbar__phase">Phase
+              <select class="field-input" id="gantt-add-phase" aria-label="Phase for the new activity"></select>
+            </label>
+            <button type="button" class="btn btn-small" data-gantt="add">+ Add activity</button>
+            <button type="button" class="btn btn-small btn-ghost" data-gantt="relayout">Lay out again</button>
+          </div>
+          <p class="tl-live" id="gantt-live" aria-live="polite"></p>
+          <p class="sr-only" id="gantt-keys">Left and right arrows move the activity a day. Shift with an arrow changes the end date, Alt with an arrow the start date.</p>
+          <div class="gantt" id="gantt">
+            <div class="gantt__head" aria-hidden="true">
+              <span class="gantt__col-phase"></span>
+              <span class="gantt__col-name">Activity</span>
+              <span class="gantt__col-date">Start</span>
+              <span class="gantt__col-date">End</span>
+              <span class="gantt__col-done">Done %</span>
+              <span class="gantt__col-act"></span>
+              <div class="gantt__scale" id="gantt-scale"></div>
+            </div>
+            <div class="gantt__body" id="gantt-body"></div>
+          </div>
         </section>
 
         <section class="card" id="sec-budget">
@@ -2428,6 +2466,11 @@
       <div class="panel__section">
         <h3>New project</h3>
         <div class="template-grid" id="template-grid"></div>
+        <label class="field-label field-label--block" for="new-project-lifecycle">Lifecycle (required)
+          <select class="field-input" id="new-project-lifecycle" required aria-required="true" aria-describedby="new-project-lifecycle-hint"></select>
+        </label>
+        <p class="hint" id="new-project-lifecycle-hint">How the project is run. It decides the phases the Gantt on the Plan page is laid out with; a template that already follows one picks it for you.</p>
+        <p class="field-error" id="new-project-lifecycle-error" role="alert" hidden>Choose a lifecycle to create the project.</p>
         <label class="field-label field-label--block">Project name
           <input type="text" class="field-input" id="new-project-name" placeholder="Leave blank to use the template's name">
         </label>

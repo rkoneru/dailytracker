@@ -7,7 +7,7 @@
 // part that is genuinely its own — the derived counters, the ref prefixes, and
 // the vocabulary each one offers.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -227,6 +227,7 @@ const { eq, done } = createChecks();
   await page.click('#btn-projects');
   await page.waitForTimeout(400);
   await page.check('#template-software');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(900);
   await page.click('#tab-service');

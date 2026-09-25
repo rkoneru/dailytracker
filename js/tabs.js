@@ -30,7 +30,8 @@ const KEY = 'projectPlannerPageTab_v1';
 export const PAGE_TABS = {
   'page-planner': [
     { id: 'sec-milestones', label: 'Milestones', sections: ['sec-method', 'sec-milestones'] },
-    { id: 'sec-ticks', label: 'Edit Timeline' },
+    { id: 'sec-ticks', label: 'Timeline' },
+    { id: 'sec-gantt', label: 'Gantt' },
     { id: 'sec-budget', label: 'Budget & Baseline' },
     { id: 'sec-notes', label: 'Notes' },
   ],

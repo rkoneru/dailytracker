@@ -99,4 +99,13 @@ async function openSection(page, sectionId) {
   }
 }
 
-module.exports = { ROOT, findChromium, APP_URL, SW_URL, API_URL, TMP, SW_COPY, OUT, out, launch, createChecks, openSection };
+/**
+ * A new project needs a lifecycle. A template that follows one proposes it in
+ * the Projects panel; for the rest, a suite that is not about lifecycles takes
+ * the general one, the way a person creating a plain project would.
+ */
+async function chooseLifecycle(page, id = 'project') {
+  if (!(await page.inputValue('#new-project-lifecycle'))) await page.selectOption('#new-project-lifecycle', id);
+}
+
+module.exports = { ROOT, findChromium, APP_URL, SW_URL, API_URL, TMP, SW_COPY, OUT, out, launch, createChecks, openSection, chooseLifecycle };

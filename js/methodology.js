@@ -39,6 +39,7 @@
  */
 const CRISP_DM = {
   id: 'crisp-dm',
+  ai: true,
   kind: 'lifecycle',
   label: 'CRISP-DM',
   full: 'Cross-Industry Standard Process for Data Mining',
@@ -92,6 +93,7 @@ const CRISP_DM = {
  */
 const CPMAI = {
   id: 'cpmai',
+  ai: true,
   kind: 'lifecycle',
   label: 'CPMAI',
   full: 'Cognitive Project Management for AI',
@@ -141,6 +143,7 @@ const CPMAI = {
  */
 const MLOPS = {
   id: 'mlops',
+  ai: true,
   kind: 'practice',
   label: 'MLOps',
   full: 'Machine learning operations',
@@ -190,6 +193,7 @@ const MLOPS = {
  */
 const LLMOPS = {
   id: 'llmops',
+  ai: true,
   kind: 'practice',
   label: 'LLMOps',
   full: 'Large language model operations',
@@ -241,6 +245,7 @@ const LLMOPS = {
  */
 const SDLC = {
   id: 'sdlc',
+  ai: false,
   kind: 'lifecycle',
   label: 'SDLC',
   full: 'Software Development Life Cycle',
@@ -294,6 +299,7 @@ const SDLC = {
  */
 const ADLC = {
   id: 'adlc',
+  ai: true,
   kind: 'lifecycle',
   label: 'ADLC',
   full: 'AI Development Life Cycle',
@@ -346,6 +352,7 @@ const ADLC = {
  */
 const AGENTIC_DLC = {
   id: 'agentic-dlc',
+  ai: true,
   kind: 'lifecycle',
   label: 'Agentic DLC',
   full: 'Agentic Development Life Cycle',
@@ -385,7 +392,56 @@ const AGENTIC_DLC = {
   ],
 };
 
-export const METHODOLOGIES = [CPMAI, CRISP_DM, SDLC, ADLC, AGENTIC_DLC, MLOPS, LLMOPS];
+/**
+ * The general project lifecycle — the five phases every project passes through
+ * whether or not there is software or data in it. It is here because a
+ * lifecycle is chosen for every project now, when it is created, and a
+ * marketing campaign or an office move forced into SDLC's phases would be
+ * measured against gates that do not describe the work. The phases follow the
+ * PMI process groups; Monitoring & Controlling runs alongside Executing rather
+ * than after it, and the Gantt it lays out shows them overlapping for that
+ * reason.
+ */
+const PROJECT_LIFECYCLE = {
+  id: 'project',
+  ai: false,
+  kind: 'lifecycle',
+  label: 'Project Lifecycle',
+  full: 'General Project Lifecycle',
+  origin: 'The five process groups of the PMI project lifecycle, used by most project methods in some form.',
+  suits: 'Any project with a start, an outcome and an end — campaigns, events, transitions, internal change.',
+  phases: [
+    {
+      id: 'initiating', n: 'I', label: 'Initiating',
+      asks: 'Why are we doing this, for whom, and what does done look like?',
+      gate: 'A sponsor, an objective in the organisation’s own terms, and agreement to proceed.',
+    },
+    {
+      id: 'planning', n: 'II', label: 'Planning',
+      asks: 'What is the scope, the schedule, the budget and who does what?',
+      gate: 'A baselined plan the sponsor has signed off, with the risks named.',
+    },
+    {
+      id: 'executing', n: 'III', label: 'Executing',
+      asks: 'Is the work being done, by the people planned, to the standard agreed?',
+      gate: 'The deliverables produced and handed to whoever accepts them.',
+    },
+    {
+      id: 'monitoring', n: 'IV', label: 'Monitoring & Controlling', alongside: 'executing',
+      asks: 'Are we where the plan says we should be, and if not, what changes?',
+      gate: 'Variances explained and changes approved rather than absorbed.',
+    },
+    {
+      id: 'closing', n: 'V', label: 'Closing',
+      asks: 'Was it accepted, what did we learn, and is everything handed over?',
+      gate: 'Formal acceptance, lessons recorded, and the team released.',
+    },
+  ],
+};
+
+// The general lifecycle first: it is the right answer for most projects, and
+// the AI and software lifecycles are the specialisations.
+export const METHODOLOGIES = [PROJECT_LIFECYCLE, CPMAI, CRISP_DM, SDLC, ADLC, AGENTIC_DLC, MLOPS, LLMOPS];
 
 export function findMethod(id) {
   return METHODOLOGIES.find((m) => m.id === id) || null;

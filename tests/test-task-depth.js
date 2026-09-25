@@ -6,7 +6,7 @@
 // maths is tested on its own in test-critical.mjs; this is about whether the
 // screen tells the truth about it.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -25,6 +25,7 @@ const { eq, done } = createChecks();
   await page.click('#btn-projects');
   await page.waitForTimeout(400);
   await page.check('#template-transition');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(1200);
   await page.click('#tab-tasks');

@@ -75,7 +75,8 @@ export const NAV_TREE = [
         title: 'Plan',
         children: [
           { id: 'nav-milestones', label: 'Milestones', page: 'page-planner', title: 'Plan', section: 'sec-milestones' },
-          { id: 'nav-ticks', label: 'Edit Timeline', page: 'page-planner', title: 'Plan', section: 'sec-ticks' },
+          { id: 'nav-ticks', label: 'Timeline', page: 'page-planner', title: 'Plan', section: 'sec-ticks' },
+          { id: 'nav-gantt', label: 'Gantt', page: 'page-planner', title: 'Plan', section: 'sec-gantt' },
           { id: 'nav-budget', label: 'Budget & Baseline', page: 'page-planner', title: 'Plan', section: 'sec-budget' },
           { id: 'nav-notes', label: 'Notes', page: 'page-planner', title: 'Plan', section: 'sec-notes' },
         ],

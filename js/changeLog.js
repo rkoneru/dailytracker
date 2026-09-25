@@ -54,6 +54,7 @@ const SCALAR_FORMAT = {
 const COLLECTIONS = {
   dashTasks: { noun: 'Task', watch: { status: 'status', end: 'due date', assigned: 'owner' }, name: ['name'] },
   milestones: { noun: 'Milestone', watch: { due: 'due date', done: 'completion' }, name: ['text'] },
+  ganttActivities: { noun: 'Gantt activity', watch: { start: 'start', end: 'end' }, name: ['name'] },
   raid: { noun: 'RAID item', watch: { status: 'status', severity: 'severity', owner: 'owner' }, name: ['title'] },
   deliverables: {
     noun: 'Deliverable',

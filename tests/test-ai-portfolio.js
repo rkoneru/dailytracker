@@ -6,7 +6,7 @@
 // practice are told apart correctly, and that the counts agree with what
 // methodology.js and raid.js would say directly.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -35,6 +35,7 @@ const { APP_URL, launch, createChecks } = require('./harness');
     await page.click('#btn-projects');
     await page.waitForTimeout(400);
     await page.check(`#template-${template}`);
+    await chooseLifecycle(page);
     await page.click('#btn-create-project');
     await page.waitForTimeout(700);
   };

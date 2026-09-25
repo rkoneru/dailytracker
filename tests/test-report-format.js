@@ -5,7 +5,7 @@
 // whichever cadence you open. A format that drifts between cadences is the
 // thing a house style exists to prevent, and it drifts one renderer at a time.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 const TYPES = ['daily', 'weekly', 'steerco', 'executive'];
@@ -27,6 +27,7 @@ const TYPES = ['daily', 'weekly', 'steerco', 'executive'];
   await page.click('#btn-projects');
   await page.waitForTimeout(500);
   await page.check('#template-transition');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(1400);
   await page.click('#tab-reports');
@@ -141,6 +142,7 @@ const TYPES = ['daily', 'weekly', 'steerco', 'executive'];
   await page.waitForTimeout(500);
   await page.check('#template-blank');
   await page.fill('#new-project-name', 'Empty');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(1200);
   await page.click('#tab-reports');

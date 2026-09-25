@@ -6,7 +6,7 @@
 // whether or not they have a number, that an unmeasured one says what would
 // fill it in, and that the page follows the data when the data changes.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -68,6 +68,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await page.click('#btn-projects');
   await page.waitForTimeout(400);
   await page.check('#template-blank');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(900);
   await page.click('#tab-kpis .nav-row__label');

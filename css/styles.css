@@ -437,6 +437,8 @@ main { padding: 20px clamp(14px, 2vw, 44px) 64px; }
   letter-spacing: 0.03em;
 }
 .field-label--block { display: flex; width: 100%; margin-top: 10px; }
+.field-error { margin: 4px 0 0; font-size: 12px; font-weight: 600; color: var(--color-danger-text); }
+.field-input[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
 /* The label is small caps-style text; what someone typed inside it is not. */
 .field-label .editable {
   text-transform: none;
@@ -1610,7 +1612,7 @@ body { overflow-anchor: none; }
 .sync-pill.is-error { color: var(--color-danger-text); }
 .sync-pill.is-signed-out { color: var(--color-text-muted); }
 
-/* ---------- Edit Timeline ---------- */
+/* ---------- Timeline ---------- */
 
 .tl-range { font-variant-numeric: tabular-nums; }
 .tl-toolbar {
@@ -5544,7 +5546,7 @@ body.login-open { overflow: hidden; }
    (data-label, written by js/tableLabels.js from the table's own header).
    Squeezing fifteen columns into 360px cut names to three letters, and
    scrolling sideways hid the columns that matter behind the ones that don't.
-   The Edit Timeline is a grid of days, not a list of fields, so it stays. */
+   The Timeline is a grid of days, not a list of fields, so it stays. */
 @media (max-width: 600px) {
   /* !important because several tables pin a desktop width by id
      (#raid-table is 1400px), which would otherwise outrank this. */
@@ -5601,4 +5603,161 @@ body.login-open { overflow: hidden; }
   table.data-table:not(.tick-table) td textarea { width: 100% !important; min-width: 0 !important; }
   table.data-table:not(.tick-table) .col-drag { display: none; }
   table.data-table:not(.tick-table) .col-action { justify-content: flex-end; }
+}
+
+/* ---------- Gantt (lifecycle activities) ---------- */
+
+.gantt-method { font-weight: 600; }
+.gantt-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 10px; margin: 8px 0 4px; }
+.gantt-toolbar__phase { min-width: 220px; }
+.gantt-empty {
+  margin: 10px 0;
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+.gantt-empty p { margin: 0 0 10px; }
+.gantt-empty__choose { margin-bottom: 10px; max-width: 320px; }
+
+/* One grid for the header and every row, so the columns cannot drift apart. */
+.gantt {
+  --gantt-cols: 34px minmax(150px, 1.2fr) 136px 136px 64px 36px minmax(320px, 3fr);
+  --gantt-today: -10%;
+  --gantt-week: 100%;
+  --gantt-week-offset: 0%;
+  overflow-x: auto;
+}
+.gantt__head, .gantt-row {
+  display: grid;
+  grid-template-columns: var(--gantt-cols);
+  align-items: center;
+  gap: 0 8px;
+  min-width: 1000px;
+}
+.gantt__head {
+  padding: 4px 0 6px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.gantt__scale { position: relative; height: 18px; }
+.gantt__month {
+  position: absolute;
+  top: 0;
+  padding-left: 4px;
+  border-left: 1px solid var(--color-border);
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text);
+}
+
+.gantt-row { padding: 5px 0; border-bottom: 1px solid var(--color-border); }
+/* A new phase starts with a heavier rule, so the groups read without headers. */
+.gantt-row.is-phase-start:not(:first-child) { border-top: 2px solid var(--color-border); }
+.gantt-row__phase {
+  justify-self: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.gantt-row__phase.is-repeat { background: none; }
+.gantt-row__phase.is-orphan { background: var(--color-bg); color: var(--color-text-muted); }
+.gantt-row .field-input { min-height: 34px; padding: 4px 8px; font-size: 13px; }
+.gantt-row__name { font-weight: 600; }
+.gantt-row__done { text-align: right; }
+
+.gantt-row__track {
+  position: relative;
+  height: 34px;
+  border-radius: 8px;
+  background-image: repeating-linear-gradient(90deg, var(--color-border) 0 1px, transparent 1px var(--gantt-week));
+  background-position-x: var(--gantt-week-offset);
+}
+.gantt-row__track::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: var(--gantt-today);
+  width: 2px;
+  background: rgba(239, 68, 68, 0.55);
+  pointer-events: none;
+}
+.gantt-row__undated { font-size: 12px; color: var(--color-text-muted); line-height: 34px; padding-left: 6px; }
+
+.gantt-bar {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  min-width: 6px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ddd6fe;
+  box-shadow: inset 0 0 0 1px rgba(109, 74, 235, 0.35);
+  cursor: grab;
+  touch-action: none;
+}
+.gantt-bar__done { position: absolute; inset: 0 auto 0 0; background: var(--color-primary); pointer-events: none; }
+.gantt-row.is-practice .gantt-bar { background: #e0f2fe; box-shadow: inset 0 0 0 1px rgba(3, 105, 161, 0.35); }
+.gantt-row.is-practice .gantt-bar__done { background: #0284c7; }
+.gantt-row.is-orphan .gantt-bar { background: var(--color-bg); box-shadow: inset 0 0 0 1px var(--color-border); }
+.gantt-row.is-orphan .gantt-bar__done { background: #94a3b8; }
+.gantt-bar:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.gantt-bar.is-dragging { cursor: grabbing; opacity: 0.85; }
+.gantt-bar__handle { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; z-index: 1; }
+.gantt-bar__handle--start { left: 0; }
+.gantt-bar__handle--end { right: 0; }
+.gantt-bar__handle::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: #fff;
+  opacity: 0;
+}
+.gantt-row:hover .gantt-bar__handle::after { opacity: 0.9; }
+@media (hover: none) {
+  .gantt-bar__handle { width: 14px; }
+  .gantt-bar__handle::after { opacity: 0.9; }
+}
+
+@media screen and (prefers-color-scheme: dark) {
+  .gantt-bar { background: rgba(167, 139, 250, 0.28); }
+  .gantt-row.is-practice .gantt-bar { background: rgba(56, 189, 248, 0.22); }
+  .gantt-row.is-practice .gantt-bar__done { background: #38bdf8; }
+}
+
+/* On a phone an activity is a card: its name and phase, its dates, then its
+   bar across the full width — the chart still fits the screen, never scrolls. */
+@media (max-width: 600px) {
+  .gantt__head { display: none; }
+  .gantt-row {
+    min-width: 0;
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) 64px 36px;
+    grid-template-areas: 'phase name name name act' 'start start end done done' 'track track track track track';
+    gap: 6px 8px;
+    padding: 10px 0;
+  }
+  .gantt-row__phase { grid-area: phase; }
+  .gantt-row__name { grid-area: name; }
+  .gantt-row [data-field="start"] { grid-area: start; }
+  .gantt-row [data-field="end"] { grid-area: end; }
+  .gantt-row__done { grid-area: done; }
+  .gantt-row [data-gantt="delete"] { grid-area: act; }
+  .gantt-row__track { grid-area: track; }
 }

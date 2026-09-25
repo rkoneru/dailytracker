@@ -54,7 +54,8 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/login.js`, `demoAccounts.js` | the sign-in screen and the five invented people behind it |
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
 | `js/kpi.js`, `kpiPage.js` | the 20 project indicators |
-| `js/methodology.js` | CPMAI, CRISP-DM, MLOps, LLMOps as data; phase progress derived from milestones |
+| `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
+| `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks |
 | `js/zip.js`, `pptx.js`, `reportDeck.js` | slide export, written by hand |
 | `js/dates.js` | local calendar dates and the one display formatter. Never `toISOString()` for a day |
 | `js/tableLabels.js` | labels every data table's cells and fields from its header: phone cards and screen-reader names |
@@ -104,6 +105,12 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   capabilities you have or do not. The UI numbers the first and refuses to number
   the second, because numbering a practice asserts a sequence that does not
   exist. `kind` on each entry in `methodology.js` is what decides.
+- **Every new project has a lifecycle.** It is required in the Projects panel and
+  `createProject` throws without one; the Gantt is laid out from it. Projects saved
+  before the rule can have `methodology: ''`, and the Plan page asks for one.
+- **The Gantt and the tasks are separate on purpose.** `ganttActivities` is its own
+  synced collection; moving a phase never moves a task, and a task slipping never
+  redraws the plan.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

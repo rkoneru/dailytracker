@@ -7,6 +7,7 @@ import { offerUndo, offerUndoAction } from './trash.js';
 import { notifyProjectDataChanged, isOverdue, clampProgress } from './taskModel.js';
 import { el } from './dom.js';
 import { onSectionShown } from './tabs.js';
+import { initGantt, renderGantt } from './gantt.js';
 import { refFor } from './register.js';
 import { METHODOLOGIES, methodOf, phasesOf, phaseProgress, sanitisePhase } from './methodology.js';
 import { toLocalISO, formatDate } from './dates.js';
@@ -68,7 +69,9 @@ function renderMethod() {
 
   const picker = document.getElementById('method-select');
   if (picker.dataset.built !== 'yes') {
-    picker.appendChild(el('option', { value: '', text: '— no method —' }));
+    // Only an older project arrives without one; a new project chose it when
+    // it was created, so the blank is a prompt and cannot be chosen back.
+    picker.appendChild(el('option', { value: '', text: 'Choose a lifecycle…', disabled: true }));
     // Short enough to fit the closed control, and the kind is the useful part
     // when choosing: the full name and where it came from are in the line
     // underneath, where there is room for them.
@@ -80,8 +83,9 @@ function renderMethod() {
 
   document.getElementById('method-blurb').textContent = method
     ? `${method.full}. ${method.origin} ${method.suits}`
-    : 'How this project is run. Optional, and most projects do not need one — '
-      + 'it earns its place on AI and data work, where the order of the phases is the argument.';
+    : 'How this project is run. It sets the phases the Gantt is laid out with, and on AI '
+      + 'and data work the order of those phases is the argument. This project predates the '
+      + 'choice being required — pick one here.';
 
   document.getElementById('method-empty').hidden = !!method;
   document.getElementById('milestone-phase-head').hidden = !method;
@@ -113,6 +117,8 @@ function bindMethod() {
     scheduleSave();
     renderMethod();
     renderMilestones();
+    // The Gantt is laid out by phase, so it follows the method it is drawn in.
+    renderGantt();
   });
 }
 
@@ -254,7 +260,7 @@ function bindMilestones() {
   });
 }
 
-// ---------- Edit Timeline ----------
+// ---------- Timeline ----------
 //
 // A row per task, drawn from its start and end — the same two fields the Task
 // Tracker edits — so there is one home for when a task runs and the two pages
@@ -824,6 +830,7 @@ export function renderPlanner() {
   renderMethod();
   renderMilestones();
   renderTicks();
+  renderGantt();
   renderBaselineNote();
   renderNotes();
 }
@@ -834,6 +841,7 @@ export function initPlanner() {
   bindMilestones();
   bindOpenTasks();
   bindTicks();
+  initGantt({ onMethodChange: () => { renderMethod(); renderMilestones(); } });
   onSectionShown((pageId, ids) => {
     if (pageId === 'page-planner' && ids.includes('sec-ticks') && ticksStale) renderTicks();
   });

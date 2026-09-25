@@ -1,4 +1,4 @@
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 const acceptDialog = async (page) => {
@@ -81,6 +81,7 @@ const acceptDialog = async (page) => {
   await page.click('#btn-projects');
   await page.waitForTimeout(400);
   await page.check('#template-software');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(600);
   await page.click('#btn-projects');

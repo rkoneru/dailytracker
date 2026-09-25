@@ -21,7 +21,7 @@ export const PRIORITY_COLORS = { High: '#ef4444', Medium: '#f59e0b', Low: '#22c5
 
 /**
  * Late means unfinished and past its end date. Derived, never stored: the
- * Task Tracker, the Board and the Edit Timeline all colour a task by this,
+ * Task Tracker, the Board and the Timeline all colour a task by this,
  * so it lives here rather than in any one of them.
  */
 export function isOverdue(task, today) {

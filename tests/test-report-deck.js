@@ -5,7 +5,7 @@
 // every report type produces one, that it is named for what it is, and that
 // building it never throws on a project with nothing in it.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -56,6 +56,7 @@ const os = require('os');
   await page.click('#btn-projects');
   await page.waitForTimeout(400);
   await page.check('#template-blank');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(900);
   const blank = await grab('weekly');

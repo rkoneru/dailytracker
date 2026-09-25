@@ -4,6 +4,7 @@ import { REGISTER_KEYS, LEGACY_REGISTER_KEYS, CHARTER_FIELDS } from './registerD
 import { newResource, resourceIdFor } from './resourceModel.js';
 import { snapshotOf, diffSnapshots } from './changeLog.js';
 import { sanitiseMethodology, sanitisePhase } from './methodology.js';
+import { layOut, sanitiseActivity } from './ganttModel.js';
 import { todayISO, toLocalISO } from './dates.js';
 
 const STORAGE_KEY = 'projectPlannerStore_v2';
@@ -40,7 +41,7 @@ function earliestStart(data) {
 
 /**
  * The old tick grid kept its own day numbers beside each task's dates. The
- * Edit Timeline now draws only from start/end, so a task that was ticked but
+ * Timeline now draws only from start/end, so a task that was ticked but
  * never dated gets the dates its ticks meant rather than vanishing from the
  * timeline. Tasks that already have dates keep them: those were always the
  * ones every other page believed. With no saved anchor, day 1 was the
@@ -248,6 +249,11 @@ function migrateProject(data) {
   (data.milestones || []).forEach((m) => {
     m.phase = sanitisePhase(data.methodology, m.phase);
   });
+  // The lifecycle Gantt (js/ganttModel.js): its own rows, not the tasks. An
+  // activity whose phase is not in the method in force is kept, not dropped —
+  // it is somebody's plan, and the Gantt shows it apart until it is moved.
+  if (!Array.isArray(data.ganttActivities)) data.ganttActivities = [];
+  data.ganttActivities = data.ganttActivities.map(sanitiseActivity);
   // The change log is per project and append-only; projects made before it
   // existed simply start empty rather than inventing a history.
   if (!Array.isArray(data.changeLog)) data.changeLog = [];
@@ -354,6 +360,7 @@ function emitTrashChanged() {
 const TRASH_LABELS = {
   milestones: 'Milestone',
   dashTasks: 'Task',
+  ganttActivities: 'Gantt activity',
   notes: 'Note',
   raid: 'RAID entry',
   roster: 'Team member',
@@ -849,6 +856,14 @@ function emitProjectsChanged() {
   projectsChangeListeners.forEach((fn) => fn());
 }
 
+const templateMethods = new Map();
+
+/** The lifecycle a template follows, or '' — read off a build, and remembered. */
+export function templateMethodology(key) {
+  if (!templateMethods.has(key)) templateMethods.set(key, findTemplate(key).build().methodology || '');
+  return templateMethods.get(key);
+}
+
 export function listTemplates() {
   return TEMPLATES.map(({ key, category, label, description }) => ({ key, category, label, description }));
 }
@@ -901,9 +916,22 @@ export function switchProject(id) {
   emitProjectsChanged();
 }
 
-export function createProject({ name, templateKey } = {}) {
+/**
+ * A new project, from a template, run by the lifecycle chosen for it.
+ *
+ * The lifecycle is required, and refused rather than defaulted when it is
+ * missing or unknown: it decides what the Gantt lays out, and a project quietly
+ * given one nobody picked would be planned against phases nobody chose.
+ */
+export function createProject({ name, templateKey, methodology } = {}) {
+  if (!sanitiseMethodology(methodology)) throw new Error('Choose a lifecycle for the project.');
   const s = getStore();
   const project = buildProjectFromTemplate(templateKey, name);
+  if (project.methodology !== methodology) {
+    project.methodology = methodology;
+    project.milestones.forEach((m) => { m.phase = sanitisePhase(methodology, m.phase); });
+  }
+  project.ganttActivities = layOut(project, undefined, uid);
   s.projects[project.id] = project;
   // A template still ships the old roster shape; folding it into the pool has
   // to happen as the project appears, or the people on it would be invisible
@@ -935,7 +963,7 @@ export function createProject({ name, templateKey } = {}) {
  */
 function regenerateRowIds(project) {
   const collections = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog',
-    'allocations', 'timesheets', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
+    'allocations', 'timesheets', 'ganttActivities', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
 
   const remap = new Map();
   collections.forEach((key) => {

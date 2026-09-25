@@ -34,6 +34,8 @@ export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog
   // follow-ups and transcript nested inside it, so the whole minute travels
   // as a unit rather than as six collections that can half-arrive.
   'meetings',
+  // The lifecycle Gantt's activities — their own rows, not the tasks'.
+  'ganttActivities',
   ...REGISTER_KEYS];
 
 // Fields the app keeps locally that must never be pushed to the server.

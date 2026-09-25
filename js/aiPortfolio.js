@@ -4,7 +4,8 @@
 // There is no separate "is this an AI project" flag to maintain and no model
 // or agent registry to keep in sync — a project is on this page because it
 // named a methodology, and methodology.js already says whether that
-// methodology is an AI one (SDLC is the one lifecycle here that is not).
+// methodology is an AI one (its `ai` flag: SDLC and the general project
+// lifecycle are the two that are not).
 // Phase progress, RAID counts and RAG all come from the same functions the
 // Plan page and the RAID log already use, so a number here can't say
 // something different from the page that owns it.
@@ -18,11 +19,11 @@ let onGo = null;
 
 const RAG_TONE = { 'ON TRACK': 'is-good', 'AT RISK': 'is-warn', 'OFF TRACK': 'is-bad' };
 
-/** A project is an AI initiative here if it names any methodology but SDLC. */
+/** A project is an AI initiative here if its methodology is an AI one. */
 function aiProjects() {
   return listFullProjects()
     .map((p) => ({ project: p, method: methodOf(p) }))
-    .filter(({ method }) => method && method.id !== 'sdlc');
+    .filter(({ method }) => method && method.ai);
 }
 
 function summarise({ project, method }) {

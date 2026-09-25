@@ -15,6 +15,7 @@ import { mountRegisters, renderAll, renderRosterOptions } from './register.js';
 import { SCOPE_REGISTERS, PEOPLE_REGISTERS, CHARTER_FIELDS } from './registerDefs.js';
 import { KEY_ROLES, utilisation } from './resourceModel.js';
 import { notifyProjectDataChanged } from './taskModel.js';
+import { priorityOf, priorityLabel, SCORE_MIN, SCORE_MAX } from './priority.js';
 
 // ---------- Charter ----------
 
@@ -24,7 +25,20 @@ function renderCharter() {
   const state = getState();
   host.innerHTML = '';
 
+  const scores = el('div', { class: 'charter-scores charter-field--wide' });
   CHARTER_FIELDS.forEach((f) => {
+    if (f.score) {
+      const options = [el('option', { value: '', text: 'Not scored' })];
+      for (let n = SCORE_MIN; n <= SCORE_MAX; n += 1) options.push(el('option', { value: String(n), text: String(n) }));
+      const select = el('select', { class: 'field-input charter-field__input', 'data-field': f.field }, options);
+      select.value = String(state[f.field] || '');
+      scores.appendChild(el('label', { class: 'charter-field' }, [
+        el('span', { class: 'charter-field__label', text: f.label }),
+        select,
+        el('span', { class: 'charter-field__hint', text: f.hint }),
+      ]));
+      return;
+    }
     const input = f.long
       ? el('textarea', {
         class: 'field-input charter-field__input',
@@ -40,11 +54,27 @@ function renderCharter() {
         value: state[f.field] || '',
       });
 
-    host.appendChild(el('label', { class: `charter-field ${f.long ? 'charter-field--wide' : ''}` }, [
+    host.appendChild(el('label', { class: `charter-field ${f.long || f.wide ? 'charter-field--wide' : ''}` }, [
       el('span', { class: 'charter-field__label', text: f.label }),
       input,
     ]));
+    // The scores sit together straight after the objective they justify.
+    if (f.field === 'charterObjective') host.appendChild(scores);
   });
+  scores.appendChild(el('div', { class: 'charter-field charter-priority' }, [
+    el('span', { class: 'charter-field__label', text: 'Priority' }),
+    el('output', { id: 'charter-priority', class: 'charter-priority__value' }),
+    el('span', { class: 'charter-field__hint', text: '(value + fit) ÷ effort, worked out' }),
+  ]));
+  renderPriority();
+}
+
+function renderPriority() {
+  const out = document.getElementById('charter-priority');
+  if (!out) return;
+  const priority = priorityOf(getState());
+  out.textContent = priorityLabel(priority);
+  out.className = `charter-priority__value ${priority ? `is-${priority.band.toLowerCase()}` : 'is-unscored'}`;
 }
 
 function bindCharter() {
@@ -53,6 +83,15 @@ function bindCharter() {
     const field = e.target.dataset.field;
     if (!field) return;
     getState()[field] = e.target.value;
+    renderPriority();
+    scheduleSave();
+  });
+  // A select reports through `change`, and nothing here re-renders the grid,
+  // so listening to both cannot drop an edit in progress.
+  host.addEventListener('change', (e) => {
+    if (e.target.tagName !== 'SELECT' || !e.target.dataset.field) return;
+    getState()[e.target.dataset.field] = e.target.value;
+    renderPriority();
     scheduleSave();
   });
 }

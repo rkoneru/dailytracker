@@ -28,12 +28,12 @@ const { eq, done } = createChecks();
   await page.click('#tab-scope');
   await page.waitForTimeout(600);
   eq('scope & contract', await page.$$eval('#page-scope .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Charter', 'Deliverables', 'Change Requests (Scope, Time, Cost)']);
+     ['Charter', 'Deliverables', 'Change Requests (Scope, Time, Cost)', 'Documents (Repository Index)']);
 
   await page.click('#tab-people');
   await page.waitForTimeout(600);
   eq('people & stakeholders', await page.$$eval('#page-people .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Team Roster', 'Who Does What (RACI)', 'Stakeholders', 'Communications Plan']);
+     ['Team Roster', 'Who Does What (RACI)', 'Stakeholders', 'Communications Plan', 'Vendors & Suppliers']);
 
   await page.click('#tab-service');
   await page.waitForTimeout(600);
@@ -272,7 +272,8 @@ const { eq, done } = createChecks();
   await page.click('#tab-scope');
   await page.waitForTimeout(600);
   await openSection(page, 'sec-charter');
-  eq('every charter field is rendered', await page.locator('#charter-fields .charter-field').count(), 7);
+  // Eleven fields, plus the priority worked out from three of them.
+  eq('every charter field is rendered', await page.locator('#charter-fields .charter-field').count(), 12);
   await page.fill('#charter-fields [data-field="charterScopeOut"]', 'Anything outside the UK market.');
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: 'networkidle' });

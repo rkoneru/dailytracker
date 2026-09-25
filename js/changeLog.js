@@ -35,6 +35,10 @@ const SCALARS = {
   charterScopeOut: 'Charter — out of scope',
   charterSuccess: 'Charter — success criteria',
   charterSponsor: 'Charter — sponsor',
+  charterObjective: 'Charter — strategic objective',
+  charterValue: 'Charter — business value',
+  charterFit: 'Charter — strategic fit',
+  charterEffort: 'Charter — effort',
 };
 
 /**
@@ -67,6 +71,8 @@ const COLLECTIONS = {
     watch: { status: 'status', decidedBy: 'approver', scheduleImpact: 'schedule impact', costImpact: 'cost impact' },
     name: ['title'],
   },
+  documents: { noun: 'Document', watch: { status: 'status', version: 'version', link: 'location' }, name: ['title'] },
+  vendors: { noun: 'Vendor', watch: { status: 'status', end: 'contract end', performance: 'performance' }, name: ['name'] },
   serviceLevels: { noun: 'Service level', watch: { status: 'status', target: 'target', actual: 'actual' }, name: ['metric', 'service'] },
   sac: { noun: 'Acceptance criterion', watch: { status: 'status', evidence: 'evidence' }, name: ['criterion'] },
   releases: { noun: 'Release', watch: { status: 'status', windowStart: 'window' }, name: ['name'] },

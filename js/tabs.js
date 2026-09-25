@@ -57,11 +57,13 @@ export const PAGE_TABS = {
     { id: 'sec-charter', label: 'Charter' },
     { id: 'sec-deliverables', label: 'Deliverables' },
     { id: 'sec-change-requests', label: 'Change Requests' },
+    { id: 'sec-documents', label: 'Documents' },
   ],
   'page-people': [
     { id: 'sec-roster', label: 'Team' },
     { id: 'sec-raci', label: 'Who Does What' },
     { id: 'sec-stakeholders', label: 'Stakeholders & Comms', sections: ['sec-stakeholders', 'sec-comms'] },
+    { id: 'sec-vendors', label: 'Vendors' },
   ],
   'page-service': [
     { id: 'sec-service-levels', label: 'Service Levels' },

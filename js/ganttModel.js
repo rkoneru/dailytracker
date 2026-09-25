@@ -99,6 +99,31 @@ export function orderedActivities(project) {
     .map(({ a }) => a);
 }
 
+/**
+ * Work breakdown codes — phase number, then the activity's place in it: 2.3 is
+ * the third activity of the second phase. Derived from the order on screen and
+ * never stored, so reordering or adding an activity can never leave two rows
+ * claiming the same code.
+ *
+ * Only a lifecycle gets them. A practice's capabilities have no order, and a
+ * code that starts "3." asserts a sequence as surely as a phase number does.
+ * Activities outside the method in force have no phase to be numbered under.
+ */
+export function wbsCodes(project) {
+  const codes = new Map();
+  const method = methodOf(project);
+  if (!method || method.kind !== 'lifecycle') return codes;
+  const phaseNo = new Map(method.phases.map((p, i) => [p.id, i + 1]));
+  const seen = new Map();
+  orderedActivities(project).forEach((a) => {
+    if (!phaseNo.has(a.phase)) return;
+    const n = (seen.get(a.phase) || 0) + 1;
+    seen.set(a.phase, n);
+    codes.set(a.id, `${phaseNo.get(a.phase)}.${n}`);
+  });
+  return codes;
+}
+
 export function activitySpan(activity) {
   const start = parseDate(activity.start) || parseDate(activity.end);
   const end = parseDate(activity.end) || start;

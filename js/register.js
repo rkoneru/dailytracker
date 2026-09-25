@@ -66,6 +66,32 @@ function inputCell(col, value, type) {
   });
 }
 
+/**
+ * A link typed into a register is only ever opened if it is http(s). The
+ * field keeps whatever was typed — it is the person's text — but a
+ * `javascript:` or `data:` address never becomes something to click.
+ */
+export function safeUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function linkOpener(value) {
+  const href = safeUrl(value);
+  return el('a', {
+    class: 'link-open no-print',
+    href: href || '#',
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    text: 'Open ↗',
+    hidden: !href,
+  });
+}
+
 function buildCell(col, row, index, def) {
   const cls = ['register-cell', col.cls].filter(Boolean).join(' ');
 
@@ -95,6 +121,11 @@ function buildCell(col, row, index, def) {
     if (col.max != null) node.max = String(col.max);
     if (col.step != null) node.step = String(col.step);
     return el('td', { class: `${cls} col-num` }, [node]);
+  }
+  if (col.type === 'link') {
+    return el('td', { class: `${cls} col-link` }, [
+      el('div', { class: 'link-cell' }, [inputCell(col, row[col.field], 'url'), linkOpener(row[col.field])]),
+    ]);
   }
   if (col.type === 'person') {
     // A free-text name that offers the roster, rather than a hard select:
@@ -245,6 +276,13 @@ function bindRegister(def, onChanged) {
     const item = findById(rowsOf(def), rowIdOf(e.target));
     if (!item) return;
     item[field] = e.target.value;
+    // The Open link follows the address as it is typed, in place.
+    const opener = e.target.type === 'url' ? e.target.parentElement.querySelector('.link-open') : null;
+    if (opener) {
+      const href = safeUrl(e.target.value);
+      opener.hidden = !href;
+      opener.href = href || '#';
+    }
     if ((def.searchFields || []).includes(field)) applySearch(def);
     commit();
   });

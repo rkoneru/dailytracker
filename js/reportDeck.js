@@ -210,6 +210,7 @@ const TITLES = {
   weekly: 'Weekly Status Report',
   steerco: 'Steering Committee Report',
   executive: 'Executive Leadership Report',
+  closure: 'Project Closure Summary',
 };
 
 /**

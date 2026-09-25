@@ -148,6 +148,19 @@ const SPINE_CHANGE_REQUESTS = (d) => [
   { title: 'Retain full traces for seven years rather than one', raisedBy: d.roleNames.compliance, raised: wk(9), scopeImpact: 'Storage and retrieval for long-lived traces; no change to the agent itself.', scheduleImpact: 0, costImpact: 18000, status: 'Approved', decidedBy: 'Sponsor', decided: wk(11) },
 ];
 
+const SPINE_DOCUMENTS = (d) => [
+  { title: 'Guardrail specification', type: 'Design', link: '', version: 'v0.1', owner: d.roleNames.compliance, status: 'Draft', review: wk(14) },
+  { title: 'Evaluation plan and held-out case set', type: 'Plan', link: '', version: 'v1.0', owner: d.roleNames.engineer, status: 'Approved', review: wk(8) },
+  { title: 'Operations runbook', type: 'Plan', link: '', version: '', owner: d.roleNames.design, status: 'Draft', review: wk(26) },
+];
+
+// Every agentic programme buys its model; that contract is the one vendor they
+// all share, and the one whose terms (retention, training on your data) the
+// guardrail specification has to agree with.
+const SPINE_VENDORS = (d) => [
+  { name: 'Model provider', service: 'Hosted foundation model API, under an enterprise agreement', contract: 'Enterprise agreement', value: 120000, start: wk(0), end: wk(52), owner: d.roleNames.engineer, status: 'Active', performance: 'Not reviewed' },
+];
+
 const SPINE_STAKEHOLDERS = (d) => [
   { name: 'Delivery team', org: 'Internal', role: 'Build and run', influence: 'Medium', interest: 'High', attitude: 'Champion', approach: 'Closest to what the agent actually does. Their disagreements with the eval result are usually right.', owner: d.roleNames.lead },
 ];
@@ -244,6 +257,8 @@ export function agenticSpine(d) {
     raci: [...SPINE_RACI(d), ...(d.raci || [])].map((x) => ({ id: uid('ra'), ...x })),
     stakeholders: [...SPINE_STAKEHOLDERS(d), ...(d.stakeholders || [])].map((x) => ({ id: uid('sh'), ...x })),
     comms: [...SPINE_COMMS(d), ...(d.comms || [])].map((x) => ({ id: uid('cm'), ...x })),
+    documents: [...SPINE_DOCUMENTS(d), ...(d.documents || [])].map((x) => ({ id: uid('doc'), ...x })),
+    vendors: [...SPINE_VENDORS(d), ...(d.vendors || [])].map((x) => ({ id: uid('vn'), ...x })),
     dependencies: [...SPINE_DEPENDENCIES(d), ...(d.dependencies || [])].map((x) => ({ id: uid('dp'), ...x })),
     serviceLevels: [...SPINE_SLA(d), ...(d.serviceLevels || [])].map((x) => ({ id: uid('sl'), ...x })),
     sac: [...SPINE_SAC(d), ...(d.sac || [])].map((x) => ({ verified: '', ...x, id: uid('sa') })),

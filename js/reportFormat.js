@@ -118,11 +118,13 @@ export function bulletBox(title, items, { empty = 'Nothing to report.' } = {}) {
  * name on the left, its owner or date on the right, aligned down the column so
  * the eye can run the list rather than read it.
  */
-export function listBox(title, items, { empty = 'Nothing to report.' } = {}) {
+export function listBox(title, items, { empty = 'Nothing to report.', stacked = false } = {}) {
   return el('div', { class: 'rpt-box' }, [
     el('h3', { class: 'rpt-box__title', text: title.toUpperCase() }),
     items.length
-      ? el('ul', { class: 'rpt-list' }, items.map((item) => el('li', { class: 'rpt-list__row' }, [
+      // Stacked puts the meta under its label, for prose that would otherwise
+      // squeeze the label out of a two-column row.
+      ? el('ul', { class: `rpt-list${stacked ? ' rpt-list--stacked' : ''}` }, items.map((item) => el('li', { class: 'rpt-list__row' }, [
         el('span', { class: 'rpt-list__label', text: item.label }),
         el('span', { class: 'rpt-list__meta', text: item.meta || '' }),
       ])))

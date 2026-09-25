@@ -37,6 +37,10 @@ export function createServiceTransition() {
 
     charterSponsor: 'Helen Ward, COO (client)',
     charterServiceOwner: 'Dev Raman, Service Delivery Manager',
+    charterObjective: 'Cut the cost of running core platforms without losing service quality.',
+    charterValue: '5',
+    charterFit: '4',
+    charterEffort: '4',
     charterBusinessCase: 'The incumbent contract ends on 31 December and will not be renewed. A managed service is forecast to cut run cost by 22% and halve P1 resolution time.',
     charterScopeIn: 'Run, monitor and support the Orders platform and its three integrations. 24x7 P1 cover, business-hours P2 to P4. Knowledge transfer, tooling migration, and the first quarter of continual improvement.',
     charterScopeOut: 'New feature development, the data warehouse, and anything touching the payments gateway — those stay with the client under a separate agreement.',
@@ -152,6 +156,17 @@ export function createServiceTransition() {
       { id: id('dl'), name: 'Knowledge transfer record', type: 'Document', owner: 'Tom Byrne', due: '2026-11-14', acceptance: 'Session log, recordings and a competency check signed by both leads.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
     ],
 
+    documents: [
+      { id: id('doc'), title: 'Master services agreement and service schedule', type: 'Contract', link: '', version: 'v3.0', owner: 'Helen Ward', status: 'Approved', review: '2026-12-01' },
+      { id: id('doc'), title: 'Incumbent exit plan', type: 'Plan', link: '', version: 'v1.2', owner: 'Dev Raman', status: 'Approved', review: '' },
+      { id: id('doc'), title: 'Integration inventory from due diligence', type: 'Design', link: '', version: 'v0.4', owner: 'Dev Raman', status: 'In Review', review: '2026-10-16' },
+    ],
+
+    vendors: [
+      { id: id('vn'), name: 'Incumbent support supplier', service: 'Current run and support, until handover', contract: 'Existing contract, not renewed', value: 42000, start: '2026-01-01', end: '2026-12-31', owner: 'Helen Ward', status: 'Active', performance: 'Below' },
+      { id: id('vn'), name: 'Monitoring tooling vendor', service: 'Observability licences for the new support team', contract: 'PO 7731', value: 9600, start: '2026-10-15', end: '2027-10-14', owner: 'Dev Raman', status: 'Onboarding', performance: 'Not reviewed' },
+    ],
+
     changeRequests: [
       { id: id('cr'), title: 'Support the twelve integrations found in due diligence', raisedBy: 'Dev Raman', raised: '2026-10-06', scopeImpact: 'Adds twelve interfaces to the supported estate, three of which have no documentation at all.', scheduleImpact: 10, costImpact: 34000, status: 'Under Review', decidedBy: '', decided: '' },
       { id: id('cr'), title: 'Extend hypercare from two weeks to four', raisedBy: 'Grace Lin', raised: '2026-10-02', scopeImpact: 'Two further weeks of daily client stand-ups and on-site presence.', scheduleImpact: 0, costImpact: 12500, status: 'Draft', decidedBy: '', decided: '' },
@@ -232,6 +247,10 @@ export function createServiceDeskLaunch() {
 
     charterSponsor: 'Priya Shah, IT Director',
     charterServiceOwner: 'Owen Clarke, Service Desk Manager',
+    charterObjective: 'Make IT support measurable, so it can be improved.',
+    charterValue: '4',
+    charterFit: '3',
+    charterEffort: '2',
     charterBusinessCase: 'Three mailboxes and a spreadsheet mean nothing is measured and nothing is prioritised. A single desk gives a queue, a priority model and a number to improve.',
     charterScopeIn: 'One intake channel, a four-tier priority model, a starter catalogue of twelve request types, and reporting from day one.',
     charterScopeOut: 'Asset management, procurement approval, and anything for the manufacturing site — those follow in a later phase.',
@@ -308,6 +327,15 @@ export function createServiceDeskLaunch() {
       { id: id('dl'), name: 'Request catalogue', type: 'Service', owner: 'Sara Boyd', due: '2026-10-24', acceptance: 'Twelve request types, each with an owner, a target and a form that does not ask for what IT already knows.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Configured service desk', type: 'Software', owner: 'Ben Iqbal', due: '2026-10-31', acceptance: 'Routing, escalation and reporting work end to end on the pilot data.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Weekly service report', type: 'Report', owner: 'Owen Clarke', due: '2026-11-30', acceptance: 'Volumes, first-response and breaches, produced by the tool rather than by hand.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
+    ],
+
+    documents: [
+      { id: id('doc'), title: 'Priority model and SLA definition', type: 'Policy', link: '', version: 'v1.0', owner: 'Owen Clarke', status: 'Approved', review: '2027-04-01' },
+      { id: id('doc'), title: 'Request catalogue', type: 'Design', link: '', version: 'v0.8', owner: 'Sara Boyd', status: 'In Review', review: '2026-10-24' },
+    ],
+
+    vendors: [
+      { id: id('vn'), name: 'Service desk tool vendor', service: 'The already-licensed service desk platform and its configuration support', contract: 'Existing licence', value: 18000, start: '2026-01-01', end: '2027-03-31', owner: 'Ben Iqbal', status: 'Active', performance: 'Meeting' },
     ],
 
     changeRequests: [

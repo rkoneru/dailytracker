@@ -27,6 +27,12 @@ const TSHIRT = ['S', 'M', 'L', 'XL'];
 export const CHARTER_FIELDS = [
   { field: 'charterSponsor', label: 'Sponsor', placeholder: 'Who is accountable for the outcome?' },
   { field: 'charterServiceOwner', label: 'Service owner', placeholder: 'Who owns the service once it is live?' },
+  { field: 'charterObjective', label: 'Strategic objective', wide: true, placeholder: 'Which organisational goal this serves — the line that ties it to the portfolio.' },
+  // Scored 1–5 for the portfolio board. js/priority.js turns them into a
+  // priority; the charter only ever stores the three judgements.
+  { field: 'charterValue', label: 'Business value', score: true, hint: '1 little – 5 a great deal' },
+  { field: 'charterFit', label: 'Strategic fit', score: true, hint: '1 tangential – 5 central' },
+  { field: 'charterEffort', label: 'Effort', score: true, hint: '1 small – 5 very large' },
   { field: 'charterBusinessCase', label: 'Business case', long: true, placeholder: 'Why this work is worth doing, in a sentence or two.' },
   { field: 'charterScopeIn', label: 'In scope', long: true, placeholder: 'What this engagement will deliver.' },
   { field: 'charterScopeOut', label: 'Out of scope', long: true, placeholder: 'What it explicitly will not — the line that stops scope creep.' },
@@ -377,20 +383,78 @@ export const KNOWN_ERRORS = {
 
 // ---------- Which page each register lives on ----------
 //
+// The documents themselves live wherever the organisation keeps documents — a
+// shared drive, SharePoint, Confluence. This register is the index to them:
+// which version is current, who owns it and when it is next due a look. It
+// holds a link, never the file, because a second copy of a contract is how the
+// wrong version gets signed.
+export const DOCUMENTS = {
+  key: 'documents',
+  id: 'documents',
+  title: 'Documents (Repository Index)',
+  rowLabel: 'document',
+  addLabel: '+ Add Document',
+  refPrefix: 'DOC',
+  blurb: 'The index to where each document actually lives, which version is current, and who owns it. A link, not a copy: links only open if they are http or https.',
+  emptyText: 'No documents indexed yet.',
+  searchFields: ['title', 'type', 'owner'],
+  searchPlaceholder: 'Search title, type or owner…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'title', label: 'Document', placeholder: 'What it is', cls: 'col-wide' },
+    { field: 'type', label: 'Type', type: 'select', options: ['Contract', 'Statement of Work', 'Charter', 'Plan', 'Design', 'Report', 'Minutes', 'Policy', 'Other'] },
+    { field: 'link', label: 'Where it lives', type: 'link', placeholder: 'https://…', cls: 'col-wide' },
+    { field: 'version', label: 'Version', placeholder: 'v1.0' },
+    { field: 'owner', label: 'Owner', type: 'person', placeholder: 'Who keeps it current' },
+    { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Draft', 'In Review', 'Approved', 'Superseded'] },
+    { field: 'review', label: 'Next review', type: 'date' },
+  ],
+  newRow: () => ({ title: '', type: 'Other', link: '', version: '', owner: '', status: 'Draft', review: '' }),
+};
+
+// Suppliers are people you depend on under contract, and the contract is what
+// makes them different from a stakeholder: a value, an end date and a service
+// you can hold them to. The owner is the person inside who manages them.
+export const VENDORS = {
+  key: 'vendors',
+  id: 'vendors',
+  title: 'Vendors & Suppliers',
+  rowLabel: 'vendor',
+  addLabel: '+ Add Vendor',
+  refPrefix: 'V',
+  blurb: 'Who you buy from, under which contract, until when, and how they are doing. The end date is the one to watch: a supplier whose contract lapses mid-delivery is a risk nobody logged.',
+  emptyText: 'No vendors recorded yet.',
+  searchFields: ['name', 'service', 'contract'],
+  searchPlaceholder: 'Search vendor, service or contract…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'name', label: 'Vendor', placeholder: 'Company name' },
+    { field: 'service', label: 'Provides', placeholder: 'What you buy from them', cls: 'col-wide' },
+    { field: 'contract', label: 'Contract', placeholder: 'Reference or PO' },
+    { field: 'value', label: 'Value', type: 'number', step: 100 },
+    { field: 'start', label: 'Start', type: 'date' },
+    { field: 'end', label: 'End', type: 'date' },
+    { field: 'owner', label: 'Managed by', type: 'person', placeholder: 'Who holds the contract' },
+    { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Onboarding', 'Active', 'On Hold', 'Ended'] },
+    { field: 'performance', label: 'Performance', type: 'select', tone: true, options: ['Not reviewed', 'Exceeding', 'Meeting', 'Below', 'Failing'] },
+  ],
+  newRow: () => ({ name: '', service: '', contract: '', value: '', start: '', end: '', owner: '', status: 'Onboarding', performance: 'Not reviewed' }),
+};
+
 // Grouped by who needs them rather than by which body of practice they came
 // from. A tester and a service manager both want the go-live checklist and the
 // known errors; neither opens a stakeholder map. Splitting PMP from ITIL made
 // two piles that no single role reads end to end.
 
 /** Commercial: what was agreed, and what has changed since. Leads only. */
-export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS];
+export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS, DOCUMENTS];
 
 /** Relationships: who is on it, who decides, who needs telling. Leads only. */
 // The roster used to be the first of these. It is now a view of the central
 // resource pool's allocations — see adoptLegacyRosters in state.js — because a
 // roster typed separately into each project cannot answer the question a
 // roster exists for: whether this person has the time.
-export const PEOPLE_REGISTERS = [RACI, STAKEHOLDERS, COMMS];
+export const PEOPLE_REGISTERS = [RACI, STAKEHOLDERS, COMMS, VENDORS];
 
 /** Blockers, alongside the RAID log — the other half of "what is in our way". */
 export const BLOCKER_REGISTERS = [DEPENDENCIES];

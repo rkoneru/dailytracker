@@ -76,7 +76,7 @@ const dashNames = (d) => d.page.evaluate(async () => (await import('/js/state.js
   // travels as a unit rather than as six collections that can half-arrive.
   eq('rows carry their kind', [...new Set(dump.rows.map(r => r.kind))].sort(),
      ['allocations', 'changeRequests', 'comms', 'dashTasks', 'deliverables', 'dependencies',
-      'lessons', 'meetings', 'milestones', 'notes', 'raci', 'raid', 'stakeholders']);
+      'documents', 'lessons', 'meetings', 'milestones', 'notes', 'raci', 'raid', 'stakeholders', 'vendors']);
   eq('and the migration converted rather than dropped them',
      dump.rows.filter((r) => r.kind === 'allocations').length > 0, true);
   eq('no updatedAt duplicated into the blob', 'updatedAt' in dump.projects[0].data, false);

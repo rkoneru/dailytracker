@@ -47,7 +47,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/mobileNav.js` | the phone bottom bar; fills its slots from `NAV_TREE` + `roleShows` |
 | `js/tabs.js` | in-page tabs; `PAGE_TABS` maps a page to its sections |
 | `js/router.js` | hash routing and deep links |
-| `js/register.js` + `js/registerDefs.js` | one table engine, 14 declarative registers |
+| `js/register.js` + `js/registerDefs.js` | one table engine, 16 declarative registers (Documents and Vendors among them); a `link` column opens only http(s) |
 | `js/sync*.js` | `syncModel` (wire shape), `syncMerge` (pure three-way merge), `sync` (network) |
 | `js/supabase.js` | hand-rolled PostgREST + GoTrue over `fetch` |
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
@@ -55,7 +55,9 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
 | `js/kpi.js`, `kpiPage.js` | the 22 project indicators |
 | `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
-| `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks |
+| `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks; WBS codes derived from the order |
+| `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
+| `js/reports.js`, `reportFormat.js` | five report types; Closure is whole-project and reads only the open project |
 | `js/zip.js`, `pptx.js`, `reportDeck.js` | slide export, written by hand |
 | `js/dates.js` | local calendar dates and the one display formatter. Never `toISOString()` for a day |
 | `js/tableLabels.js` | labels every data table's cells and fields from its header: phone cards and screen-reader names |
@@ -111,6 +113,11 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 - **The Gantt and the tasks are separate on purpose.** `ganttActivities` is its own
   synced collection; moving a phase never moves a task, and a task slipping never
   redraws the plan.
+- **Priority, WBS codes and the labour estimate are derived, never stored.** The
+  charter holds three 1–5 judgements; `priorityOf` returns `null` ("Not scored")
+  unless all three are set. WBS codes number lifecycles only, for the same reason
+  practices are not numbered. The labour estimate prices allocations at cost
+  rates, names whoever has no rate, and is `null` — grey — when nobody can be priced.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

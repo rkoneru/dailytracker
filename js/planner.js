@@ -1,4 +1,4 @@
-import { getState, scheduleSave, uid, trashRow, todayISO, getActiveProjectId } from './state.js';
+import { getState, scheduleSave, uid, trashRow, todayISO, getActiveProjectId, listResources } from './state.js';
 import { makeSortable, reorderById } from './dragReorder.js';
 import { parseDate, daysBetween } from './charts.js';
 import { scheduleSummary, setBaseline, clearBaseline, baselineSummaryText } from './schedule.js';
@@ -11,6 +11,8 @@ import { initGantt, renderGantt } from './gantt.js';
 import { refFor } from './register.js';
 import { METHODOLOGIES, methodOf, phasesOf, phaseProgress, sanitisePhase } from './methodology.js';
 import { toLocalISO, formatDate } from './dates.js';
+import { labourEstimate } from './resourceModel.js';
+import { projectWindow } from './ganttModel.js';
 
 function findById(list, id) {
   return list.find((item) => item.id === id);
@@ -728,6 +730,7 @@ export function renderPlannerShared() {
   renderMilestones();
   renderTicks();
   renderBaselineNote();
+  renderCostEstimate();
 }
 
 
@@ -739,6 +742,55 @@ export function renderPlannerShared() {
 
 function renderBaselineNote() {
   document.getElementById('planner-baseline-note').textContent = baselineSummaryText(getState());
+}
+
+// The budget is a number someone typed; the labour estimate is worked out
+// from who Resources has booked here and their cost rates. Shown side by side
+// because "does the team we booked fit the money we have?" is the question,
+// and neither number answers it alone. Nothing here is written back.
+function money(n) {
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+export function renderCostEstimate() {
+  const host = document.getElementById('cost-estimate');
+  if (!host) return;
+  const state = getState();
+  const win = projectWindow(state);
+  const est = labourEstimate(state.allocations || [], listResources(), {
+    from: win.start ? toLocalISO(win.start) : '',
+    to: win.end ? toLocalISO(win.end) : '',
+  });
+  const budget = Number(state.budgetPlanned) || 0;
+
+  let value = 'Not estimated';
+  let tone = 'is-unmeasured';
+  let detail;
+  if (est.count === 0) {
+    detail = 'Nobody is allocated to this project yet. Book people on Resources and the estimate follows.';
+  } else if (est.cost === null) {
+    detail = 'No one booked here has a cost rate. Add rates on Resources → People to price the plan.';
+  } else {
+    value = money(est.cost);
+    const share = budget > 0 ? Math.round((est.cost / budget) * 100) : null;
+    tone = share === null ? 'is-neutral' : share > 100 ? 'is-bad' : share > 85 ? 'is-warn' : 'is-good';
+    detail = `From ${money(est.pricedHours)} priced hours of booking across ${est.count} allocation${est.count === 1 ? '' : 's'}`
+      + (share === null ? ', and no planned budget to compare with.' : ` — ${share}% of the planned budget, before any non-labour cost.`);
+  }
+  const gaps = [];
+  if (est.unpriced.length && est.cost !== null) {
+    gaps.push(`Not priced: ${est.unpriced.join(', ')} (${money(est.unpricedHours)} h) — no cost rate, so the figure is low.`);
+  }
+  if (est.undated) gaps.push(`${est.undated} allocation${est.undated === 1 ? ' has' : 's have'} no dates and the project has no due date to run ${est.undated === 1 ? 'it' : 'them'} to.`);
+
+  host.replaceChildren(
+    el('div', { class: `cost-estimate__figure ${tone}` }, [
+      el('span', { class: 'cost-estimate__label', text: 'Labour cost estimate' }),
+      el('strong', { id: 'cost-estimate-value', text: value }),
+    ]),
+    el('p', { class: 'hint', id: 'cost-estimate-detail', text: detail }),
+    ...gaps.map((g) => el('p', { class: 'hint cost-estimate__gap', text: g })),
+  );
 }
 
 function bindBaseline() {
@@ -832,6 +884,7 @@ export function renderPlanner() {
   renderTicks();
   renderGantt();
   renderBaselineNote();
+  renderCostEstimate();
   renderNotes();
 }
 
@@ -844,7 +897,11 @@ export function initPlanner() {
   initGantt({ onMethodChange: () => { renderMethod(); renderMilestones(); } });
   onSectionShown((pageId, ids) => {
     if (pageId === 'page-planner' && ids.includes('sec-ticks') && ticksStale) renderTicks();
+    // Rates and bookings are edited on Resources; recomputing on arrival is
+    // cheaper than subscribing to every change there.
+    if (pageId === 'page-planner' && ids.includes('sec-budget')) renderCostEstimate();
   });
+  document.querySelector('#sec-budget [data-field="budgetPlanned"]').addEventListener('input', renderCostEstimate);
   bindBaseline();
   bindNotes();
 }

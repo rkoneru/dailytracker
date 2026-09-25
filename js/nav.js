@@ -103,6 +103,7 @@ export const NAV_TREE = [
           { id: 'nav-charter', label: 'Charter', page: 'page-scope', title: 'Scope & Contract', section: 'sec-charter' },
           { id: 'nav-deliverables', label: 'Deliverables', page: 'page-scope', title: 'Scope & Contract', section: 'sec-deliverables' },
           { id: 'nav-change-requests', label: 'Change Requests', page: 'page-scope', title: 'Scope & Contract', section: 'sec-change-requests' },
+          { id: 'nav-documents', label: 'Documents', page: 'page-scope', title: 'Scope & Contract', section: 'sec-documents' },
         ],
       },
       {
@@ -116,6 +117,7 @@ export const NAV_TREE = [
           { id: 'nav-raci', label: 'Who Does What', page: 'page-people', title: 'People & Stakeholders', section: 'sec-raci' },
           { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-people', title: 'People & Stakeholders', section: 'sec-stakeholders' },
           { id: 'nav-comms', label: 'Communications', page: 'page-people', title: 'People & Stakeholders', section: 'sec-comms' },
+          { id: 'nav-vendors', label: 'Vendors', page: 'page-people', title: 'People & Stakeholders', section: 'sec-vendors' },
         ],
       },
     ],
@@ -214,6 +216,7 @@ export const NAV_TREE = [
           { id: 'nav-report-weekly', label: 'Weekly', page: 'page-reports', title: 'Reports', report: 'weekly' },
           { id: 'nav-report-steerco', label: 'SteerCo', page: 'page-reports', title: 'Reports', report: 'steerco' },
           { id: 'nav-report-exec', label: 'Executive', page: 'page-reports', title: 'Reports', report: 'executive' },
+          { id: 'nav-report-closure', label: 'Closure', page: 'page-reports', title: 'Reports', report: 'closure' },
         ],
       },
     ],

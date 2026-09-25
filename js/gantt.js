@@ -15,7 +15,7 @@ import { getState, scheduleSave, uid, trashRow } from './state.js';
 import { el } from './dom.js';
 import { formatDate, parseDate, toLocalISO } from './dates.js';
 import { METHODOLOGIES, methodOf, findPhase, sanitisePhase } from './methodology.js';
-import { layOut, orderedActivities, activitySpan, chartWindow, newActivity } from './ganttModel.js';
+import { layOut, orderedActivities, activitySpan, chartWindow, newActivity, wbsCodes } from './ganttModel.js';
 import { offerUndo, offerUndoAction } from './trash.js';
 import { confirmAction } from './dialog.js';
 import { onSectionShown } from './tabs.js';
@@ -86,7 +86,7 @@ function phaseChip(method, activity, first) {
   });
 }
 
-function renderRow(activity, method, first) {
+function renderRow(activity, method, first, wbs) {
   const span = activitySpan(activity);
   const name = activity.name || 'Untitled activity';
   const orphan = !method || !findPhase(method.id, activity.phase);
@@ -111,6 +111,7 @@ function renderRow(activity, method, first) {
     'data-id': activity.id,
   }, [
     phaseChip(method, activity, first),
+    el('span', { class: 'gantt-row__wbs', title: wbs ? `Work breakdown code ${wbs}` : '', text: wbs || '' }),
     el('input', {
       class: 'field-input gantt-row__name', 'data-field': 'name', value: activity.name || '',
       placeholder: 'Activity', 'aria-label': phase ? `Activity in ${phase.label}` : 'Activity',
@@ -177,11 +178,12 @@ export function renderGantt() {
   const today = parseDate(toLocalISO(new Date()));
   renderScale(today);
   let lastPhase = null;
+  const codes = wbsCodes(state);
   body.replaceChildren(...rows.map((a) => {
     const known = method && findPhase(method.id, a.phase) ? a.phase : '?';
     const first = known !== lastPhase;
     lastPhase = known;
-    return renderRow(a, method, first);
+    return renderRow(a, method, first, codes.get(a.id));
   }));
 }
 

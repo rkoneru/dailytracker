@@ -293,6 +293,7 @@
           <div class="gantt" id="gantt">
             <div class="gantt__head" aria-hidden="true">
               <span class="gantt__col-phase"></span>
+              <span class="gantt__col-wbs" title="Work breakdown code: phase, then activity">WBS</span>
               <span class="gantt__col-name">Activity</span>
               <span class="gantt__col-date">Start</span>
               <span class="gantt__col-date">End</span>
@@ -318,6 +319,7 @@
               <input type="number" min="0" step="1" class="field-input" data-field="budgetActual">
             </label>
           </div>
+          <div class="cost-estimate" id="cost-estimate" aria-live="polite"></div>
           <p class="hint" id="planner-baseline-note"></p>
           <div class="sync-actions no-print">
             <button type="button" class="btn btn-small" id="btn-set-baseline">📌 Set Baseline</button>
@@ -1301,6 +1303,11 @@
             <span class="report-type-btn__icon" aria-hidden="true">📈</span>
             <span class="report-type-btn__label">Executive</span>
             <span class="report-type-btn__sub">Portfolio rollup</span>
+          </button>
+          <button type="button" class="report-type-btn" data-report="closure" aria-pressed="false">
+            <span class="report-type-btn__icon" aria-hidden="true">🏁</span>
+            <span class="report-type-btn__label">Closure</span>
+            <span class="report-type-btn__sub">Hand-over &amp; sign-off</span>
           </button>
         </div>
 

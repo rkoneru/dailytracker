@@ -130,6 +130,15 @@ function createMarketingCampaign() {
       { id: id('cm'), audience: 'Campaign team', purpose: 'Unblock the week', channel: 'Meeting', frequency: 'Weekly', owner: 'Priya N.', format: '30 minutes Monday, standing agenda.' },
       { id: id('cm'), audience: 'Finance', purpose: 'Spend against budget', channel: 'Email', frequency: 'Monthly', owner: 'Jordan K.', format: 'Spend export plus commentary.' },
     ],
+    documents: [
+      { id: id('doc'), title: 'Agency statement of work', type: 'Statement of Work', link: 'https://drive.example.com/northside-sow', version: 'v2.1', owner: 'Jordan K.', status: 'Approved', review: '2026-09-30' },
+      { id: id('doc'), title: 'Campaign brief', type: 'Plan', link: 'https://drive.example.com/campaign-brief', version: 'v1.3', owner: 'Priya N.', status: 'Approved', review: '' },
+      { id: id('doc'), title: 'Influencer contract template', type: 'Contract', link: '', version: 'v0.2', owner: 'Priya N.', status: 'In Review', review: '2026-09-15' },
+    ],
+    vendors: [
+      { id: id('vn'), name: 'Northside Agency', service: 'Paid media buying and optimisation on Meta and TikTok', contract: 'SOW-2026-014', value: 18000, start: '2026-08-15', end: '2026-10-31', owner: 'Jordan K.', status: 'Active', performance: 'Meeting' },
+      { id: id('vn'), name: 'Frameworks Studio', service: 'Creative production: video cut-downs and statics', contract: 'PO 44821', value: 7500, start: '2026-08-20', end: '2026-09-20', owner: 'Marcus T.', status: 'Active', performance: 'Not reviewed' },
+    ],
     changeRequests: [
       { id: id('cr'), title: 'Add TikTok as a third channel', raisedBy: 'Dana Ruiz', raised: '2026-09-04', scopeImpact: 'One more channel to set up, monitor and report on.', scheduleImpact: 2, costImpact: 4000, status: 'Approved', decidedBy: 'Dana Ruiz', decided: '2026-09-06' },
       { id: id('cr'), title: 'Extend campaign by two weeks', raisedBy: 'Priya N.', raised: '2026-09-12', scopeImpact: 'Runs to mid-October; needs a second creative refresh.', scheduleImpact: 14, costImpact: 6000, status: 'Under Review', decidedBy: '', decided: '' },

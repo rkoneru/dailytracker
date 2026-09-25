@@ -15,6 +15,7 @@ import { el } from './dom.js';
 import { parseDate } from './charts.js';
 import { raidCounts } from './raid.js';
 import { formatDate } from './dates.js';
+import { priorityOf, priorityLabel } from './priority.js';
 
 let onGo = null;
 let sortKey = 'due';
@@ -65,6 +66,10 @@ function summarise(project, today) {
     id: project.id,
     name: project.projectName || 'Untitled project',
     objective: project.objective || '',
+    // Alignment and priority come off the charter: the objective is typed
+    // there, the priority is worked out from its three scores each time.
+    strategic: (project.charterObjective || '').trim(),
+    priority: priorityOf(project),
     rag: (project.dashStatus || '').trim().toUpperCase(),
     total: tasks.length,
     complete,
@@ -97,6 +102,12 @@ function summarise(project, today) {
 const COLUMNS = [
   { key: 'name', label: 'Project', cls: 'col-name' },
   { key: 'rag', label: 'RAG' },
+  // Highest first on the first click: nobody sorts a priority list to find the
+  // least important project.
+  { key: 'priority', label: 'Priority', numeric: true, desc: true },
+  // Beside the priority, because the two are read together at a portfolio
+  // board: how much it matters, and to which goal.
+  { key: 'strategic', label: 'Strategic objective', cls: 'col-wide' },
   { key: 'pct', label: 'Progress', numeric: true },
   { key: 'overdue', label: 'Overdue', numeric: true },
   { key: 'risks', label: 'Open risks', numeric: true },
@@ -111,6 +122,11 @@ function sortValue(row, key) {
   if (key === 'due') return row.dueSort;
   if (key === 'next') return row.nextMilestoneDue || '';
   if (key === 'rag') return ['ON TRACK', 'AT RISK', 'OFF TRACK'].indexOf(row.rag);
+  // Unscored sits below the lowest possible score (0.4), so it sorts to the
+  // end of a highest-first list rather than masquerading as a low priority.
+  if (key === 'priority') return row.priority ? row.priority.score : -1;
+  // Unaligned projects last in A–Z: the gap is what a portfolio review wants to see.
+  if (key === 'strategic') return row.strategic ? row.strategic.toLowerCase() : '\uffff';
   return row[key];
 }
 
@@ -222,6 +238,11 @@ export function renderPortfolio() {
         row.id === activeId ? el('span', { class: 'pf-here', text: 'open' }) : null,
       ]),
       el('td', {}, [el('span', { class: `pf-rag ${RAG_TONE[row.rag] || 'is-idle'}`, text: row.rag || 'Not set' })]),
+      el('td', { class: 'num' }, [el('span', {
+        class: `pf-priority ${row.priority ? `is-${row.priority.band.toLowerCase()}` : 'is-unscored'}`,
+        text: priorityLabel(row.priority),
+      })]),
+      el('td', { class: `col-wide pf-strategic ${row.strategic ? '' : 'is-quiet'}`, text: row.strategic || 'Not aligned' }),
       bar(row.pct),
       countCell(row.overdue, 'is-bad'),
       el('td', { class: `num ${row.critical > 0 ? 'is-bad' : row.risks > 0 ? 'is-warn' : 'is-quiet'}` }, [
@@ -248,6 +269,8 @@ export function renderPortfolio() {
   foot.appendChild(el('tr', {}, [
     el('td', { class: 'col-name', text: `${rows.length} project${rows.length === 1 ? '' : 's'}` }),
     el('td', { text: '' }),
+    el('td', { class: 'num', text: `${rows.filter((r) => r.priority).length} scored` }),
+    el('td', { text: `${rows.filter((r) => r.strategic).length} aligned` }),
     el('td', { class: 'num', text: `${rows.length ? Math.round(sum('pct') / rows.length) : 0}%` }),
     el('td', { class: 'num', text: String(sum('overdue')) }),
     el('td', { class: 'num', text: String(sum('risks')) }),
@@ -278,7 +301,7 @@ export function initPortfolio(go) {
   const sortBy = (key) => {
     if (!key) return;
     if (sortKey === key) sortDir *= -1;
-    else { sortKey = key; sortDir = 1; }
+    else { sortKey = key; sortDir = COLUMNS.find((c) => c.key === key)?.desc ? -1 : 1; }
     head.querySelectorAll('.pf-sort').forEach((s) => { s.textContent = ''; });
     const mark = head.querySelector(`[data-key="${key}"] .pf-sort`);
     if (mark) mark.textContent = sortDir === 1 ? '▲' : '▼';

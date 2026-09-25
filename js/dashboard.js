@@ -9,6 +9,7 @@ import { raidCounts } from './raid.js';
 import { scheduleSummary, baselineSummaryText } from './schedule.js';
 import { STATUS_COLORS, taskRef } from './taskModel.js';
 import { el } from './dom.js';
+import { formatDate } from './dates.js';
 
 const MONEY = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
@@ -134,7 +135,7 @@ function renderKpis() {
   const status = (state.dashStatus || '').trim().toUpperCase();
   const statusTone = { 'ON TRACK': 'is-good', 'AT RISK': 'is-warn', 'OFF TRACK': 'is-bad' }[status] || 'is-idle';
   setTile('kpi-status', status || 'Not set',
-    status ? `as at ${state.dashDate || 'no date'}` : 'Set it on the Planner', statusTone);
+    status ? `as at ${formatDate(state.dashDate) || 'no date'}` : 'Set it on the Planner', statusTone);
 
   if (!schedule.baselined) {
     setTile('kpi-schedule', '—', 'No baseline set', 'is-idle');
@@ -314,7 +315,7 @@ function renderUpcomingDeadlines() {
       else { whenLabel = `in ${daysAway}d`; whenClass = 'deadline-list__when--ok'; }
     }
 
-    const meta = [item.kind, item.who, item.date ? item.date.toLocaleDateString() : '']
+    const meta = [item.kind, item.who, item.date ? formatDate(item.date) : '']
       .filter(Boolean).join(' · ');
 
     list.appendChild(el('li', {}, [
@@ -383,7 +384,7 @@ const BOARD_COLUMNS = [
 function projectCard(p) {
   const card = el('button', { type: 'button', class: 'dos-project', 'data-id': p.id }, [
     el('span', { class: 'active-projects-list__name', text: p.name }),
-    el('span', { class: 'active-projects-list__meta', text: p.dueDate ? `Due ${p.dueDate}` : 'No due date' }),
+    el('span', { class: 'active-projects-list__meta', text: p.dueDate ? `Due ${formatDate(p.dueDate)}` : 'No due date' }),
     el('div', { class: 'active-projects-list__track' }, [
       el('div', { class: 'active-projects-list__fill', style: `width:${p.pctComplete}%` }),
     ]),
@@ -591,7 +592,7 @@ function renderActivity() {
       ]),
       el('span', {
         class: 'dos-activity__when',
-        text: Number.isNaN(when.getTime()) ? '' : when.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+        text: formatDate(when, 'day'),
       }),
     ]));
   });

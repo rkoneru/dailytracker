@@ -12,7 +12,7 @@
 // screen which normally says "enforced by the server" stops saying so when
 // there is no server.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, openDestination } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -199,6 +199,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
     await page.click('[data-demo="demo-tester"]');
     await page.waitForTimeout(1000);
 
+    await openDestination(page, 'nav-settings-role');
     eq('the role follows the account', await page.inputValue('#role-select'), 'tester');
     eq('and is not theirs to change', await page.locator('#role-select').isDisabled(), true);
     eq('with the escape hatch withdrawn',

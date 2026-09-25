@@ -6,7 +6,7 @@
 // whether or not they have a number, that an unmeasured one says what would
 // fill it in, and that the page follows the data when the data changes.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -23,19 +23,28 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
 
   const cardValue = (id) => page.textContent(`.kpi-card[data-kpi="${id}"] .kpi-card__number`);
 
-  console.log('\n--- all twenty are on the page ---');
+  console.log('\n--- every indicator is on the page ---');
   await page.click('#tab-kpis .nav-row__label');
   await page.waitForTimeout(600);
   eq('landed on the KPI page', await page.textContent('#page-title'), 'Project KPIs');
-  eq('twenty cards', await page.locator('.kpi-card').count(), 20);
-  eq('and twenty rows explaining them', await page.locator('#kpi-basis-body tr').count(), 20);
-  eq('five categories, four each', await page.evaluate(() => ['schedule', 'cost', 'scope', 'risk', 'quality']
-    .map((c) => document.querySelectorAll(`#kpi-grid-${c} .kpi-card`).length)), [4, 4, 4, 4, 4]);
+  eq('thirty-five cards', await page.locator('.kpi-card').count(), 35);
+  eq('and a row explaining each', await page.locator('#kpi-basis-body tr').count(), 35);
+  eq('seven categories', await page.evaluate(() => ['schedule', 'cost', 'scope', 'risk', 'quality', 'improvement', 'customer']
+    .map((c) => document.querySelectorAll(`#kpi-grid-${c} .kpi-card`).length)), [4, 5, 5, 5, 5, 2, 9]);
+  eq('numbered in the order they are shown', await page.$$eval('.kpi-card .kpi-card__n', (e) => e.map((x) => Number(x.textContent))),
+     Array.from({ length: 35 }, (_, i) => i + 1));
 
-  console.log('\n--- the starter project can answer all of them ---');
-  eq('coverage is stated', await page.textContent('#kpi-coverage'), '20 of 20 measured');
-  eq('nothing reads as unmeasured',
-     await page.locator('.kpi-card.is-unmeasured').count(), 0);
+  console.log('\n--- the starter project answers every project indicator, and admits the rest ---');
+  // A marketing campaign has no customer accounts, no rates on its people and
+  // no closed decisions, so those read "not measured" and say what would
+  // measure them — rather than the starter being padded with data to look full.
+  eq('coverage is stated', await page.textContent('#kpi-coverage'), '23 of 35 measured');
+  eq('only the ones it has no data for read as unmeasured',
+     await page.$$eval('.kpi-card.is-unmeasured', (e) => e.map((x) => x.dataset.kpi)),
+     ['grossMargin', 'decisionSpeed', 'improvementDelivery', 'customerRetention', 'churnRate', 'grr', 'nrr', 'nps', 'ltv', 'cac', 'ltvCac', 'timeToValue']);
+  eq('and each says what would fill it', await page.$$eval('.kpi-card.is-unmeasured', (e) => e.every((x) => x.querySelector('.kpi-card__needs')?.textContent.length > 10)), true);
+  eq('a bad KPI is paired with its KRI',
+     await page.textContent('.kpi-card[data-kpi="cpi"] .kpi-card__kri'), 'KRICost efficiency declining');
   // EAC has a number and no verdict. It is grey, but it is not blank — the
   // two greys have to stay distinguishable or a real forecast reads as absent.
   eq('a forecast is tone-neutral but still a number',
@@ -66,11 +75,12 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await page.click('#btn-projects');
   await page.waitForTimeout(400);
   await page.check('#template-blank');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(900);
   await page.click('#tab-kpis .nav-row__label');
   await page.waitForTimeout(700);
-  eq('still twenty cards', await page.locator('.kpi-card').count(), 20);
+  eq('still every card', await page.locator('.kpi-card').count(), 35);
   eq('most of them unmeasured', (await page.locator('.kpi-card.is-unmeasured').count()) > 10, true);
   eq('SPI is not invented', await cardValue('spi'), 'Not measured');
   eq('nor is a perfect CPI', await cardValue('cpi'), 'Not measured');
@@ -85,16 +95,29 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
     return blank.every((c) => !c.classList.contains('is-good') && !c.classList.contains('is-warn'));
   }), true);
 
-  console.log('\n--- the nav reaches each category ---');
-  if (await page.getAttribute('#tab-kpis', 'aria-expanded') === 'false') {
-    await page.click('#tab-kpis .nav-twisty');
-    await page.waitForTimeout(300);
-  }
-  await page.click('#nav-kpi-quality .nav-row__label');
+  console.log('\n--- a link reaches each category ---');
+  // Sections are the page's tab strip, not sidebar rows; a link reaches them.
+  await page.evaluate(() => { window.location.hash = '#/nav-kpi-quality'; });
   await page.waitForTimeout(500);
-  eq('the quality tab is the one showing', await page.evaluate(() =>
+  // The six categories share the Indicators tab, so a link to one opens it.
+  eq('the indicators tab is the one showing, quality included', await page.evaluate(() =>
     !document.getElementById('sec-kpi-quality').classList.contains('is-tab-hidden')
-    && document.getElementById('sec-kpi-schedule').classList.contains('is-tab-hidden')), true);
+    && document.getElementById('sec-kpi-framework').classList.contains('is-tab-hidden')), true);
+
+  console.log('\n--- the wider framework says what is and is not tracked ---');
+  await openSection(page, 'sec-kpi-framework');
+  await page.waitForTimeout(500);
+  eq('twelve categories', await page.locator('#kpi-framework-table tbody tr').count(), 12);
+  eq('a tracked one links back to its live section',
+     await page.locator('#kpi-framework-table button[data-goto="nav-kpi-schedule"]').count() > 0, true);
+  await page.click('#kpi-framework-table button[data-goto="nav-kpi-schedule"]');
+  await page.waitForTimeout(500);
+  eq('clicking it actually lands there', await page.evaluate(() =>
+    !document.getElementById('sec-kpi-schedule').classList.contains('is-tab-hidden')), true);
+  await openSection(page, 'sec-kpi-framework');
+  await page.waitForTimeout(500);
+  eq('an untracked one says so rather than being silently absent',
+     (await page.textContent('#kpi-framework-table')).includes('not tracked'), true);
 
   console.log('\n--- layout ---');
   await page.setViewportSize({ width: 400, height: 900 });

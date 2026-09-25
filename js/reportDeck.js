@@ -1,5 +1,6 @@
 import { buildPptx, RAG_COLOURS, PPTX_MIME } from './pptx.js';
 import { KPI_DEFS, projectKpis, formatKpi, kpiTone, coverage } from './kpi.js';
+import { formatDate } from './dates.js';
 
 // A status report, as slides.
 //
@@ -34,7 +35,7 @@ function titleSlide(report, title) {
     subtitle: report.periodLabel,
     meta: [
       `${report.summary.totalProjects} project${report.summary.totalProjects === 1 ? '' : 's'}`,
-      `Prepared ${new Date().toISOString().slice(0, 10)}`,
+      `Prepared ${formatDate(new Date())}`,
     ],
   };
 }
@@ -166,6 +167,8 @@ function decisionSlide(report) {
  * that silently omits the six things nobody is recording is the reason nobody
  * starts recording them.
  */
+const KPI_ROWS_PER_SLIDE = 12;
+
 function kpiSlides(project, { resources, absences }) {
   if (!project) return [];
   const values = projectKpis(project, { resources, absences });
@@ -182,24 +185,18 @@ function kpiSlides(project, { resources, absences }) {
     ];
   });
 
-  return [
-    {
-      kind: 'table',
-      title: 'Project KPIs',
-      subtitle: `${project.projectName || 'Project'} · ${measured} of ${total} measured`,
-      columns: ['#', 'Indicator', 'Value', 'Formula'],
-      widths: [0.5, 4, 1.6, 3.4],
-      rows: rows.slice(0, 10),
-    },
-    {
-      kind: 'table',
-      title: 'Project KPIs (continued)',
-      subtitle: `${project.projectName || 'Project'} · ${measured} of ${total} measured`,
-      columns: ['#', 'Indicator', 'Value', 'Formula'],
-      widths: [0.5, 4, 1.6, 3.4],
-      rows: rows.slice(10),
-    },
-  ];
+  // At most twelve rows a slide, split evenly, so the table stays legible as
+  // indicators are added and no slide is the crowded one.
+  const pages = Math.ceil(rows.length / KPI_ROWS_PER_SLIDE);
+  const per = Math.ceil(rows.length / pages);
+  return Array.from({ length: pages }, (_, i) => ({
+    kind: 'table',
+    title: i === 0 ? 'Project KPIs' : 'Project KPIs (continued)',
+    subtitle: `${project.projectName || 'Project'} · ${measured} of ${total} measured`,
+    columns: ['#', 'Indicator', 'Value', 'Formula'],
+    widths: [0.5, 4, 1.6, 3.4],
+    rows: rows.slice(i * per, (i + 1) * per),
+  }));
 }
 
 const TITLES = {
@@ -207,6 +204,7 @@ const TITLES = {
   weekly: 'Weekly Status Report',
   steerco: 'Steering Committee Report',
   executive: 'Executive Leadership Report',
+  closure: 'Project Closure Summary',
 };
 
 /**

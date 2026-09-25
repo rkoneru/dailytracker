@@ -24,7 +24,7 @@ These are not preferences. Check before breaking one.
 
 ```bash
 npm start                      # python3 -m http.server 8765
-npm test                       # all 52 suites (needs chromium)
+npm test                       # every suite, 4 at a time (needs chromium); JOBS=1 for serial
 node tests/run.js nav sync     # only suites whose filename matches
 npm run lint                   # eslint, flat config
 ```
@@ -39,23 +39,31 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 
 | Path | What |
 |---|---|
-| `index.html` | every page, as a hidden `<section class="page">`; 18 of them, plus the login overlay |
+| `index.html` | every page, as a hidden `<section class="page">`; 17 of them, plus the login overlay. AI Portfolio, Planning Layers, Capacity, Sync and Trash are `.merged-page` blocks inside their host page, keeping their old ids |
 | `css/styles.css` | all of it; design tokens on `:root` at the top |
 | `js/state.js` | the store. Load, migrate, save (debounced 400 ms), trash, projects, resources |
 | `js/app.js` | boot and wiring; the only file that knows about most others |
-| `js/nav.js` | `NAV_TREE` — five groups, ARIA tree, roving tabindex |
+| `js/nav.js` | `NAV_TREE` — five groups, ARIA tree, roving tabindex. The sidebar draws two levels (groups, pages); sections stay in the tree for links and the palette but are the page's tab strip, not rows |
 | `js/mobileNav.js` | the phone bottom bar; fills its slots from `NAV_TREE` + `roleShows` |
 | `js/tabs.js` | in-page tabs; `PAGE_TABS` maps a page to its sections |
 | `js/router.js` | hash routing and deep links |
-| `js/register.js` + `js/registerDefs.js` | one table engine, 14 declarative registers |
+| `js/register.js` + `js/registerDefs.js` | one table engine, 16 declarative registers (Documents and Vendors among them); a `link` column opens only http(s); `readonly` columns, `custom` cells and `rowActions` for pages that draw their own |
 | `js/sync*.js` | `syncModel` (wire shape), `syncMerge` (pure three-way merge), `sync` (network) |
 | `js/supabase.js` | hand-rolled PostgREST + GoTrue over `fetch` |
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
 | `js/login.js`, `demoAccounts.js` | the sign-in screen and the five invented people behind it |
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
-| `js/kpi.js`, `kpiPage.js` | the 20 project indicators |
-| `js/methodology.js` | CPMAI, CRISP-DM, MLOps, LLMOps as data; phase progress derived from milestones |
+| `js/kpi.js`, `kpiPage.js` | the 35 indicators in seven categories, numbered in display order; `ceoKpis.js` maps a company-level (CEO) KPI set onto them and says why the rest are not held |
+| `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
+| `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks; WBS codes derived from the order |
+| `js/customerSuccess.js`, `customerSuccessPage.js`, `sampleCustomers.js` | the CSM lifecycle (six ordered stages with gates, Churned as an exit), health score, retention/NRR/NPS/LTV/CAC, and the Customer Success page over the `customers` register |
+| `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
+| `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
+| `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
+| `js/reports.js`, `reportFormat.js` | five report types; Closure is whole-project and reads only the open project |
 | `js/zip.js`, `pptx.js`, `reportDeck.js` | slide export, written by hand |
+| `js/dates.js` | local calendar dates and the one display formatter. Never `toISOString()` for a day |
+| `js/tableLabels.js` | labels every data table's cells and fields from its header: phone cards and screen-reader names |
 | `supabase/schema.sql` | tables, RLS policies, triggers. Idempotent; re-running it is the upgrade path |
 | `tests/harness.js` | URLs and helpers. Take them from here, never hardcode |
 | `SECURITY.md` | what Postgres enforces vs what is only the app being tidy |
@@ -102,9 +110,37 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   capabilities you have or do not. The UI numbers the first and refuses to number
   the second, because numbering a practice asserts a sequence that does not
   exist. `kind` on each entry in `methodology.js` is what decides.
+- **Every new project has a lifecycle.** It is required in the Projects panel and
+  `createProject` throws without one; the Gantt is laid out from it. Projects saved
+  before the rule can have `methodology: ''`, and the Plan page asks for one.
+- **The Gantt and the tasks are separate on purpose.** `ganttActivities` is its own
+  synced collection; moving a phase never moves a task, and a task slipping never
+  redraws the plan.
+- **Priority, WBS codes and the labour estimate are derived, never stored.** The
+  charter holds three 1–5 judgements; `priorityOf` returns `null` ("Not scored")
+  unless all three are set. WBS codes number lifecycles only, for the same reason
+  practices are not numbered. The labour estimate prices allocations at cost
+  rates, names whoever has no rate, and is `null` — grey — when nobody can be priced.
+- **A change request's status is derived, not typed.** `stage` records the steps
+  taken; `derivedStatus` works the status out from it and the approvals. An
+  approval whose signature no longer matches `crContent` counts as Pending, so
+  editing an approved change un-approves it. Implementing a change moves the
+  scope baseline only by what that change `touches` (`baselineAfter`), never by
+  every edit made since — that would launder creep through someone's approval.
+  Signatures are records, not locks; SECURITY.md says what they do not secure.
+- **Customer health and the customer KPIs are derived, never stored.** Health
+  needs at least two signals or it is `null`; a churned account has none. LTV
+  is `null` until the book has lost a customer in the last twelve months, since
+  an unbounded lifetime is not a number. Time to value is read off each
+  account's `stageHistory`, which `recordStageChanges` appends to on every edit.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".
+- **Merged pages keep their ids.** `tab-ai-portfolio`, `tab-capacity`, `tab-sync`,
+  `tab-trash`, `tab-planning-layers` are tab destinations under their host page, so
+  links, role homes and saved page policies still resolve. Go to one with
+  `goToNode(id)`, never by clicking a row: it has none. Tabs are not role-filtered,
+  so AI initiatives is visible to anyone who sees Portfolio.
 - **Every nav surface asks `roleShows`.** The bottom bar is not a second list of
   destinations; it reads `NAV_TREE` and filters the same way the sidebar does, so
   it cannot offer a page the policy removed.
@@ -140,6 +176,10 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 - **A first-run gate would break every suite.** Each suite does its own
   `page.goto` — there is no shared opener to dismiss one in. That is a reason to
   keep the boot path open, not a reason to add a test-only backdoor.
+- **Only the page on screen is kept built.** Shared-data changes rebuild the
+  visible page and mark the rest stale; they rebuild on arrival (`renderWhenShown`
+  in `js/app.js`, the tab-level equivalent in `tasks.js` and `planner.js`). A test
+  that reads a hidden page or tab must open it first.
 - **`isVisible()` is true for the closed mobile drawer.** It is moved with
   `transform`, not hidden, so Playwright still counts it. Assert on its
   `getBoundingClientRect()` instead.

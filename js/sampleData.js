@@ -1,48 +1,70 @@
-import { TICK_DAYS } from './taskModel.js';
 import { createServiceTransition, createServiceDeskLaunch } from './sampleServices.js';
+import { createCustomerSuccessProgramme } from './sampleCustomers.js';
 import { AGENTIC_DOMAINS, buildAgentic } from './sampleAgentic.js';
+import { todayISO, toLocalISO, parseDate } from './dates.js';
 
 // Starter templates for new projects. Each template is a factory function
 // (not a static object) so every project created from it gets its own
 // fresh row ids — templates get cloned many times over a session as users
 // create/clone projects, and a shared counter keeps every id unique.
-// Every template authors real start/end dates for its tasks, so the tick
-// timeline is seeded from them rather than hand-listing day numbers per
-// template. Ticks are editable afterwards and drift from the dates freely —
-// this only decides what a brand new project opens with.
+// Every template authors real start/end dates for its tasks; the Edit
+// Timeline draws straight from them, so the only thing seeded here is the
+// progress a brand new project opens with.
 const DAY_MS = 86400000;
 
-function seedTicks(project) {
-  const starts = project.dashTasks.map((t) => t.start).filter(Boolean).sort();
-  project.tickStart = starts[0] || project.dashDate || '';
-  if (!project.tickStart) return project;
-
-  const anchor = new Date(`${project.tickStart}T00:00:00`);
+function seedProgress(project) {
   project.dashTasks.forEach((task) => {
+    if (task.progress !== undefined) return;
     const from = task.start ? new Date(`${task.start}T00:00:00`) : null;
     const to = task.end ? new Date(`${task.end}T00:00:00`) : from;
-    task.tickType = from && to && from.getTime() === to.getTime() ? 'diamond' : 'check';
-    // Progress the template ships with: finished work is 100, unstarted is 0,
-    // and anything in flight is estimated from how much of its own date range
-    // has elapsed against the project's status date.
-    if (task.progress === undefined) {
-      if (task.status === 'Complete') task.progress = 100;
-      else if (task.status === 'Not Started') task.progress = 0;
-      else if (from && to) {
-        const asOf = project.dashDate ? new Date(`${project.dashDate}T00:00:00`) : anchor;
-        const span = Math.max(1, (to - from) / DAY_MS);
-        task.progress = Math.min(95, Math.max(5, Math.round(((asOf - from) / DAY_MS / span) * 100 / 5) * 5));
-      } else task.progress = 0;
-    }
-    task.cells = [];
-    if (!from || !to) return;
-    const first = Math.round((from - anchor) / DAY_MS) + 1;
-    const last = Math.round((to - anchor) / DAY_MS) + 1;
-    for (let day = Math.max(1, first); day <= Math.min(TICK_DAYS, last); day += 1) {
-      task.cells.push(day);
-    }
+    // Finished work is 100, unstarted is 0, and anything in flight is
+    // estimated from how much of its own date range has elapsed against the
+    // project's status date.
+    if (task.status === 'Complete') task.progress = 100;
+    else if (task.status === 'Not Started') task.progress = 0;
+    else if (from && to) {
+      const asOf = project.dashDate ? new Date(`${project.dashDate}T00:00:00`) : from;
+      const span = Math.max(1, (to - from) / DAY_MS);
+      task.progress = Math.min(95, Math.max(5, Math.round(((asOf - from) / DAY_MS / span) * 100 / 5) * 5));
+    } else task.progress = 0;
   });
   return project;
+}
+
+// The templates were written against a fixed calendar, and a demo pinned to
+// dates in the past reads as a project where everything is overdue — the red
+// is the calendar moving, not the story. So each template is moved as it is
+// created, keeping every date's distance from its status date: a campaign
+// written as "a week in" is a week in on whatever day it is opened. The move
+// is in whole weeks, so a Monday stays a Monday (timesheet weeks and the
+// agentic programme start depend on it) and the status date lands within
+// three days of today.
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function shiftDates(value, days) {
+  if (typeof value === 'string') {
+    if (!ISO_DAY.test(value)) return value;
+    const d = parseDate(value);
+    if (!d) return value;
+    d.setDate(d.getDate() + days);
+    return toLocalISO(d);
+  }
+  if (Array.isArray(value)) return value.map((item) => shiftDates(item, days));
+  if (value && typeof value === 'object') {
+    const out = {};
+    Object.keys(value).forEach((key) => { out[key] = shiftDates(value[key], days); });
+    return out;
+  }
+  return value;
+}
+
+function onToday(project) {
+  const starts = (project.dashTasks || []).map((t) => t.start).filter(Boolean).sort();
+  const anchor = parseDate(project.dashDate || starts[0]);
+  if (!anchor) return project;
+  const today = parseDate(todayISO());
+  const weeks = Math.round(Math.round((today - anchor) / DAY_MS) / 7);
+  return weeks ? shiftDates(project, weeks * 7) : project;
 }
 
 let idCounter = 0;
@@ -109,6 +131,15 @@ function createMarketingCampaign() {
       { id: id('cm'), audience: 'Campaign team', purpose: 'Unblock the week', channel: 'Meeting', frequency: 'Weekly', owner: 'Priya N.', format: '30 minutes Monday, standing agenda.' },
       { id: id('cm'), audience: 'Finance', purpose: 'Spend against budget', channel: 'Email', frequency: 'Monthly', owner: 'Jordan K.', format: 'Spend export plus commentary.' },
     ],
+    documents: [
+      { id: id('doc'), title: 'Agency statement of work', type: 'Statement of Work', link: 'https://drive.example.com/northside-sow', version: 'v2.1', owner: 'Jordan K.', status: 'Approved', review: '2026-09-30' },
+      { id: id('doc'), title: 'Campaign brief', type: 'Plan', link: 'https://drive.example.com/campaign-brief', version: 'v1.3', owner: 'Priya N.', status: 'Approved', review: '' },
+      { id: id('doc'), title: 'Influencer contract template', type: 'Contract', link: '', version: 'v0.2', owner: 'Priya N.', status: 'In Review', review: '2026-09-15' },
+    ],
+    vendors: [
+      { id: id('vn'), name: 'Northside Agency', service: 'Paid media buying and optimisation on Meta and TikTok', contract: 'SOW-2026-014', value: 18000, start: '2026-08-15', end: '2026-10-31', owner: 'Jordan K.', status: 'Active', performance: 'Meeting' },
+      { id: id('vn'), name: 'Frameworks Studio', service: 'Creative production: video cut-downs and statics', contract: 'PO 44821', value: 7500, start: '2026-08-20', end: '2026-09-20', owner: 'Marcus T.', status: 'Active', performance: 'Not reviewed' },
+    ],
     changeRequests: [
       { id: id('cr'), title: 'Add TikTok as a third channel', raisedBy: 'Dana Ruiz', raised: '2026-09-04', scopeImpact: 'One more channel to set up, monitor and report on.', scheduleImpact: 2, costImpact: 4000, status: 'Approved', decidedBy: 'Dana Ruiz', decided: '2026-09-06' },
       { id: id('cr'), title: 'Extend campaign by two weeks', raisedBy: 'Priya N.', raised: '2026-09-12', scopeImpact: 'Runs to mid-October; needs a second creative refresh.', scheduleImpact: 14, costImpact: 6000, status: 'Under Review', decidedBy: '', decided: '' },
@@ -164,6 +195,58 @@ function createMarketingCampaign() {
           { id: id('ut'), at: '01:40', speaker: 'Jordan K.', text: "The pixel still is not firing on checkout. I'll raise a dev ticket and chase it today.", final: true },
           { id: id('ut'), at: '03:05', speaker: 'Priya N.', text: 'Legal have gone quiet on the influencer terms. We agreed to launch on the 8th regardless and hold that content back.', final: true },
           { id: id('ut'), at: '04:20', speaker: 'Priya N.', text: "We'll decide the paid and organic split once we have a week of data rather than guessing now.", final: true },
+        ],
+      },
+      {
+        id: id('mt'),
+        name: 'Quarterly Strategy Meeting',
+        date: '2025-05-20',
+        startTime: '09:00',
+        endTime: '12:30',
+        location: 'Virtual (Zoom)',
+        purpose: 'Review Q1 performance, align on priorities, and plan next steps for Q2.',
+        owner: 'Jessica Morgan (CEO)',
+        preparedBy: 'Alex Rivera (Strategy Manager)',
+        status: 'Complete',
+        notes: 'Quarterly results: Q1 revenue up 8% YoY; profitability impacted by higher marketing spend and supply chain costs.\n'
+          + 'Growth priorities: Focus on product innovation, customer acquisition in North America, and channel partnerships.\n'
+          + 'Budget review: Reallocate 10% from discretionary spend to growth initiatives; maintain investment in product roadmap.\n'
+          + 'Next steps: Align cross-functional teams on key initiatives, define KPIs, and establish check-ins.',
+        outcome: 'Aligned on Q2 strategic priorities, approved budget reallocations, and defined clear next steps with owners and timelines.',
+        agenda: [
+          { id: id('ag'), time: '09:00', topic: 'Quarterly results', lead: 'Michael Chen (Finance)', minutes: 45 },
+          { id: id('ag'), time: '', topic: 'Growth priorities', lead: 'Sarah Patel (Marketing)', minutes: 45 },
+          { id: id('ag'), time: '', topic: 'Budget review', lead: 'David Lee (Finance)', minutes: 45 },
+          { id: id('ag'), time: '', topic: 'Next steps', lead: 'Jessica Morgan (CEO)', minutes: 45 },
+          { id: id('ag'), time: '12:00', topic: 'Q&A & Wrap-up', lead: 'All', minutes: 30 },
+        ],
+        attendees: [
+          { id: id('at'), name: 'Jessica Morgan', role: 'CEO', department: 'Executive', attended: true },
+          { id: id('at'), name: 'Michael Chen', role: 'CFO', department: 'Finance', attended: true },
+          { id: id('at'), name: 'Sarah Patel', role: 'CMO', department: 'Marketing', attended: true },
+          { id: id('at'), name: 'David Lee', role: 'COO', department: 'Operations', attended: true },
+          { id: id('at'), name: 'Priya Nair', role: 'VP, Finance', department: 'Finance', attended: true },
+          { id: id('at'), name: 'James Wilson', role: 'Director, Operations', department: 'Operations', attended: true },
+          { id: id('at'), name: 'Emily Rogers', role: 'Marketing Manager', department: 'Marketing', attended: false },
+          { id: id('at'), name: 'Alex Rivera', role: 'Strategy Manager', department: 'Strategy', attended: true },
+        ],
+        decisions: [
+          { id: id('de'), decision: 'Increase investment in product innovation by 10%.', tag: 'Strategic', impact: 'High' },
+          { id: id('de'), decision: 'Expand marketing budget for North America growth.', tag: 'Growth', impact: 'High' },
+          { id: id('de'), decision: 'Defer office expansion to Q4 pending performance review.', tag: 'Financial', impact: 'Medium' },
+          { id: id('de'), decision: 'Implement quarterly KPI dashboard for leadership.', tag: 'Operational', impact: 'High' },
+        ],
+        actions: [
+          { id: id('ac'), text: 'Finalize Q2 growth plan and budget', owner: 'Sarah Patel (Marketing)', due: '2025-05-27', status: 'Open', taskId: '' },
+          { id: id('ac'), text: 'Provide detailed budget reallocation analysis', owner: 'Michael Chen (Finance)', due: '2025-05-23', status: 'In Progress', taskId: '' },
+          { id: id('ac'), text: 'Share Q1 financial performance report', owner: 'Michael Chen (Finance)', due: '2025-05-16', status: 'Done', taskId: '' },
+          { id: id('ac'), text: 'Define KPIs and performance requirements', owner: 'David Lee (Operations)', due: '2025-05-30', status: 'Open', taskId: '' },
+          { id: id('ac'), text: 'Schedule cross-functional workgroup', owner: 'Alex Rivera (Strategy)', due: '2025-05-26', status: 'In Progress', taskId: '' },
+        ],
+        followUps: [
+          { id: id('fu'), activity: 'Progress check-in', purpose: 'Review progress on action items', owner: 'Jessica Morgan (CEO)', date: '2025-06-10', type: 'Meeting', reminder: '1 day before' },
+          { id: id('fu'), activity: 'KPI dashboard review', purpose: 'Assess KPIs and performance trends', owner: 'David Lee (Operations)', date: '2025-06-24', type: 'Review', reminder: '2 days before' },
+          { id: id('fu'), activity: 'Q2 Strategy Update', purpose: 'Evaluate Q2 progress and adjust plan', owner: 'Jessica Morgan (CEO)', date: '2025-07-15', type: 'Meeting', reminder: '2 days before' },
         ],
       },
     ],
@@ -346,7 +429,7 @@ function createPersonalGoals() {
 }
 
 function createBlankProject() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   return {
     projectName: 'Untitled Project',
     objective: '',
@@ -733,24 +816,26 @@ function createLLMOpsPractice() {
   };
 }
 
-export const TEMPLATES = [
-  { key: 'marketing', category: 'General', label: 'Social Media Marketing Campaign', description: 'A 30-day multi-channel launch campaign, from creative production through wrap-up reporting.', build: () => seedTicks(createMarketingCampaign()) },
-  { key: 'software', category: 'General', label: 'Software Release Plan', description: 'A feature-freeze-to-ship release cycle with QA, regression testing, and a security review.', build: () => seedTicks(createSoftwareRelease()) },
-  { key: 'event', category: 'General', label: 'Event Planning', description: 'Venue, catering, invitations, and day-of logistics for an in-person event.', build: () => seedTicks(createEventPlanning()) },
-  { key: 'personal', category: 'General', label: 'Personal Goals Sprint', description: 'A 30-day personal project mixing a study goal with a fitness goal.', build: () => seedTicks(createPersonalGoals()) },
+const RAW_TEMPLATES = [
+  { key: 'marketing', category: 'General', label: 'Social Media Marketing Campaign', description: 'A 30-day multi-channel launch campaign, from creative production through wrap-up reporting.', build: () => seedProgress(createMarketingCampaign()) },
+  { key: 'software', category: 'General', label: 'Software Release Plan', description: 'A feature-freeze-to-ship release cycle with QA, regression testing, and a security review.', build: () => seedProgress(createSoftwareRelease()) },
+  { key: 'event', category: 'General', label: 'Event Planning', description: 'Venue, catering, invitations, and day-of logistics for an in-person event.', build: () => seedProgress(createEventPlanning()) },
+  { key: 'personal', category: 'General', label: 'Personal Goals Sprint', description: 'A 30-day personal project mixing a study goal with a fitness goal.', build: () => seedProgress(createPersonalGoals()) },
 
-  { key: 'llm-feature', category: 'AI & Data', label: 'LLM Feature Launch', description: 'Ship an AI feature to GA: prompt iteration, an eval harness, red-teaming, and a staged rollout.', build: () => seedTicks(createLLMFeatureLaunch()) },
-  { key: 'rag-assistant', category: 'AI & Data', label: 'RAG Knowledge Assistant', description: 'Doc ingestion, retrieval tuning, citation checks and a support-team pilot for a grounded Q&A assistant.', build: () => seedTicks(createRagAssistant()) },
-  { key: 'ml-model', category: 'AI & Data', label: 'ML Model Development', description: 'A predictive model end to end — data pipeline, training, fairness gate, deployment and drift monitoring.', build: () => seedTicks(createMLModelDevelopment()) },
-  { key: 'ai-agent', category: 'AI & Data', label: 'AI Agent Automation Pilot', description: 'Pilot an agent on a real workflow with tool integrations, guardrails, human review and a go/no-go.', build: () => seedTicks(createAgentAutomationPilot()) },
-  { key: 'ai-governance', category: 'AI & Data', label: 'AI Governance & Readiness', description: 'Model inventory, risk tiering, review gates and assessments for getting AI systems audit-ready.', build: () => seedTicks(createAIGovernance()) },
-  { key: 'mlops-platform', category: 'AI & Data', label: 'MLOps Platform Rollout', description: 'Make every production model reproducible, registered, monitored and rollback-able. A capability plan, not a lifecycle — measured by models meeting the bar, not tools installed.', build: () => seedTicks(createMLOpsPlatform()) },
-  { key: 'llmops-practice', category: 'AI & Data', label: 'LLMOps Practice Rollout', description: 'Bring shipped assistants under one standard: versioned prompts, a golden set that gates release, traced cost, and a plan for the day the model version changes.', build: () => seedTicks(createLLMOpsPractice()) },
+  { key: 'llm-feature', category: 'AI & Data', label: 'LLM Feature Launch', description: 'Ship an AI feature to GA: prompt iteration, an eval harness, red-teaming, and a staged rollout.', build: () => seedProgress(createLLMFeatureLaunch()) },
+  { key: 'rag-assistant', category: 'AI & Data', label: 'RAG Knowledge Assistant', description: 'Doc ingestion, retrieval tuning, citation checks and a support-team pilot for a grounded Q&A assistant.', build: () => seedProgress(createRagAssistant()) },
+  { key: 'ml-model', category: 'AI & Data', label: 'ML Model Development', description: 'A predictive model end to end — data pipeline, training, fairness gate, deployment and drift monitoring.', build: () => seedProgress(createMLModelDevelopment()) },
+  { key: 'ai-agent', category: 'AI & Data', label: 'AI Agent Automation Pilot', description: 'Pilot an agent on a real workflow with tool integrations, guardrails, human review and a go/no-go.', build: () => seedProgress(createAgentAutomationPilot()) },
+  { key: 'ai-governance', category: 'AI & Data', label: 'AI Governance & Readiness', description: 'Model inventory, risk tiering, review gates and assessments for getting AI systems audit-ready.', build: () => seedProgress(createAIGovernance()) },
+  { key: 'mlops-platform', category: 'AI & Data', label: 'MLOps Platform Rollout', description: 'Make every production model reproducible, registered, monitored and rollback-able. A capability plan, not a lifecycle — measured by models meeting the bar, not tools installed.', build: () => seedProgress(createMLOpsPlatform()) },
+  { key: 'llmops-practice', category: 'AI & Data', label: 'LLMOps Practice Rollout', description: 'Bring shipped assistants under one standard: versioned prompts, a golden set that gates release, traced cost, and a plan for the day the model version changes.', build: () => seedProgress(createLLMOpsPractice()) },
 
-  { key: 'transition', category: 'Services & Operations', label: 'Managed Service Transition', description: 'Take a service over from another supplier: due diligence, knowledge transfer, service acceptance and hypercare. The one template that fills every register.', build: () => seedTicks(createServiceTransition()) },
-  { key: 'servicedesk', category: 'Services & Operations', label: 'Service Desk Launch', description: 'Replace mailboxes and a spreadsheet with one desk: priority model, request catalogue, pilot, and closing the old channel.', build: () => seedTicks(createServiceDeskLaunch()) },
+  { key: 'transition', category: 'Services & Operations', label: 'Managed Service Transition', description: 'Take a service over from another supplier: due diligence, knowledge transfer, service acceptance and hypercare. The one template that fills every register.', build: () => seedProgress(createServiceTransition()) },
+  { key: 'servicedesk', category: 'Services & Operations', label: 'Service Desk Launch', description: 'Replace mailboxes and a spreadsheet with one desk: priority model, request catalogue, pilot, and closing the old channel.', build: () => seedProgress(createServiceDeskLaunch()) },
 
-  { key: 'blank', category: 'General', label: 'Blank Project', description: 'Start from an empty sheet — no sample data.', build: () => seedTicks(createBlankProject()) },
+  { key: 'customer-success', category: 'Services & Operations', label: 'Customer Success Programme', description: 'A CSM team\u2019s book of business across the whole lifecycle — onboarding to advocacy, one churned — with health scores, renewals, NPS and revenue retention.', build: () => seedProgress(createCustomerSuccessProgramme()) },
+
+  { key: 'blank', category: 'General', label: 'Blank Project', description: 'Start from an empty sheet — no sample data.', build: () => seedProgress(createBlankProject()) },
 
   // One per industry, all off the same delivery spine — see js/agenticSpine.js
   // for why the order of an agentic programme is not a matter of taste.
@@ -759,8 +844,10 @@ export const TEMPLATES = [
     category: domain.category,
     label: domain.label,
     description: domain.description,
-    build: () => seedTicks(buildAgentic(domain)),
+    build: () => seedProgress(buildAgentic(domain)),
   })),
 ];
+
+export const TEMPLATES = RAW_TEMPLATES.map((template) => ({ ...template, build: () => onToday(template.build()) }));
 
 export const DEFAULT_TEMPLATE_KEY = 'marketing';

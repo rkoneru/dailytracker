@@ -37,23 +37,30 @@ function eq(label, got, want) {
     `got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
 }
 
-// ---------- the four methods ----------
+// ---------- the eight methods ----------
 
-eq('there are four', METHODOLOGIES.map((m) => m.id),
-  ['cpmai', 'crisp-dm', 'mlops', 'llmops']);
+eq('there are eight, the general one first', METHODOLOGIES.map((m) => m.id),
+  ['project', 'cpmai', 'crisp-dm', 'sdlc', 'adlc', 'agentic-dlc', 'mlops', 'llmops']);
+
+// The general lifecycle is the PMI process groups, and there are five of them;
+// every other method has six. A sixth invented to match would be the only
+// phase in the file with no source.
+const PHASE_COUNT = { project: 5 };
+eq('which are AI methods is stated, not inferred', METHODOLOGIES.filter((m) => !m.ai).map((m) => m.id), ['project', 'sdlc']);
 
 METHODOLOGIES.forEach((m) => {
   check(`${m.id}: is a lifecycle or a practice, and says which`,
     m.kind === 'lifecycle' || m.kind === 'practice', `kind = ${m.kind}`);
-  check(`${m.id}: has six phases`, m.phases.length === 6, `${m.phases.length}`);
+  const count = PHASE_COUNT[m.id] || 6;
+  check(`${m.id}: has ${count} phases`, m.phases.length === count, `${m.phases.length}`);
   check(`${m.id}: every phase says what it asks and when it is left`,
     m.phases.every((p) => p.asks && p.gate), '');
   check(`${m.id}: phase ids are unique`,
-    new Set(m.phases.map((p) => p.id)).size === 6, '');
+    new Set(m.phases.map((p) => p.id)).size === count, '');
   // A lifecycle is ordered and numbered; a practice is a set and must not be,
   // because numbering it would assert a sequence that does not exist.
   const numbered = m.phases.filter((p) => p.n).length;
-  eq(`${m.id}: numbering matches its kind`, numbered, m.kind === 'lifecycle' ? 6 : 0);
+  eq(`${m.id}: numbering matches its kind`, numbered, m.kind === 'lifecycle' ? count : 0);
 });
 
 // CPMAI is CRISP-DM's descendant and keeps four of its six phase ids; the two

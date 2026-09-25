@@ -9,7 +9,7 @@ import {
   renderComputed as refreshDashboardDerived,
 } from './dashboard.js';
 import { onProjectDataChanged, notifyProjectDataChanged } from './taskModel.js';
-import { initNav, setActiveNode, renderNav, registerPanel, openPanel, NAV_TREE } from './nav.js';
+import { initNav, setActiveNode, renderNav, registerPanel, openPanel, goToNode, pageNodeOf, NAV_TREE } from './nav.js';
 import { el } from './dom.js';
 import { initTasks, renderTasksPage } from './tasks.js';
 import { confirmAction, toast } from './dialog.js';
@@ -25,6 +25,7 @@ import { captureSnapshotIfDue } from './history.js';
 import { initRaid, renderRaid } from './raid.js';
 import { initEngagement, renderEngagement } from './engagement.js';
 import { initService, renderService } from './service.js';
+import { initCustomerSuccess, renderCustomerSuccess } from './customerSuccessPage.js';
 import { initRolePicker } from './rolePicker.js';
 import { initRouter, setRoute, onRouteChange, revealRow, currentUrl } from './router.js';
 import { initChangeLog, renderChangeLog } from './changeLogPage.js';
@@ -44,8 +45,12 @@ import { initMeetings, renderMeetings, setMeetingsChangedHandler } from './meeti
 import { initMyWork, renderMyWork } from './myWork.js';
 import { initPortfolio, renderPortfolio } from './portfolio.js';
 import { initResources, renderResources } from './resourcesPage.js';
+import { initCapacity, renderCapacity } from './capacityPage.js';
+import { initAiPortfolio, renderAiPortfolio } from './aiPortfolio.js';
 import { seedMeFrom, getMe, onMeChange } from './me.js';
 import * as supabase from './supabase.js';
+import { formatDate } from './dates.js';
+import { watchTables } from './tableLabels.js';
 
 // ---------- Service worker ----------
 
@@ -104,10 +109,13 @@ if ('serviceWorker' in navigator) {
 
 // ---------- Tabs ----------
 
+// AI Portfolio, Planning Layers, Capacity, Sync and Trash are tabs of other
+// pages now (see PAGE_TABS in tabs.js); their blocks keep the old ids so the
+// code and links that name them still find them.
 const PAGE_IDS = ['page-mywork', 'page-portfolio', 'page-resources',
   'page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
-  'page-scope', 'page-people', 'page-service', 'page-improve',
-  'page-meetings', 'page-kpis', 'page-reports', 'page-settings', 'page-sync', 'page-changelog', 'page-trash'];
+  'page-scope', 'page-people', 'page-service', 'page-improve', 'page-customers',
+  'page-meetings', 'page-kpis', 'page-reports', 'page-settings', 'page-changelog'];
 
 function showPage(pageId, title) {
   PAGE_IDS.forEach((id) => {
@@ -122,15 +130,21 @@ function showPage(pageId, title) {
   if (pageId === 'page-dashboard') refreshDashboardDerived();
   // The report spans every project, so recompute whenever it's opened.
   if (pageId === 'page-reports') refreshReport();
-  if (pageId === 'page-sync') renderSyncPage();
-  if (pageId === 'page-trash') renderTrash();
-  if (pageId === 'page-changelog') renderChangeLog();
-  if (pageId === 'page-tasks') renderTasksPage();
+  if (pageId === 'page-changelog') {
+    renderChangeLog();
+    renderTrash();
+  }
   // Both of these read every project, so they are assembled on arrival rather
   // than kept warm — there is nothing on them that is theirs to go stale.
   if (pageId === 'page-mywork') renderMyWork();
-  if (pageId === 'page-portfolio') renderPortfolio();
-  if (pageId === 'page-resources') renderResources();
+  if (pageId === 'page-portfolio') {
+    renderPortfolio();
+    renderAiPortfolio();
+  }
+  if (pageId === 'page-resources') {
+    renderResources();
+    renderCapacity();
+  }
   // Every indicator is derived, so the page is assembled on arrival rather
   // than kept warm: there is nothing on it that is its own to go stale.
   if (pageId === 'page-kpis') renderKpis();
@@ -140,16 +154,25 @@ function showPage(pageId, title) {
   // Re-read on arrival rather than kept warm: membership and the page policy
   // are the server's to state, and a stale "you are an admin" is exactly the
   // claim that must not linger.
-  if (pageId === 'page-settings') refreshSettings();
+  if (pageId === 'page-settings') {
+    refreshSettings();
+    renderSyncPage();
+  }
   // Every register page offers the roster in its owner fields, and the roster
   // is edited on one of them, so each arrival re-reads rather than trusting
   // whatever the last render left behind.
   if (pageId === 'page-scope' || pageId === 'page-people') renderEngagement();
   if (pageId === 'page-service' || pageId === 'page-improve') renderService();
+  if (pageId === 'page-customers') renderCustomerSuccess();
 
   // Last, because the register pages build their own cards above and the strip
   // can only list the sections that exist by the time it is drawn.
   mountTabs(pageId);
+
+  // After the tabs, not before: these build only the tab that is on screen,
+  // and on a first visit no tab has been hidden yet.
+  if (pageId === 'page-tasks') renderTasksPage();
+  renderIfStale(pageId);
 }
 
 // The node the app is currently showing, so the router can rebuild the link
@@ -166,7 +189,8 @@ function navigateTo(node, { fromRoute = false, rowId = '' } = {}) {
   if (node.report) setReportType(node.report, { render: false });
   showPage(node.page, node.title);
   setActiveNode(node.id);
-  setMobileActive(node.id);
+  // The bottom bar holds pages, so a tab lights up the page it is on.
+  setMobileActive(pageNodeOf(node.id)?.id || node.id);
   activeNode = node;
 
   if (!fromRoute) setRoute({ navId: node.id, projectId: getActiveProjectId() });
@@ -397,7 +421,7 @@ function renderSyncPill(status) {
   // stays a local-first app for everyone who never opens the Sync page.
   pill.hidden = status.state === 'off';
   pill.textContent = label;
-  pill.title = status.state === 'error' ? status.message : 'Open Sync & Team';
+  pill.title = status.state === 'error' ? status.message : 'Open Settings → Sync';
   ['synced', 'syncing', 'offline', 'error', 'signed-out'].forEach((state) => {
     pill.classList.toggle(`is-${state}`, status.state === state);
   });
@@ -434,7 +458,7 @@ function renderSyncPage() {
 
 function initSyncPage() {
   document.getElementById('sync-pill').addEventListener('click', () => {
-    document.getElementById('tab-sync').click();
+    goToNode('tab-sync');
   });
 
   document.getElementById('btn-sync-connect').addEventListener('click', () => {
@@ -526,7 +550,7 @@ function initSyncPage() {
 
   onSyncStatusChange((status) => {
     renderSyncPill(status);
-    if (document.getElementById('page-sync').classList.contains('is-active')) renderSyncPage();
+    if (isPageActive('page-settings')) renderSyncPage();
     // Membership drives the assignee picker on the Planner, not just this
     // page, so it is loaded on any sync state change rather than on arrival.
     if (status.state === 'synced' || status.state === 'signed-out') {
@@ -705,8 +729,9 @@ function initTeam() {
 
 /**
  * Tasks and milestones appear on the Planner, the Dashboard and the reports at
- * once. Whichever page an edit came from, the others have to catch up
- * immediately rather than on the next tab switch.
+ * once. Whichever page an edit came from, the one on screen catches up at once
+ * and the rest are rebuilt as they are opened (renderWhenShown, below) — only
+ * one page is ever visible, and export and print only read that one.
  *
  * The originating page is skipped: it has already applied its own targeted
  * update, and rebuilding the table under the user's cursor would drop focus
@@ -714,15 +739,66 @@ function initTeam() {
  */
 function initSharedDataSync() {
   onProjectDataChanged((source) => {
-    if (source !== 'planner') renderPlannerShared();
-    if (source !== 'tasks') renderTasksPage();
-    renderDashboardShared();
+    if (source !== 'planner') renderWhenShown('page-planner', renderPlannerShared);
+    // These two rebuild on every arrival anyway (showPage), so off screen
+    // there is nothing to remember.
+    if (source !== 'tasks' && isPageActive('page-tasks')) renderTasksPage();
+    if (isPageActive('page-dashboard')) renderDashboardShared();
+    refreshOpenReadOnlyPage();
 
     // The report spans every project and is rebuilt from scratch, so it is
     // only worth recomputing while it is actually on screen; opening the tab
     // refreshes it anyway.
     if (document.getElementById('page-reports').classList.contains('is-active')) refreshReport();
   });
+}
+
+/**
+ * Only the page on screen is rebuilt when shared data changes; the others are
+ * marked stale and rebuilt as they are opened. Rebuilding every page on every
+ * keystroke is what made typing in a big project lag — the Plan timeline alone
+ * cost 600 ms per key at a thousand tasks, for a page nobody was looking at.
+ */
+const stalePages = new Map();
+
+function isPageActive(pageId) {
+  return document.getElementById(pageId).classList.contains('is-active');
+}
+
+function renderWhenShown(pageId, render) {
+  if (isPageActive(pageId)) {
+    stalePages.delete(pageId);
+    render();
+  } else {
+    stalePages.set(pageId, render);
+  }
+}
+
+function renderIfStale(pageId) {
+  const render = stalePages.get(pageId);
+  if (!render) return;
+  stalePages.delete(pageId);
+  render();
+}
+
+/**
+ * The cross-project pages are assembled on arrival (see showPage), which
+ * keeps them right as you move around. But data can also change while one is
+ * open — a sync pull, a playbook step, a meeting action — so the page being
+ * looked at rebuilds then too. Only read-only pages are listed: rebuilding a
+ * page with inputs on it would drop an edit in progress.
+ */
+const READ_ONLY_PAGES = {
+  'page-mywork': () => renderMyWork(),
+  'page-portfolio': () => { renderPortfolio(); renderAiPortfolio(); },
+  // Only its Capacity tab: the rest of Resources has inputs on it.
+  'page-resources': () => renderCapacity(),
+  'page-kpis': () => renderKpis(),
+};
+
+function refreshOpenReadOnlyPage() {
+  const open = PAGE_IDS.find(isPageActive);
+  READ_ONLY_PAGES[open]?.();
 }
 
 // ---------- Full re-render (project switched, cloned, created, imported, or reset) ----------
@@ -735,7 +811,9 @@ function refreshActiveProjectView() {
   renderRaid();
   renderEngagement();
   renderService();
+  renderCustomerSuccess();
   refreshReport();
+  refreshOpenReadOnlyPage();
   // The project is half of every link, so switching one has to move the
   // address with it — otherwise Copy link quietly hands out the project
   // someone was looking at a minute ago. Replace rather than push: switching
@@ -765,7 +843,7 @@ function updateLastBackupLabel() {
   }
   const days = daysAgo(last);
   const when = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
-  label.textContent = `Last backup: ${when} (${new Date(last).toLocaleDateString()}).`;
+  label.textContent = `Last backup: ${when} (${formatDate(new Date(last))}).`;
 }
 
 function downloadBackup() {
@@ -927,6 +1005,8 @@ function init() {
   initInstallPrompt();
   initExportPanel();
   initBackup();
+  // Before any table is built, so every one of them is labelled as it appears.
+  watchTables();
   initPlanner();
   initDashboard({ onProjectSwitch: refreshActiveProjectView });
   initProjects({ onProjectChange: refreshActiveProjectView });
@@ -934,6 +1014,7 @@ function init() {
   initRaid({ onChanged: onRaidChanged });
   initEngagement();
   initService();
+  initCustomerSuccess();
   initSharedDataSync();
   initTasks();
   initTrash({ onRestore: refreshActiveProjectView });
@@ -947,6 +1028,15 @@ function init() {
   initPortfolio(goTo);
   initMobileNav(goTo);
   initResources(goTo);
+  initCapacity(goTo);
+  initAiPortfolio(goTo);
+  // Planning Layers is entirely static — nothing to render on arrival — so
+  // its only wiring, and the header links on AI Portfolio and the KPI page,
+  // are the inline pointers to other pages, scoped the same way the
+  // Dashboard's own kpi tiles and Capacity Planning's process card are.
+  document.querySelectorAll('#page-planning-layers [data-goto], #page-ai-portfolio [data-goto], #page-kpis [data-goto]').forEach((btn) => {
+    btn.addEventListener('click', () => goTo({ navId: btn.dataset.goto }));
+  });
   // The nav asks the policy which pages a role may see. Injected rather than
   // imported by roles.js, because policy.js reads the role list from there and
   // a cycle would leave one of them empty at load.
@@ -961,8 +1051,9 @@ function init() {
     // A narrower role can land while the page it no longer covers is on
     // screen. Redrawing only the sidebar would apply the policy to the menu
     // and not to what the person is actually looking at.
-    if (roleShows(activeNode.id)) setActiveNode(activeNode.id);
-    else document.getElementById(getRole().home)?.click();
+    // A tab is shown when its page is: sections were never filtered by role.
+    if (roleShows(pageNodeOf(activeNode.id).id)) setActiveNode(activeNode.id);
+    else goToNode(getRole().home);
   });
   refreshIdentity(getActiveProjectId())
     .catch((err) => console.warn('Could not read your membership.', err));
@@ -976,7 +1067,7 @@ function init() {
       await refreshIdentity(getActiveProjectId());
       renderNav();
       await refreshSettings();
-      document.getElementById(getRole().home)?.click();
+      goToNode(getRole().home);
     },
   });
   initWizard();
@@ -992,7 +1083,7 @@ function init() {
     // Roles differ on where they would have clicked first — a scrum master
     // opens the board, a service manager opens service levels — so first paint
     // lands on the role's own page rather than always on the Dashboard.
-    document.getElementById(getRole().home)?.click();
+    goToNode(getRole().home);
   }
 
   // Last, and over the top of a built app rather than instead of one: the

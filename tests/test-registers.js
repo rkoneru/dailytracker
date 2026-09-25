@@ -7,7 +7,7 @@
 // part that is genuinely its own — the derived counters, the ref prefixes, and
 // the vocabulary each one offers.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -28,12 +28,13 @@ const { eq, done } = createChecks();
   await page.click('#tab-scope');
   await page.waitForTimeout(600);
   eq('scope & contract', await page.$$eval('#page-scope .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Charter', 'Deliverables', 'Change Requests (Scope, Time, Cost)']);
+     ['Charter', 'Scope Baseline & Creep', 'Deliverables', 'Change Requests (Scope, Time, Cost)', 'Documents (Repository Index)',
+      'Change Request Workflow', 'Approval Route']);
 
   await page.click('#tab-people');
   await page.waitForTimeout(600);
   eq('people & stakeholders', await page.$$eval('#page-people .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Team Roster', 'Who Does What (RACI)', 'Stakeholders', 'Communications Plan']);
+     ['Team Roster', 'Who Does What (RACI)', 'Stakeholders', 'Communications Plan', 'Vendors & Suppliers']);
 
   await page.click('#tab-service');
   await page.waitForTimeout(600);
@@ -227,6 +228,7 @@ const { eq, done } = createChecks();
   await page.click('#btn-projects');
   await page.waitForTimeout(400);
   await page.check('#template-software');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(900);
   await page.click('#tab-service');
@@ -271,7 +273,8 @@ const { eq, done } = createChecks();
   await page.click('#tab-scope');
   await page.waitForTimeout(600);
   await openSection(page, 'sec-charter');
-  eq('every charter field is rendered', await page.locator('#charter-fields .charter-field').count(), 7);
+  // Eleven fields, plus the priority worked out from three of them.
+  eq('every charter field is rendered', await page.locator('#charter-fields .charter-field').count(), 12);
   await page.fill('#charter-fields [data-field="charterScopeOut"]', 'Anything outside the UK market.');
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: 'networkidle' });
@@ -283,14 +286,10 @@ const { eq, done } = createChecks();
      await page.inputValue('#charter-fields [data-field="charterScopeOut"]'), 'Anything outside the UK market.');
 
   console.log('\n--- nav reaches every register ---');
-  // The tree remembers what was open, so toggle only if it is currently shut.
-  if (await page.getAttribute('#tab-improve', 'aria-expanded') === 'false') {
-    await page.click('#tab-improve .nav-twisty');
-    await page.waitForTimeout(300);
-  }
-  await page.click('#nav-lessons .nav-row__label');
+  // Sections are the page's tab strip, not sidebar rows; a link reaches them.
+  await page.evaluate(() => { window.location.hash = '#/nav-lessons'; });
   await page.waitForTimeout(500);
-  eq('a section leaf opens its page', await page.textContent('#page-title'), 'Improvement & Lessons');
+  eq('a link to a section opens its page', await page.textContent('#page-title'), 'Improvement & Lessons');
   // The jump is a smooth scroll, so wait for it to land rather than guessing.
   const onScreen = await page.waitForFunction(() => {
     const r = document.getElementById('sec-lessons').getBoundingClientRect();

@@ -16,6 +16,8 @@ import { el } from './dom.js';
 import { parseDate } from './charts.js';
 import { getMe, setMe, isMine, onMeChange } from './me.js';
 import { WORK_REGISTERS, isOpenRow } from './registerDefs.js';
+import { effectiveDecision } from './changeControl.js';
+import { formatDate } from './dates.js';
 
 let onGo = null;
 let scope = 'mine';       // 'mine' | 'everyone'
@@ -86,6 +88,20 @@ function gather(me) {
       }));
     });
 
+    // A decision someone is waiting on is work too, and it belongs to the
+    // named approver rather than to whoever raised the change.
+    (project.changeRequests || []).forEach((cr) => {
+      if (cr.stage !== 'review') return;
+      (cr.approvals || []).forEach((ap) => {
+        if (effectiveDecision(ap, cr) !== 'Pending') return;
+        if (mineOnly && !isMine(ap.name, me)) return;
+        rows.push(item({
+          ...base, title: `Decide: ${cr.title || 'untitled change'}`, kind: `Approval · ${ap.role}`, owner: ap.name,
+          due: '', status: 'Awaiting decision', navId: 'tab-scope', rowId: cr.id, done: false,
+        }));
+      });
+    });
+
     WORK_REGISTERS.forEach((def) => {
       (project[def.key] || []).forEach((row) => {
         const done = !isOpenRow(def, row);
@@ -115,7 +131,7 @@ function dueLabel(row) {
   if (!row.due) return '—';
   const d = parseDate(row.due);
   if (!d) return row.due;
-  const nice = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const nice = formatDate(d, 'day');
   if (row.days === 0) return 'Today';
   if (row.days === 1) return 'Tomorrow';
   if (row.days < 0) return `${nice} · ${Math.abs(row.days)}d late`;

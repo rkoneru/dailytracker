@@ -5,7 +5,7 @@
 // not access control — the toggle proves that — and it must never strand
 // someone on a page their new role cannot navigate back to.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openDestination } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -24,12 +24,17 @@ const { eq, done } = createChecks();
     .filter((e) => !e.classList.contains('nav-row--group'))
     .map((e) => e.querySelector('.nav-row__label').textContent));
   const activePage = () => page.evaluate(() => document.querySelector('.page.is-active').id);
-  const setRole = async (id) => { await page.selectOption('#role-select', id); await page.waitForTimeout(450); };
+  // The picker lives on Settings → Account now, not above the sidebar.
+  const setRole = async (id) => {
+    await openDestination(page, 'nav-settings-role');
+    await page.selectOption('#role-select', id);
+    await page.waitForTimeout(450);
+  };
 
   console.log('\n--- the picker offers every role and starts on the lead ---');
   eq('roles offered', await page.$$eval('#role-select option', (e) => e.map((x) => x.textContent)),
      ['Engagement Lead', 'Project Manager', 'Product Manager', 'Scrum Master',
-      'Developer', 'Tester / QA', 'Service Manager']);
+      'Developer', 'Tester / QA', 'Service Manager', 'Customer Success Manager', 'Chief AI Officer']);
   eq('default role', await page.inputValue('#role-select'), 'engagement-lead');
   eq('and it explains itself', (await page.textContent('#role-blurb')).length > 20, true);
 
@@ -40,7 +45,7 @@ const { eq, done } = createChecks();
   eq('nothing is held back', await page.isHidden('#nav-filter-note'), true);
 
   console.log('\n--- Engagement is for the lead, and only the lead ---');
-  for (const role of ['project-manager', 'product-manager', 'scrum-master', 'developer', 'tester', 'service-manager']) {
+  for (const role of ['project-manager', 'product-manager', 'scrum-master', 'developer', 'tester', 'service-manager', 'chief-ai-officer']) {
     await setRole(role);
     const visible = await pages();
     eq(`${role} cannot see Scope & Contract`, visible.includes('Scope & Contract'), false);
@@ -70,6 +75,7 @@ const { eq, done } = createChecks();
   eq('and names the role', (await page.textContent('#nav-filter-note')).includes('Service Manager'), true);
 
   console.log('\n--- it is a filter, not a lock ---');
+  await openDestination(page, 'nav-settings-role');
   await page.check('#role-show-all');
   await page.waitForTimeout(450);
   const everything = await pages();
@@ -87,6 +93,10 @@ const { eq, done } = createChecks();
   await setRole('project-manager');
   const pm = await pages();
   eq('a project manager has both', pm.includes('My Work') && pm.includes('Portfolio'), true);
+  // AI initiatives is a tab of Portfolio now, so it has no menu row of its own.
+  eq('AI initiatives is not a menu row', pm.includes('AI Portfolio'), false);
+  await setRole('chief-ai-officer');
+  eq('the CAIO has the Portfolio it lives on', (await pages()).includes('Portfolio'), true);
 
   console.log('\n--- each role opens where it would have clicked ---');
   // Deep links made the URL the source of truth for where you are, so the
@@ -104,12 +114,17 @@ const { eq, done } = createChecks();
     developer: 'page-mywork',
     tester: 'page-mywork',
     'service-manager': 'page-service',
+    // Portfolio, on its AI initiatives tab (checked below).
+    'chief-ai-officer': 'page-portfolio',
   };
   for (const [role, expected] of Object.entries(landings)) {
     await setRole(role);
     await page.goto(`${APP_URL}/index.html`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1100);
     eq(`${role} opens on ${expected}`, await activePage(), expected);
+    if (role === 'chief-ai-officer') {
+      eq('on its AI initiatives tab', await page.getAttribute('#tab-sec-ai-portfolio', 'aria-selected'), 'true');
+    }
   }
 
   console.log('\n--- but a route wins over the role default ---');
@@ -122,20 +137,27 @@ const { eq, done } = createChecks();
      await activePage(), 'page-raid');
 
   console.log('\n--- switching role never strands you on a page you cannot leave ---');
+  // A role that changes while you are on some other page — an administrator's
+  // assignment arriving, say. The picker is on Settings, so it cannot be used
+  // from here; the change comes through the role store, as that one does.
+  const roleArrives = async (id) => {
+    await page.evaluate(async (role) => (await import('./js/roles.js')).setRole(role), id);
+    await page.waitForTimeout(450);
+  };
   await setRole('engagement-lead');
   await page.click('#tab-scope');
   await page.waitForTimeout(400);
   eq('the lead is on Scope & Contract', await activePage(), 'page-scope');
-  await setRole('developer');
+  await roleArrives('developer');
   eq('a developer is moved to their own home rather than left there',
      await activePage(), 'page-mywork');
 
   // The opposite case matters too: a page the new role can still see should
   // not be yanked away just because the role changed.
-  await setRole('engagement-lead');
+  await roleArrives('engagement-lead');
   await page.click('#tab-raid');
   await page.waitForTimeout(400);
-  await setRole('tester');
+  await roleArrives('tester');
   eq('a page both roles share is left alone', await activePage(), 'page-raid');
 
   console.log('\n--- the choice sticks, and survives a reload ---');

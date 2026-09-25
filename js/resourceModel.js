@@ -11,6 +11,8 @@
 // overlapping date windows, part-time capacity, leave in the middle of an
 // allocation — testable without a browser.
 
+import { toLocalISO } from './dates.js';
+
 const DAY_MS = 86400000;
 
 // ---------- vocabulary ----------
@@ -46,7 +48,7 @@ export function parseDate(value) {
 }
 
 export function toISO(date) {
-  return date.toISOString().slice(0, 10);
+  return toLocalISO(date);
 }
 
 /** Monday of the week a date falls in, so every week-based figure agrees. */
@@ -364,6 +366,53 @@ export function findConflicts({ resources, allocations, absences, projects = [],
 
   const order = { high: 0, medium: 1, low: 2 };
   return out.sort((a, b) => order[a.severity] - order[b.severity]);
+}
+
+// ---------- labour estimate ----------
+
+/**
+ * What the people booked on a project will cost over its life: each
+ * allocation's share of that person's week, for the weeks it runs, at their
+ * cost rate. An allocation with an open end runs to the project's due date;
+ * one with no dates at all borrows the project's own window.
+ *
+ * It is a forecast from bookings, not a record of spend — timesheets are that.
+ * Anyone without a cost rate is counted in hours and named, never priced at
+ * nothing, and when nobody can be priced the cost is null: an estimate of zero
+ * would read as "this is free".
+ */
+export function labourEstimate(allocations, resources, { from, to } = {}) {
+  const byId = new Map(resources.map((r) => [r.id, r]));
+  let cost = 0;
+  let pricedHours = 0;
+  let unpricedHours = 0;
+  let undated = 0;
+  const unpriced = new Set();
+  allocations.forEach((alloc) => {
+    const start = alloc.from || from;
+    const end = alloc.to || to;
+    if (!parseDate(start) || !parseDate(end)) { undated += 1; return; }
+    const days = overlapDays(start, end, start, end);
+    const resource = byId.get(alloc.resourceId);
+    const weekly = Number(resource?.capacityHours) || DEFAULT_CAPACITY;
+    const hours = ((Number(alloc.percent) || 0) / 100) * weekly * (days / 7);
+    const rate = resource ? ratesOf(resource).cost : null;
+    if (rate === null) {
+      unpricedHours += hours;
+      unpriced.add(resource?.name || alloc.name || 'Someone unnamed');
+      return;
+    }
+    pricedHours += hours;
+    cost += hours * rate;
+  });
+  return {
+    cost: pricedHours > 0 ? Math.round(cost) : null,
+    pricedHours: Math.round(pricedHours),
+    unpricedHours: Math.round(unpricedHours),
+    unpriced: [...unpriced],
+    undated,
+    count: allocations.length,
+  };
 }
 
 // ---------- timesheets ----------

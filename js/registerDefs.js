@@ -27,6 +27,12 @@ const TSHIRT = ['S', 'M', 'L', 'XL'];
 export const CHARTER_FIELDS = [
   { field: 'charterSponsor', label: 'Sponsor', placeholder: 'Who is accountable for the outcome?' },
   { field: 'charterServiceOwner', label: 'Service owner', placeholder: 'Who owns the service once it is live?' },
+  { field: 'charterObjective', label: 'Strategic objective', wide: true, placeholder: 'Which organisational goal this serves — the line that ties it to the portfolio.' },
+  // Scored 1–5 for the portfolio board. js/priority.js turns them into a
+  // priority; the charter only ever stores the three judgements.
+  { field: 'charterValue', label: 'Business value', score: true, hint: '1 little – 5 a great deal' },
+  { field: 'charterFit', label: 'Strategic fit', score: true, hint: '1 tangential – 5 central' },
+  { field: 'charterEffort', label: 'Effort', score: true, hint: '1 small – 5 very large' },
   { field: 'charterBusinessCase', label: 'Business case', long: true, placeholder: 'Why this work is worth doing, in a sentence or two.' },
   { field: 'charterScopeIn', label: 'In scope', long: true, placeholder: 'What this engagement will deliver.' },
   { field: 'charterScopeOut', label: 'Out of scope', long: true, placeholder: 'What it explicitly will not — the line that stops scope creep.' },
@@ -42,7 +48,7 @@ export const ROSTER = {
   title: 'Team Roster',
   rowLabel: 'person',
   addLabel: '+ Add Person',
-  blurb: 'Who is on the engagement, in what role, and for how much of their time. Names here are offered wherever the app asks who owns something. Sign-in accounts and who may edit what are separate, on Sync & Team.',
+  blurb: 'Who is on the engagement, in what role, and for how much of their time. Names here are offered wherever the app asks who owns something. Sign-in accounts and who may edit what are separate, in Settings under Sync.',
   emptyText: 'No one on the roster yet. Add the people working on this engagement.',
   searchFields: ['name', 'role', 'org'],
   searchPlaceholder: 'Search name, role or organisation…',
@@ -86,6 +92,7 @@ export const DELIVERABLES = {
   rowLabel: 'deliverable',
   addLabel: '+ Add Deliverable',
   refPrefix: 'D',
+  hiddenFields: ['signedOffBy', 'signOffDate', 'signature'],
   blurb: 'What the client actually receives, and what has to be true for them to accept it. A deliverable with no acceptance criteria is an argument waiting to happen.',
   emptyText: 'No deliverables listed yet.',
   searchFields: ['name', 'owner', 'acceptance'],
@@ -98,8 +105,11 @@ export const DELIVERABLES = {
     { field: 'due', label: 'Due', type: 'date' },
     { field: 'acceptance', label: 'Acceptance criteria', placeholder: 'What "done" means to the client', cls: 'col-wide' },
     { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Not Started', 'In Progress', 'In Review', 'Accepted', 'Rejected'] },
-    { field: 'signedOffBy', label: 'Signed off by', type: 'person', placeholder: 'Who accepted it' },
-    { field: 'signOffDate', label: 'Sign-off', type: 'date' },
+    // Accepting or rejecting is signed, against the name and the criteria as
+    // they stand; the page draws the cell (js/scopeControlPage.js). The old
+    // typed "signed off by" and date fields are still kept, filled from the
+    // signature, because reports and the closure summary read them.
+    { field: '_signoff', label: 'Sign-off', type: 'custom' },
     // Defects found against this deliverable. The denominator of defect
     // density, which without it is an indicator the app can define and never
     // answer — so it is a field on the thing defects are found in, rather than
@@ -185,7 +195,9 @@ export const CHANGE_REQUESTS = {
   rowLabel: 'change request',
   addLabel: '+ Add Change Request',
   refPrefix: 'CR',
-  blurb: 'Changes to what was agreed: scope, timeline or money. A change to how the live service runs is a different thing with a different approval path — that is Change Control, on Service & Support.',
+  // The workflow's own state, kept on the row and drawn by the review panel.
+  hiddenFields: ['stage', 'reason', 'touches', 'approvals', 'history', 'implemented'],
+  blurb: 'Changes to what was agreed: scope, timeline or money. Each one is raised, has its impact assessed, is decided by the approvers its size calls for, and is then implemented — use Review to move it along; the status follows. A change to how the live service runs is Change Control, on Service & Support.',
   emptyText: 'No change requests raised yet.',
   searchFields: ['title', 'raisedBy', 'scopeImpact'],
   searchPlaceholder: 'Search title or requester…',
@@ -197,11 +209,16 @@ export const CHANGE_REQUESTS = {
     { field: 'scopeImpact', label: 'Scope impact', placeholder: 'What it adds or removes', cls: 'col-wide' },
     { field: 'scheduleImpact', label: 'Days', type: 'number', step: 1 },
     { field: 'costImpact', label: 'Cost', type: 'number', step: 100 },
-    { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Draft', 'Submitted', 'Under Review', 'Approved', 'Rejected', 'Deferred'] },
-    { field: 'decidedBy', label: 'Decided by', type: 'person', placeholder: 'Approver' },
-    { field: 'decided', label: 'Decided', type: 'date' },
+    // Read-only: the workflow sets these, from the stage and the signatures.
+    { field: 'status', label: 'Status', type: 'select', tone: true, readonly: true, options: ['Draft', 'Submitted', 'Under Review', 'Approved', 'Rejected', 'Deferred', 'Implemented', 'Withdrawn'] },
+    { field: 'decidedBy', label: 'Decided by', type: 'person', readonly: true },
+    { field: 'decided', label: 'Decided', type: 'date', readonly: true },
   ],
-  newRow: () => ({ title: '', raisedBy: '', raised: '', scopeImpact: '', scheduleImpact: '', costImpact: '', status: 'Draft', decidedBy: '', decided: '' }),
+  rowActions: [{ action: 'review', label: 'Review', text: 'Review ▸' }],
+  newRow: () => ({
+    title: '', raisedBy: '', raised: '', scopeImpact: '', scheduleImpact: '', costImpact: '', status: 'Draft', decidedBy: '', decided: '',
+    stage: 'draft', reason: '', touches: '', approvals: [], history: [],
+  }),
 };
 
 export const LESSONS = {
@@ -377,20 +394,121 @@ export const KNOWN_ERRORS = {
 
 // ---------- Which page each register lives on ----------
 //
+// The documents themselves live wherever the organisation keeps documents — a
+// shared drive, SharePoint, Confluence. This register is the index to them:
+// which version is current, who owns it and when it is next due a look. It
+// holds a link, never the file, because a second copy of a contract is how the
+// wrong version gets signed.
+export const DOCUMENTS = {
+  key: 'documents',
+  id: 'documents',
+  title: 'Documents (Repository Index)',
+  rowLabel: 'document',
+  addLabel: '+ Add Document',
+  refPrefix: 'DOC',
+  blurb: 'The index to where each document actually lives, which version is current, and who owns it. A link, not a copy: links only open if they are http or https.',
+  emptyText: 'No documents indexed yet.',
+  searchFields: ['title', 'type', 'owner'],
+  searchPlaceholder: 'Search title, type or owner…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'title', label: 'Document', placeholder: 'What it is', cls: 'col-wide' },
+    { field: 'type', label: 'Type', type: 'select', options: ['Contract', 'Statement of Work', 'Charter', 'Plan', 'Design', 'Report', 'Minutes', 'Policy', 'Other'] },
+    { field: 'link', label: 'Where it lives', type: 'link', placeholder: 'https://…', cls: 'col-wide' },
+    { field: 'version', label: 'Version', placeholder: 'v1.0' },
+    { field: 'owner', label: 'Owner', type: 'person', placeholder: 'Who keeps it current' },
+    { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Draft', 'In Review', 'Approved', 'Superseded'] },
+    { field: 'review', label: 'Next review', type: 'date' },
+  ],
+  newRow: () => ({ title: '', type: 'Other', link: '', version: '', owner: '', status: 'Draft', review: '' }),
+};
+
+// Suppliers are people you depend on under contract, and the contract is what
+// makes them different from a stakeholder: a value, an end date and a service
+// you can hold them to. The owner is the person inside who manages them.
+export const VENDORS = {
+  key: 'vendors',
+  id: 'vendors',
+  title: 'Vendors & Suppliers',
+  rowLabel: 'vendor',
+  addLabel: '+ Add Vendor',
+  refPrefix: 'V',
+  blurb: 'Who you buy from, under which contract, until when, and how they are doing. The end date is the one to watch: a supplier whose contract lapses mid-delivery is a risk nobody logged.',
+  emptyText: 'No vendors recorded yet.',
+  searchFields: ['name', 'service', 'contract'],
+  searchPlaceholder: 'Search vendor, service or contract…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'name', label: 'Vendor', placeholder: 'Company name' },
+    { field: 'service', label: 'Provides', placeholder: 'What you buy from them', cls: 'col-wide' },
+    { field: 'contract', label: 'Contract', placeholder: 'Reference or PO' },
+    { field: 'value', label: 'Value', type: 'number', step: 100 },
+    { field: 'start', label: 'Start', type: 'date' },
+    { field: 'end', label: 'End', type: 'date' },
+    { field: 'owner', label: 'Managed by', type: 'person', placeholder: 'Who holds the contract' },
+    { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Onboarding', 'Active', 'On Hold', 'Ended'] },
+    { field: 'performance', label: 'Performance', type: 'select', tone: true, options: ['Not reviewed', 'Exceeding', 'Meeting', 'Below', 'Failing'] },
+  ],
+  newRow: () => ({ name: '', service: '', contract: '', value: '', start: '', end: '', owner: '', status: 'Onboarding', performance: 'Not reviewed' }),
+};
+
+// A customer success manager's book of business. One row per account, with
+// the lifecycle stage it is in; the health score beside it is worked out from
+// adoption, NPS, how recently anyone spoke to them and how close the renewal
+// is (js/customerSuccess.js), and is drawn by the page, never typed.
+// `startArr` is what the account was worth when the period began — without it
+// revenue retention has nothing to be a percentage of.
+export const CUSTOMERS = {
+  key: 'customers',
+  id: 'customers',
+  title: 'Accounts',
+  rowLabel: 'account',
+  addLabel: '+ Add Account',
+  refPrefix: 'AC',
+  hiddenFields: ['stageHistory'],
+  blurb: 'Every customer account, where it is in the lifecycle, and the signals its health is read from. Health is worked out, not typed: it needs at least two of adoption, NPS and last touch.',
+  emptyText: 'No accounts yet.',
+  searchFields: ['name', 'csm', 'segment'],
+  searchPlaceholder: 'Search account, CSM or segment…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'name', label: 'Account', placeholder: 'Customer name' },
+    { field: 'segment', label: 'Segment', type: 'select', options: ['Enterprise', 'Mid-market', 'SMB'] },
+    { field: 'csm', label: 'CSM', type: 'person', placeholder: 'Who owns the relationship' },
+    { field: 'stage', label: 'Stage', type: 'select', tone: true, options: ['Onboard', 'Adopt', 'Realise value', 'Renew', 'Expand', 'Advocate', 'Churned'] },
+    { field: '_health', label: 'Health', type: 'custom' },
+    { field: 'arr', label: 'ARR', type: 'number', step: 1000 },
+    { field: 'startArr', label: 'ARR at start', type: 'number', step: 1000 },
+    { field: 'start', label: 'Customer since', type: 'date' },
+    { field: 'renewal', label: 'Renewal', type: 'date' },
+    { field: 'adoption', label: 'Adoption %', type: 'number', min: 0, max: 100, step: 5 },
+    { field: 'nps', label: 'NPS (0–10)', type: 'number', min: 0, max: 10, step: 1 },
+    { field: 'lastTouch', label: 'Last touch', type: 'date' },
+    { field: 'acquisitionCost', label: 'Cost to acquire', type: 'number', step: 500 },
+  ],
+  newRow: () => ({
+    name: '', segment: 'Mid-market', csm: '', stage: 'Onboard', arr: '', startArr: '', start: '', renewal: '',
+    adoption: '', nps: '', lastTouch: '', acquisitionCost: '', stageHistory: [],
+  }),
+};
+
 // Grouped by who needs them rather than by which body of practice they came
 // from. A tester and a service manager both want the go-live checklist and the
 // known errors; neither opens a stakeholder map. Splitting PMP from ITIL made
 // two piles that no single role reads end to end.
 
 /** Commercial: what was agreed, and what has changed since. Leads only. */
-export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS];
+export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS, DOCUMENTS];
 
 /** Relationships: who is on it, who decides, who needs telling. Leads only. */
 // The roster used to be the first of these. It is now a view of the central
 // resource pool's allocations — see adoptLegacyRosters in state.js — because a
 // roster typed separately into each project cannot answer the question a
 // roster exists for: whether this person has the time.
-export const PEOPLE_REGISTERS = [RACI, STAKEHOLDERS, COMMS];
+export const PEOPLE_REGISTERS = [RACI, STAKEHOLDERS, COMMS, VENDORS];
+
+/** Customer success: the accounts and where each is in its lifecycle. */
+export const CUSTOMER_REGISTERS = [CUSTOMERS];
 
 /** Blockers, alongside the RAID log — the other half of "what is in our way". */
 export const BLOCKER_REGISTERS = [DEPENDENCIES];
@@ -414,12 +532,13 @@ const PAGE_OF = [
   [BLOCKER_REGISTERS, 'tab-raid'],
   [SERVICE_REGISTERS, 'tab-service'],
   [IMPROVE_REGISTERS, 'tab-improve'],
+  [CUSTOMER_REGISTERS, 'tab-customers'],
 ];
 PAGE_OF.forEach(([group, navId]) => group.forEach((def) => { def.navId = navId; }));
 
 export const ALL_REGISTERS = [
   ...SCOPE_REGISTERS, ...PEOPLE_REGISTERS, ...BLOCKER_REGISTERS,
-  ...SERVICE_REGISTERS, ...IMPROVE_REGISTERS,
+  ...SERVICE_REGISTERS, ...IMPROVE_REGISTERS, ...CUSTOMER_REGISTERS,
 ];
 
 /** Every collection these pages own, for migrations, sync and cloning. */
@@ -445,7 +564,8 @@ export const LEGACY_REGISTER_KEYS = ['roster'];
 const WORK_SHAPE = {
   deliverables: { ownerField: 'owner', dueField: 'due', closed: ['Accepted', 'Rejected'] },
   dependencies: { ownerField: 'owner', dueField: 'neededBy', closed: ['Met', 'Missed'] },
-  changeRequests: { ownerField: 'raisedBy', dueField: '', closed: ['Approved', 'Rejected', 'Deferred'] },
+  // Approved is not finished: somebody still has to implement it.
+  changeRequests: { ownerField: 'raisedBy', dueField: '', closed: ['Implemented', 'Rejected', 'Deferred', 'Withdrawn'] },
   // An SLA is a standing promise, so only a promise in trouble is work.
   serviceLevels: { ownerField: 'owner', dueField: '', closed: ['Met', 'Not measured'] },
   sac: { ownerField: 'owner', dueField: '', closed: ['Met', 'Waived'] },
@@ -454,6 +574,8 @@ const WORK_SHAPE = {
   csi: { ownerField: 'owner', dueField: 'target', closed: ['Done', 'Rejected'] },
   knownErrors: { ownerField: 'owner', dueField: '', closed: ['Resolved'] },
   lessons: { ownerField: 'owner', dueField: '', closed: ['Applied', 'Rejected'] },
+  // An account is standing work for its CSM, due at its renewal.
+  customers: { ownerField: 'csm', dueField: 'renewal', closed: ['Churned'] },
 };
 
 ALL_REGISTERS.forEach((def) => {

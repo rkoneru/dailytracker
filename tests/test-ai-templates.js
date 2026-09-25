@@ -1,4 +1,4 @@
-const { APP_URL, out, launch } = require('./harness');
+const { APP_URL, out, launch, chooseLifecycle } = require('./harness');
 
 const AI_TEMPLATES = ['llm-feature', 'rag-assistant', 'ml-model', 'ai-agent', 'ai-governance'];
 
@@ -27,6 +27,7 @@ const AI_TEMPLATES = ['llm-feature', 'rag-assistant', 'ml-model', 'ai-agent', 'a
     await page.waitForTimeout(200);
     await page.locator(`#template-${key}`).scrollIntoViewIfNeeded();
     await page.check(`#template-${key}`);
+    await chooseLifecycle(page);
     await page.click('#btn-create-project');
     await page.waitForTimeout(400);
 

@@ -1,4 +1,4 @@
-const { APP_URL, out, launch, openSection } = require('./harness');
+const { APP_URL, out, launch, openSection, chooseLifecycle } = require('./harness');
 
 // The app uses in-page dialogs now, not window.confirm, so a test drives them
 // like any other UI: click the button, then the dialog's own action.
@@ -70,6 +70,7 @@ async function acceptDialog(page) {
   await page.waitForTimeout(250);
   await page.locator('#template-llm-feature').scrollIntoViewIfNeeded();
   await page.check('#template-llm-feature');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(400);
 

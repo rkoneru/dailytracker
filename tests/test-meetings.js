@@ -5,7 +5,7 @@
 // action that never became a task, a transcript that swallowed the first half
 // of a sentence because it looked like a speaker label.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, openDestination } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -31,11 +31,13 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   eq('landed on Meetings', await page.textContent('#page-title'), 'Meetings');
   eq('the sections are the meeting, in the order it happens',
      await page.$$eval('#page-meetings .page-tab', (e) => e.map((x) => x.firstChild.textContent.trim())),
-     ['Overview', 'Agenda', 'Attendees', 'Discussion Notes', 'Decisions',
-      'Action Items', 'Follow-up', 'Recording & Transcript']);
+     ['Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']);
 
   console.log('\n--- the starter project ships a worked example ---');
-  eq('a meeting is already there', await page.locator('#meeting-picker option').count(), 1);
+  // The newest of the two is the worked example these assertions walk through;
+  // sortMeetings puts it first in the picker and meetings[0] agrees, since it
+  // is also first in the array the template literal wrote it in.
+  eq('two meetings are already there', await page.locator('#meeting-picker option').count(), 2);
   const sample = await meeting();
   eq('with an agenda', sample.agenda.length, 4);
   eq('attendees', sample.attendees.length, 4);
@@ -98,7 +100,14 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
     return tasks[tasks.length - 1];
   });
   eq('it carries the owner', made.assigned, 'Priya N.');
-  eq('and the due date', made.end, '2026-09-10');
+  // The template is moved to sit on today (js/sampleData.js), so the due
+  // date is read from the action the task was made from, not written in.
+  const actionDue = await page.evaluate(async (taskId) => {
+    const { getState } = await import('/js/state.js');
+    const action = (getState().meetings || []).flatMap((m) => m.actions || []).find((a) => a.taskId === taskId);
+    return action ? action.due : null;
+  }, made.id);
+  eq('and the due date', made.end, actionDue);
   eq('and says where it came from', made.comments.includes('stand-up'), true);
 
   // Closing the action closes the task: one state, two places that show it.
@@ -159,14 +168,23 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
   await page.waitForTimeout(400);
   await page.click('.dialog .btn-danger');
   await page.waitForTimeout(600);
-  eq('it is gone from the picker', await page.locator('#meeting-picker option').count(), 0);
+  eq('one is left in the picker', await page.locator('#meeting-picker option').count(), 1);
+  eq('so the page does not yet claim there are none',
+     await page.locator('#meeting-none').isVisible(), false);
+
+  // Delete the second one too, to reach the actually-empty state.
+  await page.click('#btn-delete-meeting');
+  await page.waitForTimeout(400);
+  await page.click('.dialog .btn-danger');
+  await page.waitForTimeout(600);
+  eq('now it is gone from the picker', await page.locator('#meeting-picker option').count(), 0);
   eq('and the page says so rather than showing eight empty tabs',
      await page.locator('#meeting-none').isVisible(), true);
-  await page.click('#tab-trash .nav-row__label');
+  await openDestination(page, 'tab-trash');
   await page.waitForTimeout(500);
-  eq('it is in the Trash, named as a meeting',
+  eq('both are in the Trash, named as a meeting',
      (await page.$$eval('#trash-body .trash-item__meta', (e) => e.map((x) => x.textContent)))
-       .some((t) => t.startsWith('Meeting')), true);
+       .filter((t) => t.startsWith('Meeting')).length, 2);
 
   console.log('\n--- layout ---');
   await page.click('#tab-meetings .nav-row__label');

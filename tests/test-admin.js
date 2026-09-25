@@ -10,7 +10,7 @@
 // What a determined attacker runs into is Postgres, and that is tested for
 // real in tests/test-rls.js.
 
-const { APP_URL, API_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, API_URL, launch, createChecks, openSection, openDestination } = require('./harness');
 
 const PROJECT = '10000000-0000-4000-8000-0000000000aa';
 const ME = '00000000-0000-4000-8000-00000000000a';
@@ -82,6 +82,7 @@ async function useProject(page) {
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(900);
 
+    await openDestination(page, 'nav-settings-role');
     eq('the picker is usable', await page.locator('#role-select').isDisabled(), false);
     eq('nothing claims it was assigned', await page.locator('#role-assigned').isVisible(), false);
     eq('and the escape hatch is offered', await page.locator('#role-show-all-row').isVisible(), true);
@@ -131,6 +132,7 @@ async function useProject(page) {
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(1600);
 
+    await openDestination(page, 'nav-settings-role');
     eq('the assigned role is the one in force', await page.inputValue('#role-select'), 'tester');
     eq('the picker is locked', await page.locator('#role-select').isDisabled(), true);
     eq('and says who locked it', await page.locator('#role-assigned').isVisible(), true);
@@ -246,7 +248,7 @@ async function useProject(page) {
     console.log('\n--- setting page access ---');
     await openSection(page, 'sec-settings-pages');
     eq('the policy editor is there', await page.locator('#admin-pages').isVisible(), true);
-    eq('with a column per job role', await page.locator('.policy-role').count(), 7);
+    eq('with a column per job role', await page.locator('.policy-role').count(), 9);
     // Defaults rather than a blank sheet: saving an empty policy would leave
     // every role with nothing.
     const ticked = await page.locator('.policy-page input:checked').count();

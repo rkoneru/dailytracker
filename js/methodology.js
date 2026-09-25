@@ -13,9 +13,9 @@
 //
 // TWO KINDS, AND THEY ARE NOT INTERCHANGEABLE
 //
-// A LIFECYCLE is an ordered set of phases with gates between them. CRISP-DM and
-// CPMAI are lifecycles: you are in one phase at a time, and leaving it means
-// something specific.
+// A LIFECYCLE is an ordered set of phases with gates between them. CRISP-DM,
+// CPMAI, SDLC, ADLC and the Agentic DLC are lifecycles: you are in one phase
+// at a time, and leaving it means something specific.
 //
 // A PRACTICE is a set of capabilities you either have or do not. MLOps and
 // LLMOps are practices. They are frequently drawn as a six-box cycle to make
@@ -39,6 +39,7 @@
  */
 const CRISP_DM = {
   id: 'crisp-dm',
+  ai: true,
   kind: 'lifecycle',
   label: 'CRISP-DM',
   full: 'Cross-Industry Standard Process for Data Mining',
@@ -92,6 +93,7 @@ const CRISP_DM = {
  */
 const CPMAI = {
   id: 'cpmai',
+  ai: true,
   kind: 'lifecycle',
   label: 'CPMAI',
   full: 'Cognitive Project Management for AI',
@@ -141,6 +143,7 @@ const CPMAI = {
  */
 const MLOPS = {
   id: 'mlops',
+  ai: true,
   kind: 'practice',
   label: 'MLOps',
   full: 'Machine learning operations',
@@ -190,6 +193,7 @@ const MLOPS = {
  */
 const LLMOPS = {
   id: 'llmops',
+  ai: true,
   kind: 'practice',
   label: 'LLMOps',
   full: 'Large language model operations',
@@ -229,7 +233,215 @@ const LLMOPS = {
   ],
 };
 
-export const METHODOLOGIES = [CPMAI, CRISP_DM, MLOPS, LLMOPS];
+/**
+ * SDLC — the Software Development Life Cycle. No consortium owns it and no
+ * single version is definitive; this is the shape nearly every engineering
+ * team already works in, named.
+ *
+ * It earns a place here for the projects on this board that are not AI or
+ * data work at all — a plain software delivery forced into CRISP-DM's phases
+ * would be measured against gates ("data preparation", "modeling") that do
+ * not describe what the team is doing.
+ */
+const SDLC = {
+  id: 'sdlc',
+  ai: false,
+  kind: 'lifecycle',
+  label: 'SDLC',
+  full: 'Software Development Life Cycle',
+  origin: 'No single author or version — the generic shape of engineering delivery, named rather than invented here.',
+  suits: 'Software delivery of any kind, AI-powered or not.',
+  phases: [
+    {
+      id: 'requirements', n: 'I', label: 'Requirements',
+      asks: 'What must the system do, for whom, and how would we know it does it?',
+      gate: 'Requirements written down, testable, and agreed by whoever is paying for the work.',
+    },
+    {
+      id: 'design', n: 'II', label: 'Design',
+      asks: 'What is the shape of the solution, and what will it cost to build?',
+      gate: 'An architecture and interfaces reviewed by the team that has to build and live with them.',
+    },
+    {
+      id: 'implementation', n: 'III', label: 'Implementation',
+      asks: 'Is the design becoming working code?',
+      gate: 'Features built to the agreed design, under version control, reviewed before merge.',
+    },
+    {
+      id: 'testing', n: 'IV', label: 'Testing',
+      asks: 'Does it do what was asked, and what breaks it?',
+      gate: 'Test cases run against the requirements, defects triaged, and the ones that matter fixed.',
+    },
+    {
+      id: 'deployment', n: 'V', label: 'Deployment',
+      asks: 'How does this reach the people who asked for it?',
+      gate: 'Released to production with a rollback plan, and the people it affects told it happened.',
+    },
+    {
+      id: 'maintenance', n: 'VI', label: 'Maintenance',
+      asks: 'Who keeps this working, and how do defects and change requests reach them?',
+      gate: 'An owner named, a support channel open, and a route for the next change agreed.',
+    },
+  ],
+};
+
+/**
+ * ADLC — the AI Development Life Cycle.
+ *
+ * CPMAI and CRISP-DM both assume the deliverable is a trained model, which is
+ * a narrower thing than a lot of AI work now is: a feature built on a model
+ * somebody else trained, or a system whose behaviour comes from a prompt and
+ * a retrieval index rather than weights of its own. ADLC is the lighter,
+ * model-agnostic shape for that work — the same six-beat arc as CPMAI without
+ * assuming training is what happens in the middle, and ending in an
+ * operating phase rather than a shipped one, because the risk in this kind of
+ * system is behaviour that drifts, not just accuracy that decays.
+ */
+const ADLC = {
+  id: 'adlc',
+  ai: true,
+  kind: 'lifecycle',
+  label: 'ADLC',
+  full: 'AI Development Life Cycle',
+  origin: 'The general shape of building an AI-powered feature, whether or not the model is your own.',
+  suits: 'AI features and products where the model may belong to someone else, and the risk is behaviour, not only accuracy.',
+  phases: [
+    {
+      id: 'framing', n: 'I', label: 'Problem Framing',
+      asks: 'What decision or task is this meant to change, and is AI the right shape of answer?',
+      gate: 'A use case, a success measure, and the failure modes worth worrying about, written down.',
+    },
+    {
+      id: 'data-grounding', n: 'II', label: 'Data & Grounding',
+      asks: 'What does the system need to know, and where does that come from?',
+      gate: 'Sources identified, access and licensing settled, and freshness requirements stated.',
+    },
+    {
+      id: 'build', n: 'III', label: 'Build',
+      asks: 'What is being built — a trained model, a prompt, a retrieval pipeline, or all three?',
+      gate: 'A working version against a fixed set of inputs, with its configuration under version control.',
+    },
+    {
+      id: 'evaluation', n: 'IV', label: 'Evaluation',
+      asks: 'Is it good enough, safe enough, and better than what it replaces?',
+      gate: 'A golden set run against the build, thresholds met, and harmful failure modes checked for.',
+    },
+    {
+      id: 'release', n: 'V', label: 'Release',
+      asks: 'How does this reach users without betting the whole service on day one?',
+      gate: 'A staged rollout, a rollback path, and a named owner for what happens after launch.',
+    },
+    {
+      id: 'operate', n: 'VI', label: 'Operate',
+      asks: 'How would we know it had quietly stopped being right, and what happens when the model changes?',
+      gate: 'Usage, cost and quality monitored, with a trigger for re-evaluation and a route back to Build.',
+    },
+  ],
+};
+
+/**
+ * Agentic DLC — the lifecycle for an autonomous, tool-using agent.
+ *
+ * ADLC above, CPMAI and CRISP-DM are all still about a system that answers;
+ * an agent acts — it plans, calls tools, and does things with side effects a
+ * wrong answer never had. That changes what has to be true before it ships:
+ * the gate is not "is the output good" but "what is it allowed to do on its
+ * own, and what happens when it does the wrong thing with real permissions".
+ * This is that six-beat arc, built around autonomy and blast radius rather
+ * than accuracy.
+ */
+const AGENTIC_DLC = {
+  id: 'agentic-dlc',
+  ai: true,
+  kind: 'lifecycle',
+  label: 'Agentic DLC',
+  full: 'Agentic Development Life Cycle',
+  origin: 'The shape of building an autonomous, tool-using agent — one that acts, not only answers.',
+  suits: 'Agents that plan, call tools and take actions on their own, where the risk is what it does, not just what it says.',
+  phases: [
+    {
+      id: 'scope', n: 'I', label: 'Scope & Autonomy',
+      asks: 'What is the agent allowed to decide and do on its own, and where must a human step in?',
+      gate: 'Task boundaries, the tool and action inventory, and every human-in-the-loop point agreed and written down.',
+    },
+    {
+      id: 'tooling', n: 'II', label: 'Tooling & Permissions',
+      asks: 'What can the agent actually touch, and with what access?',
+      gate: 'Every tool scoped to least privilege, its blast radius understood, and destructive actions gated.',
+    },
+    {
+      id: 'build', n: 'III', label: 'Build the Loop',
+      asks: 'How does it plan, act, observe, and decide when to stop?',
+      gate: 'A working plan-act-observe loop against a fixed set of tasks, prompts and policies under version control.',
+    },
+    {
+      id: 'evaluation', n: 'IV', label: 'Evaluation & Red-teaming',
+      asks: 'Does it complete the task, and what does it do when it is wrong, stuck, or pushed off-course?',
+      gate: 'Task success measured on a held-out set, plus adversarial and failure-mode testing by someone trying to break it.',
+    },
+    {
+      id: 'release', n: 'V', label: 'Staged Release',
+      asks: 'How does it earn more autonomy, rather than being granted all of it on day one?',
+      gate: 'Supervised or shadow runs before unsupervised ones, escalation paths tested, and a kill switch rehearsed.',
+    },
+    {
+      id: 'operate', n: 'VI', label: 'Operate & Oversight',
+      asks: 'How would we know it did something wrong, and who is watching?',
+      gate: 'Every action logged and traceable, outcomes and cost monitored, and a named owner who can revoke autonomy.',
+    },
+  ],
+};
+
+/**
+ * The general project lifecycle — the five phases every project passes through
+ * whether or not there is software or data in it. It is here because a
+ * lifecycle is chosen for every project now, when it is created, and a
+ * marketing campaign or an office move forced into SDLC's phases would be
+ * measured against gates that do not describe the work. The phases follow the
+ * PMI process groups; Monitoring & Controlling runs alongside Executing rather
+ * than after it, and the Gantt it lays out shows them overlapping for that
+ * reason.
+ */
+const PROJECT_LIFECYCLE = {
+  id: 'project',
+  ai: false,
+  kind: 'lifecycle',
+  label: 'Project Lifecycle',
+  full: 'General Project Lifecycle',
+  origin: 'The five process groups of the PMI project lifecycle, used by most project methods in some form.',
+  suits: 'Any project with a start, an outcome and an end — campaigns, events, transitions, internal change.',
+  phases: [
+    {
+      id: 'initiating', n: 'I', label: 'Initiating',
+      asks: 'Why are we doing this, for whom, and what does done look like?',
+      gate: 'A sponsor, an objective in the organisation’s own terms, and agreement to proceed.',
+    },
+    {
+      id: 'planning', n: 'II', label: 'Planning',
+      asks: 'What is the scope, the schedule, the budget and who does what?',
+      gate: 'A baselined plan the sponsor has signed off, with the risks named.',
+    },
+    {
+      id: 'executing', n: 'III', label: 'Executing',
+      asks: 'Is the work being done, by the people planned, to the standard agreed?',
+      gate: 'The deliverables produced and handed to whoever accepts them.',
+    },
+    {
+      id: 'monitoring', n: 'IV', label: 'Monitoring & Controlling', alongside: 'executing',
+      asks: 'Are we where the plan says we should be, and if not, what changes?',
+      gate: 'Variances explained and changes approved rather than absorbed.',
+    },
+    {
+      id: 'closing', n: 'V', label: 'Closing',
+      asks: 'Was it accepted, what did we learn, and is everything handed over?',
+      gate: 'Formal acceptance, lessons recorded, and the team released.',
+    },
+  ],
+};
+
+// The general lifecycle first: it is the right answer for most projects, and
+// the AI and software lifecycles are the specialisations.
+export const METHODOLOGIES = [PROJECT_LIFECYCLE, CPMAI, CRISP_DM, SDLC, ADLC, AGENTIC_DLC, MLOPS, LLMOPS];
 
 export function findMethod(id) {
   return METHODOLOGIES.find((m) => m.id === id) || null;

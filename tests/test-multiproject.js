@@ -1,4 +1,4 @@
-const { APP_URL, launch } = require('./harness');
+const { APP_URL, launch, chooseLifecycle } = require('./harness');
 
 // The app uses in-page dialogs now, not window.confirm, so a test drives them
 // like any other UI: click the button, then the dialog's own action.
@@ -41,6 +41,7 @@ async function fillDialog(page, value) {
   // Create a new project from the "event" template
   await page.check('#template-event');
   await page.fill('#new-project-name', 'Test Offsite Event');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(300);
   console.log('--- After creating project ---');

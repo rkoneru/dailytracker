@@ -20,9 +20,12 @@
 // This module is pure: it diffs two snapshots and describes what moved.
 // js/state.js owns the storage, the ids and the cap.
 
+import { findMethod } from './methodology.js';
+
 /** Project-level fields worth accounting for, and what to call them. */
 const SCALARS = {
   projectName: 'Project name',
+  methodology: 'Methodology',
   dueDate: 'Due date',
   dashStatus: 'RAG status',
   budgetPlanned: 'Planned budget',
@@ -32,6 +35,20 @@ const SCALARS = {
   charterScopeOut: 'Charter — out of scope',
   charterSuccess: 'Charter — success criteria',
   charterSponsor: 'Charter — sponsor',
+  charterObjective: 'Charter — strategic objective',
+  charterValue: 'Charter — business value',
+  charterFit: 'Charter — strategic fit',
+  charterEffort: 'Charter — effort',
+};
+
+/**
+ * A handful of scalars are ids, not text a person typed, and an entry that
+ * reads "cpmai → sdlc" is a field path wearing a sentence's clothes. Format
+ * those through the module that owns the label rather than showing the raw
+ * value everywhere else on the log does.
+ */
+const SCALAR_FORMAT = {
+  methodology: (value) => (findMethod(value) ? findMethod(value).label : 'No method'),
 };
 
 /**
@@ -41,6 +58,7 @@ const SCALARS = {
 const COLLECTIONS = {
   dashTasks: { noun: 'Task', watch: { status: 'status', end: 'due date', assigned: 'owner' }, name: ['name'] },
   milestones: { noun: 'Milestone', watch: { due: 'due date', done: 'completion' }, name: ['text'] },
+  ganttActivities: { noun: 'Gantt activity', watch: { start: 'start', end: 'end' }, name: ['name'] },
   raid: { noun: 'RAID item', watch: { status: 'status', severity: 'severity', owner: 'owner' }, name: ['title'] },
   deliverables: {
     noun: 'Deliverable',
@@ -53,6 +71,9 @@ const COLLECTIONS = {
     watch: { status: 'status', decidedBy: 'approver', scheduleImpact: 'schedule impact', costImpact: 'cost impact' },
     name: ['title'],
   },
+  documents: { noun: 'Document', watch: { status: 'status', version: 'version', link: 'location' }, name: ['title'] },
+  customers: { noun: 'Account', watch: { stage: 'lifecycle stage', arr: 'ARR', renewal: 'renewal date', csm: 'CSM' }, name: ['name'] },
+  vendors: { noun: 'Vendor', watch: { status: 'status', end: 'contract end', performance: 'performance' }, name: ['name'] },
   serviceLevels: { noun: 'Service level', watch: { status: 'status', target: 'target', actual: 'actual' }, name: ['metric', 'service'] },
   sac: { noun: 'Acceptance criterion', watch: { status: 'status', evidence: 'evidence' }, name: ['criterion'] },
   releases: { noun: 'Release', watch: { status: 'status', windowStart: 'window' }, name: ['name'] },
@@ -92,7 +113,9 @@ function show(value) {
 export function snapshotOf(project) {
   if (!project) return null;
   const snap = { scalars: {}, rows: {} };
-  Object.keys(SCALARS).forEach((k) => { snap.scalars[k] = norm(project[k]); });
+  Object.keys(SCALARS).forEach((k) => {
+    snap.scalars[k] = (SCALAR_FORMAT[k] || norm)(project[k]);
+  });
 
   Object.entries(COLLECTIONS).forEach(([key, spec]) => {
     const rows = {};

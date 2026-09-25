@@ -1,5 +1,5 @@
 // Bump this on every release to roll out a fresh cache and drop the old one.
-const CACHE_VERSION = 'v40';
+const CACHE_VERSION = 'v59';
 const CACHE_NAME = `project-planner-${CACHE_VERSION}`;
 
 // App shell: everything needed to run fully offline after first load.
@@ -17,6 +17,8 @@ const PRECACHE_URLS = [
   './js/sampleAgentic.js',
   './js/agenticSpine.js',
   './js/planner.js',
+  './js/gantt.js',
+  './js/ganttModel.js',
   './js/dashboard.js',
   './js/export.js',
   './js/charts.js',
@@ -30,6 +32,8 @@ const PRECACHE_URLS = [
   './js/taskModel.js',
   './js/critical.js',
   './js/dom.js',
+  './js/dates.js',
+  './js/tableLabels.js',
   './js/tasks.js',
   './js/nav.js',
   './js/mobileNav.js',
@@ -60,6 +64,15 @@ const PRECACHE_URLS = [
   './js/supabase.js',
   './js/register.js',
   './js/registerDefs.js',
+  './js/priority.js',
+  './js/signatureModel.js',
+  './js/signature.js',
+  './js/changeControl.js',
+  './js/scopeControlPage.js',
+  './js/customerSuccess.js',
+  './js/customerSuccessPage.js',
+  './js/sampleCustomers.js',
+  './js/ceoKpis.js',
   './js/engagement.js',
   './js/roles.js',
   './js/router.js',
@@ -72,6 +85,8 @@ const PRECACHE_URLS = [
   './js/portfolio.js',
   './js/resourceModel.js',
   './js/resourcesPage.js',
+  './js/capacityPage.js',
+  './js/aiPortfolio.js',
   './js/rolePicker.js',
   './js/service.js',
   './icons/icon-32.png',

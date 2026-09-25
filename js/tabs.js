@@ -28,78 +28,96 @@ const KEY = 'projectPlannerPageTab_v1';
  * answer the same question, and so do the Legend and the reading tips.
  */
 export const PAGE_TABS = {
+  // Fewer, broader tabs. A tab is worth having when it is a different job, not
+  // a different table: most of the merges below put two short lists that are
+  // read together (Budget and Notes, Stakeholders and Communications) behind
+  // one tab, and the pages that used to be separate menu entries — AI
+  // Portfolio, Capacity, Sync, Trash — are now a tab of the page they belong to.
+  'page-portfolio': [
+    { id: 'sec-portfolio-all', label: 'All projects' },
+    { id: 'sec-ai-portfolio', label: 'AI initiatives', sections: ['page-ai-portfolio'] },
+    { id: 'sec-planning-layers', label: 'Planning layers', sections: ['page-planning-layers'] },
+  ],
   'page-planner': [
     { id: 'sec-milestones', label: 'Milestones', sections: ['sec-method', 'sec-milestones'] },
-    { id: 'sec-ticks', label: 'Tick Timeline' },
-    { id: 'sec-budget', label: 'Budget & Baseline' },
-    { id: 'sec-notes', label: 'Notes' },
+    { id: 'sec-ticks', label: 'Timeline' },
+    { id: 'sec-gantt', label: 'Gantt' },
+    { id: 'sec-budget', label: 'Budget & Notes', sections: ['sec-budget', 'sec-notes'] },
   ],
   'page-tasks': [
-    { id: 'sec-task-list', label: 'Task List' },
+    // The legend explains the list, so it sits under it rather than a tab away.
+    { id: 'sec-task-list', label: 'Task List', sections: ['sec-task-list', 'sec-task-help'] },
     { id: 'sec-task-board', label: 'Priority Board' },
-    { id: 'sec-task-help', label: 'Legend & Tips' },
   ],
   'page-raid': [
-    { id: 'sec-raid-log', label: 'Risks & Issues' },
+    { id: 'sec-raid-log', label: 'Log' },
     { id: 'sec-dependencies', label: 'Dependencies' },
   ],
   'page-scope': [
     { id: 'sec-charter', label: 'Charter' },
+    { id: 'sec-scope-baseline', label: 'Scope Baseline' },
     { id: 'sec-deliverables', label: 'Deliverables' },
-    { id: 'sec-change-requests', label: 'Change Requests' },
+    { id: 'sec-change-requests', label: 'Change Requests', sections: ['sec-change-requests', 'sec-cr-workflow', 'sec-cr-route'] },
+    { id: 'sec-documents', label: 'Documents' },
   ],
   'page-people': [
-    { id: 'sec-roster', label: 'Team Roster' },
+    { id: 'sec-roster', label: 'Team' },
     { id: 'sec-raci', label: 'Who Does What' },
-    { id: 'sec-stakeholders', label: 'Stakeholders' },
-    { id: 'sec-comms', label: 'Communications' },
+    { id: 'sec-stakeholders', label: 'Stakeholders & Comms', sections: ['sec-stakeholders', 'sec-comms'] },
+    { id: 'sec-vendors', label: 'Vendors' },
   ],
   'page-service': [
     { id: 'sec-service-levels', label: 'Service Levels' },
-    { id: 'sec-sac', label: 'Go-Live Checklist' },
-    { id: 'sec-releases', label: 'Releases' },
-    { id: 'sec-changes', label: 'Change Control' },
+    { id: 'sec-sac', label: 'Go-Live' },
+    { id: 'sec-releases', label: 'Releases & Change', sections: ['sec-releases', 'sec-changes'] },
     { id: 'sec-known-errors', label: 'Known Issues' },
+  ],
+  'page-customers': [
+    { id: 'sec-customers', label: 'Accounts', sections: ['sec-customers', 'sec-cs-economics'] },
+    { id: 'sec-cs-lifecycle', label: 'Lifecycle' },
+    { id: 'sec-cs-renewals', label: 'Renewals' },
   ],
   'page-improve': [
     { id: 'sec-csi', label: 'Improvements' },
-    { id: 'sec-lessons', label: 'Lessons Learned' },
+    { id: 'sec-lessons', label: 'Lessons' },
   ],
-  // The tabs are in the order a meeting happens in: prepare, discuss, follow
-  // up. A page whose tabs follow the work needs no explaining.
+  // In the order a meeting happens: prepare, discuss, follow up.
   'page-meetings': [
-    { id: 'sec-meeting-overview', label: 'Overview' },
-    { id: 'sec-meeting-agenda', label: 'Agenda' },
-    { id: 'sec-meeting-attendees', label: 'Attendees' },
-    { id: 'sec-meeting-notes', label: 'Discussion Notes' },
-    { id: 'sec-meeting-decisions', label: 'Decisions' },
-    { id: 'sec-meeting-actions', label: 'Action Items' },
-    { id: 'sec-meeting-followups', label: 'Follow-up' },
-    { id: 'sec-meeting-transcript', label: 'Recording & Transcript' },
+    { id: 'sec-meeting-overview', label: 'Overview & Agenda', sections: ['sec-meeting-overview', 'sec-meeting-attendees', 'sec-meeting-agenda'] },
+    { id: 'sec-meeting-notes', label: 'Notes & Decisions', sections: ['sec-meeting-notes', 'sec-meeting-decisions'] },
+    { id: 'sec-meeting-actions', label: 'Actions', sections: ['sec-meeting-actions', 'sec-meeting-followups'] },
+    { id: 'sec-meeting-transcript', label: 'Recording' },
   ],
   'page-settings': [
-    { id: 'sec-settings-account', label: 'Account' },
-    { id: 'sec-settings-workspace', label: 'Workspace' },
-    { id: 'sec-settings-people', label: 'People & Roles' },
-    { id: 'sec-settings-pages', label: 'Page Access' },
+    { id: 'sec-settings-account', label: 'Account', sections: ['sec-settings-role', 'sec-settings-account', 'sec-settings-workspace'] },
+    { id: 'sec-settings-people', label: 'People & Access', sections: ['sec-settings-people', 'sec-settings-pages'] },
     { id: 'sec-settings-workflow', label: 'Task Execution' },
-    { id: 'sec-settings-security', label: 'Security' },
-    { id: 'sec-settings-data', label: 'Data' },
+    { id: 'sec-settings-data', label: 'Data & Security', sections: ['sec-settings-data', 'sec-settings-security'] },
+    { id: 'sec-settings-sync', label: 'Sync', sections: ['page-sync'] },
   ],
+  // Six categories of indicator are one page of cards, read top to bottom,
+  // not six tabs to click through.
   'page-kpis': [
-    { id: 'sec-kpi-schedule', label: 'Schedule' },
-    { id: 'sec-kpi-cost', label: 'Cost' },
-    { id: 'sec-kpi-scope', label: 'Scope & Change' },
-    { id: 'sec-kpi-risk', label: 'Risk & Issue' },
-    { id: 'sec-kpi-quality', label: 'Quality & Resource' },
-    { id: 'sec-kpi-basis', label: 'How These Work' },
+    {
+      id: 'sec-kpi-schedule',
+      label: 'Indicators',
+      sections: ['sec-kpi-schedule', 'sec-kpi-cost', 'sec-kpi-scope', 'sec-kpi-risk', 'sec-kpi-quality', 'sec-kpi-improvement', 'sec-kpi-customer'],
+    },
+    { id: 'sec-kpi-basis', label: 'How They Work' },
+    { id: 'sec-kpi-framework', label: 'PM Framework' },
+    { id: 'sec-kpi-ceo', label: 'Business & Leadership' },
   ],
   'page-resources': [
     { id: 'sec-people', label: 'People' },
     { id: 'sec-allocations', label: 'Allocations' },
-    { id: 'sec-availability', label: 'Availability', sections: ['sec-availability'] },
+    // Clashes and leave are what availability is for, so they are read together.
+    { id: 'sec-availability', label: 'Availability', sections: ['sec-availability', 'sec-conflicts'] },
     { id: 'sec-timesheets', label: 'Timesheets' },
-    { id: 'sec-conflicts', label: 'Worth Looking At' },
+    { id: 'sec-capacity', label: 'Capacity', sections: ['page-capacity'] },
+  ],
+  'page-changelog': [
+    { id: 'sec-changelog', label: 'Change Log' },
+    { id: 'sec-trash', label: 'Trash', sections: ['page-trash'] },
   ],
 };
 
@@ -178,6 +196,17 @@ function present(pageId) {
   return (PAGE_TABS[pageId] || []).filter((tab) => sectionsOf(tab).length > 0);
 }
 
+const sectionListeners = new Set();
+
+/**
+ * Called with (pageId, sectionIds) whenever a tab's sections come into view,
+ * so a page can leave a hidden tab stale and build it only when it is opened.
+ */
+export function onSectionShown(listener) {
+  sectionListeners.add(listener);
+  return () => sectionListeners.delete(listener);
+}
+
 function apply(pageId, tabId) {
   const tabs = present(pageId);
   tabs.forEach((tab) => {
@@ -194,6 +223,11 @@ function apply(pageId, tabId) {
       button.classList.toggle('is-active', on);
     }
   });
+  const shown = tabs.find((tab) => tab.id === tabId);
+  if (shown) {
+    const ids = sectionsOf(shown).map((section) => section.id);
+    sectionListeners.forEach((listener) => listener(pageId, ids));
+  }
 }
 
 /**

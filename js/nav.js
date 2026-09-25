@@ -3,11 +3,13 @@ import { roleShows, getRole, isShowingEverything } from './roles.js';
 
 // Sidebar navigation, as a real tree, filtered to the role that is looking.
 //
-// The flat list worked while there were four pages. There are now fifteen, two
-// side panels, and pages long enough that their own sections are worth jumping
-// to — so the nav is a tree: top-level groups, pages under them, and the tabs
-// of a page as leaves. Every leaf is a real destination: a page's sections are
-// tabs now (see tabs.js), so a leaf selects one rather than scrolling to it.
+// The flat list worked while there were four pages. There are now twenty, so
+// the nav is a tree — but only two levels of it: groups, and the pages in them.
+// A page's own sections are also in NAV_TREE, as leaves under the page, because
+// links, the router and the command palette name them ("open the Edit
+// Timeline"); the sidebar just doesn't draw them. They are the tab strip at the
+// top of the page, and a third level repeating that strip beside it was what
+// made the menu feel clumsy. Arriving at a section marks its page current.
 //
 // It follows the WAI-ARIA tree pattern rather than approximating it: roving
 // tabindex, arrow keys to move and expand, aria-expanded on every parent. A
@@ -21,14 +23,28 @@ const EXPANDED_KEY = 'projectPlannerNavExpanded_v1';
 export const NAV_TREE = [
   // Five groups, named for what you would be doing rather than for a department:
   // everything, then planning it, then running it, then telling people about it,
-  // then the housekeeping. Each page's tabs hang off it as leaves, so the nav is
-  // a map of every surface in the app and nothing is more than two clicks away.
+  // then the housekeeping. Each page's tabs hang off it as leaves: the sidebar
+  // draws only groups and pages, but links and the palette can name a tab.
   {
     id: 'group-across',
     label: 'Across Projects',
     children: [
       { id: 'tab-mywork', label: 'My Work', icon: '🎯', page: 'page-mywork', title: 'My Work' },
-      { id: 'tab-portfolio', label: 'Portfolio', icon: '🗂', page: 'page-portfolio', title: 'Portfolio' },
+      {
+        id: 'tab-portfolio',
+        label: 'Portfolio',
+        icon: '🗂',
+        page: 'page-portfolio',
+        title: 'Portfolio',
+        // AI Portfolio and Planning Layers were menu entries of their own; they
+        // are views of the portfolio, so they are its tabs now. The ids stay,
+        // so a saved link, a role's home and a page-access policy still resolve.
+        children: [
+          { id: 'nav-portfolio-all', label: 'All projects', page: 'page-portfolio', title: 'Portfolio', section: 'sec-portfolio-all' },
+          { id: 'tab-ai-portfolio', label: 'AI initiatives', page: 'page-portfolio', title: 'Portfolio', section: 'page-ai-portfolio' },
+          { id: 'tab-planning-layers', label: 'Planning layers', page: 'page-portfolio', title: 'Portfolio', section: 'page-planning-layers' },
+        ],
+      },
       {
         id: 'tab-resources',
         label: 'Resources',
@@ -41,6 +57,7 @@ export const NAV_TREE = [
           { id: 'nav-availability', label: 'Availability', page: 'page-resources', title: 'Resources', section: 'sec-availability' },
           { id: 'nav-timesheets', label: 'Timesheets', page: 'page-resources', title: 'Resources', section: 'sec-timesheets' },
           { id: 'nav-conflicts', label: 'Worth Looking At', page: 'page-resources', title: 'Resources', section: 'sec-conflicts' },
+          { id: 'tab-capacity', label: 'Capacity', page: 'page-resources', title: 'Resources', section: 'page-capacity' },
         ],
       },
     ],
@@ -70,7 +87,8 @@ export const NAV_TREE = [
         title: 'Plan',
         children: [
           { id: 'nav-milestones', label: 'Milestones', page: 'page-planner', title: 'Plan', section: 'sec-milestones' },
-          { id: 'nav-ticks', label: 'Tick Timeline', page: 'page-planner', title: 'Plan', section: 'sec-ticks' },
+          { id: 'nav-ticks', label: 'Timeline', page: 'page-planner', title: 'Plan', section: 'sec-ticks' },
+          { id: 'nav-gantt', label: 'Gantt', page: 'page-planner', title: 'Plan', section: 'sec-gantt' },
           { id: 'nav-budget', label: 'Budget & Baseline', page: 'page-planner', title: 'Plan', section: 'sec-budget' },
           { id: 'nav-notes', label: 'Notes', page: 'page-planner', title: 'Plan', section: 'sec-notes' },
         ],
@@ -83,8 +101,24 @@ export const NAV_TREE = [
         title: 'Scope & Contract',
         children: [
           { id: 'nav-charter', label: 'Charter', page: 'page-scope', title: 'Scope & Contract', section: 'sec-charter' },
+          { id: 'nav-scope-baseline', label: 'Scope Baseline', page: 'page-scope', title: 'Scope & Contract', section: 'sec-scope-baseline' },
           { id: 'nav-deliverables', label: 'Deliverables', page: 'page-scope', title: 'Scope & Contract', section: 'sec-deliverables' },
           { id: 'nav-change-requests', label: 'Change Requests', page: 'page-scope', title: 'Scope & Contract', section: 'sec-change-requests' },
+          { id: 'nav-documents', label: 'Documents', page: 'page-scope', title: 'Scope & Contract', section: 'sec-documents' },
+        ],
+      },
+      {
+        id: 'tab-people',
+        label: 'People & Stakeholders',
+        icon: '👥',
+        page: 'page-people',
+        title: 'People & Stakeholders',
+        children: [
+          { id: 'nav-roster', label: 'Team Roster', page: 'page-people', title: 'People & Stakeholders', section: 'sec-roster' },
+          { id: 'nav-raci', label: 'Who Does What', page: 'page-people', title: 'People & Stakeholders', section: 'sec-raci' },
+          { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-people', title: 'People & Stakeholders', section: 'sec-stakeholders' },
+          { id: 'nav-comms', label: 'Communications', page: 'page-people', title: 'People & Stakeholders', section: 'sec-comms' },
+          { id: 'nav-vendors', label: 'Vendors', page: 'page-people', title: 'People & Stakeholders', section: 'sec-vendors' },
         ],
       },
     ],
@@ -129,12 +163,24 @@ export const NAV_TREE = [
           { id: 'nav-lessons', label: 'Lessons Learned', page: 'page-improve', title: 'Improvement & Lessons', section: 'sec-lessons' },
         ],
       },
+      {
+        id: 'tab-customers',
+        label: 'Customer Success',
+        icon: '⭐',
+        page: 'page-customers',
+        title: 'Customer Success',
+        children: [
+          { id: 'nav-accounts', label: 'Accounts', page: 'page-customers', title: 'Customer Success', section: 'sec-customers' },
+          { id: 'nav-cs-lifecycle', label: 'CSM Lifecycle', page: 'page-customers', title: 'Customer Success', section: 'sec-cs-lifecycle' },
+          { id: 'nav-cs-renewals', label: 'Renewals', page: 'page-customers', title: 'Customer Success', section: 'sec-cs-renewals' },
+        ],
+      },
     ],
   },
   {
-    // What the numbers say, the pack that says it, and who gets told. The
-    // stakeholder map and the communications plan belong here for the same
-    // reason the reports do: they all answer "who needs telling what".
+    // What the numbers say, and the pack that says it. The team, the
+    // stakeholder map and the communications plan moved to Plan & Build:
+    // they are set up with the scope, before there is anything to report.
     id: 'group-share',
     label: 'Report & Share',
     children: [
@@ -167,20 +213,11 @@ export const NAV_TREE = [
           { id: 'nav-kpi-scope', label: 'Scope & Change', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-scope' },
           { id: 'nav-kpi-risk', label: 'Risk & Issue', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-risk' },
           { id: 'nav-kpi-quality', label: 'Quality & Resource', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-quality' },
+          { id: 'nav-kpi-improvement', label: 'Improvement', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-improvement' },
+          { id: 'nav-kpi-customer', label: 'Customer Success', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-customer' },
           { id: 'nav-kpi-basis', label: 'How These Work', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-basis' },
-        ],
-      },
-      {
-        id: 'tab-people',
-        label: 'People & Stakeholders',
-        icon: '👥',
-        page: 'page-people',
-        title: 'People & Stakeholders',
-        children: [
-          { id: 'nav-roster', label: 'Team Roster', page: 'page-people', title: 'People & Stakeholders', section: 'sec-roster' },
-          { id: 'nav-raci', label: 'Who Does What', page: 'page-people', title: 'People & Stakeholders', section: 'sec-raci' },
-          { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-people', title: 'People & Stakeholders', section: 'sec-stakeholders' },
-          { id: 'nav-comms', label: 'Communications', page: 'page-people', title: 'People & Stakeholders', section: 'sec-comms' },
+          { id: 'nav-kpi-framework', label: 'PM Framework', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-framework' },
+          { id: 'nav-kpi-ceo', label: 'Business & Leadership', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-ceo' },
         ],
       },
       {
@@ -194,6 +231,7 @@ export const NAV_TREE = [
           { id: 'nav-report-weekly', label: 'Weekly', page: 'page-reports', title: 'Reports', report: 'weekly' },
           { id: 'nav-report-steerco', label: 'SteerCo', page: 'page-reports', title: 'Reports', report: 'steerco' },
           { id: 'nav-report-exec', label: 'Executive', page: 'page-reports', title: 'Reports', report: 'executive' },
+          { id: 'nav-report-closure', label: 'Closure', page: 'page-reports', title: 'Reports', report: 'closure' },
         ],
       },
     ],
@@ -211,21 +249,37 @@ export const NAV_TREE = [
         title: 'Settings',
         children: [
           { id: 'nav-settings-account', label: 'Account', page: 'page-settings', title: 'Settings', section: 'sec-settings-account' },
+          { id: 'nav-settings-role', label: 'Your job role', page: 'page-settings', title: 'Settings', section: 'sec-settings-role' },
           { id: 'nav-settings-workspace', label: 'Workspace', page: 'page-settings', title: 'Settings', section: 'sec-settings-workspace' },
           { id: 'nav-settings-people', label: 'People & Roles', page: 'page-settings', title: 'Settings', section: 'sec-settings-people' },
           { id: 'nav-settings-pages', label: 'Page Access', page: 'page-settings', title: 'Settings', section: 'sec-settings-pages' },
           { id: 'nav-settings-workflow', label: 'Task Execution', page: 'page-settings', title: 'Settings', section: 'sec-settings-workflow' },
           { id: 'nav-settings-security', label: 'Security', page: 'page-settings', title: 'Settings', section: 'sec-settings-security' },
           { id: 'nav-settings-data', label: 'Data', page: 'page-settings', title: 'Settings', section: 'sec-settings-data' },
+          { id: 'tab-sync', label: 'Sync & Team', page: 'page-settings', title: 'Settings', section: 'page-sync' },
         ],
       },
-      { id: 'tab-sync', label: 'Sync & Team', icon: '🔄', page: 'page-sync', title: 'Sync & Team' },
-      { id: 'tab-changelog', label: 'Change Log', icon: '🕓', page: 'page-changelog', title: 'Change Log' },
-      { id: 'tab-trash', label: 'Trash', icon: '🗑', page: 'page-trash', title: 'Trash', badge: 'trash-count' },
+      {
+        // What changed, and what was deleted: one question, "what happened
+        // here", so one page with the trash count on its row.
+        id: 'tab-changelog',
+        label: 'History',
+        icon: '🕓',
+        page: 'page-changelog',
+        title: 'History',
+        badge: 'trash-count',
+        children: [
+          { id: 'nav-changelog', label: 'Change Log', page: 'page-changelog', title: 'History', section: 'sec-changelog' },
+          { id: 'tab-trash', label: 'Trash', page: 'page-changelog', title: 'History', section: 'page-trash' },
+        ],
+      },
       { id: 'btn-export-panel', label: 'Export / Share', icon: '📤', panel: 'export' },
     ],
   },
 ];
+
+// Groups, then pages. Deeper nodes are destinations, not rows (see above).
+const SIDEBAR_LEVELS = 2;
 
 let onActivate = null;
 let expanded = null;
@@ -282,13 +336,17 @@ function saveExpanded() {
 
 // ---------- rendering ----------
 
+function sidebarChildren(node, level) {
+  return level < SIDEBAR_LEVELS ? (node.children || []).filter(visible) : [];
+}
+
 function buildRow(node, level) {
-  const hasChildren = (node.children || []).some(visible);
+  const hasChildren = sidebarChildren(node, level).length > 0;
   const isGroup = !node.page && !node.panel;
 
   const row = el('div', {
     id: node.id,
-    class: `nav-row${isGroup ? ' nav-row--group' : ''}${level > 2 ? ' nav-row--leaf' : ''}`,
+    class: `nav-row${isGroup ? ' nav-row--group' : ''}`,
     role: 'treeitem',
     tabindex: '-1',
     'aria-level': String(level),
@@ -301,11 +359,9 @@ function buildRow(node, level) {
     row.setAttribute('aria-owns', `${node.id}-group`);
   }
 
-  row.appendChild(el('span', {
-    class: `nav-twisty${hasChildren ? '' : ' is-empty'}`,
-    'aria-hidden': 'true',
-    text: hasChildren ? '▸' : '',
-  }));
+  // Only a group can open, so only a group carries the arrow; a page row
+  // spends that width on its label instead.
+  if (hasChildren) row.appendChild(el('span', { class: 'nav-twisty', 'aria-hidden': 'true', text: '▸' }));
   if (node.icon) row.appendChild(el('span', { class: 'nav-row__icon', 'aria-hidden': 'true', text: node.icon }));
   row.appendChild(el('span', { class: 'nav-row__label', text: node.label }));
   if (node.badge) row.appendChild(el('span', { id: node.badge, class: 'nav-row__badge', hidden: true }));
@@ -335,7 +391,7 @@ function buildBranch(node, level, list) {
   li.appendChild(row);
   list.push(row);
 
-  const children = (node.children || []).filter(visible);
+  const children = sidebarChildren(node, level);
   if (children.length) {
     const group = el('ul', { id: `${node.id}-group`, role: 'group', class: 'nav-group' });
     group.hidden = !expanded.has(node.id);
@@ -364,7 +420,7 @@ function renderFilterNote() {
     return;
   }
   note.hidden = false;
-  note.textContent = `${hidden.length} more ${hidden.length === 1 ? 'page' : 'pages'} hidden for ${getRole().label}`;
+  note.textContent = `${hidden.length} more ${hidden.length === 1 ? 'page' : 'pages'} hidden for ${getRole().label} · change`;
 }
 
 export function renderNav() {
@@ -380,9 +436,13 @@ export function renderNav() {
 
 const render = renderNav;
 
-/** Rows inside a collapsed parent are skipped by the keyboard and by tabbing. */
+/**
+ * Rows inside a collapsed parent are skipped by the keyboard and by tabbing.
+ * Asked of the markup, not of layout: reading offsetParent here forced a full
+ * layout of whatever page had just been built, before it was ever painted.
+ */
 function visibleRows() {
-  return rows.filter((row) => row.offsetParent !== null || !row.closest('[hidden]'));
+  return rows.filter((row) => !row.closest('[hidden]'));
 }
 
 /**
@@ -420,27 +480,23 @@ function toggle(row) {
 // ---------- selection ----------
 
 /**
- * Marks one row current and opens every ancestor so it is actually on screen.
+ * Marks one row current and opens its group so it is actually on screen.
  * Called by the app after a page change, including changes the nav didn't
- * cause (a button elsewhere, restoring state on boot).
+ * cause (a button elsewhere, restoring state on boot). A section has no row of
+ * its own, so its page is the one marked.
  */
 export function setActiveNode(id) {
-  rows.forEach((row) => {
-    const active = row.id === id;
-    row.classList.toggle('is-active', active);
-    if (active) row.setAttribute('aria-current', 'page');
-    else row.removeAttribute('aria-current');
+  const row = rows.find((r) => r.id === id)
+    || rows.find((r) => (r._node.children || []).some((child) => child.id === id));
+  rows.forEach((r) => {
+    const active = r === row;
+    r.classList.toggle('is-active', active);
+    if (active) r.setAttribute('aria-current', 'page');
+    else r.removeAttribute('aria-current');
   });
 
-  const row = rows.find((r) => r.id === id);
-  if (row) {
-    let parentGroup = row.closest('.nav-group');
-    while (parentGroup) {
-      const parentRow = parentGroup.parentElement.querySelector(':scope > .nav-row');
-      if (parentRow) setExpanded(parentRow, true);
-      parentGroup = parentGroup.parentElement.closest('.nav-group');
-    }
-  }
+  const groupRow = row?.closest('.nav-group')?.parentElement.querySelector(':scope > .nav-row');
+  if (groupRow) setExpanded(groupRow, true);
   refreshTabStops();
 }
 
@@ -456,11 +512,6 @@ function activate(row) {
     if (open) open();
     return;
   }
-
-  // Opening a page reveals what's inside it. Activating never collapses —
-  // use the twisty for that — so clicking the page you're already on doesn't
-  // hide the section you were aiming for.
-  if (node.children && node.children.length) setExpanded(row, true);
 
   if (onActivate) onActivate(node);
 }
@@ -510,6 +561,43 @@ function onKeyDown(e) {
 }
 
 // ---------- boot ----------
+
+function findNode(id, nodes = NAV_TREE) {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    const hit = node.children && findNode(id, node.children);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** The page a destination belongs to: itself, or the page whose tab it is. */
+export function pageNodeOf(id) {
+  const node = findNode(id);
+  if (!node || !node.page) return node;
+  const walk = (nodes) => {
+    for (const n of nodes) {
+      if (n.page === node.page && !n.section && !n.report) return n;
+      const hit = n.children && walk(n.children);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  return walk(NAV_TREE) || node;
+}
+
+/**
+ * Goes to a destination by id, whether or not it has a sidebar row. A role's
+ * home can be a tab (the Chief AI Officer lands on Portfolio's AI tab), and a
+ * tab has no row to click.
+ */
+export function goToNode(id) {
+  const node = findNode(id);
+  if (!node) return false;
+  if (node.panel) return openPanel(node.panel);
+  if (onActivate) onActivate(node);
+  return true;
+}
 
 export function initNav({ onActivate: handler }) {
   onActivate = handler;

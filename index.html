@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Project Planner</title>
   <meta name="description" content="Offline-first project planning tool with a planner sheet and a live dashboard.">
-  <meta name="theme-color" content="#1d4ed8">
+  <meta name="theme-color" content="#6d4aeb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161320" media="(prefers-color-scheme: dark)">
   <!-- Standalone on iOS too, where the manifest's display mode is ignored. -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -73,7 +74,7 @@
         </div>
         <p class="hint" id="login-note"></p>
         <p class="hint callout" id="login-unconfigured" hidden>
-          No workspace is connected yet. Connect one on <strong>Sync &amp; Team</strong> first
+          No workspace is connected yet. Connect one under <strong>Settings &rarr; Sync</strong> first
           &mdash; signing in needs somewhere to sign in to.
         </p>
       </section>
@@ -98,24 +99,8 @@
                 aria-label="Close menu">&#x2715;</button>
       </div>
 
-      <!-- Who is looking. Filters the nav below to the pages that role uses.
-           On a device of your own it is yours to set; inside a workspace an
-           administrator assigns it and the picker becomes a statement. -->
-      <div class="role-picker">
-        <label class="role-picker__label" for="role-select">I'm working as</label>
-        <select class="field-input role-picker__select" id="role-select"></select>
-        <p class="role-picker__blurb" id="role-blurb"></p>
-        <p class="role-picker__assigned" id="role-assigned" hidden>
-          🔒 Assigned by your administrator
-        </p>
-        <label class="role-picker__toggle" id="role-show-all-row">
-          <input type="checkbox" id="role-show-all">
-          <span>Show every page</span>
-        </label>
-      </div>
-
       <nav class="sidebar__nav" id="sidebar-nav" aria-label="Sections"></nav>
-      <p class="nav-filter-note" id="nav-filter-note" hidden></p>
+      <button type="button" class="nav-filter-note link-btn" id="nav-filter-note" hidden></button>
 
       <div class="sidebar__footer">
         <button type="button" class="btn btn-primary btn-install-sidebar" id="btn-install" hidden>⬇ Install App</button>
@@ -246,22 +231,78 @@
 
         <section class="card" id="sec-ticks">
           <div class="card__head">
-            <h2>Tick Timeline</h2>
-            <span class="hint">Day 1 &middot; <span id="tick-start-label">&mdash;</span></span>
+            <h2>Timeline</h2>
+            <span class="hint tl-range" id="tick-start-label">&mdash;</span>
             <button type="button" class="btn btn-small btn-primary no-print" data-action="open-tasks">Open Task Tracker &rarr;</button>
           </div>
-          <p class="hint">A read-only view of the task list. Marks come from each task's dates. Tasks are added and edited on the Task Tracker; the Dashboard draws the same dates as a Gantt.</p>
+          <p class="hint">Drag a bar to move a task, drag either end to change its start or end, or drag across empty days to schedule one. The Task Tracker, Dashboard and reports change with it, and every edit can be undone.</p>
+          <div class="tl-toolbar no-print">
+            <div class="tl-nav" role="group" aria-label="Which days to show">
+              <button type="button" class="btn btn-small" data-tl="prev">&lsaquo; Week</button>
+              <button type="button" class="btn btn-small" data-tl="today">Today</button>
+              <button type="button" class="btn btn-small" data-tl="fit">Whole project</button>
+              <button type="button" class="btn btn-small" data-tl="next">Week &rsaquo;</button>
+            </div>
+            <ul class="tl-legend" aria-label="Bar colours">
+              <li><span class="tl-key tl-row--todo"></span>Not started</li>
+              <li><span class="tl-key tl-row--active"></span>In progress</li>
+              <li><span class="tl-key tl-row--hold"></span>On hold</li>
+              <li><span class="tl-key tl-row--late"></span>Late</li>
+              <li><span class="tl-key tl-row--done"></span>Complete</li>
+              <li><span class="tl-key tl-key--base"></span>Baseline</li>
+            </ul>
+          </div>
+          <p class="tl-live" id="tl-live" aria-live="polite"></p>
+          <p class="sr-only" id="tl-keys">Left and right arrows move the task a day. Shift with an arrow changes the end date, Alt with an arrow the start date. Enter schedules an undated task for today. Up and down move between tasks.</p>
           <div class="table-scroll">
             <table class="data-table tick-table" id="tick-table">
               <thead>
-                <tr id="tick-head-row">
-                  <th class="col-tickname">Task</th>
-                </tr>
+                <tr id="tick-month-row"></tr>
+                <tr id="tick-head-row"></tr>
               </thead>
               <tbody id="tick-body"></tbody>
             </table>
           </div>
-          <p class="hint" id="tick-empty" hidden>Add a task below and it appears here.</p>
+          <p class="hint" id="tick-empty" hidden>No tasks yet. Add one on the Task Tracker and it appears here.</p>
+        </section>
+
+        <section class="card" id="sec-gantt">
+          <div class="card__head">
+            <h2>Gantt</h2>
+            <span class="hint gantt-method" id="gantt-method"></span>
+          </div>
+          <p class="hint">The project&rsquo;s lifecycle as activities with their own dates, kept apart from the tasks: moving a phase moves the plan, not forty tasks. Drag a bar to move it, drag either end to change a date, or type the dates in.</p>
+          <div class="gantt-empty" id="gantt-empty" hidden>
+            <p id="gantt-empty-text"></p>
+            <div class="gantt-empty__choose" id="gantt-empty-choose" hidden>
+              <label class="field-label">Lifecycle
+                <select class="field-input" id="gantt-lifecycle"></select>
+              </label>
+            </div>
+            <button type="button" class="btn btn-primary btn-small no-print" data-gantt="layout">Lay out the phases</button>
+          </div>
+          <div class="gantt-toolbar no-print" id="gantt-toolbar">
+            <label class="field-label gantt-toolbar__phase">Phase
+              <select class="field-input" id="gantt-add-phase" aria-label="Phase for the new activity"></select>
+            </label>
+            <button type="button" class="btn btn-small" data-gantt="add">+ Add activity</button>
+            <button type="button" class="btn btn-small btn-ghost" data-gantt="relayout">Lay out again</button>
+          </div>
+          <p class="tl-live" id="gantt-live" aria-live="polite"></p>
+          <p class="sr-only" id="gantt-keys">Left and right arrows move the activity a day. Shift with an arrow changes the end date, Alt with an arrow the start date.</p>
+          <div class="gantt" id="gantt">
+            <div class="gantt__head" aria-hidden="true">
+              <span class="gantt__col-phase"></span>
+              <span class="gantt__col-wbs" title="Work breakdown code: phase, then activity">WBS</span>
+              <span class="gantt__col-name">Activity</span>
+              <span class="gantt__col-date">Start</span>
+              <span class="gantt__col-date">End</span>
+              <span class="gantt__col-done">Done %</span>
+              <span class="gantt__col-act"></span>
+              <div class="gantt__scale" id="gantt-scale"></div>
+            </div>
+            <div class="gantt__body" id="gantt-body"></div>
+          </div>
         </section>
 
         <section class="card" id="sec-budget">
@@ -278,6 +319,7 @@
               <input type="number" min="0" step="1" class="field-input" data-field="budgetActual">
             </label>
           </div>
+          <div class="cost-estimate" id="cost-estimate" aria-live="polite"></div>
           <p class="hint" id="planner-baseline-note"></p>
           <div class="sync-actions no-print">
             <button type="button" class="btn btn-small" id="btn-set-baseline">📌 Set Baseline</button>
@@ -369,8 +411,8 @@
             <button type="button" class="btn btn-small btn-primary no-print" data-action="add-task-row">+ Add Task</button>
           </div>
           <div class="filter-bar no-print">
-            <input type="search" class="field-input" id="tasks-search" placeholder="Search tasks, owner, comments...">
-            <select class="field-input" id="tasks-status-filter">
+            <input type="search" class="field-input" id="tasks-search" aria-label="Search tasks" placeholder="Search tasks, owner, comments...">
+            <select class="field-input" id="tasks-status-filter" aria-label="Filter by status">
               <option value="">All statuses</option>
               <option>Not Started</option>
               <option>In Progress</option>
@@ -378,7 +420,7 @@
               <option>Overdue</option>
               <option>On Hold</option>
             </select>
-            <select class="field-input" id="tasks-prio-filter">
+            <select class="field-input" id="tasks-prio-filter" aria-label="Filter by priority">
               <option value="">All priorities</option>
               <option>High</option>
               <option>Medium</option>
@@ -613,6 +655,11 @@
             <span class="kpi__value">0</span>
             <span class="kpi__sub">&mdash;</span>
           </div>
+          <div class="kpi" id="scope-count-creep">
+            <span class="kpi__label">Scope creep</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
         </section>
 
         <section class="card" id="sec-charter">
@@ -624,7 +671,35 @@
           <div class="charter-grid" id="charter-fields"></div>
         </section>
 
+        <section class="card" id="sec-scope-baseline">
+          <div class="card__head"><h2>Scope Baseline &amp; Creep</h2></div>
+          <p class="hint">
+            The scope as it was agreed and signed: the charter&rsquo;s scope statement and the deliverables.
+            Anything that has moved since, and is not covered by an approved change request, is scope creep.
+          </p>
+          <div id="scope-baseline-body"></div>
+        </section>
+
         <div id="scope-registers"></div>
+
+        <section class="card" id="sec-cr-workflow">
+          <div class="card__head"><h2>Change Request Workflow</h2></div>
+          <p class="hint">
+            Raised, impact assessed, decided by the approvers its size calls for, then implemented. Each decision
+            is signed against the change as it stands; edit the change afterwards and those signatures stop counting.
+            This is a record the app keeps, not a lock &mdash; anyone who can edit the project can edit it.
+          </p>
+          <div id="cr-workflow-body"></div>
+        </section>
+
+        <section class="card" id="sec-cr-route">
+          <div class="card__head"><h2>Approval Route</h2></div>
+          <p class="hint">
+            Who has to approve a change, by its size. Every change goes to the project manager; the sponsor and the
+            change board join once either threshold, cost or days, is reached. Applied when a change is assessed.
+          </p>
+          <div class="cr-route" id="cr-route-fields"></div>
+        </section>
       </div>
     </section>
 
@@ -637,7 +712,7 @@
             Who decides, who needs telling, and who is booked on this engagement. The team
             itself is allocated from the central pool on Resources, so one person exists once
             across every project rather than once per project. Accounts and who may edit what
-            are on Sync &amp; Team.
+            are in Settings, under Sync.
           </p>
         </header>
 
@@ -757,6 +832,79 @@
       </div>
     </section>
 
+    <section id="page-customers" class="page" role="region" aria-label="Customer success">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Customer Success</span></div>
+          <p class="hint report-subtitle">
+            Every account, where it is in the customer lifecycle, how healthy it is, and when it renews.
+            Health and the numbers above are worked out from the accounts, never typed.
+          </p>
+        </header>
+
+        <section class="kpi-row" aria-label="Customer health">
+          <div class="kpi" id="cs-tile-retention">
+            <span class="kpi__label">Customer retention</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="cs-tile-nrr">
+            <span class="kpi__label">Net revenue retention</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="cs-tile-nps">
+            <span class="kpi__label">Net Promoter Score</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="cs-tile-risk">
+            <span class="kpi__label">ARR at risk</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+        </section>
+
+        <div id="customers-registers"></div>
+
+        <section class="card" id="sec-cs-economics">
+          <div class="card__head"><h2>Unit Economics</h2></div>
+          <p class="hint">
+            Lifetime value needs the one figure an account cannot supply: the gross margin you make on it.
+            LTV is average ARR &times; gross margin &divide; the churn rate of the last twelve months; CAC is the average
+            cost to acquire an account, from the accounts that record one.
+          </p>
+          <label class="field-label cs-margin">Gross margin %
+            <input type="number" class="field-input" id="cs-gross-margin" min="0" max="100" step="1" placeholder="e.g. 75">
+          </label>
+          <dl class="cs-economics" id="cs-economics-read"></dl>
+        </section>
+
+        <section class="card" id="sec-cs-lifecycle">
+          <div class="card__head"><h2>CSM Lifecycle</h2></div>
+          <p class="hint">
+            Six stages, in order, each with the gate that lets an account leave it and the plays a CSM runs in it.
+            Move an account by changing its stage on Accounts; the day it moved is kept, which is how time to value is measured.
+          </p>
+          <div id="cs-lifecycle-body"></div>
+        </section>
+
+        <section class="card" id="sec-cs-renewals">
+          <div class="card__head">
+            <h2>Renewals</h2>
+            <span class="hint" id="cs-renewals-summary"></span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="cs-renewals-table">
+              <thead><tr><th>Account</th><th>CSM</th><th class="col-date">Renewal</th><th class="col-num">In</th><th class="col-num">ARR</th><th>Health</th><th>Stage</th></tr></thead>
+              <tbody id="cs-renewals-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="cs-renewals-empty" hidden>No renewals in the next six months.</p>
+        </section>
+      </div>
+    </section>
+
     <section id="page-raid" class="page" role="region" aria-label="Risks issues and dependencies">
       <div class="print-page">
         <header class="dash-header">
@@ -780,15 +928,15 @@
             <button type="button" class="btn btn-small no-print" id="btn-add-raid">+ Add Entry</button>
           </div>
           <div class="filter-bar no-print">
-            <input type="search" class="field-input" id="raid-search" placeholder="Search title, owner, next step...">
-            <select class="field-input" id="raid-type-filter">
+            <input type="search" class="field-input" id="raid-search" aria-label="Search the log" placeholder="Search title, owner, next step...">
+            <select class="field-input" id="raid-type-filter" aria-label="Filter by type">
               <option value="">All types</option>
               <option>Risk</option>
               <option>Issue</option>
               <option>Decision</option>
               <option>Assumption</option>
             </select>
-            <select class="field-input" id="raid-status-filter">
+            <select class="field-input" id="raid-status-filter" aria-label="Filter by status">
               <option value="open" selected>Open only</option>
               <option value="">All statuses</option>
               <option value="closed">Closed only</option>
@@ -939,7 +1087,7 @@
         <section class="card" id="sec-meeting-notes">
           <div class="card__head"><h2>Discussion Notes</h2></div>
           <p class="hint">What was actually said, in your words. The transcript is kept separately.</p>
-          <textarea class="field-input meeting-notes" id="meeting-notes" rows="14"
+          <textarea class="field-input meeting-notes" id="meeting-notes" aria-label="Discussion notes" rows="14"
                     placeholder="Quarterly results: Q1 revenue up 8% YoY&#10;Budget review: reallocate 10% from discretionary spend&#10;&#10;One line per point reads best in the minutes."></textarea>
         </section>
 
@@ -1047,7 +1195,7 @@
               <code>Name: what they said</code> and <code>[00:12] Name: what they said</code>
               are both understood.
             </p>
-            <textarea class="field-input" id="transcript-input" rows="6"
+            <textarea class="field-input" id="transcript-input" aria-label="Transcript to import" rows="6"
                       placeholder="[00:00] Jessica Morgan: Let's start with the Q1 numbers."></textarea>
             <div class="sync-actions">
               <button type="button" class="btn btn-small btn-primary" id="btn-import-transcript">Add to transcript</button>
@@ -1081,10 +1229,13 @@
             <span class="dash-header__badge" id="kpi-coverage">&mdash;</span>
           </div>
           <p class="hint report-subtitle">
-            Twenty indicators for schedule, cost, scope, risk and quality &mdash; every one of them
-            worked out from the plan and the registers, none of them typed in. An indicator with
-            nothing behind it reads &ldquo;not measured&rdquo; and says which field would fill it,
-            rather than showing a number nobody earned.
+            Indicators for schedule, cost, scope, risk, quality, improvement and customer success &mdash;
+            every one of them worked out from the plan and the registers, none of them typed in. An
+            indicator with nothing behind it reads &ldquo;not measured&rdquo; and says which field
+            would fill it, rather than showing a number nobody earned. A card whose number has
+            turned bad is also flagged with what that looks like as a risk &mdash; see
+            <button type="button" class="link-btn" data-goto="nav-kpi-framework">PM Framework</button>
+            for the wider set this app cannot measure yet.
           </p>
         </header>
 
@@ -1131,6 +1282,17 @@
           <div class="card__head"><h2>Quality &amp; Resource KPIs</h2></div>
           <div class="kpi-grid" id="kpi-grid-quality"></div>
         </section>
+        <section class="card" id="sec-kpi-improvement">
+          <div class="card__head"><h2>Improvement KPIs</h2></div>
+          <div class="kpi-grid" id="kpi-grid-improvement"></div>
+        </section>
+        <section class="card" id="sec-kpi-customer">
+          <div class="card__head">
+            <h2>Customer Success KPIs</h2>
+            <span class="hint">Read from the accounts on Customer Success.</span>
+          </div>
+          <div class="kpi-grid" id="kpi-grid-customer"></div>
+        </section>
 
         <section class="card card--quiet" id="sec-kpi-basis">
           <div class="card__head"><h2>How these are worked out</h2></div>
@@ -1146,6 +1308,105 @@
                 </tr>
               </thead>
               <tbody id="kpi-basis-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card card--quiet" id="sec-kpi-ceo">
+          <div class="card__head">
+            <h2>Business &amp; leadership KPIs</h2>
+            <span class="hint" id="kpi-ceo-summary"></span>
+          </div>
+          <p class="hint">
+            A company-level KPI set &mdash; business, leadership and personal &mdash; against what this app can answer.
+            Where it measures the same thing, or its project-level equivalent, the value is live and links to its card.
+            Where it cannot, the reason is given: most company finance needs a ledger or a balance sheet, and this app
+            will not invent one.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table" id="kpi-ceo-table">
+              <thead><tr><th>Area</th><th>KPI</th><th>In this app</th><th>Now</th><th>How, or why not</th></tr></thead>
+              <tbody id="kpi-ceo-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card card--quiet" id="sec-kpi-framework">
+          <div class="card__head">
+            <h2>The wider PM framework</h2>
+            <span class="hint">Twelve categories a project management practice typically tracks. Where this app has real data, the KPI links straight to it above; where it does not, that is said plainly rather than guessed at.</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="kpi-framework-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>KPIs</th>
+                  <th>KRIs</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Project Governance</td>
+                  <td><ul class="cap-guidance-list"><li>Steering committee meeting frequency <em>— not tracked</em></li><li>Project charter approval rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Delayed executive decisions</li><li>Lack of governance oversight</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Scope Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-scope">Scope change frequency</button></li><li>Requirements approval timeliness <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Scope creep incidents</li><li>Unapproved requirement changes</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Schedule Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-schedule">Schedule variance</button></li><li><button type="button" class="link-btn" data-goto="nav-kpi-schedule">Milestone completion rate</button></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Missed critical milestones</li><li>Increasing schedule slippage</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Cost Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-cost">Cost variance</button></li><li><button type="button" class="link-btn" data-goto="nav-kpi-cost">Budget utilisation rate</button></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Budget overruns</li><li>Unplanned cost escalations</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Risk Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-risk">Risk response timeliness</button></li><li>Risk register update frequency <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>High residual risk exposure</li><li>Delayed risk response actions</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Quality Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-quality">Defect density</button></li><li>Quality audit pass rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Increasing defect trends</li><li>Rework frequency</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Stakeholder Management</td>
+                  <td><ul class="cap-guidance-list"><li>Stakeholder satisfaction score <em>— not tracked</em></li><li>Communication effectiveness <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Stakeholder complaints</li><li>Escalation frequency</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Procurement Management</td>
+                  <td><ul class="cap-guidance-list"><li>Vendor on-time delivery <em>— not tracked</em></li><li>Contract compliance rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Vendor performance degradation</li><li>Contract compliance gaps</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Change Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-scope">Change approval cycle time</button></li><li><button type="button" class="link-btn" data-goto="nav-kpi-scope">Change approval rate</button> <em>— an approval rate, not a success rate; nothing tracks whether an implemented change stuck</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Failed change implementations</li><li>Emergency change frequency</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Communication Management</td>
+                  <td><ul class="cap-guidance-list"><li>Reporting timeliness <em>— not tracked</em></li><li>Status update accuracy <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Information gaps</li><li>Misaligned stakeholder expectations</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Performance Monitoring</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-schedule">Earned value performance</button> — SV, SPI, CV, CPI</li><li>Portfolio health index <em>— not a single number; read as the mix of colours across the grids above</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Declining performance trends</li><li>Uncontrolled variance growth</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Lessons Learned &amp; Improvement</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-improvement">Lessons logged</button></li><li>Process improvement adoption rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Repeated project failures</li><li>Lack of continuous improvement</li></ul></td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </section>
@@ -1174,6 +1435,11 @@
             <span class="report-type-btn__icon" aria-hidden="true">📈</span>
             <span class="report-type-btn__label">Executive</span>
             <span class="report-type-btn__sub">Portfolio rollup</span>
+          </button>
+          <button type="button" class="report-type-btn" data-report="closure" aria-pressed="false">
+            <span class="report-type-btn__icon" aria-hidden="true">🏁</span>
+            <span class="report-type-btn__label">Closure</span>
+            <span class="report-type-btn__sub">Hand-over &amp; sign-off</span>
           </button>
         </div>
 
@@ -1446,6 +1712,164 @@
             No over-allocation, no bookings across leave, and every project has its key roles filled.
           </p>
         </section>
+        <div class="merged-page" id="page-capacity" role="region" aria-label="Capacity Planning">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Capacity Planning</span></div>
+          <p class="hint report-subtitle">
+            From demand to a plan the pool can actually deliver. The process below is a reference;
+            the numbers under it are read live off this workspace's projects, resources and bookings.
+          </p>
+        </header>
+
+        <section class="card card--quiet" id="sec-capacity-process">
+          <div class="card__head">
+            <h2><span class="section-number">1</span> The process</h2>
+            <span class="hint">From demand to balanced execution. No data on this card — it is a reference, not a form.</span>
+          </div>
+          <ol class="cap-steps">
+            <li class="cap-step">
+              <span class="cap-step__n">1</span>
+              <h3 class="cap-step__title">Capture demand</h3>
+              <p class="cap-step__text">Collect the work that wants doing: projects, tasks and the estimates behind them. This is <button type="button" class="link-btn" data-goto="tab-portfolio">Portfolio</button> and each project's own Task Tracker.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">2</span>
+              <h3 class="cap-step__title">Analyse capacity</h3>
+              <p class="cap-step__text">Understand who is available, at what capacity, and what leave and other commitments already take off the top. This is the <button type="button" class="link-btn" data-goto="tab-resources">Resources</button> pool and its Availability tab.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">3</span>
+              <h3 class="cap-step__title">Compare &amp; prioritise</h3>
+              <p class="cap-step__text">Match demand against what is actually available. Where the two do not fit, decide what defers, shrinks or gets more people rather than letting every project run 5% behind.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">4</span>
+              <h3 class="cap-step__title">Allocate resources</h3>
+              <p class="cap-step__text">Book the right people to the right work, time-phased rather than open-ended. This is <button type="button" class="link-btn" data-goto="tab-resources">Resources → Allocations</button>.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">5</span>
+              <h3 class="cap-step__title">Execute &amp; monitor</h3>
+              <p class="cap-step__text">Keep the plan honest as it runs: watch utilisation, catch overload before it becomes a missed date, adjust when the picture changes.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">6</span>
+              <h3 class="cap-step__title">Review &amp; improve</h3>
+              <p class="cap-step__text">After the fact, look at what the plan assumed against what happened, and feed it into the next round of estimates. See <button type="button" class="link-btn" data-goto="tab-improve">Improvement &amp; Lessons</button>.</p>
+            </li>
+          </ol>
+        </section>
+
+        <section class="card card--feature" id="sec-capacity-overview">
+          <div class="card__head">
+            <h2><span class="section-number">2</span> Portfolio capacity overview</h2>
+            <span class="hint">Every project's own window, coloured by RAG status. The number on each bar is its estimated effort in days.</span>
+          </div>
+          <div class="chart-scroll"><div class="gantt-chart" id="capacity-gantt"></div></div>
+          <p class="hint" id="capacity-gantt-empty" hidden>Give a project a due date to see it here — a start and a due date are all a bar needs.</p>
+        </section>
+
+        <section class="card card--feature" id="sec-capacity-metrics">
+          <div class="card__head">
+            <h2><span class="section-number">3</span> KPI dashboard</h2>
+            <span class="hint">Measured over the window below, across every resource and project in the workspace.</span>
+          </div>
+          <div class="res-controls no-print">
+            <label class="field-label">From
+              <input type="date" class="field-input" id="cap-from">
+            </label>
+            <label class="field-label">To
+              <input type="date" class="field-input" id="cap-to">
+            </label>
+          </div>
+          <section class="cap-kpis" id="capacity-metrics"></section>
+          <p class="hint" id="capacity-metrics-empty" hidden>Add someone to the Resources pool to see utilisation and capacity numbers here.</p>
+        </section>
+
+        <section class="card card--quiet" id="sec-capacity-formula">
+          <div class="card__head">
+            <h2><span class="section-number">4</span> Capacity formula</h2>
+            <span class="hint">The arithmetic behind the numbers above, worked through for one real person.</span>
+          </div>
+          <div class="cap-formula" id="capacity-formula"></div>
+          <p class="hint" id="capacity-formula-empty" hidden>Add someone to the Resources pool to see a worked example.</p>
+        </section>
+
+        <div class="dash-row dash-row--3" id="sec-capacity-signals">
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Overload</h2></div>
+            <ul class="cap-guidance-list">
+              <li>High resource utilisation (over 85%)</li>
+              <li>Demand running ahead of capacity (gap over +10%)</li>
+              <li>Overloaded roles climbing</li>
+              <li>On-time delivery falling</li>
+            </ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Underutilisation</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Low resource utilisation (under 70%)</li>
+              <li>Demand running behind capacity (gap under -10%)</li>
+              <li>Buffer capacity high (over 20%)</li>
+              <li>Throughput falling with people still free</li>
+            </ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Healthy balance</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Utilisation in the 70–85% band</li>
+              <li>Demand-vs-capacity gap within ±10%</li>
+              <li>On-time delivery in the 85–95% band</li>
+              <li>Buffer capacity in the 10–20% band</li>
+            </ul>
+          </section>
+        </div>
+
+        <section class="card card--quiet" id="sec-capacity-checklist">
+          <div class="card__head"><h2>Monthly review checklist</h2></div>
+          <p class="hint">A five-step check to keep the portfolio on track. Look at these together — one number out of band is a watch item, several moving the same way is the thing to act on.</p>
+          <ol class="cap-guidance-list cap-guidance-list--numbered">
+            <li>Review utilisation by person, not just the average</li>
+            <li>Compare demand against capacity for the weeks ahead, not just now</li>
+            <li>Check on-time delivery and throughput together</li>
+            <li>Look at forecast accuracy — is the plan learning from what actually happened?</li>
+            <li>Confirm buffer capacity is enough to absorb the next surprise</li>
+          </ol>
+        </section>
+
+        <div class="dash-row dash-row--3" id="sec-capacity-guidance">
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Common capacity gaps</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Too many projects running at once, none of them fully staffed</li>
+              <li>Estimates that assumed nobody would ever be on leave</li>
+              <li>A skill only one person has, booked on two projects at once</li>
+              <li>Allocations nobody revisits once the project is under way</li>
+              <li>Priorities that change faster than the plan can be re-run</li>
+            </ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>When demand exceeds capacity</h2></div>
+            <ol class="cap-guidance-list cap-guidance-list--numbered">
+              <li>Reassess priorities — which projects actually deliver the most value?</li>
+              <li>Reduce or split scope — can the project be smaller, or phased?</li>
+              <li>Shift timelines — can it start later, or run longer?</li>
+              <li>Add resources — internally, or from outside?</li>
+              <li>Defer or stop the lowest-value work rather than spread everyone thinner</li>
+            </ol>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Best practice</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Plan against realistic capacity, not a full week per person</li>
+              <li>Count all the work — projects, BAU and support, not just the visible plan</li>
+              <li>Book against skills, not just headcount</li>
+              <li>Revisit allocations on a schedule, not only when something breaks</li>
+              <li>Keep one shared, transparent view rather than a spreadsheet per team</li>
+            </ul>
+          </section>
+        </div>
+        </div>
       </div>
     </section>
 
@@ -1459,6 +1883,16 @@
             own Dashboard shows &mdash; side by side rather than one at a time.
           </p>
         </header>
+        <div id="sec-portfolio-all">
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Project tiles</h2>
+            <span class="hint">The same rows as the table below, one card per project. Click a tile to open it.</span>
+          </div>
+          <div class="pf-tiles" id="portfolio-tiles"></div>
+          <p class="hint" id="portfolio-tiles-empty" hidden>No projects yet.</p>
+        </section>
 
         <section class="card">
           <div class="card__head">
@@ -1474,13 +1908,207 @@
           </div>
           <p class="hint" id="portfolio-empty" hidden>No projects yet.</p>
         </section>
+        </div>
+        <div class="merged-page" id="page-ai-portfolio" role="region" aria-label="AI Portfolio">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>AI Portfolio</span></div>
+          <p class="hint report-subtitle">
+            Every project running an AI or ML methodology, in one place. A project lands here the moment
+            it names one on its <button type="button" class="link-btn" data-goto="tab-planner">Plan</button>
+            page — nothing else to maintain.
+          </p>
+        </header>
+
+        <section class="stat-cards" id="ai-portfolio-stats"></section>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Initiatives</h2>
+            <span class="hint">Click a card to open that project's Plan page.</span>
+          </div>
+          <div class="pf-tiles" id="ai-portfolio-tiles"></div>
+          <p class="hint" id="ai-portfolio-empty" hidden>
+            No project has an AI or ML methodology set yet. Give one a method on its Plan page — CPMAI,
+            CRISP-DM, ADLC, Agentic DLC, MLOps or LLMOps — and it appears here.
+          </p>
+        </section>
+        </div>
+        <div class="merged-page" id="page-planning-layers" role="region" aria-label="Planning Layers">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Planning Layers</span></div>
+          <p class="hint report-subtitle">
+            Three horizons, cascading into each other: where the practice is going, how that becomes
+            coordinated work, and what actually happens today. A number that cannot be traced back up
+            this chain to a strategic priority is busywork, however well it is executed.
+          </p>
+        </header>
+
+        <section class="card cap-layer" id="layer-strategic">
+          <div class="cap-layer__head">
+            <span class="cap-layer__n">01</span>
+            <div class="cap-layer__title-group">
+              <h2 class="cap-layer__title">Strategic Planning</h2>
+              <p class="cap-layer__subtitle">Long-term direction — sets vision, defines where and how to compete.</p>
+            </div>
+            <span class="cap-layer__span">3–5 years</span>
+          </div>
+          <div class="cap-layer__grid">
+            <div class="cap-layer__col">
+              <h3>Key focus</h3>
+              <ul class="cap-guidance-list">
+                <li>Market position and differentiation</li>
+                <li>Competitive advantage</li>
+                <li>Vision and growth opportunities</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Owned by</h3>
+              <ul class="cap-guidance-list">
+                <li>Leadership sets direction</li>
+                <li>Sponsors and the steering committee agree priorities</li>
+                <li>Governance validates the choice</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Best practice</h3>
+              <ul class="cap-guidance-list">
+                <li>A handful of priorities, not a wishlist</li>
+                <li>Decide what you will not do, not only what you will</li>
+                <li>Revisit as the market moves, not on a fixed clock</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Common mistakes</h3>
+              <ul class="cap-guidance-list">
+                <li>Vague or overly broad goals</li>
+                <li>Avoiding the hard trade-offs</li>
+                <li>Chasing every opportunity at once</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="card cap-layer" id="layer-tactical">
+          <div class="cap-layer__head">
+            <span class="cap-layer__n">02</span>
+            <div class="cap-layer__title-group">
+              <h2 class="cap-layer__title">Tactical Planning</h2>
+              <p class="cap-layer__subtitle">The bridge to execution — turns strategy into coordinated initiatives.</p>
+            </div>
+            <span class="cap-layer__span">1–3 years</span>
+          </div>
+          <div class="cap-layer__grid">
+            <div class="cap-layer__col">
+              <h3>Key focus</h3>
+              <ul class="cap-guidance-list">
+                <li>Team alignment around initiatives</li>
+                <li>Cross-team resource coordination</li>
+                <li>Progress toward the strategic goals above</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Owned by</h3>
+              <ul class="cap-guidance-list">
+                <li>Programme and delivery leads coordinate</li>
+                <li>Cross-functional owners align</li>
+                <li>Middle management runs it — this is <button type="button" class="link-btn" data-goto="tab-portfolio">Portfolio</button>, <button type="button" class="link-btn" data-goto="tab-resources">Resources</button> and <button type="button" class="link-btn" data-goto="tab-capacity">Capacity Planning</button> territory</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Best practice</h3>
+              <ul class="cap-guidance-list">
+                <li>Roadmaps with real milestones — see <button type="button" class="link-btn" data-goto="tab-planner">Plan</button></li>
+                <li>One accountable owner per initiative</li>
+                <li>Regular checkpoint reviews, not just a kickoff and a retro</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Common mistakes</h3>
+              <ul class="cap-guidance-list">
+                <li>Plans disconnected from the strategy that funded them</li>
+                <li>More initiatives than the pool has capacity for — see <button type="button" class="link-btn" data-goto="tab-capacity">Capacity Planning</button></li>
+                <li>Poor coordination across teams sharing the same people</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="card cap-layer" id="layer-operational">
+          <div class="cap-layer__head">
+            <span class="cap-layer__n">03</span>
+            <div class="cap-layer__title-group">
+              <h2 class="cap-layer__title">Operational Planning</h2>
+              <p class="cap-layer__subtitle">Short-term execution — where the work actually happens, day to day.</p>
+            </div>
+            <span class="cap-layer__span">Days–12 months</span>
+          </div>
+          <div class="cap-layer__grid">
+            <div class="cap-layer__col">
+              <h3>Key focus</h3>
+              <ul class="cap-guidance-list">
+                <li>Consistent delivery and quality</li>
+                <li>Day-to-day process efficiency</li>
+                <li>Frontline execution</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Owned by</h3>
+              <ul class="cap-guidance-list">
+                <li>Team leads manage the daily work</li>
+                <li>Supervisors oversee completion</li>
+                <li>This project's own <button type="button" class="link-btn" data-goto="tab-tasks">Tasks</button> and <button type="button" class="link-btn" data-goto="tab-planner">Plan</button></li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Best practice</h3>
+              <ul class="cap-guidance-list">
+                <li>Standard steps for repeated work</li>
+                <li>Track the handful of indicators that matter — see <button type="button" class="link-btn" data-goto="tab-kpis">KPIs</button></li>
+                <li>Keep the plan realistic, not a full week booked per person</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Common mistakes</h3>
+              <ul class="cap-guidance-list">
+                <li>Mistaking activity for progress</li>
+                <li>Losing sight of the strategy above</li>
+                <li>Overloading the team beyond what capacity supports</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="card card--quiet" id="sec-planning-cascade">
+          <div class="card__head">
+            <h2>From strategy to execution</h2>
+            <span class="hint">Each layer asks the question the one below it has to answer.</span>
+          </div>
+          <ol class="cap-steps">
+            <li class="cap-step">
+              <span class="cap-step__n">1</span>
+              <h3 class="cap-step__title">Define the top-level goal</h3>
+              <p class="cap-step__text">Leadership sets one to three priorities with a measurable outcome — "reach 30% market share in two years," not "grow the business." Ask: what has to be true for this to happen?</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">2</span>
+              <h3 class="cap-step__title">Break it into initiatives</h3>
+              <p class="cap-step__text">Each priority becomes two to four tactical initiatives, each with a deadline and a named owner — tracked as <button type="button" class="link-btn" data-goto="tab-portfolio">projects</button> with their own <button type="button" class="link-btn" data-goto="tab-planner">milestones</button>. Ask: what does the team do every week to make this happen?</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">3</span>
+              <h3 class="cap-step__title">Translate into daily execution</h3>
+              <p class="cap-step__text">Each initiative becomes concrete <button type="button" class="link-btn" data-goto="tab-tasks">tasks</button> and the two or three <button type="button" class="link-btn" data-goto="tab-kpis">KPIs</button> that show whether it is working. Ask: what does this look like day to day?</p>
+            </li>
+          </ol>
+        </section>
+        </div>
       </div>
     </section>
 
-    <section id="page-changelog" class="page" role="region" aria-label="Change log">
+    <section id="page-changelog" class="page" role="region" aria-label="History">
       <div class="print-page">
         <header class="dash-header">
-          <div class="dash-header__title"><span>Change Log</span></div>
+          <div class="dash-header__title"><span>History</span></div>
           <p class="hint report-subtitle">
             Statuses, dates, sign-offs, owners and budgets, recorded as they move.
             Deliberately not a keystroke log &mdash; only the changes someone could be asked
@@ -1488,6 +2116,7 @@
             keeps the record of what happened either way.
           </p>
         </header>
+        <div id="sec-changelog">
 
         <section class="card">
           <div class="card__head">
@@ -1515,11 +2144,8 @@
           </div>
           <p class="hint" id="changelog-empty" hidden></p>
         </section>
-      </div>
-    </section>
-
-    <section id="page-trash" class="page" role="region" aria-label="Trash">
-      <div class="print-page">
+        </div>
+        <div class="merged-page" id="page-trash" role="region" aria-label="Trash">
         <header class="dash-header">
           <div class="dash-header__title"><span>Trash</span></div>
           <p class="hint report-subtitle">
@@ -1548,6 +2174,7 @@
             </table>
           </div>
         </section>
+        </div>
       </div>
     </section>
 
@@ -1564,6 +2191,28 @@
             what and which pages each role is offered.
           </p>
         </header>
+
+        <!-- Who is looking. Filters the menu to the pages that role uses. On a
+             device of your own it is yours to set; inside a workspace an
+             administrator assigns it and the picker becomes a statement. It
+             lived at the top of the sidebar, where it took the space of five
+             menu rows to change something most people set once. -->
+        <section class="card" id="sec-settings-role">
+          <div class="card__head"><h2>Your job role</h2></div>
+          <div class="role-picker">
+            <label class="role-picker__label" for="role-select">I'm working as</label>
+            <select class="field-input role-picker__select" id="role-select"></select>
+            <p class="role-picker__blurb" id="role-blurb"></p>
+            <p class="role-picker__assigned" id="role-assigned" hidden>
+              🔒 Assigned by your administrator
+            </p>
+            <label class="role-picker__toggle" id="role-show-all-row">
+              <input type="checkbox" id="role-show-all">
+              <span>Show every page</span>
+            </label>
+            <p class="hint">Decides which pages the menu offers. It is a view, not a permission: what you can read and change is decided by your workspace, not by this.</p>
+          </div>
+        </section>
 
         <section class="card" id="sec-settings-account">
           <div class="card__head"><h2>Account</h2></div>
@@ -1587,7 +2236,7 @@
               which is the quickest way to see the screens below.
             </p>
             <p class="hint callout" id="signin-unconfigured" hidden>
-              No workspace is connected yet. Connect one on <strong>Sync &amp; Team</strong> first &mdash;
+              No workspace is connected yet. Connect one under <strong>Settings &rarr; Sync</strong> first &mdash;
               sign-in needs somewhere to sign in to.
             </p>
           </div>
@@ -1754,11 +2403,7 @@
             <button type="button" class="btn btn-ghost" id="btn-settings-open-export">Export &amp; share options</button>
           </div>
         </section>
-      </div>
-    </section>
-
-    <section id="page-sync" class="page" role="region" aria-label="Sync and team">
-      <div class="print-page">
+        <div class="merged-page" id="page-sync" role="region" aria-label="Sync and team">
         <header class="dash-header">
           <div class="dash-header__title"><span>Sync &amp; Team</span></div>
           <p class="hint report-subtitle">
@@ -1871,6 +2516,7 @@
             </p>
           </section>
         </div>
+        </div>
       </div>
     </section>
 
@@ -1954,6 +2600,11 @@
       <div class="panel__section">
         <h3>New project</h3>
         <div class="template-grid" id="template-grid"></div>
+        <label class="field-label field-label--block" for="new-project-lifecycle">Lifecycle (required)
+          <select class="field-input" id="new-project-lifecycle" required aria-required="true" aria-describedby="new-project-lifecycle-hint"></select>
+        </label>
+        <p class="hint" id="new-project-lifecycle-hint">How the project is run. It decides the phases the Gantt on the Plan page is laid out with; a template that already follows one picks it for you.</p>
+        <p class="field-error" id="new-project-lifecycle-error" role="alert" hidden>Choose a lifecycle to create the project.</p>
         <label class="field-label field-label--block">Project name
           <input type="text" class="field-input" id="new-project-name" placeholder="Leave blank to use the template's name">
         </label>
@@ -1984,7 +2635,7 @@
       <div class="panel__section">
         <h3>Import project</h3>
         <p class="hint">Import a project previously exported as JSON (see Export / Share). This adds a new project — it won't overwrite anything.</p>
-        <input type="file" accept="application/json" class="field-input" id="import-project-file">
+        <input type="file" accept="application/json" class="field-input" id="import-project-file" aria-label="Project file to import">
       </div>
     </div>
   </div>
@@ -2020,7 +2671,7 @@
     <div class="palette" role="dialog" aria-modal="true" aria-label="Search everything">
       <div class="palette__inputrow">
         <span class="palette__icon" aria-hidden="true">🔍</span>
-        <input type="text" class="palette__input" id="palette-input" role="combobox"
+        <input type="text" class="palette__input" id="palette-input" aria-label="Search everything" role="combobox"
                aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list"
                autocomplete="off" spellcheck="false"
                placeholder="Search tasks, risks, deliverables, releases, people&hellip;">

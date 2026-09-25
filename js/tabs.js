@@ -81,7 +81,7 @@ export const PAGE_TABS = {
     { id: 'sec-meeting-transcript', label: 'Recording' },
   ],
   'page-settings': [
-    { id: 'sec-settings-account', label: 'Account', sections: ['sec-settings-account', 'sec-settings-workspace'] },
+    { id: 'sec-settings-account', label: 'Account', sections: ['sec-settings-role', 'sec-settings-account', 'sec-settings-workspace'] },
     { id: 'sec-settings-people', label: 'People & Access', sections: ['sec-settings-people', 'sec-settings-pages'] },
     { id: 'sec-settings-workflow', label: 'Task Execution' },
     { id: 'sec-settings-data', label: 'Data & Security', sections: ['sec-settings-data', 'sec-settings-security'] },

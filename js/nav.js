@@ -231,6 +231,7 @@ export const NAV_TREE = [
         title: 'Settings',
         children: [
           { id: 'nav-settings-account', label: 'Account', page: 'page-settings', title: 'Settings', section: 'sec-settings-account' },
+          { id: 'nav-settings-role', label: 'Your job role', page: 'page-settings', title: 'Settings', section: 'sec-settings-role' },
           { id: 'nav-settings-workspace', label: 'Workspace', page: 'page-settings', title: 'Settings', section: 'sec-settings-workspace' },
           { id: 'nav-settings-people', label: 'People & Roles', page: 'page-settings', title: 'Settings', section: 'sec-settings-people' },
           { id: 'nav-settings-pages', label: 'Page Access', page: 'page-settings', title: 'Settings', section: 'sec-settings-pages' },
@@ -401,7 +402,7 @@ function renderFilterNote() {
     return;
   }
   note.hidden = false;
-  note.textContent = `${hidden.length} more ${hidden.length === 1 ? 'page' : 'pages'} hidden for ${getRole().label}`;
+  note.textContent = `${hidden.length} more ${hidden.length === 1 ? 'page' : 'pages'} hidden for ${getRole().label} · change`;
 }
 
 export function renderNav() {

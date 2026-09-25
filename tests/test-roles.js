@@ -5,7 +5,7 @@
 // not access control — the toggle proves that — and it must never strand
 // someone on a page their new role cannot navigate back to.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openDestination } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -24,7 +24,12 @@ const { eq, done } = createChecks();
     .filter((e) => !e.classList.contains('nav-row--group'))
     .map((e) => e.querySelector('.nav-row__label').textContent));
   const activePage = () => page.evaluate(() => document.querySelector('.page.is-active').id);
-  const setRole = async (id) => { await page.selectOption('#role-select', id); await page.waitForTimeout(450); };
+  // The picker lives on Settings → Account now, not above the sidebar.
+  const setRole = async (id) => {
+    await openDestination(page, 'nav-settings-role');
+    await page.selectOption('#role-select', id);
+    await page.waitForTimeout(450);
+  };
 
   console.log('\n--- the picker offers every role and starts on the lead ---');
   eq('roles offered', await page.$$eval('#role-select option', (e) => e.map((x) => x.textContent)),
@@ -70,6 +75,7 @@ const { eq, done } = createChecks();
   eq('and names the role', (await page.textContent('#nav-filter-note')).includes('Service Manager'), true);
 
   console.log('\n--- it is a filter, not a lock ---');
+  await openDestination(page, 'nav-settings-role');
   await page.check('#role-show-all');
   await page.waitForTimeout(450);
   const everything = await pages();
@@ -131,20 +137,27 @@ const { eq, done } = createChecks();
      await activePage(), 'page-raid');
 
   console.log('\n--- switching role never strands you on a page you cannot leave ---');
+  // A role that changes while you are on some other page — an administrator's
+  // assignment arriving, say. The picker is on Settings, so it cannot be used
+  // from here; the change comes through the role store, as that one does.
+  const roleArrives = async (id) => {
+    await page.evaluate(async (role) => (await import('./js/roles.js')).setRole(role), id);
+    await page.waitForTimeout(450);
+  };
   await setRole('engagement-lead');
   await page.click('#tab-scope');
   await page.waitForTimeout(400);
   eq('the lead is on Scope & Contract', await activePage(), 'page-scope');
-  await setRole('developer');
+  await roleArrives('developer');
   eq('a developer is moved to their own home rather than left there',
      await activePage(), 'page-mywork');
 
   // The opposite case matters too: a page the new role can still see should
   // not be yanked away just because the role changed.
-  await setRole('engagement-lead');
+  await roleArrives('engagement-lead');
   await page.click('#tab-raid');
   await page.waitForTimeout(400);
-  await setRole('tester');
+  await roleArrives('tester');
   eq('a page both roles share is left alone', await activePage(), 'page-raid');
 
   console.log('\n--- the choice sticks, and survives a reload ---');

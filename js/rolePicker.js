@@ -1,8 +1,9 @@
-// The "I'm working as" control in the sidebar.
+// The "I'm working as" control, on Settings → Account.
 //
-// It sits immediately above the nav it filters, and it says out loud what it
-// is doing — a page that has simply vanished reads as a missing feature, so
-// the count of hidden pages and the way to get them back are both on screen.
+// It used to sit above the sidebar it filters, where it took the room of five
+// menu rows to change something most people set once. The sidebar keeps the
+// part that matters when pages are missing — a line saying how many are hidden
+// for which role — and that line opens this control.
 
 import { el } from './dom.js';
 import {
@@ -63,6 +64,7 @@ export function initRolePicker() {
     select.appendChild(el('option', { value: role.id, text: role.label }));
   });
   select.value = getRoleId();
+  document.getElementById('nav-filter-note').addEventListener('click', () => goToNode('nav-settings-role'));
   renderBlurb();
   renderAssignment();
 

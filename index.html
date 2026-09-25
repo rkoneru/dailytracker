@@ -99,24 +99,8 @@
                 aria-label="Close menu">&#x2715;</button>
       </div>
 
-      <!-- Who is looking. Filters the nav below to the pages that role uses.
-           On a device of your own it is yours to set; inside a workspace an
-           administrator assigns it and the picker becomes a statement. -->
-      <div class="role-picker">
-        <label class="role-picker__label" for="role-select">I'm working as</label>
-        <select class="field-input role-picker__select" id="role-select"></select>
-        <p class="role-picker__blurb" id="role-blurb"></p>
-        <p class="role-picker__assigned" id="role-assigned" hidden>
-          🔒 Assigned by your administrator
-        </p>
-        <label class="role-picker__toggle" id="role-show-all-row">
-          <input type="checkbox" id="role-show-all">
-          <span>Show every page</span>
-        </label>
-      </div>
-
       <nav class="sidebar__nav" id="sidebar-nav" aria-label="Sections"></nav>
-      <p class="nav-filter-note" id="nav-filter-note" hidden></p>
+      <button type="button" class="nav-filter-note link-btn" id="nav-filter-note" hidden></button>
 
       <div class="sidebar__footer">
         <button type="button" class="btn btn-primary btn-install-sidebar" id="btn-install" hidden>⬇ Install App</button>
@@ -2068,6 +2052,28 @@
             what and which pages each role is offered.
           </p>
         </header>
+
+        <!-- Who is looking. Filters the menu to the pages that role uses. On a
+             device of your own it is yours to set; inside a workspace an
+             administrator assigns it and the picker becomes a statement. It
+             lived at the top of the sidebar, where it took the space of five
+             menu rows to change something most people set once. -->
+        <section class="card" id="sec-settings-role">
+          <div class="card__head"><h2>Your job role</h2></div>
+          <div class="role-picker">
+            <label class="role-picker__label" for="role-select">I'm working as</label>
+            <select class="field-input role-picker__select" id="role-select"></select>
+            <p class="role-picker__blurb" id="role-blurb"></p>
+            <p class="role-picker__assigned" id="role-assigned" hidden>
+              🔒 Assigned by your administrator
+            </p>
+            <label class="role-picker__toggle" id="role-show-all-row">
+              <input type="checkbox" id="role-show-all">
+              <span>Show every page</span>
+            </label>
+            <p class="hint">Decides which pages the menu offers. It is a view, not a permission: what you can read and change is decided by your workspace, not by this.</p>
+          </div>
+        </section>
 
         <section class="card" id="sec-settings-account">
           <div class="card__head"><h2>Account</h2></div>

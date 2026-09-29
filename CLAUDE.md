@@ -61,6 +61,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/serviceDesk.js`, `billing.js` | incident SLA clocks (priority targets, overridable per project) and billing collection state, days to collect. Pure |
 | `js/deals.js` | the sales pipeline on use cases: stage, value, delivery cost, margin, probability, weighted forecast by quarter, win rate. Pure |
 | `js/quotes.js` | quotes on a use case (lines, discounts, tax, validity, versions), signed acceptance, and the standalone proposal HTML. Pure |
+| `js/accounting.js` | the accounting link as files: Xero / QuickBooks Online / plain invoice CSVs out, a payments CSV matched back by invoice number. Pure |
 | `js/journey.js` | one use case from sale to success: seven steps read off the deal, the decision and the project it became. Stores nothing |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
@@ -166,6 +167,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   delivery cost, margin or probability. Quotes live on the use case, so they
   get its row level security; conversion copies the governing quote's payment
   terms along with the value.
+- **The accounting system is linked by files, not an API.** OAuth to Xero or
+  QuickBooks needs a server holding a secret and this app has none. Export
+  takes only milestones Ready to invoice or Invoiced that have an amount and an
+  invoice number (the number is how the payment comes back), and lists the rest
+  with why. Text cells starting `= + - @` get an apostrophe (CSV injection).
+  A payments file is matched by invoice number, part payments are reported not
+  rounded up, and nothing is written until "Mark N paid", with Cancel beside it.
 - **The journey is a view, never a record.** Client View lays each use case's
   sale, decision, delivery, billing, support, account health and realised
   value side by side from where each is kept; `none` is grey (nothing

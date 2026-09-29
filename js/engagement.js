@@ -14,6 +14,10 @@ import { el } from './dom.js';
 import { mountRegisters, renderAll, renderRosterOptions, refreshDerivedCells } from './register.js';
 import { SCOPE_REGISTERS, PEOPLE_REGISTERS, CHARTER_FIELDS, BILLING } from './registerDefs.js';
 import { billingMetrics, collectionState, termsOf } from './billing.js';
+import {
+  FORMATS, invoicesFor, invoiceCsv, matchPayments, applyPayments,
+} from './accounting.js';
+import { toast } from './dialog.js';
 import { formatDate } from './dates.js';
 import { KEY_ROLES, utilisation } from './resourceModel.js';
 import { notifyProjectDataChanged } from './taskModel.js';
@@ -144,6 +148,109 @@ function renderBillingTerms() {
     ['Overdue', m.overdueCount ? `${money(m.overdueAmount)} on ${m.overdueCount}` : 'Nothing'],
     ['Days to collect', m.dso === null ? 'Not measured — nothing paid yet' : `${m.dso.toFixed(0)} days on average`],
   ].flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]));
+}
+
+// ---------- The accounting system ----------
+
+function download(name, text, type) {
+  const a = el('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function fileSlug() {
+  return String(getState().projectName || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project';
+}
+
+function renderAccounting() {
+  const s = getState();
+  const settings = s.accounting || {};
+  document.querySelectorAll('[data-acct]').forEach((input) => {
+    if (document.activeElement === input) return;
+    input.value = settings[input.dataset.acct] ?? (input.tagName === 'SELECT' ? 'DD/MM/YYYY' : '');
+  });
+  const host = document.getElementById('acct-export');
+  if (!host) return;
+  const plan = invoicesFor(s);
+  host.replaceChildren(...[
+    el('p', { class: 'hint', id: 'acct-summary', text: plan.included.length
+      ? `${plan.included.length} invoice${plan.included.length === 1 ? '' : 's'} ready to export, $${plan.included.reduce((n, i) => n + i.amount, 0).toLocaleString()} in all.`
+      : 'Nothing to export: no milestone is ready to invoice or invoiced with a number.' }),
+    plan.blocked ? el('p', { class: 'hint is-warn', text: plan.blocked }) : null,
+    ...plan.warnings.map((w) => el('p', { class: 'hint is-warn', text: w })),
+    plan.left.length ? el('ul', { class: 'uc-client-notes', id: 'acct-left' }, plan.left.map((l) => el('li', { text: `Left out: ${l.label} — ${l.why}.` }))) : null,
+    el('div', { class: 'sync-actions no-print' }, Object.entries(FORMATS).map(([id, label]) => el('button', {
+      type: 'button', class: 'btn btn-small', 'data-acct-export': id, disabled: !!plan.blocked || !plan.included.length, text: `Export for ${label}`,
+    }))),
+  ].filter(Boolean));
+}
+
+let pendingMatch = null;
+
+function renderPaymentPreview() {
+  const host = document.getElementById('acct-preview');
+  if (!host) return;
+  const m = pendingMatch;
+  if (!m) { host.replaceChildren(); return; }
+  if (m.error) { host.replaceChildren(el('p', { class: 'hint is-warn', text: m.error })); return; }
+  const money = (n) => `$${Number(n).toLocaleString()}`;
+  const list = (title, items, fmt) => (items.length ? [el('h4', { class: 'uc-sub', text: title }), el('ul', { class: 'uc-client-notes' }, items.map((x) => el('li', { text: fmt(x) })))] : []);
+  host.replaceChildren(
+    el('p', { id: 'acct-preview-summary', text: `${m.lines} line${m.lines === 1 ? '' : 's'} read. ${m.toPay.length} to mark paid, ${m.partial.length} part paid, ${m.already.length} already paid, ${m.skipped.length} not used.` }),
+    ...list('Will be marked paid', m.toPay, (x) => `${x.number} ${x.milestone} — ${money(x.paid)} on ${formatDate(x.paidOn)}`),
+    ...list('Part paid — left as they are', m.partial, (x) => `${x.number} ${x.milestone} — ${money(x.paid)} of ${money(x.amount)}`),
+    ...list('Already paid here', m.already, (x) => `${x.number} ${x.milestone}`),
+    ...list('Not used', m.skipped, (x) => `Line ${x.line}: ${x.why}`),
+    el('div', { class: 'sync-actions no-print' }, [
+      el('button', { type: 'button', class: 'btn btn-small btn-primary', id: 'acct-apply', disabled: !m.toPay.length, text: `Mark ${m.toPay.length} paid` }),
+      el('button', { type: 'button', class: 'btn btn-small btn-ghost', id: 'acct-cancel', text: 'Cancel' }),
+    ]),
+  );
+}
+
+function bindAccounting() {
+  const card = document.getElementById('sec-billing-accounting');
+  if (!card) return;
+  const save = (e) => {
+    const key = e.target.dataset.acct;
+    if (!key) return;
+    const s = getState();
+    s.accounting = { ...(s.accounting || {}), [key]: e.target.value };
+    scheduleSave();
+    renderAccounting();
+  };
+  card.addEventListener('input', save);
+  card.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT') save(e); });
+  card.addEventListener('change', async (e) => {
+    if (e.target.id !== 'acct-payments-file') return;
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    pendingMatch = matchPayments(getState(), await file.text());
+    renderPaymentPreview();
+  });
+  card.addEventListener('click', (e) => {
+    const format = e.target.closest('[data-acct-export]')?.dataset.acctExport;
+    if (format) {
+      download(`invoices-${format}-${fileSlug()}.csv`, invoiceCsv(getState(), format), 'text/csv');
+      toast(`Exported for ${FORMATS[format]}. Import it there, then bring the payments back here.`, 'success');
+      return;
+    }
+    if (e.target.id === 'acct-cancel') { pendingMatch = null; renderPaymentPreview(); return; }
+    if (e.target.id === 'acct-apply' && pendingMatch?.toPay) {
+      const n = applyPayments(getState(), pendingMatch);
+      pendingMatch = null;
+      scheduleSave();
+      notifyProjectDataChanged('scope:billing');
+      renderAll(SCOPE_REGISTERS);
+      renderBillingTerms();
+      renderCounters();
+      renderPaymentPreview();
+      renderAccounting();
+      toast(`${n} milestone${n === 1 ? '' : 's'} marked paid.`, 'success');
+    }
+  });
 }
 
 // ---------- Summary strip ----------
@@ -343,12 +450,14 @@ export function renderEngagement() {
   renderRosterOptions();
   renderScopeControl();
   renderBillingTerms();
+  renderAccounting();
   renderCounters();
 }
 
 export function initEngagement() {
   // Before the registers mount, so the billing table's first draw has it.
   BILLING.renderCell = collectionCell;
+  bindAccounting();
   document.getElementById('sec-billing-terms')?.addEventListener('input', (e) => {
     const field = e.target.dataset.billingField;
     if (!field) return;
@@ -365,6 +474,7 @@ export function initEngagement() {
     if (def.key === 'billing') {
       refreshDerivedCells(BILLING);
       renderBillingTerms();
+      renderAccounting();
     }
     renderCounters();
     // Deliverable dates reach the Dashboard and the roster feeds every owner

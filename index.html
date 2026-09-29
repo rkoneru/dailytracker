@@ -705,6 +705,49 @@
 
         <div id="scope-registers"></div>
 
+        <section class="card" id="sec-billing-accounting">
+          <div class="card__head"><h2>Accounting System</h2></div>
+          <p class="hint">
+            Invoices out and payments back, as files. Export the milestones that are ready to invoice or invoiced into
+            Xero or QuickBooks Online, and bring their payments back to mark them paid. A live connection would need a server to
+            hold the accounting system&rsquo;s secret, and this app has none &mdash; so nothing is sent anywhere until you import
+            the file yourself. Check the columns against your system&rsquo;s current import template before the first import.
+          </p>
+          <div class="planner-fields">
+            <label class="field-label">Bill to (as named in your accounts)
+              <input type="text" class="field-input" data-acct="billTo" placeholder="Contoso Retail Ltd">
+            </label>
+            <label class="field-label">Revenue account code
+              <input type="text" class="field-input" data-acct="accountCode" placeholder="200">
+            </label>
+            <label class="field-label">Tax type
+              <input type="text" class="field-input" data-acct="taxType" placeholder="20% (VAT on Income)">
+            </label>
+            <label class="field-label">Currency
+              <input type="text" class="field-input" data-acct="currency" maxlength="3" placeholder="GBP">
+            </label>
+            <label class="field-label">Date format in your accounts
+              <select class="field-input" data-acct="dateFormat">
+                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+              </select>
+            </label>
+          </div>
+          <div id="acct-export"></div>
+          <h3 class="uc-sub">Payments back</h3>
+          <p class="hint">
+            Choose a payments or receivables export with an invoice number, a payment date and an amount. You will see what
+            it matches before anything is marked paid.
+          </p>
+          <div class="sync-actions no-print">
+            <label class="btn btn-small">Choose a payments file&hellip;
+              <input type="file" id="acct-payments-file" accept=".csv,text/csv" hidden>
+            </label>
+          </div>
+          <div id="acct-preview"></div>
+        </section>
+
         <section class="card" id="sec-cr-workflow">
           <div class="card__head"><h2>Change Request Workflow</h2></div>
           <p class="hint">

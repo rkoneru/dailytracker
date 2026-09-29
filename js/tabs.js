@@ -58,7 +58,7 @@ export const PAGE_TABS = {
     { id: 'sec-scope-baseline', label: 'Scope Baseline' },
     { id: 'sec-deliverables', label: 'Deliverables' },
     { id: 'sec-change-requests', label: 'Change Requests', sections: ['sec-change-requests', 'sec-cr-workflow', 'sec-cr-route'] },
-    { id: 'sec-billing', label: 'Billing', sections: ['sec-billing-terms', 'sec-billing'] },
+    { id: 'sec-billing', label: 'Billing', sections: ['sec-billing-terms', 'sec-billing', 'sec-billing-accounting'] },
     { id: 'sec-documents', label: 'Documents' },
   ],
   'page-people': [

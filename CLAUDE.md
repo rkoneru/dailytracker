@@ -60,6 +60,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/useCaseModel.js`, `useCaseStore.js`, `useCaseSync.js`, `useCasesPage.js` | Use Cases & ROI: weighted evaluator, monthly ROI model (ROI %, payback, NPV, low/expected/high), signed go/no-go, conversion to a project, value realisation, and the Client View (`clientPortfolio`). Own storage key and own sync lane to the `use_cases` table; client records are rows there too, `type: 'client'` |
 | `js/serviceDesk.js`, `billing.js` | incident SLA clocks (priority targets, overridable per project) and billing collection state, days to collect. Pure |
 | `js/deals.js` | the sales pipeline on use cases: stage, value, delivery cost, margin, probability, weighted forecast by quarter, win rate. Pure |
+| `js/journey.js` | one use case from sale to success: seven steps read off the deal, the decision and the project it became. Stores nothing |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
 | `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
@@ -149,6 +150,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   `unsupported` and forecast as Negotiation. A signed no-go loses it. Win rate
   and margin are `null` until something has closed. Conversion copies only
   the deal value, as the project's `contractValue`, and says so in the preview.
+- **The journey is a view, never a record.** Client View lays each use case's
+  sale, decision, delivery, billing, support, account health and realised
+  value side by side from where each is kept; `none` is grey (nothing
+  recorded), `todo` is a step not reached. The loop back is the Expand row
+  action on Customer Success accounts, offered when `roleShows('tab-usecases')`:
+  it starts one use case per account (`expansionOf`), as a Lead, and opens the
+  existing one if asked twice.
 - **A use case is decided alone; a client is seen whole.** `clientPortfolio`
   counts shared costs once (held at client level unless spread by benefit
   share), counts a benefit `pool` claimed by several use cases once at its

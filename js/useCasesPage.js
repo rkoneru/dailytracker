@@ -15,7 +15,7 @@
 
 import { el } from './dom.js';
 import {
-  getActiveProjectId, listProjects, createProject, switchProject, scheduleSave,
+  getActiveProjectId, listProjects, listFullProjects, createProject, switchProject, scheduleSave,
 } from './state.js';
 import { getIdentity, isSignedIn, isDemo } from './identity.js';
 import { getMe } from './me.js';
@@ -36,6 +36,7 @@ import {
   clientPortfolio, benefitPools,
 } from './useCaseModel.js';
 import { DEAL_STAGES, LOST, dealOf, pipeline } from './deals.js';
+import { journeyOf, JOURNEY_STEPS } from './journey.js';
 import { toLocalISO } from './dates.js';
 
 let selectedId = '';
@@ -669,7 +670,24 @@ function renderClientRead(client) {
       : `First-year cost of everything recommended: ${money(p.yearOneTotal)} against a budget of ${money(p.budget)}. ${p.fundable.size} of ${p.order.length} fit${p.sharedYearOne ? `, after ${money(p.sharedYearOne)} of shared costs` : ''}.`,
     'The combined figures run everything as if it started together: the order changes when benefit arrives, not what it adds up to.',
   ];
+  const projects = new Map(listFullProjects().map((x) => [x.id, x]));
+  const journey = el('div', { class: 'table-scroll' }, [el('table', { class: 'data-table journey-table', id: 'uc-journey-table' }, [
+    el('thead', {}, [el('tr', {}, ['Use case', ...JOURNEY_STEPS.map((s) => s.label)].map((t) => el('th', { text: t })))]),
+    el('tbody', {}, p.rows.map((r) => el('tr', { 'data-journey': r.uc.id }, [
+      el('td', {}, [
+        el('button', { type: 'button', class: 'link-btn', 'data-cl-open': r.uc.id, text: r.uc.name || 'Untitled use case' }),
+        r.uc.expansionOf ? el('span', { class: 'journey-tag', text: 'Expansion' }) : null,
+      ].filter(Boolean)),
+      ...journeyOf(r.uc, projects.get(r.uc.convertedProjectId) || null).map((s) => el('td', {}, [
+        el('span', { class: `journey is-${s.state}`, 'data-step': s.id, text: s.text }),
+      ])),
+    ]))),
+  ])]);
+
   host.replaceChildren(...[
+    el('h3', { class: 'uc-sub', text: 'From sale to success' }),
+    el('p', { class: 'hint', text: 'Each use case’s engagement end to end, read from where each step is kept: the deal and decision here, delivery, billing, support and the account on the project it became. Grey is nothing recorded, not nothing wrong.' }),
+    journey,
     el('h3', { class: 'uc-sub', text: 'Side by side, in the recommended order' }),
     p.loop ? el('p', { class: 'uc-open', id: 'uc-client-loop', text: 'Two or more use cases each need the other first. The order below breaks the loop by score; fix the “Needs first” choices.' }) : null,
     table,
@@ -963,6 +981,14 @@ function bind() {
 export function initUseCases() {
   bind();
   renderUseCases();
+}
+
+/** Opens one use case at a tab, from elsewhere in the app (the expansion loop on Customer Success). */
+export function openUseCase(id, sectionId = 'sec-uc-pipeline') {
+  selectedId = id;
+  goToNode('tab-usecases');
+  renderUseCases();
+  showSection('page-usecases', sectionId);
 }
 
 /** For the closure report: the business case behind a project, when this device holds it. */

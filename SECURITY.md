@@ -96,8 +96,13 @@ own cost figures. They are stored in their own table, `use_cases`, and:
 - **The client never mixes them into project data.** Use cases live under their
   own localStorage key and sync on their own lane; they are not in project
   exports, and converting one into a project copies only the name, outcome,
-  problem, sponsor, value and fit scores and the planned budget — never the
-  benefits, rates, ROI, NPV, assumptions or signatures.
+  problem, sponsor, value and fit scores, the planned budget and the deal
+  value as the contract value — never the benefits, rates, ROI, NPV,
+  assumptions, signatures, delivery cost or margin.
+- **The sales pipeline is part of the use case.** Deal value, delivery cost,
+  margin and probability are fields on the use case row, so they have the same
+  protection. The contract value a project carries after conversion is project
+  data, readable by every member, and the conversion preview says so.
 - **Client records are rows in the same table**, so a client's budget and
   shared costs have exactly the same protection as its use cases.
 - **Losing access removes the local copy.** A device that synced a use case and
@@ -109,7 +114,12 @@ Client Partner job role, and that part is page hiding like any other. Signed
 out, use cases stay on the device and are shared with nobody. In a demo the
 app mirrors the rule and says it enforces nothing. A client partner can print
 or copy what they see; the Closure report shows the business case only on a
-device that holds it.
+device that holds it. The Client View's journey reads delivery, billing,
+support and the account from the project, which every member can already read;
+putting it beside the deal reveals nothing the project did not. The Expand
+action on Customer Success is offered only to people offered the Use Cases
+page — page hiding again — and what it starts is a use case, stored and
+protected like any other.
 
 ## Signatures and approvals
 

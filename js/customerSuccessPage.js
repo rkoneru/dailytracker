@@ -19,6 +19,45 @@ import { onSectionShown } from './tabs.js';
 import {
   CS_STAGES, CHURNED, healthOf, customerMetrics, upcomingRenewals, recordStageChanges,
 } from './customerSuccess.js';
+import { roleShows, onRoleChange } from './roles.js';
+import { onPolicyChange } from './policy.js';
+import { createUseCase, listUseCases, listClients } from './useCaseStore.js';
+import { openUseCase } from './useCasesPage.js';
+import { getActiveProjectId } from './state.js';
+import { toast } from './dialog.js';
+
+// ---------- The loop back to sales ----------
+//
+// Expand is where customer success hands an account back to sales. The action
+// starts a use case for it — or opens the one already started — so the
+// expansion is priced, evaluated and signed like any other sale. It is offered
+// only to people the Use Cases page is offered to; that is page hiding, and
+// what keeps the use case itself from everyone else is the database, as ever.
+
+const EXPAND_ACTION = [{ action: 'expand', label: 'Start an expansion use case for', text: 'Expand ▸' }];
+
+function startExpansion(accountId) {
+  const account = accounts().find((a) => a.id === accountId);
+  if (!account) return;
+  const existing = listUseCases().find((uc) => uc.expansionOf === account.id && !uc.deletedAt);
+  if (existing) {
+    openUseCase(existing.id, 'sec-uc-pipeline');
+    toast(`Opened the expansion already started for ${account.name || 'this account'}.`, 'info');
+    return;
+  }
+  const name = String(account.name || '').trim();
+  const client = listClients().find((c) => String(c.name || '').trim().toLowerCase() === name.toLowerCase());
+  const uc = createUseCase(getActiveProjectId(), {
+    name: `Expansion — ${name || 'account'}`,
+    client: client?.name || name,
+    clientId: client?.id || '',
+    expansionOf: account.id,
+    problem: `Raised from Customer Success: ${name || 'the account'} is at ${account.stage || 'no stage'}${account.adoption !== '' && account.adoption !== undefined ? ` with ${account.adoption}% adoption` : ''}${account.csm ? `, CSM ${account.csm}` : ''}.`,
+    deal: { stage: 'Lead' },
+  });
+  openUseCase(uc.id, 'sec-uc-pipeline');
+  toast(`Expansion for ${name || 'the account'} started as a lead.`, 'success');
+}
 
 function money(n) {
   return `$${Math.round(Number(n) || 0).toLocaleString()}`;
@@ -206,6 +245,12 @@ export function renderCustomerSuccess() {
 
 export function initCustomerSuccess() {
   CUSTOMERS.renderCell = healthCell;
+  // Read at every draw, so a role or policy change takes the action away.
+  Object.defineProperty(CUSTOMERS, 'rowActions', { configurable: true, get: () => (roleShows('tab-usecases') ? EXPAND_ACTION : []) });
+  CUSTOMERS.onRowAction = (action, id) => { if (action === 'expand') startExpansion(id); };
+  const redraw = () => renderAll(CUSTOMER_REGISTERS);
+  onRoleChange(redraw);
+  onPolicyChange(redraw);
   mountRegisters('customers-registers', CUSTOMER_REGISTERS, (def) => {
     afterEdit();
     notifyProjectDataChanged(`customers:${def.id}`);

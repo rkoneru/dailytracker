@@ -47,7 +47,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/mobileNav.js` | the phone bottom bar; fills its slots from `NAV_TREE` + `roleShows` |
 | `js/tabs.js` | in-page tabs; `PAGE_TABS` maps a page to its sections |
 | `js/router.js` | hash routing and deep links |
-| `js/register.js` + `js/registerDefs.js` | one table engine, 19 declarative registers (Documents, Vendors, Incidents and Billing among them); a `datetime` column is a local `YYYY-MM-DDTHH:MM`; a `link` column opens only http(s); `readonly` columns, `custom` cells and `rowActions` for pages that draw their own |
+| `js/register.js` + `js/registerDefs.js` | one table engine, 21 declarative registers (Documents, Vendors, Incidents, Billing, Contacts and the Activity Log among them); a `person` column takes `list` to offer accounts or contacts instead of people; a `datetime` column is a local `YYYY-MM-DDTHH:MM`; a `link` column opens only http(s); `readonly` columns, `custom` cells and `rowActions` for pages that draw their own |
 | `js/sync*.js` | `syncModel` (wire shape), `syncMerge` (pure three-way merge), `sync` (network) |
 | `js/supabase.js` | hand-rolled PostgREST + GoTrue over `fetch` |
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
@@ -132,6 +132,12 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   scope baseline only by what that change `touches` (`baselineAfter`), never by
   every edit made since — that would launder creep through someone's approval.
   Signatures are records, not locks; SECURITY.md says what they do not secure.
+- **The activity log feeds, it does not sit beside.** A logged activity is a
+  touch: `accountSignals(project)` gives health the latest activity per account
+  alongside open P1/P2s, and `lastTouchOf` takes the later of that and the
+  typed date. An activity with `status: 'Follow-up due'` is on its owner's My
+  Work. A contact's last activity is read off the log. Contacts and activities
+  are project data every member reads; commercial talk belongs on the use case.
 - **Customer health and the customer KPIs are derived, never stored.** Health
   needs at least two signals or it is `null`; a churned account has none. LTV
   is `null` until the book has lost a customer in the last twelve months, since

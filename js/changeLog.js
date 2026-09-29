@@ -74,6 +74,8 @@ const COLLECTIONS = {
     name: ['title'],
   },
   documents: { noun: 'Document', watch: { status: 'status', version: 'version', link: 'location' }, name: ['title'] },
+  contacts: { noun: 'Contact', watch: { account: 'account', relationship: 'part they play', owner: 'our contact' }, name: ['name'] },
+  activities: { noun: 'Activity', watch: { status: 'follow-up', owner: 'owner', nextDue: 'next step date' }, name: ['summary'] },
   customers: { noun: 'Account', watch: { stage: 'lifecycle stage', arr: 'ARR', renewal: 'renewal date', csm: 'CSM' }, name: ['name'] },
   vendors: { noun: 'Vendor', watch: { status: 'status', end: 'contract end', performance: 'performance' }, name: ['name'] },
   serviceLevels: { noun: 'Service level', watch: { status: 'status', target: 'target', actual: 'actual' }, name: ['metric', 'service'] },

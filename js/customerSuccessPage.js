@@ -11,13 +11,13 @@
 import { getState, scheduleSave } from './state.js';
 import { el } from './dom.js';
 import { mountRegisters, renderAll, refreshDerivedCells, renderRosterOptions } from './register.js';
-import { CUSTOMER_REGISTERS, CUSTOMERS } from './registerDefs.js';
+import { CUSTOMER_REGISTERS, CUSTOMERS, CONTACTS } from './registerDefs.js';
 import { formatDate } from './dates.js';
-import { severeOpenByAccount } from './serviceDesk.js';
 import { notifyProjectDataChanged } from './taskModel.js';
 import { onSectionShown } from './tabs.js';
 import {
   CS_STAGES, CHURNED, healthOf, customerMetrics, upcomingRenewals, recordStageChanges,
+  accountSignals, signalsFor,
 } from './customerSuccess.js';
 import { roleShows, onRoleChange } from './roles.js';
 import { onPolicyChange } from './policy.js';
@@ -74,19 +74,21 @@ function accounts() {
 }
 
 function metrics() {
-  return customerMetrics(accounts(), { grossMargin: getState().csGrossMargin, severeByAccount: severe() });
+  return customerMetrics(accounts(), { grossMargin: getState().csGrossMargin, ...signals() });
 }
 
 // ---------- Health, drawn into the register ----------
 
-// Open P1/P2 incidents on Service & Support, by account name: support feeding
-// success, so an account in the middle of an outage is not reported healthy.
-function severe() {
-  return severeOpenByAccount(getState());
+// Open P1/P2 incidents on Service & Support, and the latest logged activity,
+// by account name: support and the relationship feeding success, so an
+// account in the middle of an outage is not reported healthy, and a call
+// logged yesterday counts as a touch.
+function signals() {
+  return accountSignals(getState());
 }
 
-function severeFor(account, map = severe()) {
-  return { severeOpen: map.get(String(account.name || '').trim().toLowerCase()) || 0 };
+function severeFor(account, all = signals()) {
+  return signalsFor(account, all);
 }
 
 function healthCell(col, account) {
@@ -179,7 +181,7 @@ export function renderLifecycle() {
 export function renderRenewals() {
   const body = document.getElementById('cs-renewals-body');
   if (!body) return;
-  const rows = upcomingRenewals(accounts(), { severeByAccount: severe() });
+  const rows = upcomingRenewals(accounts(), signals());
   body.replaceChildren(...rows.map(({ account, until }) => el('tr', { class: until < 0 ? 'is-late' : '' }, [
     el('td', { text: account.name || 'Unnamed account' }),
     el('td', { text: account.csm || '—' }),
@@ -217,10 +219,30 @@ function renderEconomics() {
 
 // ---------- Wiring ----------
 
+// A contact's last activity: the latest logged against their name, or,
+// failing that, against their account. Read off the activity log, so it is
+// never a second copy of the date to keep in step.
+function lastActivityCell(col, contact) {
+  const name = String(contact.name || '').trim().toLowerCase();
+  const account = String(contact.account || '').trim().toLowerCase();
+  const all = (getState().activities || []).filter((a) => /^\d{4}-\d{2}-\d{2}$/.test(String(a.date || '')));
+  const latest = (list) => list.reduce((best, a) => (!best || a.date > best.date ? a : best), null);
+  const own = name ? latest(all.filter((a) => String(a.contact || '').trim().toLowerCase() === name)) : null;
+  const theirs = own || (account ? latest(all.filter((a) => String(a.account || '').trim().toLowerCase() === account)) : null);
+  if (!theirs) return el('span', { class: 'health health--none', text: 'Nothing logged' });
+  return el('span', {
+    class: 'last-activity',
+    title: theirs.summary || '',
+    text: `${formatDate(theirs.date)} · ${theirs.type || 'Activity'}${own ? '' : ' (account)'}`,
+  });
+}
+
 function afterEdit() {
   const moved = recordStageChanges(accounts());
   if (moved) scheduleSave();
   refreshDerivedCells(CUSTOMERS);
+  refreshDerivedCells(CONTACTS);
+  renderRosterOptions();
   renderTiles();
   renderEconomics();
   // The board and the renewals are on other tabs; they rebuild on arrival.
@@ -245,6 +267,7 @@ export function renderCustomerSuccess() {
 
 export function initCustomerSuccess() {
   CUSTOMERS.renderCell = healthCell;
+  CONTACTS.renderCell = lastActivityCell;
   // Read at every draw, so a role or policy change takes the action away.
   Object.defineProperty(CUSTOMERS, 'rowActions', { configurable: true, get: () => (roleShows('tab-usecases') ? EXPAND_ACTION : []) });
   CUSTOMERS.onRowAction = (action, id) => { if (action === 'expand') startExpansion(id); };

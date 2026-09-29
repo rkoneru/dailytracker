@@ -189,6 +189,8 @@ export const NAV_TREE = [
         title: 'Customer Success',
         children: [
           { id: 'nav-accounts', label: 'Accounts', page: 'page-customers', title: 'Customer Success', section: 'sec-customers' },
+          { id: 'nav-contacts', label: 'Contacts', page: 'page-customers', title: 'Customer Success', section: 'sec-contacts' },
+          { id: 'nav-activities', label: 'Activity', page: 'page-customers', title: 'Customer Success', section: 'sec-activities' },
           { id: 'nav-cs-lifecycle', label: 'CSM Lifecycle', page: 'page-customers', title: 'Customer Success', section: 'sec-cs-lifecycle' },
           { id: 'nav-cs-renewals', label: 'Renewals', page: 'page-customers', title: 'Customer Success', section: 'sec-cs-renewals' },
         ],

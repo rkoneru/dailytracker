@@ -187,6 +187,13 @@ const SPINE_BILLING = (d) => {
   ];
 };
 
+const SPINE_CONTACTS = (d) => [
+  { name: 'Pilot unit lead', account: 'Pilot business unit', title: 'Operations lead, pilot unit', relationship: 'Champion', email: '', phone: '', owner: d.roleNames.owner },
+];
+const SPINE_ACTIVITIES = (d) => [
+  { date: wk(9, 2), type: 'Meeting', account: 'Pilot business unit', contact: 'Pilot unit lead', summary: `Pilot review of ${d.agent}: users want answers to cite the policy clause.`, nextStep: 'Show clause citations in the next build', nextDue: wk(11), status: 'Follow-up due', owner: d.roleNames.owner },
+];
+
 const SPINE_STAKEHOLDERS = (d) => [
   { name: 'Delivery team', org: 'Internal', role: 'Build and run', influence: 'Medium', interest: 'High', attitude: 'Champion', approach: 'Closest to what the agent actually does. Their disagreements with the eval result are usually right.', owner: d.roleNames.lead },
 ];
@@ -288,6 +295,8 @@ export function agenticSpine(d) {
     documents: [...SPINE_DOCUMENTS(d), ...(d.documents || [])].map((x) => ({ id: uid('doc'), ...x })),
     vendors: [...SPINE_VENDORS(d), ...(d.vendors || [])].map((x) => ({ id: uid('vn'), ...x })),
     customers: [...SPINE_CUSTOMERS(d), ...(d.customers || [])].map((x) => ({ id: uid('ac'), ...x })),
+    contacts: [...SPINE_CONTACTS(d), ...(d.contacts || [])].map((x) => ({ id: uid('ct'), ...x })),
+    activities: [...SPINE_ACTIVITIES(d), ...(d.activities || [])].map((x) => ({ id: uid('act'), ...x })),
     billing: [...SPINE_BILLING(d), ...(d.billing || [])].map((x) => ({ id: uid('bm'), ...x })),
     incidents: [...SPINE_INCIDENTS(d), ...(d.incidents || [])].map((x) => ({ id: uid('inc'), ...x })),
     dependencies: [...SPINE_DEPENDENCIES(d), ...(d.dependencies || [])].map((x) => ({ id: uid('dp'), ...x })),

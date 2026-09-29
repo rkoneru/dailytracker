@@ -6121,3 +6121,11 @@ body.login-open { overflow: hidden; }
 .service-calendar .hint { flex-basis: 100%; }
 .check-inline { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; }
 .hint.is-warn { color: var(--color-warn-text); font-weight: 600; }
+
+/* Contacts and the activity log. */
+.last-activity { font-size: 0.8rem; white-space: nowrap; }
+.tone-sponsor, .tone-decision-maker { background: #ede9fe; color: #4c1d95; }
+.tone-influencer, .tone-user { background: #dbeafe; color: #1e3a8a; }
+.tone-detractor { background: #fee2e2; color: #7f1d1d; }
+.tone-follow-up-due { background: #fef3c7; color: #78350f; }
+.tone-no-follow-up { background: var(--color-bg); color: var(--color-text-muted); }

@@ -158,6 +158,17 @@ export function createServiceTransition() {
       { id: id('dl'), name: 'Knowledge transfer record', type: 'Document', owner: 'Tom Byrne', due: '2026-11-14', acceptance: 'Session log, recordings and a competency check signed by both leads.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
     ],
 
+    // The client's people, and the last fortnight of talking to them. The
+    // open follow-up is on Dev Raman's My Work.
+    contacts: [
+      { id: id('ct'), name: 'Helen Ward', account: 'Orders platform client', title: 'COO', relationship: 'Sponsor', email: 'helen.ward@example.com', phone: '', owner: 'Dev Raman' },
+      { id: id('ct'), name: 'Marcus Lee', account: 'Orders platform client', title: 'Head of IT Operations', relationship: 'Decision maker', email: 'marcus.lee@example.com', phone: '', owner: 'Dev Raman' },
+    ],
+    activities: [
+      { id: id('act'), date: '2026-09-24', type: 'Meeting', account: 'Orders platform client', contact: 'Helen Ward', summary: 'Transition steering: parallel run start agreed for 12 October.', nextStep: '', nextDue: '', status: 'No follow-up', owner: 'Dev Raman' },
+      { id: id('act'), date: '2026-10-02', type: 'Call', account: 'Orders platform client', contact: 'Marcus Lee', summary: 'Stock sync overran into trading hours; they want a root cause.', nextStep: 'Send the incident review', nextDue: '2026-10-07', status: 'Follow-up due', owner: 'Dev Raman' },
+    ],
+
     // Billed on transition milestones. The knowledge-transfer invoice is past
     // its thirty days, which is what the Billing tab exists to catch.
     billing: [
@@ -351,6 +362,13 @@ export function createServiceDeskLaunch() {
       { id: id('dl'), name: 'Request catalogue', type: 'Service', owner: 'Sara Boyd', due: '2026-10-24', acceptance: 'Twelve request types, each with an owner, a target and a form that does not ask for what IT already knows.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Configured service desk', type: 'Software', owner: 'Ben Iqbal', due: '2026-10-31', acceptance: 'Routing, escalation and reporting work end to end on the pilot data.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Weekly service report', type: 'Report', owner: 'Owen Clarke', due: '2026-11-30', acceptance: 'Volumes, first-response and breaches, produced by the tool rather than by hand.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
+    ],
+
+    contacts: [
+      { id: id('ct'), name: 'Rachel Kim', account: 'Finance department', title: 'Finance Operations Lead', relationship: 'Champion', email: 'rachel.kim@example.com', phone: '', owner: 'Owen Clarke' },
+    ],
+    activities: [
+      { id: id('act'), date: '2026-10-01', type: 'Meeting', account: 'Finance department', contact: 'Rachel Kim', summary: 'Walked Finance through the request portal; purchase requests failing.', nextStep: 'Confirm the fix with Rachel', nextDue: '2026-10-06', status: 'Follow-up due', owner: 'Owen Clarke' },
     ],
 
     // An internal desk has no client invoice, but it is still recharged to

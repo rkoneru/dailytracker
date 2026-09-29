@@ -79,6 +79,16 @@ job role, and set page access. They deliberately **cannot**:
 Without the third, delegation would be one UPDATE away from a handover. All
 three are enforced by the `project_members_write` policy, not by the UI.
 
+## Contacts and the activity log
+
+Customer contacts — names, roles, email addresses and phone numbers — and the
+log of calls and meetings are project data, like the accounts they belong to:
+every member of the project can read them, and they go into exports. That is
+deliberate, since the team needs to know who the client's sponsor is, but it
+means they are personal data held by everyone on the project. Keep what is
+commercially sensitive on the use case instead, where only client partners can
+read it.
+
 ## Use cases and ROI: the one part not every member can read
 
 Everything above lets every member of a project read everything in it. Use

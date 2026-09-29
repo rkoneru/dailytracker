@@ -16,8 +16,8 @@ import { parseDate, daysBetween } from './charts.js';
 import { hours } from './taskModel.js';
 import { raidScore } from './raid.js';
 import { utilisation, timesheetValue } from './resourceModel.js';
-import { customerMetrics } from './customerSuccess.js';
-import { serviceMetrics, severeOpenByAccount } from './serviceDesk.js';
+import { customerMetrics, accountSignals } from './customerSuccess.js';
+import { serviceMetrics } from './serviceDesk.js';
 import { billingMetrics } from './billing.js';
 import { isApprovedChange, isDecidedChange } from './changeControl.js';
 
@@ -431,7 +431,7 @@ function serviceKpis(project, now) {
 
 /** The accounts' numbers, from js/customerSuccess.js, so this page and Customer Success agree. */
 function customerKpis(project, today) {
-  const m = customerMetrics(project.customers || [], { grossMargin: project.csGrossMargin, today, severeByAccount: severeOpenByAccount(project) });
+  const m = customerMetrics(project.customers || [], { grossMargin: project.csGrossMargin, today, ...accountSignals(project) });
   return {
     customerRetention: m.customerRetention,
     churnRate: m.churnRate,

@@ -17,6 +17,14 @@
 // ---------- Shared vocabulary ----------
 
 export const HML = ['High', 'Medium', 'Low'];
+
+// Today as a local calendar date, for rows that are almost always logged on
+// the day they happened. Written out rather than imported, to keep this file
+// free of dependencies.
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 const TSHIRT = ['S', 'M', 'L', 'XL'];
 
 // ---------- Project charter ----------
@@ -521,6 +529,68 @@ export const CUSTOMERS = {
   }),
 };
 
+// Who we deal with at each account, and what was said. The contacts are the
+// people; the activity log is every call, meeting and email, with the next
+// step and who owes it. An activity is a touch, so the latest one against an
+// account counts towards its health without anyone retyping the date; and an
+// open follow-up is work, so it lands on its owner's My Work.
+//
+// Both are project data, readable by every member — the team needs to know
+// who the client's sponsor is. Anything commercial said in a call belongs on
+// the use case, with the client partners, not here.
+export const CONTACTS = {
+  key: 'contacts',
+  id: 'contacts',
+  title: 'Contacts',
+  rowLabel: 'contact',
+  addLabel: '+ Add Contact',
+  refPrefix: 'CT',
+  blurb: 'The people at each account and what part they play. Last activity is read off the activity log, not typed.',
+  emptyText: 'No contacts yet.',
+  searchFields: ['name', 'account', 'title', 'email'],
+  searchPlaceholder: 'Search name, account, role or email…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'name', label: 'Name', placeholder: 'Full name' },
+    { field: 'account', label: 'Account', type: 'person', list: 'account-names', placeholder: 'Which customer' },
+    { field: 'title', label: 'Role', placeholder: 'Job title' },
+    { field: 'relationship', label: 'Part they play', type: 'select', tone: true, options: ['Sponsor', 'Decision maker', 'Champion', 'Influencer', 'User', 'Detractor'] },
+    { field: 'email', label: 'Email', placeholder: 'name@client.com' },
+    { field: 'phone', label: 'Phone' },
+    { field: 'owner', label: 'Our contact', type: 'person', placeholder: 'Who holds the relationship' },
+    { field: '_lastActivity', label: 'Last activity', type: 'custom' },
+  ],
+  newRow: () => ({ name: '', account: '', title: '', relationship: '', email: '', phone: '', owner: '' }),
+};
+
+export const ACTIVITIES = {
+  key: 'activities',
+  id: 'activities',
+  title: 'Activity Log',
+  rowLabel: 'activity',
+  addLabel: '+ Log Activity',
+  refPrefix: 'ACT',
+  blurb: 'Every call, meeting and email with a customer, and the next step. A follow-up that is due goes on its owner’s My Work; the latest activity on an account counts as its last touch.',
+  emptyText: 'Nothing logged yet.',
+  searchFields: ['summary', 'account', 'contact', 'owner', 'nextStep'],
+  searchPlaceholder: 'Search what was said, account, contact or owner…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'date', label: 'Date', type: 'date' },
+    { field: 'type', label: 'Type', type: 'select', options: ['Call', 'Meeting', 'Email', 'Demo', 'QBR', 'Note'] },
+    { field: 'account', label: 'Account', type: 'person', list: 'account-names', placeholder: 'Which customer' },
+    { field: 'contact', label: 'With', type: 'person', list: 'contact-names', placeholder: 'Who, at the client' },
+    { field: 'summary', label: 'What was said', placeholder: 'The point of it, in a line', cls: 'col-wide' },
+    { field: 'nextStep', label: 'Next step', placeholder: 'What happens next' },
+    { field: 'nextDue', label: 'By', type: 'date' },
+    { field: 'status', label: 'Follow-up', type: 'select', tone: true, options: ['No follow-up', 'Follow-up due', 'Done'] },
+    { field: 'owner', label: 'Owner', type: 'person', placeholder: 'Who owes the next step' },
+  ],
+  newRow: () => ({
+    date: today(), type: 'Call', account: '', contact: '', summary: '', nextStep: '', nextDue: '', status: 'No follow-up', owner: '',
+  }),
+};
+
 // The service desk's queue. Each incident's priority sets the two clocks it is
 // held to, and whether it met them is worked out from the three times below
 // (js/serviceDesk.js) — never chosen from a list. `account` names the
@@ -532,7 +602,7 @@ export const INCIDENTS = {
   rowLabel: 'incident',
   addLabel: '+ Log Incident',
   refPrefix: 'INC',
-  blurb: 'What broke, for whom, and how fast it was answered and fixed. The SLA column is worked out from the times and the priority targets below, in calendar hours — an open incident past its target is already breached.',
+  blurb: 'What broke, for whom, and how fast it was answered and fixed. The SLA column is worked out from the times and the priority targets below, round the clock or in business hours as each priority is set — an open incident past its target is already breached.',
   emptyText: 'No incidents logged.',
   searchFields: ['title', 'service', 'account', 'assignee'],
   searchPlaceholder: 'Search incident, service, account or assignee…',
@@ -541,7 +611,7 @@ export const INCIDENTS = {
     { field: 'title', label: 'Incident', placeholder: 'What the user reported', cls: 'col-wide' },
     { field: 'priority', label: 'Priority', type: 'select', tone: true, options: ['P1', 'P2', 'P3', 'P4'] },
     { field: 'service', label: 'Service', placeholder: 'What is affected' },
-    { field: 'account', label: 'Account', type: 'person', placeholder: 'Customer affected' },
+    { field: 'account', label: 'Account', type: 'person', list: 'account-names', placeholder: 'Customer affected' },
     { field: 'reported', label: 'Reported', type: 'datetime' },
     { field: 'responded', label: 'First response', type: 'datetime' },
     { field: 'resolved', label: 'Resolved', type: 'datetime' },
@@ -572,7 +642,7 @@ export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS, BILLING, DOCUMENT
 export const PEOPLE_REGISTERS = [RACI, STAKEHOLDERS, COMMS, VENDORS];
 
 /** Customer success: the accounts and where each is in its lifecycle. */
-export const CUSTOMER_REGISTERS = [CUSTOMERS];
+export const CUSTOMER_REGISTERS = [CUSTOMERS, CONTACTS, ACTIVITIES];
 
 /** Blockers, alongside the RAID log — the other half of "what is in our way". */
 export const BLOCKER_REGISTERS = [DEPENDENCIES];
@@ -642,6 +712,8 @@ const WORK_SHAPE = {
   lessons: { ownerField: 'owner', dueField: '', closed: ['Applied', 'Rejected'] },
   // An account is standing work for its CSM, due at its renewal.
   customers: { ownerField: 'csm', dueField: 'renewal', closed: ['Churned'] },
+  // A logged call is history; only a follow-up still owed is work.
+  activities: { ownerField: 'owner', dueField: 'nextDue', closed: ['No follow-up', 'Done'] },
 };
 
 ALL_REGISTERS.forEach((def) => {

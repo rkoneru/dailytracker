@@ -16,8 +16,8 @@
 import { dealOf } from './deals.js';
 import { decisionOf, realisation } from './useCaseModel.js';
 import { billingMetrics } from './billing.js';
-import { serviceMetrics, severeOpenByAccount } from './serviceDesk.js';
-import { healthOf, isChurned } from './customerSuccess.js';
+import { serviceMetrics } from './serviceDesk.js';
+import { healthOf, isChurned, accountSignals, signalsFor } from './customerSuccess.js';
 
 export const JOURNEY_STEPS = [
   { id: 'sale', label: 'Sale' },
@@ -89,7 +89,7 @@ function success(uc, project, today) {
   const account = name ? (project.customers || []).find((a) => key(a.name) === name) : null;
   if (!account) return { state: 'none', text: 'No account on Customer Success' };
   if (isChurned(account)) return { state: 'bad', text: 'Churned' };
-  const h = healthOf(account, today, { severeOpen: severeOpenByAccount(project).get(name) || 0 });
+  const h = healthOf(account, today, signalsFor(account, accountSignals(project)));
   if (!h) return { state: 'none', text: `${account.stage || 'No stage'} · health not measured` };
   return { state: h.band === 'Healthy' ? 'done' : h.band === 'Watch' ? 'warn' : 'bad', text: `${account.stage || 'No stage'} · ${h.score} ${h.band}` };
 }

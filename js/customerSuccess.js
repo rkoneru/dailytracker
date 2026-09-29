@@ -16,6 +16,8 @@
 // months has an unbounded lifetime value, and printing a large number for it
 // would be a fiction; it says "not measurable yet" instead.
 
+import { severeOpenByAccount } from './serviceDesk.js';
+
 export const CS_STAGES = [
   {
     id: 'Onboard', n: 1,
@@ -59,6 +61,44 @@ export const CS_STAGES = [
 export const CHURNED = 'Churned';
 
 export const CS_STAGE_IDS = [...CS_STAGES.map((s) => s.id), CHURNED];
+
+
+const accountKey = (name) => String(name || '').trim().toLowerCase();
+
+/**
+ * The latest logged activity per account name. A call or a meeting on the
+ * activity log is a touch, so it counts towards engagement without anyone
+ * also having to retype the date on the account.
+ */
+export function lastActivityByAccount(activities = []) {
+  const out = new Map();
+  activities.forEach((a) => {
+    const key = accountKey(a.account);
+    if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(String(a.date || ''))) return;
+    if (!out.has(key) || out.get(key) < a.date) out.set(key, a.date);
+  });
+  return out;
+}
+
+/** What the rest of a project says about its accounts: open P1/P2s, and the latest activity. */
+export function accountSignals(project) {
+  return {
+    severeByAccount: severeOpenByAccount(project),
+    activityByAccount: lastActivityByAccount(project?.activities || []),
+  };
+}
+
+/** The health options for one account, from accountSignals. */
+export function signalsFor(account, { severeByAccount = new Map(), activityByAccount = new Map() } = {}) {
+  const key = accountKey(account.name);
+  return { severeOpen: severeByAccount.get(key) || 0, lastActivity: activityByAccount.get(key) || '' };
+}
+
+/** The later of the typed last touch and the latest logged activity. */
+export function lastTouchOf(account, lastActivity = '') {
+  const typed = String(account.lastTouch || '');
+  return lastActivity > typed ? lastActivity : typed;
+}
 
 const DAY_MS = 86400000;
 
@@ -132,14 +172,14 @@ export function reachedOn(account, stage) {
  * Fewer than two signals is not enough to call it, so the score is null and
  * the page shows it grey. A churned account has no health: it has an outcome.
  */
-export function healthOf(account, today = new Date(), { severeOpen = 0 } = {}) {
+export function healthOf(account, today = new Date(), { severeOpen = 0, lastActivity = '' } = {}) {
   if (isChurned(account)) return null;
   const signals = [];
   const adoption = num(account.adoption);
   if (adoption !== null) signals.push(Math.max(0, Math.min(100, adoption)));
   const nps = num(account.nps);
   if (nps !== null) signals.push(nps >= 9 ? 100 : nps >= 7 ? 60 : 20);
-  const touch = day(account.lastTouch);
+  const touch = day(lastTouchOf(account, lastActivity));
   if (touch) {
     const since = daysBetween(touch, today);
     signals.push(since <= 30 ? 100 : since <= 60 ? 60 : 20);
@@ -162,8 +202,8 @@ export function healthOf(account, today = new Date(), { severeOpen = 0 } = {}) {
  * accounts alone plus the one figure accounts cannot supply: gross margin,
  * which lifetime value needs and which is the business's, not an account's.
  */
-export function customerMetrics(accounts = [], { grossMargin = null, today = new Date(), severeByAccount = new Map() } = {}) {
-  const severe = (a) => ({ severeOpen: severeByAccount.get(String(a.name || '').trim().toLowerCase()) || 0 });
+export function customerMetrics(accounts = [], { grossMargin = null, today = new Date(), severeByAccount = new Map(), activityByAccount = new Map() } = {}) {
+  const severe = (a) => signalsFor(a, { severeByAccount, activityByAccount });
   const all = accounts.filter((a) => a.stage);
   const churned = all.filter(isChurned);
   const live = all.filter((a) => !isChurned(a));
@@ -233,10 +273,10 @@ export function customerMetrics(accounts = [], { grossMargin = null, today = new
 }
 
 /** Accounts renewing within `days`, soonest first, with how far away each is. */
-export function upcomingRenewals(accounts = [], { days = 180, today = new Date(), severeByAccount = new Map() } = {}) {
+export function upcomingRenewals(accounts = [], { days = 180, today = new Date(), severeByAccount = new Map(), activityByAccount = new Map() } = {}) {
   return accounts
     .filter((a) => !isChurned(a) && day(a.renewal))
-    .map((a) => ({ account: a, until: daysBetween(today, day(a.renewal)), health: healthOf(a, today, { severeOpen: severeByAccount.get(String(a.name || '').trim().toLowerCase()) || 0 }) }))
+    .map((a) => ({ account: a, until: daysBetween(today, day(a.renewal)), health: healthOf(a, today, signalsFor(a, { severeByAccount, activityByAccount })) }))
     .filter((r) => r.until >= -30 && r.until <= days)
     .sort((x, y) => x.until - y.until);
 }

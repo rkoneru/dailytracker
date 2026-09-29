@@ -65,6 +65,16 @@ export function createCustomerSuccessProgramme() {
       { id: id('ac'), name: 'Litware Media', segment: 'SMB', csm: 'Leo F.', stage: 'Churned', arr: 0, startArr: 24000, start: '2024-06-03', renewal: '2026-06-01', adoption: 22, nps: 4, lastTouch: '2026-05-20', acquisitionCost: 8000,
         stageHistory: h(['Onboard', '2024-06-03'], ['Adopt', '2024-08-12'], ['Renew', '2026-03-02'], ['Churned', '2026-06-01']) },
     ],
+    // The people behind the accounts, and the calls that decide renewals.
+    contacts: [
+      { id: id('ct'), name: 'Priya Nair', account: 'Harbour Logistics', title: 'VP Operations', relationship: 'Sponsor', email: 'priya.nair@example.com', phone: '', owner: 'Leo F.' },
+      { id: id('ct'), name: 'Tom Hale', account: 'Harbour Logistics', title: 'Warehouse systems manager', relationship: 'Detractor', email: 'tom.hale@example.com', phone: '', owner: 'Leo F.' },
+      { id: id('ct'), name: 'Grace Obi', account: 'Northwind Health', title: 'Director of Digital', relationship: 'Champion', email: 'grace.obi@example.com', phone: '', owner: 'Ava K.' },
+    ],
+    activities: [
+      { id: id('act'), date: '2026-09-15', type: 'QBR', account: 'Northwind Health', contact: 'Grace Obi', summary: 'Second business unit wants the same rollout.', nextStep: 'Expansion case to sales', nextDue: '2026-10-09', status: 'Follow-up due', owner: 'Ava K.' },
+      { id: id('act'), date: '2026-09-18', type: 'Call', account: 'Harbour Logistics', contact: 'Tom Hale', summary: 'Export failures are why the warehouse team stopped using it.', nextStep: 'Book the executive sponsor call', nextDue: '2026-09-25', status: 'Done', owner: 'Leo F.' },
+    ],
     // Harbour's renewal is already in trouble; an open P2 on it is what the
     // health score picks up from Service & Support.
     incidents: [

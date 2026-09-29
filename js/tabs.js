@@ -85,6 +85,8 @@ export const PAGE_TABS = {
   ],
   'page-customers': [
     { id: 'sec-customers', label: 'Accounts', sections: ['sec-customers', 'sec-cs-economics'] },
+    { id: 'sec-contacts', label: 'Contacts' },
+    { id: 'sec-activities', label: 'Activity' },
     { id: 'sec-cs-lifecycle', label: 'Lifecycle' },
     { id: 'sec-cs-renewals', label: 'Renewals' },
   ],

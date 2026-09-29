@@ -157,7 +157,7 @@ function buildCell(col, row, index, def) {
     // A free-text name that offers the roster, rather than a hard select:
     // a RACI often names a team or an outside party that has no roster row.
     const node = inputCell(col, row[col.field], 'text');
-    node.setAttribute('list', 'roster-names');
+    node.setAttribute('list', col.list || 'roster-names');
     return el('td', { class: cls }, [node]);
   }
   return el('td', { class: cls }, [inputCell(col, row[col.field], 'text')]);
@@ -290,6 +290,16 @@ export function renderRosterOptions() {
   };
   (getState().allocations || []).forEach((a) => add(a.name));
   listResources().forEach((r) => add(r.name));
+  // Accounts and contacts are offered the same way, from Customer Success.
+  fill('account-names', (getState().customers || []).map((a) => a.name));
+  fill('contact-names', (getState().contacts || []).map((c) => c.name));
+}
+
+function fill(id, names) {
+  const list = document.getElementById(id);
+  if (!list) return;
+  const unique = [...new Set(names.map((n) => String(n || '').trim()).filter(Boolean))];
+  list.replaceChildren(...unique.map((value) => el('option', { value })));
 }
 
 /**

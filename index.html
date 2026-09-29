@@ -892,6 +892,19 @@
         <p class="hint" id="uc-none" hidden>No use cases yet. Start one with + New use case; it sits in the project that is open, which is the workspace whose client partners may see it.</p>
 
         <div id="uc-body">
+          <section class="card" id="sec-uc-pipeline">
+            <div class="card__head"><h2>Deal Pipeline</h2></div>
+            <p class="hint">
+              The deal behind this use case, then every open deal together. A deal is won when the client&rsquo;s go is signed, so
+              Won waits for the signatures on Decision. Probability follows the stage unless you set it; the forecast weights each
+              deal by it, with the unweighted total beside it. Price and margin stay here, with the client partners &mdash; only the
+              deal value is copied into a project, as its contract value.
+            </p>
+            <div class="charter-grid" id="uc-deal"></div>
+            <div id="uc-deal-read"></div>
+            <div id="uc-pipeline"></div>
+          </section>
+
           <section class="card" id="sec-uc-intake">
             <div class="card__head"><h2>Intake</h2></div>
             <p class="hint">What the client wants, and why. The workspace is the project it was created in.</p>

@@ -76,6 +76,7 @@ const PRECACHE_URLS = [
   './js/useCaseModel.js',
   './js/serviceDesk.js',
   './js/billing.js',
+  './js/deals.js',
   './js/useCaseStore.js',
   './js/useCaseSync.js',
   './js/useCasesPage.js',

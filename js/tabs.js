@@ -75,6 +75,7 @@ export const PAGE_TABS = {
     { id: 'sec-known-errors', label: 'Known Issues' },
   ],
   'page-usecases': [
+    { id: 'sec-uc-pipeline', label: 'Pipeline' },
     { id: 'sec-uc-intake', label: 'Intake' },
     { id: 'sec-uc-evaluate', label: 'Evaluate' },
     { id: 'sec-uc-roi', label: 'ROI' },

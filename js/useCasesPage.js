@@ -35,6 +35,8 @@ import {
   roiModel, openAssumptions, decisionContent, DECISION_SIGNERS, decisionOf, STAGES, stageOf, realisation,
   clientPortfolio, benefitPools,
 } from './useCaseModel.js';
+import { DEAL_STAGES, LOST, dealOf, pipeline } from './deals.js';
+import { toLocalISO } from './dates.js';
 
 let selectedId = '';
 let selectedClientId = '';
@@ -113,6 +115,104 @@ function field(label, path, uc, { type = 'text', long = false, wide = false, pla
 }
 
 // ---------- Sections ----------
+
+function renderDeal(uc) {
+  const host = document.getElementById('uc-deal');
+  const d = uc.deal || {};
+  const go = decisionOf(uc)?.outcome === 'Go';
+  const stage = el('select', { class: 'field-input', id: 'uc-deal-stage' }, [
+    el('option', { value: '', text: 'Not in the pipeline', selected: !d.stage }),
+    ...DEAL_STAGES.map((s) => el('option', {
+      value: s.id,
+      text: s.id === 'Won' && !go ? `${s.n} Won — needs a signed Go` : `${s.n} ${s.id}`,
+      disabled: s.id === 'Won' && !go && d.stage !== 'Won',
+      selected: d.stage === s.id,
+    })),
+    el('option', { value: LOST, text: 'Lost', selected: d.stage === LOST }),
+  ]);
+  const defaultP = DEAL_STAGES.find((s) => s.id === (d.stage || 'Lead'))?.probability;
+  host.replaceChildren(...[
+    el('label', { class: 'charter-field' }, [el('span', { class: 'charter-field__label', text: 'Stage' }), stage]),
+    field('Deal value', 'deal.value', uc, { type: 'number', placeholder: 'What the client pays us' }),
+    field('Our delivery cost', 'deal.deliveryCost', uc, { type: 'number', placeholder: 'What it costs us to deliver' }),
+    field('Probability %', 'deal.probability', uc, { type: 'number', placeholder: defaultP === undefined ? '' : `${Math.round(defaultP * 100)} by stage` }),
+    field('Expected close', 'deal.expectedClose', uc, { type: 'date' }),
+    d.stage === LOST ? field('Why it was lost', 'deal.lostReason', uc, { wide: true, placeholder: 'Price, timing, a competitor, no budget…' }) : null,
+  ].filter(Boolean));
+}
+
+function renderDealRead(uc) {
+  const host = document.getElementById('uc-deal-read');
+  if (!host) return;
+  const deal = dealOf(uc);
+  if (!deal) {
+    host.replaceChildren(el('p', { class: 'hint is-unmeasured', text: 'Not in the pipeline: give it a stage or a value.' }));
+  } else {
+    host.replaceChildren(...[
+      deal.unsupported ? el('p', { class: 'uc-open', id: 'uc-deal-unsupported', text: 'Marked Won, but the Go is not signed by both, or lapsed when the numbers changed. It is forecast as Negotiation until it is.' }) : null,
+      el('dl', { class: 'uc-summary', id: 'uc-deal-summary' }, [
+        ['Margin', deal.margin === null ? 'Needs a value and a delivery cost' : `${money(deal.margin)}${deal.marginPct !== null ? ` (${pct(deal.marginPct)})` : ''}`],
+        ['Probability', deal.lost ? 'Lost' : pct(deal.probability)],
+        ['Weighted value', deal.weighted === null ? '—' : money(deal.weighted)],
+        ['Closes', deal.expectedClose ? `${formatDate(deal.expectedClose)}${deal.slipped ? ' — past, still open' : ''}` : 'No date'],
+        ...(deal.lost && deal.lostReason ? [['Lost because', deal.lostReason]] : []),
+      ].flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })])),
+    ].filter(Boolean));
+  }
+  renderPipeline();
+}
+
+function renderPipeline() {
+  const host = document.getElementById('uc-pipeline');
+  if (!host) return;
+  const p = pipeline(listUseCases());
+  if (!p.rows.length) {
+    host.replaceChildren(el('p', { class: 'hint', text: 'No deals yet. Every use case with a stage or a value is one.' }));
+    return;
+  }
+  const summary = el('dl', { class: 'uc-summary', id: 'uc-pipeline-summary' }, [
+    ['Open deals', `${p.open} · ${money(p.openValue)}`],
+    ['Weighted forecast', money(p.weighted)],
+    ['Won', `${p.won} · ${money(p.wonValue)}`],
+    ['Win rate', p.winRate === null ? 'Nothing closed yet' : `${pct(p.winRate)} of ${p.won + p.lost} closed`],
+    ['Average won deal', p.averageWon === null ? '—' : money(p.averageWon)],
+    ['Margin on won deals', p.wonMargin === null ? 'No delivery costs entered' : pct(p.wonMargin)],
+    ['Sales cycle', p.cycleDays === null ? '—' : `${Math.round(p.cycleDays)} days, intake to won`],
+    ['Past their close date', String(p.slipped)],
+  ].flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]));
+
+  const quarters = el('div', { class: 'table-scroll' }, [el('table', { class: 'data-table', id: 'uc-forecast-table' }, [
+    el('thead', {}, [el('tr', {}, ['Closing in', 'Deals', 'Pipeline', 'Weighted'].map((t) => el('th', { text: t })))]),
+    el('tbody', {}, p.byQuarter.map((q) => el('tr', {}, [
+      el('td', { text: q.quarter }), el('td', { class: 'col-num', text: String(q.count) }),
+      el('td', { class: 'col-num', text: money(q.value) }), el('td', { class: 'col-num', text: money(q.weighted) }),
+    ]))),
+  ])]);
+
+  const order = (r) => (r.deal.won ? 6 : r.deal.lost ? 7 : DEAL_STAGES.find((s) => s.id === r.deal.stage)?.n ?? 0);
+  const deals = el('div', { class: 'table-scroll' }, [el('table', { class: 'data-table', id: 'uc-deals-table' }, [
+    el('thead', {}, [el('tr', {}, ['Use case', 'Client', 'Stage', 'Value', 'Probability', 'Weighted', 'Margin', 'Closes'].map((t) => el('th', { text: t })))]),
+    el('tbody', {}, [...p.rows].sort((a, b) => order(a) - order(b)).map((r) => el('tr', { class: r.deal.lost ? 'is-unmeasured' : '' }, [
+      el('td', {}, [el('button', { type: 'button', class: 'link-btn', 'data-deal-open': r.uc.id, text: r.uc.name || 'Untitled use case' })]),
+      el('td', { text: r.uc.client || '—' }),
+      el('td', { text: r.deal.unsupported ? 'Won — not signed' : r.deal.stage }),
+      el('td', { class: 'col-num', text: money(r.deal.value) }),
+      el('td', { class: 'col-num', text: pct(r.deal.probability) }),
+      el('td', { class: 'col-num', text: money(r.deal.weighted) }),
+      el('td', { class: 'col-num', text: r.deal.marginPct === null ? '—' : pct(r.deal.marginPct) }),
+      el('td', { text: r.deal.expectedClose ? `${formatDate(r.deal.expectedClose)}${r.deal.slipped ? ' · slipped' : ''}` : '—' }),
+    ]))),
+  ])]);
+
+  host.replaceChildren(
+    el('h3', { class: 'uc-sub', text: 'The whole pipeline' }),
+    summary,
+    el('h3', { class: 'uc-sub', text: 'Open deals by the quarter they should close' }),
+    quarters,
+    el('h3', { class: 'uc-sub', text: 'Every deal' }),
+    deals,
+  );
+}
 
 function renderIntake(uc) {
   const host = document.getElementById('uc-intake');
@@ -382,6 +482,7 @@ function renderPicker() {
 }
 
 function refreshDerived(uc) {
+  renderDealRead(uc);
   renderEvalResult(uc);
   renderRoiResults(uc);
   renderSteps(uc);
@@ -410,6 +511,8 @@ export function renderUseCases() {
   renderPicker();
   document.getElementById('btn-uc-delete').disabled = !uc;
   if (!uc) return;
+  renderDeal(uc);
+  renderDealRead(uc);
   renderIntake(uc);
   renderEvaluate(uc);
   renderEvalResult(uc);
@@ -422,6 +525,10 @@ export function renderUseCases() {
 
 // ---------- Client view ----------
 
+// The name a group is offered under is the one the first use case gave it.
+// Two created in the same millisecond tie on that, so the tie goes to the
+// earlier spelling in code-point order (capitals first), not to whichever
+// the store happened to return first.
 function unlinkedGroups() {
   const groups = new Map();
   listUseCases().forEach((uc) => {
@@ -429,8 +536,11 @@ function unlinkedGroups() {
     if (uc.clientId && getClient(uc.clientId)) return;
     if (!name) return;
     const key = name.toLowerCase();
-    if (!groups.has(key)) groups.set(key, { name, ids: [] });
-    groups.get(key).ids.push(uc.id);
+    if (!groups.has(key)) groups.set(key, { name, at: uc.createdAt || 0, ids: [] });
+    const g = groups.get(key);
+    const at = uc.createdAt || 0;
+    if (at < g.at || (at === g.at && name < g.name)) Object.assign(g, { name, at });
+    g.ids.push(uc.id);
   });
   return [...groups.values()];
 }
@@ -613,12 +723,14 @@ async function convert(uc) {
   }
   const model = roiModel(uc);
   const scores = uc.scores || {};
+  const dealValue = dealOf(uc)?.value ?? null;
   const ok = await confirmAction({
     title: `Turn “${uc.name || 'this use case'}” into a project?`,
     message: `Copied into the new project: its name, the outcome sought as the objective and success criteria, the problem as the business case, `
-      + `the client sponsor, the value and fit scores, and the expected total cost (${money(model?.expected.totalCost)}) as the planned budget. `
-      + 'Not copied: the benefits, rates, ROI, NPV, assumptions and signatures — they stay here, with the client partners. '
-      + 'Everything in a project can be read by every member of it, so the budget will be visible to the whole team.',
+      + `the client sponsor, the value and fit scores, the expected total cost (${money(model?.expected.totalCost)}) as the planned budget`
+      + `${dealValue !== null ? `, and the deal value (${money(dealValue)}) as the contract value` : ''}. `
+      + 'Not copied: the benefits, rates, ROI, NPV, assumptions, signatures, delivery cost and margin — they stay here, with the client partners. '
+      + `Everything in a project can be read by every member of it, so the budget${dealValue !== null ? ' and contract value' : ''} will be visible to the whole team.`,
     confirmLabel: 'Create the project',
   });
   if (!ok) return;
@@ -631,6 +743,7 @@ async function convert(uc) {
     charterValue: scores.value ? String(scores.value) : '',
     charterFit: scores.fit ? String(scores.fit) : '',
     budgetPlanned: model ? model.expected.totalCost : 0,
+    ...(dealValue !== null ? { contractValue: dealValue } : {}),
   });
   scheduleSave();
   uc.convertedProjectId = project.id;
@@ -668,6 +781,16 @@ function bind() {
       renderUseCases();
       return;
     }
+    if (e.target.id === 'uc-deal-stage' && uc) {
+      // The close date is recorded, not typed: it is when the stage said so.
+      const stage = e.target.value;
+      const closed = stage === 'Won' || stage === LOST;
+      uc.deal = { ...(uc.deal || {}), stage, closedOn: closed ? (uc.deal?.closedOn && uc.deal?.stage === stage ? uc.deal.closedOn : toLocalISO(new Date())) : '' };
+      commit(uc);
+      renderDeal(uc);
+      refreshDerived(uc);
+      return;
+    }
     if (e.target.id === 'uc-outcome' && uc) {
       // A new outcome needs new signatures: nobody signed this one.
       uc.decision = e.target.value ? { outcome: e.target.value, signatures: {} } : null;
@@ -689,6 +812,13 @@ function bind() {
     const remove = e.target.closest('[data-uc-remove]')?.dataset.ucRemove;
     const signer = e.target.closest('[data-uc-sign]')?.dataset.ucSign;
     const go = e.target.closest('[data-uc-go]')?.dataset.ucGo;
+    const dealOpen = e.target.closest('[data-deal-open]')?.dataset.dealOpen;
+    if (dealOpen) {
+      selectedId = dealOpen;
+      renderUseCases();
+      showSection('page-usecases', 'sec-uc-pipeline');
+      return;
+    }
     if (add && uc) {
       const blank = {
         costs: { label: '', type: 'One-off', amount: '', source: '', assumption: false },
@@ -801,6 +931,8 @@ function bind() {
     const uc = createUseCase(getActiveProjectId(), { partner: me() });
     selectedId = uc.id;
     renderUseCases();
+    // A new use case starts with what the client wants, not with its price.
+    showSection('page-usecases', 'sec-uc-intake');
     document.querySelector('#uc-intake [data-uc="name"]')?.focus();
   });
   document.getElementById('btn-uc-delete').addEventListener('click', async () => {

@@ -18,6 +18,7 @@ import { notifyProjectDataChanged } from './taskModel.js';
 import { el } from './dom.js';
 import {
   serviceMetrics, targetsOf, incidentSla, formatHours, DEFAULT_TARGETS, PRIORITIES,
+  CLOCKS, DEFAULT_CALENDAR,
 } from './serviceDesk.js';
 
 // ---------- The incident SLA cell and the targets it is judged by ----------
@@ -26,9 +27,10 @@ const CLOCK_TEXT = { met: 'met', breached: 'breached', 'at-risk': 'at risk', run
 
 function slaCell(col, incident) {
   const sla = incidentSla(incident, targetsOf(getState()));
+  const unit = sla.clock === 'business' ? 'business hours' : 'hours, round the clock';
   const part = (label, c) => el('span', {
     class: `sla-clock is-${c.state}`,
-    title: c.target ? `Target ${c.target} h` : 'No target for this priority',
+    title: c.target ? `Target ${c.target} ${unit}` : 'No target for this priority',
     text: c.invalid ? `${label}: check the times` : `${label} ${CLOCK_TEXT[c.state]}${c.hours !== null ? ` · ${formatHours(c.hours)}` : ''}`,
   });
   return el('div', { class: 'sla-cell' }, [
@@ -38,21 +40,68 @@ function slaCell(col, incident) {
   ]);
 }
 
+const WEEKDAYS = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [0, 'Sun']];
+
 function renderTargets() {
   const host = document.getElementById('incident-targets');
   if (!host) return;
-  const own = getState().incidentTargets || {};
-  host.replaceChildren(el('table', { class: 'data-table incident-targets' }, [
-    el('thead', {}, [el('tr', {}, ['Priority', 'Respond within (h)', 'Resolve within (h)'].map((t) => el('th', { text: t })))]),
-    el('tbody', {}, PRIORITIES.map((p) => el('tr', {}, [
-      el('th', { scope: 'row', text: p }),
-      ...['respond', 'resolve'].map((k) => el('td', {}, [el('input', {
-        type: 'number', class: 'row-input', min: '0', step: '0.5', 'data-target': `${p}.${k}`,
-        'aria-label': `${p} ${k} target in hours`,
-        value: own[p]?.[k] ?? '', placeholder: String(DEFAULT_TARGETS[p][k]),
-      })])),
-    ]))),
-  ]));
+  const s = getState();
+  const own = s.incidentTargets || {};
+  const cal = { ...DEFAULT_CALENDAR, ...(s.serviceCalendar || {}) };
+  const days = new Set((cal.days || []).map(Number));
+  host.replaceChildren(
+    el('table', { class: 'data-table incident-targets' }, [
+      el('thead', {}, [el('tr', {}, ['Priority', 'Respond within (h)', 'Resolve within (h)', 'Clock'].map((t) => el('th', { text: t })))]),
+      el('tbody', {}, PRIORITIES.map((p) => el('tr', {}, [
+        el('th', { scope: 'row', text: p }),
+        ...['respond', 'resolve'].map((k) => el('td', {}, [el('input', {
+          type: 'number', class: 'row-input', min: '0', step: '0.5', 'data-target': `${p}.${k}`,
+          'aria-label': `${p} ${k} target in hours`,
+          value: own[p]?.[k] ?? '', placeholder: String(DEFAULT_TARGETS[p][k]),
+        })])),
+        el('td', {}, [el('select', { class: 'row-select', 'data-target': `${p}.clock`, 'aria-label': `${p} clock` },
+          Object.entries(CLOCKS).map(([v, t]) => el('option', { value: v, text: t, selected: (own[p]?.clock || '24x7') === v })))]),
+      ]))),
+    ]),
+    el('fieldset', { class: 'service-calendar' }, [
+      el('legend', { text: 'Service calendar — what business hours means' }),
+      el('div', { class: 'service-calendar__days' }, WEEKDAYS.map(([d, label]) => el('label', { class: 'check-inline' }, [
+        el('input', { type: 'checkbox', 'data-cal-day': String(d), checked: days.has(d) }), document.createTextNode(label),
+      ]))),
+      el('label', { class: 'field-label' }, [document.createTextNode('Opens'), el('input', { type: 'time', class: 'field-input', 'data-cal': 'start', value: cal.start })]),
+      el('label', { class: 'field-label' }, [document.createTextNode('Closes'), el('input', { type: 'time', class: 'field-input', 'data-cal': 'end', value: cal.end })]),
+      el('label', { class: 'field-label service-calendar__holidays' }, [document.createTextNode('Holidays (dates, comma separated)'),
+        el('input', { type: 'text', class: 'field-input', 'data-cal': 'holidays', value: cal.holidays || '', placeholder: '2026-12-25, 2026-12-28' })]),
+      el('p', { class: 'hint', id: 'service-calendar-note' }),
+    ]),
+  );
+  renderCalendarNote();
+}
+
+// Says, in words, what the clocks are doing — including when business hours
+// were asked for and could not be honoured.
+function renderCalendarNote() {
+  const note = document.getElementById('service-calendar-note');
+  if (!note) return;
+  const s = getState();
+  const targets = targetsOf(s);
+  const business = PRIORITIES.filter((p) => targets[p].clock === 'business');
+  const fell = PRIORITIES.filter((p) => targets[p].fellBack);
+  if (fell.length) {
+    note.textContent = `${fell.join(', ')} ${fell.length === 1 ? 'is' : 'are'} set to business hours, but this calendar has no working days or closes before it opens, so ${fell.length === 1 ? 'it runs' : 'they run'} round the clock until it is fixed.`;
+    note.className = 'hint is-warn';
+    return;
+  }
+  note.className = 'hint';
+  note.textContent = business.length
+    ? `${business.join(', ')} ${business.length === 1 ? 'counts' : 'count'} only working hours on working days, holidays excluded. The rest run round the clock.`
+    : 'Every priority runs round the clock: nights and weekends count. Set a priority to business hours to use this calendar.';
+}
+
+function readCalendar(host) {
+  const days = [...host.querySelectorAll('[data-cal-day]')].filter((c) => c.checked).map((c) => Number(c.dataset.calDay));
+  const field = (k) => host.querySelector(`[data-cal="${k}"]`)?.value ?? '';
+  return { days, start: field('start'), end: field('end'), holidays: field('holidays') };
 }
 
 const COUNTERS = [
@@ -199,13 +248,26 @@ export function renderService() {
 
 export function initService() {
   INCIDENTS.renderCell = slaCell;
-  document.getElementById('incident-targets')?.addEventListener('input', (e) => {
+  const targetsHost = document.getElementById('incident-targets');
+  const onCalendar = (e) => {
+    if (!('cal' in e.target.dataset) && !('calDay' in e.target.dataset)) return;
+    getState().serviceCalendar = readCalendar(targetsHost);
+    scheduleSave();
+    renderCalendarNote();
+    refreshDerivedCells(INCIDENTS);
+    renderCounters();
+  };
+  targetsHost?.addEventListener('input', onCalendar);
+  targetsHost?.addEventListener('change', (e) => { if (e.target.type === 'checkbox') onCalendar(e); });
+  targetsHost?.addEventListener('input', (e) => {
     const path = e.target.dataset.target;
     if (!path) return;
     const [p, k] = path.split('.');
     const s = getState();
-    s.incidentTargets = { ...(s.incidentTargets || {}), [p]: { ...(s.incidentTargets?.[p] || {}), [k]: e.target.value === '' ? '' : Number(e.target.value) } };
+    const value = k === 'clock' ? e.target.value : e.target.value === '' ? '' : Number(e.target.value);
+    s.incidentTargets = { ...(s.incidentTargets || {}), [p]: { ...(s.incidentTargets?.[p] || {}), [k]: value } };
     scheduleSave();
+    renderCalendarNote();
     // The clocks follow the targets at once, without rebuilding the table.
     refreshDerivedCells(INCIDENTS);
     renderCounters();

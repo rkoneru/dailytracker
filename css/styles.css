@@ -6112,3 +6112,12 @@ body.login-open { overflow: hidden; }
 .journey.is-todo { border-style: dashed; }
 .journey.is-none { font-style: italic; }
 .journey-tag { display: inline-block; margin-left: 6px; font-size: 0.7rem; padding: 1px 6px; border-radius: 999px; background: var(--color-surface-alt, rgba(127,127,127,.15)); }
+
+/* The service calendar business-hours SLA clocks count against. */
+.service-calendar { border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 14px 4px; margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: flex-end; max-width: 720px; }
+.service-calendar legend { font-weight: 600; font-size: 0.85rem; padding: 0 4px; }
+.service-calendar__days { display: flex; flex-wrap: wrap; gap: 4px 12px; flex-basis: 100%; }
+.service-calendar__holidays { flex: 1 1 240px; }
+.service-calendar .hint { flex-basis: 100%; }
+.check-inline { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; }
+.hint.is-warn { color: var(--color-warn-text); font-weight: 600; }

@@ -56,6 +56,40 @@ const { APP_URL, launch, createChecks, openDestination, chooseLifecycle } = requ
   eq('no incidents is no evidence, not a perfect SLA', [sla.none.responseSla, sla.none.resolutionSla, sla.none.mttr], [null, null, null]);
   eq('open P1/P2 are counted per account, whatever the case', sla.severe, [['acme', 2]]);
 
+  console.log('\n--- business hours ---');
+  const biz = await page.evaluate(async () => {
+    const m = await import('/js/serviceDesk.js');
+    const cal = m.calendarOf({ serviceCalendar: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', holidays: '2026-10-12' } });
+    const h = (a, b) => m.businessHoursBetween(m.parseLocalDateTime(a), m.parseLocalDateTime(b), cal);
+    const project = (clock, calendar) => ({
+      serviceCalendar: calendar,
+      incidentTargets: { P3: { clock } },
+      incidents: [{ priority: 'P3', reported: '2026-10-09T16:00', responded: '2026-10-13T10:00', resolved: '2026-10-13T12:00', status: 'Resolved' }],
+    });
+    const sla = (p) => { const t = m.targetsOf(p); const r = m.incidentSla(p.incidents[0], t, new Date(2026, 9, 14)); return [t.P3.clock, r.response.state, Math.round(r.response.hours * 10) / 10]; };
+    const good = { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', holidays: '2026-10-12' };
+    return {
+      sameDay: h('2026-10-06T08:00', '2026-10-06T10:30'),
+      overnight: h('2026-10-06T16:00', '2026-10-07T10:00'),
+      weekend: h('2026-10-09T16:00', '2026-10-13T10:00'),
+      outside: h('2026-10-10T08:00', '2026-10-11T20:00'),
+      broken: [m.calendarOf({ serviceCalendar: { days: [], start: '09:00', end: '17:00' } }), m.calendarOf({ serviceCalendar: { days: [1], start: '17:00', end: '09:00' } })],
+      roundTheClock: sla(project('24x7', good)),
+      business: sla(project('business', good)),
+      fellBack: (() => { const p = project('business', { days: [] }); return [sla(p)[0], m.targetsOf(p).P3.fellBack]; })(),
+      mttr: m.serviceMetrics(project('business', good)).mttr,
+    };
+  });
+  eq('inside one working day', biz.sameDay, 1.5);
+  eq('overnight counts only the open hours either side', biz.overnight, 2);
+  eq('a weekend and a holiday Monday do not count', biz.weekend, 2);
+  eq('out of hours is no time at all', biz.outside, 0);
+  eq('a calendar with no days, or closing before it opens, is unusable', biz.broken, [null, null]);
+  eq('round the clock, Friday to Tuesday breaches an 8-hour response', biz.roundTheClock, ['24x7', 'breached', 90]);
+  eq('in business hours it is two working hours, and met', biz.business, ['business', 'met', 2]);
+  eq('business hours on an unusable calendar falls back to round the clock, and says so', biz.fellBack, ['24x7', true]);
+  eq('mean time to resolve stays elapsed time whatever the clock', biz.mttr, 92);
+
   console.log('\n--- the collection state ---');
   const bill = await page.evaluate(async () => {
     const b = await import('/js/billing.js');
@@ -122,6 +156,20 @@ const { APP_URL, launch, createChecks, openDestination, chooseLifecycle } = requ
   eq('changing a target re-judges the incidents at once',
      (await page.$$eval('#sec-incidents tbody tr .sla-cell', (e) => e[0].textContent)).includes('Resolve breached'), true);
   eq('and is saved on the project', await page.evaluate(async () => (await import('/js/state.js')).getState().incidentTargets.P1.resolve), 1);
+
+  // Business hours on the calendar, from the page.
+  await page.selectOption('#incident-targets [data-target="P3.clock"]', 'business');
+  await page.waitForTimeout(200);
+  eq('choosing business hours is saved', await page.evaluate(async () => (await import('/js/state.js')).getState().incidentTargets.P3.clock), 'business');
+  eq('and the page says which priorities use the calendar', (await page.textContent('#service-calendar-note')).startsWith('P3 counts only working hours'), true);
+  for (const d of ['1', '2', '3', '4', '5']) await page.uncheck(`#incident-targets [data-cal-day="${d}"]`);
+  await page.waitForTimeout(200);
+  eq('an empty calendar is saved as it is', await page.evaluate(async () => (await import('/js/state.js')).getState().serviceCalendar.days), []);
+  eq('and the page says the clock fell back', (await page.textContent('#service-calendar-note')).includes('runs round the clock until it is fixed'), true);
+  await page.check('#incident-targets [data-cal-day="1"]');
+  await page.fill('#incident-targets [data-cal="holidays"]', '2026-12-25');
+  await page.waitForTimeout(200);
+  eq('days and holidays are saved', await page.evaluate(async () => { const c = (await import('/js/state.js')).getState().serviceCalendar; return [c.days, c.holidays]; }), [[1], '2026-12-25']);
 
   await openDestination(page, 'nav-billing');
   eq('Billing is a tab on Scope & Contract', (await page.textContent('#page-scope .page-tab.is-active')).startsWith('Billing'), true);

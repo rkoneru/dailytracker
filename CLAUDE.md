@@ -167,8 +167,10 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 - **Incident SLAs and invoice states are derived, never stored.** An incident's
   two clocks are arithmetic on reported/responded/resolved against its
   priority's targets (`targetsOf`); an open one is judged against now, so it
-  can be breached before it closes. Clocks run in calendar hours, and the page
-  says so. A billing milestone is overdue because its payment terms ran out
+  can be breached before it closes. Each priority's clock is 24x7 (default) or
+  business hours on the project's `serviceCalendar`; an unusable calendar falls
+  back to 24x7 and the page says so, since counting more hours can only look
+  worse. MTTR is always elapsed time, never business hours. A billing milestone is overdue because its payment terms ran out
   from the invoice date, never because someone picked it. No incidents is no
   SLA, not 100%; nothing paid is no days-to-collect, not zero. Open P1/P2
   incidents against an account lower its customer health. The contract value

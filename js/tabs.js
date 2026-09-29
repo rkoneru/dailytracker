@@ -72,6 +72,13 @@ export const PAGE_TABS = {
     { id: 'sec-releases', label: 'Releases & Change', sections: ['sec-releases', 'sec-changes'] },
     { id: 'sec-known-errors', label: 'Known Issues' },
   ],
+  'page-usecases': [
+    { id: 'sec-uc-intake', label: 'Intake' },
+    { id: 'sec-uc-evaluate', label: 'Evaluate' },
+    { id: 'sec-uc-roi', label: 'ROI' },
+    { id: 'sec-uc-decision', label: 'Decision' },
+    { id: 'sec-uc-value', label: 'Delivery & Value' },
+  ],
   'page-customers': [
     { id: 'sec-customers', label: 'Accounts', sections: ['sec-customers', 'sec-cs-economics'] },
     { id: 'sec-cs-lifecycle', label: 'Lifecycle' },

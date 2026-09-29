@@ -12,6 +12,7 @@ import { listFullProjects, replaceAllProjects, setAfterSaveHook } from './state.
 import { stampRevisions, toWire, ROW_KINDS } from './syncModel.js';
 import { mergeStore } from './syncMerge.js';
 import * as api from './supabase.js';
+import { syncUseCases } from './useCaseSync.js';
 
 const BASE_KEY = 'projectPlannerSyncBase_v1';
 const PUSH_DEBOUNCE_MS = 2500;
@@ -219,11 +220,22 @@ export async function syncNow() {
     emitStatus();
   }
 
+  // Its own lane, after the projects: a use case names the workspace it sits
+  // in, which has to exist on the server before the row can be accepted. It
+  // reports its own failures, so a missing table cannot turn the project
+  // sync red.
+  await syncUseCases();
+
   if (queuedRun) {
     queuedRun = false;
     return syncNow();
   }
   return getSyncStatus();
+}
+
+/** Asks for a sync soon, for edits that do not go through the project store. */
+export function requestSync() {
+  schedulePush();
 }
 
 function schedulePush() {

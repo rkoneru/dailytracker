@@ -26,6 +26,7 @@ import { initRaid, renderRaid } from './raid.js';
 import { initEngagement, renderEngagement } from './engagement.js';
 import { initService, renderService } from './service.js';
 import { initCustomerSuccess, renderCustomerSuccess } from './customerSuccessPage.js';
+import { initUseCases, renderUseCases } from './useCasesPage.js';
 import { initRolePicker } from './rolePicker.js';
 import { initRouter, setRoute, onRouteChange, revealRow, currentUrl } from './router.js';
 import { initChangeLog, renderChangeLog } from './changeLogPage.js';
@@ -114,7 +115,7 @@ if ('serviceWorker' in navigator) {
 // code and links that name them still find them.
 const PAGE_IDS = ['page-mywork', 'page-portfolio', 'page-resources',
   'page-dashboard', 'page-tasks', 'page-planner', 'page-raid',
-  'page-scope', 'page-people', 'page-service', 'page-improve', 'page-customers',
+  'page-scope', 'page-people', 'page-service', 'page-improve', 'page-customers', 'page-usecases',
   'page-meetings', 'page-kpis', 'page-reports', 'page-settings', 'page-changelog'];
 
 function showPage(pageId, title) {
@@ -164,6 +165,7 @@ function showPage(pageId, title) {
   if (pageId === 'page-scope' || pageId === 'page-people') renderEngagement();
   if (pageId === 'page-service' || pageId === 'page-improve') renderService();
   if (pageId === 'page-customers') renderCustomerSuccess();
+  if (pageId === 'page-usecases') renderUseCases();
 
   // Last, because the register pages build their own cards above and the strip
   // can only list the sections that exist by the time it is drawn.
@@ -1015,6 +1017,7 @@ function init() {
   initEngagement();
   initService();
   initCustomerSuccess();
+  initUseCases();
   initSharedDataSync();
   initTasks();
   initTrash({ onRestore: refreshActiveProjectView });

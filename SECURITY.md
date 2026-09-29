@@ -79,6 +79,36 @@ job role, and set page access. They deliberately **cannot**:
 Without the third, delegation would be one UPDATE away from a handover. All
 three are enforced by the `project_members_write` policy, not by the UI.
 
+## Use cases and ROI: the one part not every member can read
+
+Everything above lets every member of a project read everything in it. Use
+cases are the exception, because they carry pricing, margin and the client's
+own cost figures. They are stored in their own table, `use_cases`, and:
+
+- **Postgres returns them only to the project's owner and to members holding
+  the `client_partner` grant.** Everyone else — editors, delegated admins,
+  viewers, strangers, anonymous requests — gets zero rows. A client partner who
+  is a viewer on the project can read them and change nothing. A row cannot be
+  moved into a workspace where the writer is not a partner.
+- **Only the owner can grant or remove it.** A delegated admin can neither give
+  it nor edit the membership of anyone who holds it. `tests/rls/attack.sql`
+  attacks all of this for real, 21 checks of the 67.
+- **The client never mixes them into project data.** Use cases live under their
+  own localStorage key and sync on their own lane; they are not in project
+  exports, and converting one into a project copies only the name, outcome,
+  problem, sponsor, value and fit scores and the planned budget — never the
+  benefits, rates, ROI, NPV, assumptions or signatures.
+- **Losing access removes the local copy.** A device that synced a use case and
+  then stops receiving it drops it on the next sync instead of uploading it
+  again.
+
+What it does not cover: the page is offered only to the Account Executive /
+Client Partner job role, and that part is page hiding like any other. Signed
+out, use cases stay on the device and are shared with nobody. In a demo the
+app mirrors the rule and says it enforces nothing. A client partner can print
+or copy what they see; the Closure report shows the business case only on a
+device that holds it.
+
 ## Signatures and approvals
 
 Change requests, the scope baseline and deliverable sign-off are **signed**, and

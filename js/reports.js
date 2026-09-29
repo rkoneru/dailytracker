@@ -16,6 +16,8 @@ import { formatDate, toLocalISO } from './dates.js';
 import { projectWindow } from './ganttModel.js';
 import { priorityOf, priorityLabel } from './priority.js';
 import { isApprovedChange, scopeDrift, signOffState } from './changeControl.js';
+import { listUseCases } from './useCaseStore.js';
+import { roiModel, realisation } from './useCaseModel.js';
 
 // ---------- Report types ----------
 
@@ -357,7 +359,22 @@ function computeClosure(project, p, today) {
     documents: project.documents || [],
     handover,
     ready: handover.length === 0,
+    // The business case, only when this device holds it — which only a client
+    // partner's does, because the database returns use cases to nobody else.
+    useCase: listUseCases().find((uc) => uc.convertedProjectId === project.id) || null,
   };
+}
+
+function businessCaseBox(uc) {
+  const model = roiModel(uc);
+  const real = realisation(uc);
+  return listBox('Value against the business case (client partners only)', [
+    { label: 'Use case', meta: uc.name || 'untitled' },
+    { label: 'Expected benefit', meta: model ? money(model.expected.totalBenefit) : 'not modelled' },
+    { label: 'Expected ROI', meta: model && model.expected.roi !== null ? `${Math.round(model.expected.roi * 100)}%` : '—' },
+    { label: 'Forecast to date', meta: real ? money(real.forecast) : 'no go-live date' },
+    { label: 'Realised to date', meta: real && real.actual !== null ? `${money(real.actual)}${real.ratio !== null ? ` (${Math.round(real.ratio * 100)}% of forecast)` : ''}` : 'nothing recorded' },
+  ]);
 }
 
 function money(n) {
@@ -872,6 +889,7 @@ function renderClosure(report, cards, summaryEl) {
           meta: l.recommendation ? `\u2192 ${l.recommendation}` : (l.status || ''),
         })), { empty: 'No lessons recorded. Record them on Improvement & Lessons before closing.', stacked: true }),
       ]),
+      c.useCase ? businessCaseBox(c.useCase) : null,
       boxRow([
         listBox('Sign-off', [
           { label: `Sponsor${c.sponsor ? ` \u2014 ${c.sponsor}` : ''}`, meta: 'Signature ____________  Date ________' },

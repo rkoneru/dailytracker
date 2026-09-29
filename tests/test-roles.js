@@ -34,7 +34,7 @@ const { eq, done } = createChecks();
   console.log('\n--- the picker offers every role and starts on the lead ---');
   eq('roles offered', await page.$$eval('#role-select option', (e) => e.map((x) => x.textContent)),
      ['Engagement Lead', 'Project Manager', 'Product Manager', 'Scrum Master',
-      'Developer', 'Tester / QA', 'Service Manager', 'Customer Success Manager', 'Chief AI Officer']);
+      'Developer', 'Tester / QA', 'Service Manager', 'Account Executive / Client Partner', 'Customer Success Manager', 'Chief AI Officer']);
   eq('default role', await page.inputValue('#role-select'), 'engagement-lead');
   eq('and it explains itself', (await page.textContent('#role-blurb')).length > 20, true);
 
@@ -42,7 +42,10 @@ const { eq, done } = createChecks();
   const leadPages = await pages();
   eq('Scope & Contract is there', leadPages.includes('Scope & Contract'), true);
   eq('People & Stakeholders is there', leadPages.includes('People & Stakeholders'), true);
-  eq('nothing is held back', await page.isHidden('#nav-filter-note'), true);
+  // Everything but the client partner's page, which no other role is offered
+  // — and the note says so rather than letting it look like a missing feature.
+  eq('only the client partner page is held back', await page.textContent('#nav-filter-note'),
+     '1 more page hidden for Engagement Lead · change');
 
   console.log('\n--- Engagement is for the lead, and only the lead ---');
   for (const role of ['project-manager', 'product-manager', 'scrum-master', 'developer', 'tester', 'service-manager', 'chief-ai-officer']) {

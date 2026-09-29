@@ -832,6 +832,75 @@
       </div>
     </section>
 
+    <section id="page-usecases" class="page" role="region" aria-label="Use cases and ROI">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Use Cases &amp; ROI</span></div>
+          <p class="hint report-subtitle">
+            From a client&rsquo;s idea to a supported, measured service: take it in, evaluate it, model what it is worth,
+            get the go/no-go signed, turn it into a project, and track the value it actually delivers.
+          </p>
+        </header>
+
+        <p class="uc-access" id="uc-access" role="note"></p>
+
+        <div class="uc-bar no-print">
+          <label class="field-label uc-bar__picker">Use case
+            <select class="field-input" id="uc-picker"></select>
+          </label>
+          <button type="button" class="btn btn-small btn-primary" id="btn-uc-new">+ New use case</button>
+          <button type="button" class="btn btn-small btn-ghost" id="btn-uc-delete">Delete</button>
+        </div>
+        <ol class="uc-steps" id="uc-steps" aria-label="Where this use case has got to"></ol>
+        <p class="hint" id="uc-none" hidden>No use cases yet. Start one with + New use case; it sits in the project that is open, which is the workspace whose client partners may see it.</p>
+
+        <div id="uc-body">
+          <section class="card" id="sec-uc-intake">
+            <div class="card__head"><h2>Intake</h2></div>
+            <p class="hint">What the client wants, and why. The workspace is the project it was created in.</p>
+            <div class="charter-grid" id="uc-intake"></div>
+          </section>
+
+          <section class="card" id="sec-uc-evaluate">
+            <div class="card__head">
+              <h2>Evaluate</h2>
+              <span class="hint" id="uc-eval-result"></span>
+            </div>
+            <p class="hint">Score each criterion 1&ndash;5 and weigh them. The score is out of 100 and stays &ldquo;Not scored&rdquo; until every criterion has one &mdash; a missing risk score has not been judged low risk.</p>
+            <div id="uc-evaluate"></div>
+          </section>
+
+          <section class="card" id="sec-uc-roi">
+            <div class="card__head"><h2>ROI Model</h2></div>
+            <p class="hint">
+              Monthly over the horizon. One-off costs land in month one; running costs and benefits accrue monthly; benefits climb
+              to the target adoption over the ramp. Low and high scale the benefits, never the costs. Every line says where its
+              number came from, and anything unsourced is listed as an open assumption.
+            </p>
+            <div id="uc-roi"></div>
+          </section>
+
+          <section class="card" id="sec-uc-decision">
+            <div class="card__head"><h2>Go / No-go</h2></div>
+            <p class="hint">
+              Signed by the client sponsor and the client partner against the scores and the model as they stand. Change either
+              afterwards and the decision lapses &mdash; a signature on numbers that have since moved approves nothing.
+            </p>
+            <div id="uc-decision"></div>
+          </section>
+
+          <section class="card" id="sec-uc-value">
+            <div class="card__head"><h2>Delivery &amp; Value</h2></div>
+            <p class="hint">
+              The project it became, and whether the benefit arrived. The forecast is the expected case for the months since go-live;
+              the actuals are what the client confirms was realised.
+            </p>
+            <div id="uc-value"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
     <section id="page-customers" class="page" role="region" aria-label="Customer success">
       <div class="print-page">
         <header class="dash-header">
@@ -2306,6 +2375,8 @@
               <strong>Access</strong> is what somebody may read and write, and it is enforced by the
               server. <strong>Job role</strong> decides which pages the app offers them, and it is
               not a security boundary &mdash; see <em>What is actually enforced</em> below.
+              <strong>Client partner</strong> is: it decides who the database will return use cases and
+              ROI models to. Only the owner can grant it, and a delegated admin cannot edit anyone who holds it.
             </p>
             <div class="table-scroll">
               <table class="data-table" id="members-table">
@@ -2315,6 +2386,7 @@
                     <th class="col-status">Access</th>
                     <th class="col-status">Job role</th>
                     <th class="col-check" title="May manage people and page access">Admin</th>
+                    <th class="col-check" title="May see use cases and ROI models. Enforced by the database; only the owner can grant it">Client partner</th>
                   </tr>
                 </thead>
                 <tbody id="members-body"></tbody>

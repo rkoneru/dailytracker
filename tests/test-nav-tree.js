@@ -191,7 +191,7 @@ const eq = (n, got, want) => {
   // 6. Pages are regions, not tabpanels — the tabpanel role belongs to the
   // sections inside a page, which are what the in-page tab strip switches.
   eq('no page claims the tabpanel role', await page.locator('.page[role="tabpanel"]').count(), 0);
-  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 17);
+  eq('pages are labelled regions', await page.locator('.page[role="region"][aria-label]').count(), 18);
 
   // 7. Opening a report from a link renders it once, not twice.
   await openLink('tab-dashboard');

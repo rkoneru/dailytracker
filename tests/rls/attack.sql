@@ -425,6 +425,141 @@ call check_denied('a viewer cannot flip require_sign_in off',
   $q$update public.workspace_policy set require_sign_in = false
      where project_id = '10000000-0000-4000-8000-000000000001'$q$);
 
+-- ============================================================ use cases
+--
+-- The commercial data. Everything above lets any member read everything in a
+-- project; this is the one place that must not, so every role that is not a
+-- client partner tries to reach it — and the grant itself is attacked, since
+-- a grant anyone could give themselves would be decoration.
+--
+-- By now the editor (…002) is a delegated admin and the contributor (…003) has
+-- been made a viewer by them, above. Two new people hold the grant: a partner
+-- who edits, and a partner who only views.
+
+insert into auth.users (id, email) values
+  ('00000000-0000-4000-8000-000000000006', 'partner@example.test'),
+  ('00000000-0000-4000-8000-000000000007', 'partner-viewer@example.test');
+
+insert into public.project_members (project_id, user_id, role, client_partner) values
+  ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000006', 'editor', true),
+  ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000007', 'viewer', true);
+
+insert into public.use_cases (id, project_id, data, rev, created_by) values
+  ('30000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
+   '{"name":"Invoice automation","costs":[{"amount":120000}]}'::jsonb, 1,
+   '00000000-0000-4000-8000-000000000001'),
+  ('30000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000002',
+   '{"name":"The stranger''s pipeline"}'::jsonb, 1,
+   '00000000-0000-4000-8000-000000000005');
+
+do $$
+declare n integer;
+begin
+  n := anon_count('select count(*) from public.use_cases');
+  call check_true('anon sees no use cases', n <= 0, format('saw %s', n));
+
+  n := visible_count('00000000-0000-4000-8000-000000000001',
+    'select count(*) from public.use_cases');
+  call check_true('the owner sees their project''s use cases', n = 1, format('saw %s', n));
+
+  n := visible_count('00000000-0000-4000-8000-000000000006',
+    'select count(*) from public.use_cases');
+  call check_true('a client partner sees them', n = 1, format('saw %s', n));
+
+  n := visible_count('00000000-0000-4000-8000-000000000007',
+    'select count(*) from public.use_cases');
+  call check_true('so does a client partner who only views', n = 1, format('saw %s', n));
+
+  n := visible_count('00000000-0000-4000-8000-000000000002',
+    'select count(*) from public.use_cases');
+  call check_true('an editor and admin without the grant sees none', n = 0, format('saw %s', n));
+
+  n := visible_count('00000000-0000-4000-8000-000000000004',
+    'select count(*) from public.use_cases');
+  call check_true('a viewer without the grant sees none', n = 0, format('saw %s', n));
+
+  n := visible_count('00000000-0000-4000-8000-000000000003',
+    'select count(*) from public.use_cases');
+  call check_true('nor does any other member', n = 0, format('saw %s', n));
+
+  n := visible_count('00000000-0000-4000-8000-000000000006',
+    'select count(*) from public.use_cases where project_id = ''10000000-0000-4000-8000-000000000002''');
+  call check_true('a partner here cannot read another workspace''s pipeline', n = 0, format('saw %s', n));
+end $$;
+
+call check_allowed('a client partner can add a use case',
+  '00000000-0000-4000-8000-000000000006',
+  $q$insert into public.use_cases (id, project_id, data, rev)
+     values ('30000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', '{"name":"New"}'::jsonb, 1)$q$);
+
+call check_allowed('and change one',
+  '00000000-0000-4000-8000-000000000006',
+  $q$update public.use_cases set data = '{"name":"Invoice automation v2"}'::jsonb, rev = 2
+     where id = '30000000-0000-4000-8000-000000000001'$q$);
+
+call check_denied('an editor without the grant cannot add one',
+  '00000000-0000-4000-8000-000000000002',
+  $q$insert into public.use_cases (id, project_id, data, rev)
+     values (gen_random_uuid(), '10000000-0000-4000-8000-000000000001', '{}'::jsonb, 1)$q$);
+
+call check_denied('nor overwrite one it cannot see',
+  '00000000-0000-4000-8000-000000000002',
+  $q$update public.use_cases set data = '{"name":"hacked"}'::jsonb
+     where id = '30000000-0000-4000-8000-000000000001'$q$);
+
+call check_denied('a partner who only views cannot change one',
+  '00000000-0000-4000-8000-000000000007',
+  $q$update public.use_cases set data = '{"name":"hacked"}'::jsonb
+     where id = '30000000-0000-4000-8000-000000000001'$q$);
+
+call check_denied('nor delete one',
+  '00000000-0000-4000-8000-000000000007',
+  $q$delete from public.use_cases where id = '30000000-0000-4000-8000-000000000001'$q$);
+
+call check_denied('a partner cannot move a use case into a workspace they are not a partner in',
+  '00000000-0000-4000-8000-000000000006',
+  $q$update public.use_cases set project_id = '10000000-0000-4000-8000-000000000002'
+     where id = '30000000-0000-4000-8000-000000000001'$q$);
+
+-- The grant. The owner gives it; nobody else can, including to themselves.
+call check_denied('a member cannot grant themselves client partner',
+  '00000000-0000-4000-8000-000000000003',
+  $q$update public.project_members set client_partner = true
+     where project_id = '10000000-0000-4000-8000-000000000001'
+       and user_id = '00000000-0000-4000-8000-000000000003'$q$);
+
+call check_denied('a delegated admin cannot grant it to someone else',
+  '00000000-0000-4000-8000-000000000002',
+  $q$update public.project_members set client_partner = true
+     where project_id = '10000000-0000-4000-8000-000000000001'
+       and user_id = '00000000-0000-4000-8000-000000000004'$q$);
+
+call check_denied('nor quietly take it away from a partner',
+  '00000000-0000-4000-8000-000000000002',
+  $q$update public.project_members set client_partner = false
+     where project_id = '10000000-0000-4000-8000-000000000001'
+       and user_id = '00000000-0000-4000-8000-000000000006'$q$);
+
+call check_allowed('the owner can grant it',
+  '00000000-0000-4000-8000-000000000001',
+  $q$update public.project_members set client_partner = true
+     where project_id = '10000000-0000-4000-8000-000000000001'
+       and user_id = '00000000-0000-4000-8000-000000000004'$q$);
+
+call check_allowed('and take it away',
+  '00000000-0000-4000-8000-000000000001',
+  $q$update public.project_members set client_partner = false
+     where project_id = '10000000-0000-4000-8000-000000000001'
+       and user_id = '00000000-0000-4000-8000-000000000006'$q$);
+
+do $$
+declare n integer;
+begin
+  n := visible_count('00000000-0000-4000-8000-000000000006',
+    'select count(*) from public.use_cases');
+  call check_true('once revoked, the former partner sees nothing', n = 0, format('saw %s', n));
+end $$;
+
 -- ============================================================ report
 
 select name, case when passed then 'ok  ' else 'FAIL' end as result, detail

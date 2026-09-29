@@ -39,7 +39,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 
 | Path | What |
 |---|---|
-| `index.html` | every page, as a hidden `<section class="page">`; 17 of them, plus the login overlay. AI Portfolio, Planning Layers, Capacity, Sync and Trash are `.merged-page` blocks inside their host page, keeping their old ids |
+| `index.html` | every page, as a hidden `<section class="page">`; 18 of them, plus the login overlay. AI Portfolio, Planning Layers, Capacity, Sync and Trash are `.merged-page` blocks inside their host page, keeping their old ids |
 | `css/styles.css` | all of it; design tokens on `:root` at the top |
 | `js/state.js` | the store. Load, migrate, save (debounced 400 ms), trash, projects, resources |
 | `js/app.js` | boot and wiring; the only file that knows about most others |
@@ -47,16 +47,17 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/mobileNav.js` | the phone bottom bar; fills its slots from `NAV_TREE` + `roleShows` |
 | `js/tabs.js` | in-page tabs; `PAGE_TABS` maps a page to its sections |
 | `js/router.js` | hash routing and deep links |
-| `js/register.js` + `js/registerDefs.js` | one table engine, 16 declarative registers (Documents and Vendors among them); a `link` column opens only http(s); `readonly` columns, `custom` cells and `rowActions` for pages that draw their own |
+| `js/register.js` + `js/registerDefs.js` | one table engine, 17 declarative registers (Documents and Vendors among them); a `link` column opens only http(s); `readonly` columns, `custom` cells and `rowActions` for pages that draw their own |
 | `js/sync*.js` | `syncModel` (wire shape), `syncMerge` (pure three-way merge), `sync` (network) |
 | `js/supabase.js` | hand-rolled PostgREST + GoTrue over `fetch` |
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
-| `js/login.js`, `demoAccounts.js` | the sign-in screen and the five invented people behind it |
+| `js/login.js`, `demoAccounts.js` | the sign-in screen and the six invented people behind it (one of them a client partner) |
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
 | `js/kpi.js`, `kpiPage.js` | the 35 indicators in seven categories, numbered in display order; `ceoKpis.js` maps a company-level (CEO) KPI set onto them and says why the rest are not held |
 | `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
 | `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks; WBS codes derived from the order |
 | `js/customerSuccess.js`, `customerSuccessPage.js`, `sampleCustomers.js` | the CSM lifecycle (six ordered stages with gates, Churned as an exit), health score, retention/NRR/NPS/LTV/CAC, and the Customer Success page over the `customers` register |
+| `js/useCaseModel.js`, `useCaseStore.js`, `useCaseSync.js`, `useCasesPage.js` | Use Cases & ROI: weighted evaluator, monthly ROI model (ROI %, payback, NPV, low/expected/high), signed go/no-go, conversion to a project, value realisation. Own storage key and own sync lane to the `use_cases` table |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
 | `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
@@ -79,7 +80,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   separate grant. `js/identity.js` explains all three at the top.
 - **Page hiding is not access control** and the app says so on screen. The real
   boundary is row level security, attacked for real in `tests/rls/attack.sql`
-  (46 checks, and the suite fails if fewer than 46 run).
+  (67 checks, and the suite fails if fewer than 67 run).
 - **Demo accounts secure nothing** and every surface that mentions them has to
   say so. `identity.js` treats a demo exactly like a real membership so the rest
   of the app runs its real code path; `isDemo()` is how a screen knows to stop
@@ -133,6 +134,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   is `null` until the book has lost a customer in the last twelve months, since
   an unbounded lifetime is not a number. Time to value is read off each
   account's `stageHistory`, which `recordStageChanges` appends to on every edit.
+- **Use cases are the one thing not every project member can read.** They live
+  in `use_cases`, which RLS returns only to the owner and `client_partner`
+  members; the grant is the owner's alone. On the client they never touch the
+  project store (which syncs to `project_rows`, readable by every member) and
+  never go into an export. `RESTRICTED_PAGES` in `roles.js` offers the page to
+  the client-partner job role only — page hiding, not the protection. A decision
+  is signed against `decisionContent`; move a score or a number and it lapses.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

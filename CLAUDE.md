@@ -60,6 +60,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/useCaseModel.js`, `useCaseStore.js`, `useCaseSync.js`, `useCasesPage.js` | Use Cases & ROI: weighted evaluator, monthly ROI model (ROI %, payback, NPV, low/expected/high), signed go/no-go, conversion to a project, value realisation, and the Client View (`clientPortfolio`). Own storage key and own sync lane to the `use_cases` table; client records are rows there too, `type: 'client'` |
 | `js/serviceDesk.js`, `billing.js` | incident SLA clocks (priority targets, overridable per project) and billing collection state, days to collect. Pure |
 | `js/deals.js` | the sales pipeline on use cases: stage, value, delivery cost, margin, probability, weighted forecast by quarter, win rate. Pure |
+| `js/quotes.js` | quotes on a use case (lines, discounts, tax, validity, versions), signed acceptance, and the standalone proposal HTML. Pure |
 | `js/journey.js` | one use case from sale to success: seven steps read off the deal, the decision and the project it became. Stores nothing |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
@@ -156,6 +157,15 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   `unsupported` and forecast as Negotiation. A signed no-go loses it. Win rate
   and margin are `null` until something has closed. Conversion copies only
   the deal value, as the project's `contractValue`, and says so in the preview.
+- **A quote sets the deal's value once it is with the client.** `governingQuote`
+  picks the accepted quote, else the latest sent one still in date; only then
+  does the typed `deal.value` count. Acceptance is the client's signature over
+  `quoteContent`, so editing the lines un-accepts it; a sent quote past
+  `validUntil` is expired, not pipeline. The proposal (`proposalHtml`) is a
+  standalone, script-free page that escapes every value and never carries
+  delivery cost, margin or probability. Quotes live on the use case, so they
+  get its row level security; conversion copies the governing quote's payment
+  terms along with the value.
 - **The journey is a view, never a record.** Client View lays each use case's
   sale, decision, delivery, billing, support, account health and realised
   value side by side from where each is kept; `none` is grey (nothing

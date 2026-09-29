@@ -109,6 +109,11 @@ own cost figures. They are stored in their own table, `use_cases`, and:
   problem, sponsor, value and fit scores, the planned budget and the deal
   value as the contract value — never the benefits, rates, ROI, NPV,
   assumptions, signatures, delivery cost or margin.
+- **Quotes are part of the use case too**, with the same protection. The
+  downloadable proposal is a file on the partner's device the moment it is
+  saved; it leaves out delivery cost, margin and probability by construction,
+  and a test holds it to that. A quote's acceptance is a signature record: it
+  shows the quote has not changed since, not that the signer is who they typed.
 - **The sales pipeline is part of the use case.** Deal value, delivery cost,
   margin and probability are fields on the use case row, so they have the same
   protection. The contract value a project carries after conversion is project

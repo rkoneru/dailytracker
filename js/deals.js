@@ -15,8 +15,13 @@
 // overridden for an open deal; the forecast weights each deal by it, and
 // reports the unweighted total beside it, because a weighted pipeline read on
 // its own hides how much of it is a long shot.
+//
+// Once a quote is with the client, the deal is worth what the quote says —
+// the accepted one if there is one, else the latest still open — and the
+// typed value stands aside (js/quotes.js).
 
 import { decisionOf, CLIENT } from './useCaseModel.js';
+import { governingQuote, quoteTotals } from './quotes.js';
 
 export const DEAL_STAGES = [
   { id: 'Lead', n: 1, probability: 0.1 },
@@ -52,7 +57,9 @@ export function quarterOf(date) {
  */
 export function dealOf(uc, today = new Date()) {
   const d = uc.deal || {};
-  const value = num(d.value);
+  // A quote with the client decides the value; the typed one is for before.
+  const quote = governingQuote(uc, today);
+  const value = quote ? quoteTotals(quote).total : num(d.value);
   if (!d.stage && value === null) return null;
   const cost = num(d.deliveryCost);
   const decision = decisionOf(uc);
@@ -72,6 +79,7 @@ export function dealOf(uc, today = new Date()) {
   return {
     stage,
     value,
+    valueFrom: quote ? `${quote.number} v${quote.version || 1}` : '',
     cost,
     margin,
     marginPct: margin !== null && value > 0 ? margin / value : null,

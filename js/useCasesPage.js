@@ -37,10 +37,14 @@ import {
 } from './useCaseModel.js';
 import { DEAL_STAGES, LOST, dealOf, pipeline } from './deals.js';
 import { journeyOf, JOURNEY_STEPS } from './journey.js';
+import {
+  quoteTotals, quoteContent, quoteState, nextQuoteNumber, reviseQuote, proposalHtml, proposalFileName, governingQuote,
+} from './quotes.js';
 import { toLocalISO } from './dates.js';
 
 let selectedId = '';
 let selectedClientId = '';
+let selectedQuoteId = '';
 let editing = false;
 
 const money = (n) => (n === null || n === undefined ? '—' : `$${Math.round(n).toLocaleString()}`);
@@ -132,9 +136,13 @@ function renderDeal(uc) {
     el('option', { value: LOST, text: 'Lost', selected: d.stage === LOST }),
   ]);
   const defaultP = DEAL_STAGES.find((s) => s.id === (d.stage || 'Lead'))?.probability;
+  const fromQuote = dealOf(uc)?.valueFrom || '';
   host.replaceChildren(...[
     el('label', { class: 'charter-field' }, [el('span', { class: 'charter-field__label', text: 'Stage' }), stage]),
-    field('Deal value', 'deal.value', uc, { type: 'number', placeholder: 'What the client pays us' }),
+    fromQuote
+      ? el('label', { class: 'charter-field' }, [el('span', { class: 'charter-field__label', text: 'Deal value' }),
+        el('input', { class: 'field-input', id: 'uc-deal-value-quoted', disabled: true, value: `${money(dealOf(uc).value)} — from ${fromQuote}` })])
+      : field('Deal value', 'deal.value', uc, { type: 'number', placeholder: 'What the client pays us' }),
     field('Our delivery cost', 'deal.deliveryCost', uc, { type: 'number', placeholder: 'What it costs us to deliver' }),
     field('Probability %', 'deal.probability', uc, { type: 'number', placeholder: defaultP === undefined ? '' : `${Math.round(defaultP * 100)} by stage` }),
     field('Expected close', 'deal.expectedClose', uc, { type: 'date' }),
@@ -264,7 +272,7 @@ function renderEvalResult(uc) {
 }
 
 function linesTable(uc, key, columns, addLabel, prefix = 'uc') {
-  const lines = uc[key] || [];
+  const lines = getPath(uc, key) || [];
   return el('div', { class: 'uc-lines' }, [
     el('div', { class: 'table-scroll' }, [el('table', { class: 'data-table' }, [
       el('thead', {}, [el('tr', {}, [...columns.map((c) => el('th', { class: c.cls || '', text: c.label })), el('th', { class: 'col-action no-print' })])]),
@@ -362,6 +370,141 @@ function renderRoiResults(uc) {
       ])
       : el('p', { class: 'hint', text: 'Every line has a source.' }),
   );
+}
+
+// ---------- Quote ----------
+
+const QUOTE_STATE_TEXT = {
+  accepted: 'Accepted — signed by the client',
+  changed: 'Changed since the client accepted it: the acceptance no longer counts. Revise it, or put it back.',
+  expired: 'Expired: sent, and past its valid-until date. Revise it to reissue.',
+  sent: 'With the client',
+  declined: 'Declined by the client',
+  superseded: 'Superseded by a later version',
+  draft: 'Draft — not sent',
+};
+
+function quoteIndex(uc) {
+  const quotes = uc.quotes || [];
+  const i = quotes.findIndex((q) => q.id === selectedQuoteId);
+  return i >= 0 ? i : quotes.length - 1;
+}
+
+function renderQuote(uc) {
+  const host = document.getElementById('uc-quote');
+  if (!host) return;
+  const quotes = uc.quotes || [];
+  const i = quoteIndex(uc);
+  const q = quotes[i];
+  if (!q) {
+    host.replaceChildren(
+      el('p', { class: 'hint', text: 'No quote yet. Once one is sent, the deal is worth what it says.' }),
+      el('button', { type: 'button', class: 'btn btn-small btn-primary', 'data-q-action': 'new', text: '+ New quote' }),
+    );
+    return;
+  }
+  selectedQuoteId = q.id;
+  const base = `quotes.${i}`;
+  const locked = q.status === 'Superseded';
+  const bar = el('div', { class: 'uc-bar no-print' }, [
+    el('label', { class: 'field-label uc-bar__picker' }, [document.createTextNode('Quote'),
+      el('select', { class: 'field-input', id: 'uc-quote-picker' }, quotes.map((x) => el('option', {
+        value: x.id, selected: x.id === q.id,
+        text: `${x.number} v${x.version || 1} · ${quoteState(x)} · ${money(quoteTotals(x).total)}`,
+      })))]),
+    el('button', { type: 'button', class: 'btn btn-small', 'data-q-action': 'new', text: '+ New quote' }),
+    el('button', { type: 'button', class: 'btn btn-small', 'data-q-action': 'revise', disabled: locked, text: 'Revise' }),
+    el('button', { type: 'button', class: 'btn btn-small btn-primary', 'data-q-action': 'download', text: 'Download proposal' }),
+  ]);
+  host.replaceChildren(
+    bar,
+    el('div', { class: 'charter-grid' }, [
+      field('Status', `${base}.status`, uc, { options: (locked ? ['Superseded'] : ['Draft', 'Sent', 'Declined']).map((s) => [s, s]) }),
+      field('Issued', `${base}.issued`, uc, { type: 'date' }),
+      field('Valid until', `${base}.validUntil`, uc, { type: 'date' }),
+      field('Payment terms (days)', `${base}.paymentTermsDays`, uc, { type: 'number', placeholder: '30' }),
+      field('Discount on the total %', `${base}.discountPct`, uc, { type: 'number' }),
+      field('Tax %', `${base}.taxPct`, uc, { type: 'number' }),
+      field('Terms', `${base}.terms`, uc, { long: true, placeholder: 'What is included, what is not, and anything the price depends on' }),
+    ]),
+    el('h3', { class: 'uc-sub', text: 'Lines' }),
+    linesTable(uc, `${base}.lines`, [
+      { field: 'description', label: 'Item', render: input('text', { placeholder: 'What they are buying' }) },
+      { field: 'qty', label: 'Qty', cls: 'col-num', render: input('number', { min: '0', step: '1' }) },
+      { field: 'unitPrice', label: 'Unit price', cls: 'col-num', render: input('number', { min: '0', step: '100' }) },
+      { field: 'discountPct', label: 'Discount %', cls: 'col-num', render: input('number', { min: '0', max: '100', step: '1' }) },
+    ], '+ Add line'),
+    el('div', { id: 'uc-quote-read' }),
+  );
+  host.querySelectorAll('input, select, textarea').forEach((n) => { if (locked && !n.closest('.uc-bar')) n.disabled = true; });
+  renderQuoteRead(uc);
+}
+
+function renderQuoteRead(uc) {
+  const host = document.getElementById('uc-quote-read');
+  const q = (uc.quotes || [])[quoteIndex(uc)];
+  if (!host || !q) return;
+  const t = quoteTotals(q);
+  const state = quoteState(q);
+  const cost = Number(uc.deal?.deliveryCost);
+  const margin = t.net !== null && uc.deal?.deliveryCost !== '' && uc.deal?.deliveryCost !== undefined && Number.isFinite(cost) ? t.net - cost : null;
+  const canAccept = state === 'sent' || state === 'changed';
+  host.replaceChildren(...[
+    el('dl', { class: 'uc-summary', id: 'uc-quote-totals' }, [
+      ['Subtotal', money(t.subtotal)],
+      ...(t.discount ? [['Discount', `−${money(t.discount)}`]] : []),
+      ...(t.tax ? [['Tax', money(t.tax)]] : []),
+      ['Total', money(t.total)],
+      ['Margin before tax (ours, never in the proposal)', margin === null ? 'Needs a delivery cost on Pipeline' : `${money(margin)}${t.net ? ` (${pct(margin / t.net)})` : ''}`],
+    ].flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })])),
+    el('p', { class: `uc-verdict is-${state === 'accepted' ? 'go' : state === 'changed' || state === 'expired' ? 'stale' : ''}`, id: 'uc-quote-state', text: QUOTE_STATE_TEXT[state] }),
+    q.acceptance ? signatureView(q.acceptance, quoteContent(q)) : null,
+    canAccept ? el('button', { type: 'button', class: 'btn btn-small btn-primary no-print', 'data-q-action': 'accept', text: 'Record the client’s acceptance…' }) : null,
+  ].filter(Boolean));
+}
+
+async function quoteDo(uc, action) {
+  const quotes = uc.quotes || [];
+  const q = quotes[quoteIndex(uc)];
+  if (action === 'new') {
+    const created = {
+      id: `q${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      number: nextQuoteNumber(uc), version: 1, status: 'Draft',
+      issued: toLocalISO(new Date()), validUntil: '', paymentTermsDays: 30, discountPct: '', taxPct: '', terms: '',
+      lines: [{ description: uc.name || '', qty: 1, unitPrice: '', discountPct: '' }],
+      acceptance: null, createdAt: Date.now(),
+    };
+    uc.quotes = [...quotes, created];
+    selectedQuoteId = created.id;
+  } else if (action === 'revise' && q) {
+    const [old, revised] = reviseQuote(q);
+    uc.quotes = [...quotes.map((x) => (x.id === q.id ? old : x)), revised];
+    selectedQuoteId = revised.id;
+  } else if (action === 'download' && q) {
+    const html = proposalHtml(uc, q, { formatDate, preparedBy: uc.partner || me() });
+    const a = el('a', { href: URL.createObjectURL(new Blob([html], { type: 'text/html' })), download: proposalFileName(uc, q) });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('Proposal downloaded. Open it and print to PDF to send it.', 'success');
+    return;
+  } else if (action === 'accept' && q) {
+    const t = quoteTotals(q);
+    const signature = await requestSignature({
+      title: `Accept ${q.number} v${q.version || 1}`,
+      statement: `I accept quote ${q.number} version ${q.version || 1} for ${money(t.total)}${uc.client ? ` on behalf of ${uc.client}` : ''}, on the lines and terms it sets out.`,
+      summary: [['Quote', `${q.number} v${q.version || 1}`], ['Total', money(t.total)], ['Valid until', q.validUntil ? formatDate(q.validUntil) : 'not set'], ['Payment terms', q.paymentTermsDays ? `${q.paymentTermsDays} days` : 'not set']],
+      content: quoteContent(q),
+      name: uc.sponsor || '',
+      confirmLabel: 'Record acceptance',
+    });
+    if (!signature) return;
+    q.acceptance = signature;
+  } else {
+    return;
+  }
+  commit(uc);
+  renderUseCases();
 }
 
 function renderDecision(uc) {
@@ -484,6 +627,7 @@ function renderPicker() {
 
 function refreshDerived(uc) {
   renderDealRead(uc);
+  renderQuoteRead(uc);
   renderEvalResult(uc);
   renderRoiResults(uc);
   renderSteps(uc);
@@ -518,6 +662,7 @@ export function renderUseCases() {
   renderEvaluate(uc);
   renderEvalResult(uc);
   renderRoi(uc);
+  renderQuote(uc);
   renderDecision(uc);
   renderValue(uc);
   renderSteps(uc);
@@ -742,11 +887,14 @@ async function convert(uc) {
   const model = roiModel(uc);
   const scores = uc.scores || {};
   const dealValue = dealOf(uc)?.value ?? null;
+  const quote = governingQuote(uc);
+  const terms = quote && quote.paymentTermsDays !== '' && quote.paymentTermsDays !== undefined ? Number(quote.paymentTermsDays) : null;
   const ok = await confirmAction({
     title: `Turn “${uc.name || 'this use case'}” into a project?`,
     message: `Copied into the new project: its name, the outcome sought as the objective and success criteria, the problem as the business case, `
       + `the client sponsor, the value and fit scores, the expected total cost (${money(model?.expected.totalCost)}) as the planned budget`
-      + `${dealValue !== null ? `, and the deal value (${money(dealValue)}) as the contract value` : ''}. `
+      + `${dealValue !== null ? `, and the deal value (${money(dealValue)}) as the contract value` : ''}`
+      + `${terms !== null ? `, with the quote’s ${terms}-day payment terms` : ''}. `
       + 'Not copied: the benefits, rates, ROI, NPV, assumptions, signatures, delivery cost and margin — they stay here, with the client partners. '
       + `Everything in a project can be read by every member of it, so the budget${dealValue !== null ? ' and contract value' : ''} will be visible to the whole team.`,
     confirmLabel: 'Create the project',
@@ -762,6 +910,7 @@ async function convert(uc) {
     charterFit: scores.fit ? String(scores.fit) : '',
     budgetPlanned: model ? model.expected.totalCost : 0,
     ...(dealValue !== null ? { contractValue: dealValue } : {}),
+    ...(terms !== null && Number.isFinite(terms) ? { paymentTermsDays: terms } : {}),
   });
   scheduleSave();
   uc.convertedProjectId = project.id;
@@ -784,7 +933,8 @@ function bind() {
   });
   page.addEventListener('change', (e) => {
     const uc = current();
-    if (e.target.id === 'uc-picker') { selectedId = e.target.value; renderUseCases(); return; }
+    if (e.target.id === 'uc-picker') { selectedId = e.target.value; selectedQuoteId = ''; renderUseCases(); return; }
+    if (e.target.id === 'uc-quote-picker') { selectedQuoteId = e.target.value; renderQuote(uc); return; }
     if (e.target.dataset.uc === 'clientId' && uc) {
       if (e.target.value === '__new') {
         const client = createClient(uc.projectId, { name: uc.client || 'New client', sponsor: '' });
@@ -821,6 +971,8 @@ function bind() {
       setPath(uc, e.target.dataset.uc, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
       commit(uc);
       refreshDerived(uc);
+      // A quote's status changes what can be done with it and what the deal is worth.
+      if (/^quotes\.\d+\.status$/.test(e.target.dataset.uc)) { renderQuote(uc); renderDeal(uc); }
     }
   });
 
@@ -842,19 +994,24 @@ function bind() {
         costs: { label: '', type: 'One-off', amount: '', source: '', assumption: false },
         benefits: { label: '', kind: 'Time saved', hoursPerWeek: '', rate: '', annual: '', source: '', assumption: false },
         actuals: { month: '', amount: '', note: '' },
-      }[add];
-      uc[add] = [...(uc[add] || []), blank];
+        lines: { description: '', qty: 1, unitPrice: '', discountPct: '' },
+      }[add.split('.').pop()];
+      setPath(uc, add, [...(getPath(uc, add) || []), blank]);
       commit(uc);
       renderUseCases();
       return;
     }
     if (remove && uc) {
-      const [key, index] = remove.split('.');
-      uc[key] = (uc[key] || []).filter((_, i) => i !== Number(index));
+      const cut = remove.lastIndexOf('.');
+      const key = remove.slice(0, cut);
+      const index = Number(remove.slice(cut + 1));
+      setPath(uc, key, (getPath(uc, key) || []).filter((_, i) => i !== index));
       commit(uc);
       renderUseCases();
       return;
     }
+    const quoteAction = e.target.closest('[data-q-action]')?.dataset.qAction;
+    if (quoteAction && uc) { quoteDo(uc, quoteAction); return; }
     if (signer && uc) { sign(uc, signer); return; }
     if (e.target.id === 'btn-uc-convert' && uc) { convert(uc); return; }
     if (go && uc) {

@@ -56,6 +56,7 @@ export const NAV_TREE = [
           { id: 'nav-uc-intake', label: 'Intake', page: 'page-usecases', title: 'Use Cases & ROI', section: 'sec-uc-intake' },
           { id: 'nav-uc-evaluate', label: 'Evaluate', page: 'page-usecases', title: 'Use Cases & ROI', section: 'sec-uc-evaluate' },
           { id: 'nav-uc-roi', label: 'ROI', page: 'page-usecases', title: 'Use Cases & ROI', section: 'sec-uc-roi' },
+          { id: 'nav-uc-quote', label: 'Quote', page: 'page-usecases', title: 'Use Cases & ROI', section: 'sec-uc-quote' },
           { id: 'nav-uc-decision', label: 'Decision', page: 'page-usecases', title: 'Use Cases & ROI', section: 'sec-uc-decision' },
           { id: 'nav-uc-client', label: 'Client View', page: 'page-usecases', title: 'Use Cases & ROI', section: 'sec-uc-client' },
           { id: 'nav-uc-value', label: 'Delivery & Value', page: 'page-usecases', title: 'Use Cases & ROI', section: 'sec-uc-value' },

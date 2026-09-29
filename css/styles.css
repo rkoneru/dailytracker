@@ -6078,3 +6078,26 @@ body.login-open { overflow: hidden; }
 .uc-client-notes { margin: 10px 0 0; padding-left: 18px; font-size: 0.85rem; color: var(--color-text-muted); }
 .uc-client-notes li { margin: 3px 0; }
 #uc-client-table tr.is-unmeasured td { color: var(--color-text-muted); }
+
+/* ---------- Incident SLA clocks ---------- */
+.sla-cell { display: flex; flex-direction: column; gap: 3px; min-width: 150px; }
+.sla-clock { font-size: 0.76rem; font-weight: 600; white-space: nowrap; }
+.sla-clock.is-met { color: var(--color-success-text); }
+.sla-clock.is-breached { color: var(--color-danger-text); }
+.sla-clock.is-at-risk { color: var(--color-warn-text); }
+.sla-clock.is-running, .sla-clock.is-unknown { color: var(--color-text-muted); font-weight: 400; }
+.tone-p1 { background: #fee2e2; color: #7f1d1d; }
+.tone-p2 { background: #fef3c7; color: #78350f; }
+.tone-p3 { background: #dbeafe; color: #1e3a8a; }
+.tone-p4 { background: var(--color-bg); color: var(--color-text-muted); }
+.col-datetime .row-input { min-width: 170px; }
+.incident-targets { max-width: 480px; }
+.incident-targets .row-input { max-width: 110px; }
+
+/* Billing: whether the money came in, worked out from the dates. */
+.collection { font-size: 0.78rem; font-weight: 600; white-space: nowrap; color: var(--color-text-muted); }
+.collection.is-paid { color: var(--color-success-text); }
+.collection.is-overdue, .collection.is-late-to-bill { color: var(--color-danger-text); }
+.collection.is-disputed, .collection.is-no-date, .collection.is-ready { color: var(--color-warn-text); }
+.collection.is-planned, .collection.is-awaiting, .collection.is-written-off { font-weight: 400; }
+.billing-terms { max-width: 520px; }

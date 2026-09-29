@@ -168,6 +168,25 @@ const SPINE_CUSTOMERS = (d) => [
   { name: 'Pilot business unit', segment: 'Enterprise', csm: d.roleNames.owner, stage: 'Onboard', arr: '', startArr: '', start: wk(18), renewal: '', adoption: '', nps: '', lastTouch: wk(18), acquisitionCost: '', stageHistory: [{ stage: 'Onboard', at: wk(18) }] },
 ];
 
+const SPINE_INCIDENTS = (d) => [
+  { title: `${d.agent} answered from a superseded policy`, priority: 'P2', service: d.agent, account: 'Pilot business unit', reported: `${wk(9)}T10:15`, responded: `${wk(9)}T11:00`, resolved: `${wk(9)}T16:30`, status: 'Resolved', assignee: d.roleNames.engineer, knownError: '' },
+];
+
+// Billed on the programme's gates, a quarter of the contract up front. The
+// contract is the budget with a margin on it; the margin itself is the deal's,
+// on Use Cases, and never here.
+const contractOf = (d) => Math.round((d.budgetPlanned * 1.3) / 1000) * 1000;
+const SPINE_BILLING = (d) => {
+  const total = contractOf(d);
+  const first = Math.round(total * 0.25);
+  const second = Math.round(total * 0.35);
+  return [
+    { milestone: 'Discovery and design complete', amount: first, due: wk(3), status: 'Paid', invoiceNo: 'INV-1001', invoiced: wk(3), paid: wk(7), owner: d.roleNames.lead },
+    { milestone: 'Pilot live', amount: second, due: wk(8), status: 'Invoiced', invoiceNo: 'INV-1002', invoiced: wk(8), paid: '', owner: d.roleNames.lead },
+    { milestone: 'Scale-out and handover', amount: total - first - second, due: d.dueDate, status: 'Planned', invoiceNo: '', invoiced: '', paid: '', owner: d.roleNames.lead },
+  ];
+};
+
 const SPINE_STAKEHOLDERS = (d) => [
   { name: 'Delivery team', org: 'Internal', role: 'Build and run', influence: 'Medium', interest: 'High', attitude: 'Champion', approach: 'Closest to what the agent actually does. Their disagreements with the eval result are usually right.', owner: d.roleNames.lead },
 ];
@@ -224,6 +243,8 @@ export function agenticSpine(d) {
     dashStatus: d.dashStatus,
     budgetPlanned: d.budgetPlanned,
     budgetActual: d.budgetActual,
+    contractValue: contractOf(d),
+    paymentTermsDays: 30,
     reward: 'Programme bonus at steady-state sign-off.',
 
     charterSponsor: d.sponsor,
@@ -267,6 +288,8 @@ export function agenticSpine(d) {
     documents: [...SPINE_DOCUMENTS(d), ...(d.documents || [])].map((x) => ({ id: uid('doc'), ...x })),
     vendors: [...SPINE_VENDORS(d), ...(d.vendors || [])].map((x) => ({ id: uid('vn'), ...x })),
     customers: [...SPINE_CUSTOMERS(d), ...(d.customers || [])].map((x) => ({ id: uid('ac'), ...x })),
+    billing: [...SPINE_BILLING(d), ...(d.billing || [])].map((x) => ({ id: uid('bm'), ...x })),
+    incidents: [...SPINE_INCIDENTS(d), ...(d.incidents || [])].map((x) => ({ id: uid('inc'), ...x })),
     dependencies: [...SPINE_DEPENDENCIES(d), ...(d.dependencies || [])].map((x) => ({ id: uid('dp'), ...x })),
     serviceLevels: [...SPINE_SLA(d), ...(d.serviceLevels || [])].map((x) => ({ id: uid('sl'), ...x })),
     sac: [...SPINE_SAC(d), ...(d.sac || [])].map((x) => ({ verified: '', ...x, id: uid('sa') })),

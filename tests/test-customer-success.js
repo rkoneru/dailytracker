@@ -55,10 +55,16 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
      [rules.nrr.nrr, rules.nrr.grr, rules.nrr.customerRetention], [0.75, 0.5, 0.5]);
 
   console.log('\n--- the page, on the Customer Success template ---');
-  await page.evaluate(async () => {
-    const s = await import('/js/state.js');
-    s.createProject({ name: 'CS', templateKey: 'customer-success', methodology: 'project' });
+  // Started in the page and waited on by a flag, not awaited through
+  // evaluate: building the template renders a great deal, and under a
+  // parallel run Playwright has dropped the promise it was holding for it.
+  await page.evaluate(() => {
+    import('/js/state.js').then((s) => {
+      s.createProject({ name: 'CS', templateKey: 'customer-success', methodology: 'project' });
+      window.__csReady = true;
+    });
   });
+  await page.waitForFunction(() => window.__csReady === true);
   await page.waitForTimeout(700);
   await openDestination(page, 'tab-customers');
   await page.waitForTimeout(400);

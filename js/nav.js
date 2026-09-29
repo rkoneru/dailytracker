@@ -119,6 +119,7 @@ export const NAV_TREE = [
           { id: 'nav-scope-baseline', label: 'Scope Baseline', page: 'page-scope', title: 'Scope & Contract', section: 'sec-scope-baseline' },
           { id: 'nav-deliverables', label: 'Deliverables', page: 'page-scope', title: 'Scope & Contract', section: 'sec-deliverables' },
           { id: 'nav-change-requests', label: 'Change Requests', page: 'page-scope', title: 'Scope & Contract', section: 'sec-change-requests' },
+          { id: 'nav-billing', label: 'Billing', page: 'page-scope', title: 'Scope & Contract', section: 'sec-billing' },
           { id: 'nav-documents', label: 'Documents', page: 'page-scope', title: 'Scope & Contract', section: 'sec-documents' },
         ],
       },
@@ -161,6 +162,7 @@ export const NAV_TREE = [
         title: 'Service & Support',
         children: [
           { id: 'nav-service-levels', label: 'Service Levels', page: 'page-service', title: 'Service & Support', section: 'sec-service-levels' },
+          { id: 'nav-incidents', label: 'Incidents', page: 'page-service', title: 'Service & Support', section: 'sec-incidents' },
           { id: 'nav-sac', label: 'Go-Live Checklist', page: 'page-service', title: 'Service & Support', section: 'sec-sac' },
           { id: 'nav-releases', label: 'Releases', page: 'page-service', title: 'Service & Support', section: 'sec-releases' },
           { id: 'nav-changes', label: 'Change Control', page: 'page-service', title: 'Service & Support', section: 'sec-changes' },
@@ -230,6 +232,7 @@ export const NAV_TREE = [
           { id: 'nav-kpi-quality', label: 'Quality & Resource', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-quality' },
           { id: 'nav-kpi-improvement', label: 'Improvement', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-improvement' },
           { id: 'nav-kpi-customer', label: 'Customer Success', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-customer' },
+          { id: 'nav-kpi-service', label: 'Service & Support', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-service' },
           { id: 'nav-kpi-basis', label: 'How These Work', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-basis' },
           { id: 'nav-kpi-framework', label: 'PM Framework', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-framework' },
           { id: 'nav-kpi-ceo', label: 'Business & Leadership', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-ceo' },

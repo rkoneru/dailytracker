@@ -47,17 +47,18 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/mobileNav.js` | the phone bottom bar; fills its slots from `NAV_TREE` + `roleShows` |
 | `js/tabs.js` | in-page tabs; `PAGE_TABS` maps a page to its sections |
 | `js/router.js` | hash routing and deep links |
-| `js/register.js` + `js/registerDefs.js` | one table engine, 17 declarative registers (Documents and Vendors among them); a `link` column opens only http(s); `readonly` columns, `custom` cells and `rowActions` for pages that draw their own |
+| `js/register.js` + `js/registerDefs.js` | one table engine, 19 declarative registers (Documents, Vendors, Incidents and Billing among them); a `datetime` column is a local `YYYY-MM-DDTHH:MM`; a `link` column opens only http(s); `readonly` columns, `custom` cells and `rowActions` for pages that draw their own |
 | `js/sync*.js` | `syncModel` (wire shape), `syncMerge` (pure three-way merge), `sync` (network) |
 | `js/supabase.js` | hand-rolled PostgREST + GoTrue over `fetch` |
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
 | `js/login.js`, `demoAccounts.js` | the sign-in screen and the six invented people behind it (one of them a client partner) |
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
-| `js/kpi.js`, `kpiPage.js` | the 35 indicators in seven categories, numbered in display order; `ceoKpis.js` maps a company-level (CEO) KPI set onto them and says why the rest are not held |
+| `js/kpi.js`, `kpiPage.js` | the 39 indicators in eight categories, numbered in display order; `ceoKpis.js` maps a company-level (CEO) KPI set onto them and says why the rest are not held |
 | `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
 | `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks; WBS codes derived from the order |
 | `js/customerSuccess.js`, `customerSuccessPage.js`, `sampleCustomers.js` | the CSM lifecycle (six ordered stages with gates, Churned as an exit), health score, retention/NRR/NPS/LTV/CAC, and the Customer Success page over the `customers` register |
 | `js/useCaseModel.js`, `useCaseStore.js`, `useCaseSync.js`, `useCasesPage.js` | Use Cases & ROI: weighted evaluator, monthly ROI model (ROI %, payback, NPV, low/expected/high), signed go/no-go, conversion to a project, value realisation, and the Client View (`clientPortfolio`). Own storage key and own sync lane to the `use_cases` table; client records are rows there too, `type: 'client'` |
+| `js/serviceDesk.js`, `billing.js` | incident SLA clocks (priority targets, overridable per project) and billing collection state, days to collect. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
 | `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
@@ -148,6 +149,16 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   leaving out Park and No-go), and checks first-year cost against the client's
   budget with shared costs taken first. Client records share the use case
   store and table so they get the same row level security.
+- **Incident SLAs and invoice states are derived, never stored.** An incident's
+  two clocks are arithmetic on reported/responded/resolved against its
+  priority's targets (`targetsOf`); an open one is judged against now, so it
+  can be breached before it closes. Clocks run in calendar hours, and the page
+  says so. A billing milestone is overdue because its payment terms ran out
+  from the invoice date, never because someone picked it. No incidents is no
+  SLA, not 100%; nothing paid is no days-to-collect, not zero. Open P1/P2
+  incidents against an account lower its customer health. The contract value
+  is project data every member reads; the deal margin is not, and stays with
+  the use case.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

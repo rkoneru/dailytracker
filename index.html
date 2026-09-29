@@ -655,6 +655,11 @@
             <span class="kpi__value">0</span>
             <span class="kpi__sub">&mdash;</span>
           </div>
+          <div class="kpi" id="scope-count-billing">
+            <span class="kpi__label">Billed of contract</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
           <div class="kpi" id="scope-count-creep">
             <span class="kpi__label">Scope creep</span>
             <span class="kpi__value">&mdash;</span>
@@ -678,6 +683,24 @@
             Anything that has moved since, and is not covered by an approved change request, is scope creep.
           </p>
           <div id="scope-baseline-body"></div>
+        </section>
+
+        <section class="card" id="sec-billing-terms">
+          <div class="card__head"><h2>Contract &amp; Payment Terms</h2></div>
+          <p class="hint">
+            What the contract is worth and how long the client has to pay. The billing plan below should add up to the
+            contract; if it does not, the difference is shown. The margin on the deal is not here &mdash; that stays with the
+            use case, where only client partners can see it.
+          </p>
+          <div class="planner-fields">
+            <label class="field-label">Contract value
+              <input type="number" min="0" step="1000" class="field-input" data-billing-field="contractValue">
+            </label>
+            <label class="field-label">Payment terms (days)
+              <input type="number" min="0" step="1" class="field-input" data-billing-field="paymentTermsDays" placeholder="30">
+            </label>
+          </div>
+          <dl class="uc-summary" id="billing-summary"></dl>
         </section>
 
         <div id="scope-registers"></div>
@@ -778,6 +801,11 @@
         </header>
 
         <section class="kpi-row" aria-label="Service health">
+          <div class="kpi" id="svc-count-incidents">
+            <span class="kpi__label">Incidents open</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
           <div class="kpi" id="svc-count-sla">
             <span class="kpi__label">Service levels breached</span>
             <span class="kpi__value">0</span>
@@ -801,6 +829,15 @@
         </section>
 
         <div id="service-registers"></div>
+
+        <section class="card" id="sec-incident-targets">
+          <div class="card__head"><h2>Response &amp; Resolution Targets</h2></div>
+          <p class="hint">
+            Hours to first response and to resolution, by priority. Every incident&rsquo;s SLA column is judged against these,
+            in calendar hours: overnight and weekends count. Blank uses the default shown.
+          </p>
+          <div id="incident-targets"></div>
+        </section>
       </div>
     </section>
 
@@ -1308,7 +1345,7 @@
             <span class="dash-header__badge" id="kpi-coverage">&mdash;</span>
           </div>
           <p class="hint report-subtitle">
-            Indicators for schedule, cost, scope, risk, quality, improvement and customer success &mdash;
+            Indicators for schedule, cost, scope, risk, quality, improvement, customer success and service &mdash;
             every one of them worked out from the plan and the registers, none of them typed in. An
             indicator with nothing behind it reads &ldquo;not measured&rdquo; and says which field
             would fill it, rather than showing a number nobody earned. A card whose number has
@@ -1371,6 +1408,13 @@
             <span class="hint">Read from the accounts on Customer Success.</span>
           </div>
           <div class="kpi-grid" id="kpi-grid-customer"></div>
+        </section>
+        <section class="card" id="sec-kpi-service">
+          <div class="card__head">
+            <h2>Service &amp; Support KPIs</h2>
+            <span class="hint">Read from the incidents on Service &amp; Support, in calendar hours.</span>
+          </div>
+          <div class="kpi-grid" id="kpi-grid-service"></div>
         </section>
 
         <section class="card card--quiet" id="sec-kpi-basis">

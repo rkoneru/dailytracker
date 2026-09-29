@@ -28,7 +28,8 @@ const { eq, done } = createChecks();
   await page.click('#tab-scope');
   await page.waitForTimeout(600);
   eq('scope & contract', await page.$$eval('#page-scope .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Charter', 'Scope Baseline & Creep', 'Deliverables', 'Change Requests (Scope, Time, Cost)', 'Documents (Repository Index)',
+     ['Charter', 'Scope Baseline & Creep', 'Contract & Payment Terms', 'Deliverables', 'Change Requests (Scope, Time, Cost)',
+      'Billing Milestones & Invoices', 'Documents (Repository Index)',
       'Change Request Workflow', 'Approval Route']);
 
   await page.click('#tab-people');
@@ -39,8 +40,8 @@ const { eq, done } = createChecks();
   await page.click('#tab-service');
   await page.waitForTimeout(600);
   eq('service & support', await page.$$eval('#page-service .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Service Levels (SLA / OLA)', 'Go-Live Checklist (Service Acceptance)',
-      'Releases & Deployments', 'Change Control (CAB)', 'Known Issues & Workarounds (KEDB)']);
+     ['Service Levels (SLA / OLA)', 'Incidents', 'Go-Live Checklist (Service Acceptance)',
+      'Releases & Deployments', 'Change Control (CAB)', 'Known Issues & Workarounds (KEDB)', 'Response & Resolution Targets']);
 
   await page.click('#tab-improve');
   await page.waitForTimeout(600);

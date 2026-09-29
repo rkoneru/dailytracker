@@ -42,13 +42,13 @@ const project = (extra = {}) => ({
 
 // ---------- the catalogue is the whole library ----------
 
-eq('thirty-five indicators', KPI_DEFS.length, 35);
-eq('numbered 1..35 in the order shown', KPI_DEFS.map((d) => d.n), Array.from({ length: 35 }, (_, i) => i + 1));
-eq('ids are unique', new Set(KPI_DEFS.map((d) => d.id)).size, 35);
-eq('seven categories', KPI_CATEGORIES.map((c) => c.id),
-   ['schedule', 'cost', 'scope', 'risk', 'quality', 'improvement', 'customer']);
+eq('thirty-nine indicators', KPI_DEFS.length, 39);
+eq('numbered 1..39 in the order shown', KPI_DEFS.map((d) => d.n), Array.from({ length: 39 }, (_, i) => i + 1));
+eq('ids are unique', new Set(KPI_DEFS.map((d) => d.id)).size, 39);
+eq('eight categories', KPI_CATEGORIES.map((c) => c.id),
+   ['schedule', 'cost', 'scope', 'risk', 'quality', 'improvement', 'customer', 'service']);
 eq('one home each', KPI_CATEGORIES.map((c) => KPI_DEFS.filter((d) => d.cat === c.id).length),
-   [4, 5, 5, 5, 5, 2, 9]);
+   [4, 6, 5, 5, 5, 2, 9, 3]);
 eq('every one says what fills it in', KPI_DEFS.every((d) => d.needs && d.formula && d.what), true);
 eq('every KRI names a real, computed KPI',
    KPI_DEFS.filter((d) => d.kri).every((d) => typeof d.kri === 'string' && d.kri.length > 0), true);

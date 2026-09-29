@@ -394,6 +394,35 @@ export const KNOWN_ERRORS = {
 
 // ---------- Which page each register lives on ----------
 //
+// The billing plan: each milestone the client is invoiced against. Whether an
+// invoice is overdue is worked out from its date and the payment terms
+// (js/billing.js), which is what the Collection column shows.
+export const BILLING = {
+  key: 'billing',
+  id: 'billing',
+  title: 'Billing Milestones & Invoices',
+  rowLabel: 'billing milestone',
+  addLabel: '+ Add Billing Milestone',
+  refPrefix: 'BM',
+  blurb: 'What the client is invoiced, when, and whether it has been paid. An invoice unpaid past the payment terms is overdue — worked out from its date, not typed.',
+  emptyText: 'No billing milestones yet.',
+  searchFields: ['milestone', 'invoiceNo', 'owner'],
+  searchPlaceholder: 'Search milestone, invoice or owner…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'milestone', label: 'Billing milestone', placeholder: 'What triggers the invoice', cls: 'col-wide' },
+    { field: 'amount', label: 'Amount', type: 'number', step: 1000 },
+    { field: 'due', label: 'Billable from', type: 'date' },
+    { field: 'status', label: 'Status', type: 'select', tone: true, options: ['Planned', 'Ready to invoice', 'Invoiced', 'Paid', 'Disputed', 'Written off'] },
+    { field: 'invoiceNo', label: 'Invoice', placeholder: 'Number' },
+    { field: 'invoiced', label: 'Invoiced', type: 'date' },
+    { field: 'paid', label: 'Paid', type: 'date' },
+    { field: 'owner', label: 'Owner', type: 'person', placeholder: 'Who raises it' },
+    { field: '_collection', label: 'Collection', type: 'custom' },
+  ],
+  newRow: () => ({ milestone: '', amount: '', due: '', status: 'Planned', invoiceNo: '', invoiced: '', paid: '', owner: '' }),
+};
+
 // The documents themselves live wherever the organisation keeps documents — a
 // shared drive, SharePoint, Confluence. This register is the index to them:
 // which version is current, who owns it and when it is next due a look. It
@@ -492,13 +521,48 @@ export const CUSTOMERS = {
   }),
 };
 
+// The service desk's queue. Each incident's priority sets the two clocks it is
+// held to, and whether it met them is worked out from the three times below
+// (js/serviceDesk.js) — never chosen from a list. `account` names the
+// customer it hit, which is how an open P1 reaches that account's health.
+export const INCIDENTS = {
+  key: 'incidents',
+  id: 'incidents',
+  title: 'Incidents',
+  rowLabel: 'incident',
+  addLabel: '+ Log Incident',
+  refPrefix: 'INC',
+  blurb: 'What broke, for whom, and how fast it was answered and fixed. The SLA column is worked out from the times and the priority targets below, in calendar hours — an open incident past its target is already breached.',
+  emptyText: 'No incidents logged.',
+  searchFields: ['title', 'service', 'account', 'assignee'],
+  searchPlaceholder: 'Search incident, service, account or assignee…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'title', label: 'Incident', placeholder: 'What the user reported', cls: 'col-wide' },
+    { field: 'priority', label: 'Priority', type: 'select', tone: true, options: ['P1', 'P2', 'P3', 'P4'] },
+    { field: 'service', label: 'Service', placeholder: 'What is affected' },
+    { field: 'account', label: 'Account', type: 'person', placeholder: 'Customer affected' },
+    { field: 'reported', label: 'Reported', type: 'datetime' },
+    { field: 'responded', label: 'First response', type: 'datetime' },
+    { field: 'resolved', label: 'Resolved', type: 'datetime' },
+    { field: 'status', label: 'Status', type: 'select', tone: true, options: ['New', 'In Progress', 'On Hold', 'Resolved', 'Closed'] },
+    { field: 'assignee', label: 'Assignee', type: 'person', placeholder: 'Who has it' },
+    { field: 'knownError', label: 'Known error', placeholder: 'KE-01, if it is one' },
+    { field: '_sla', label: 'SLA', type: 'custom' },
+  ],
+  newRow: () => ({
+    title: '', priority: 'P3', service: '', account: '', reported: '', responded: '', resolved: '',
+    status: 'New', assignee: '', knownError: '',
+  }),
+};
+
 // Grouped by who needs them rather than by which body of practice they came
 // from. A tester and a service manager both want the go-live checklist and the
 // known errors; neither opens a stakeholder map. Splitting PMP from ITIL made
 // two piles that no single role reads end to end.
 
 /** Commercial: what was agreed, and what has changed since. Leads only. */
-export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS, DOCUMENTS];
+export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS, BILLING, DOCUMENTS];
 
 /** Relationships: who is on it, who decides, who needs telling. Leads only. */
 // The roster used to be the first of these. It is now a view of the central
@@ -514,7 +578,7 @@ export const CUSTOMER_REGISTERS = [CUSTOMERS];
 export const BLOCKER_REGISTERS = [DEPENDENCIES];
 
 /** Running the thing once it is live: developers, testers, service managers. */
-export const SERVICE_REGISTERS = [SERVICE_LEVELS, SAC, RELEASES, CHANGES, KNOWN_ERRORS];
+export const SERVICE_REGISTERS = [SERVICE_LEVELS, INCIDENTS, SAC, RELEASES, CHANGES, KNOWN_ERRORS];
 
 /**
  * What should change next time. CSI looks forward and a lesson looks back, so
@@ -573,6 +637,8 @@ const WORK_SHAPE = {
   changes: { ownerField: 'implementer', dueField: 'scheduled', closed: ['Implemented', 'Reviewed', 'Closed'] },
   csi: { ownerField: 'owner', dueField: 'target', closed: ['Done', 'Rejected'] },
   knownErrors: { ownerField: 'owner', dueField: '', closed: ['Resolved'] },
+  incidents: { ownerField: 'assignee', dueField: '', closed: ['Resolved', 'Closed'] },
+  billing: { ownerField: 'owner', dueField: 'due', closed: ['Paid', 'Written off'] },
   lessons: { ownerField: 'owner', dueField: '', closed: ['Applied', 'Rejected'] },
   // An account is standing work for its CSM, due at its renewal.
   customers: { ownerField: 'csm', dueField: 'renewal', closed: ['Churned'] },

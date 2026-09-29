@@ -13,6 +13,7 @@ import { el } from './dom.js';
 import { mountRegisters, renderAll, refreshDerivedCells, renderRosterOptions } from './register.js';
 import { CUSTOMER_REGISTERS, CUSTOMERS } from './registerDefs.js';
 import { formatDate } from './dates.js';
+import { severeOpenByAccount } from './serviceDesk.js';
 import { notifyProjectDataChanged } from './taskModel.js';
 import { onSectionShown } from './tabs.js';
 import {
@@ -34,14 +35,24 @@ function accounts() {
 }
 
 function metrics() {
-  return customerMetrics(accounts(), { grossMargin: getState().csGrossMargin });
+  return customerMetrics(accounts(), { grossMargin: getState().csGrossMargin, severeByAccount: severe() });
 }
 
 // ---------- Health, drawn into the register ----------
 
+// Open P1/P2 incidents on Service & Support, by account name: support feeding
+// success, so an account in the middle of an outage is not reported healthy.
+function severe() {
+  return severeOpenByAccount(getState());
+}
+
+function severeFor(account, map = severe()) {
+  return { severeOpen: map.get(String(account.name || '').trim().toLowerCase()) || 0 };
+}
+
 function healthCell(col, account) {
   if (account.stage === CHURNED) return el('span', { class: 'health health--gone', text: 'Churned' });
-  const health = healthOf(account);
+  const health = healthOf(account, new Date(), severeFor(account));
   if (!health) {
     return el('span', { class: 'health health--none', title: 'Needs at least two of adoption, NPS and last touch', text: 'Not enough signal' });
   }
@@ -78,7 +89,7 @@ function renderTiles() {
 // ---------- The lifecycle board ----------
 
 function accountChip(a) {
-  const health = healthOf(a);
+  const health = healthOf(a, new Date(), severeFor(a));
   const tone = health ? { Healthy: 'good', Watch: 'warn', 'At risk': 'bad' }[health.band] : 'none';
   return el('li', { class: `cs-chip cs-chip--${tone}` }, [
     el('span', { class: 'cs-chip__name', text: a.name || 'Unnamed account' }),
@@ -129,7 +140,7 @@ export function renderLifecycle() {
 export function renderRenewals() {
   const body = document.getElementById('cs-renewals-body');
   if (!body) return;
-  const rows = upcomingRenewals(accounts());
+  const rows = upcomingRenewals(accounts(), { severeByAccount: severe() });
   body.replaceChildren(...rows.map(({ account, until }) => el('tr', { class: until < 0 ? 'is-late' : '' }, [
     el('td', { text: account.name || 'Unnamed account' }),
     el('td', { text: account.csm || '—' }),

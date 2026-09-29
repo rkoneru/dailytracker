@@ -40,9 +40,14 @@ function seedProgress(project) {
 // agentic programme start depend on it) and the status date lands within
 // three days of today.
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+// Incident clocks are local date-times, and move with the rest of the template
+// or every sample incident would open years breached.
+const LOCAL_DATETIME = /^(\d{4}-\d{2}-\d{2})(T\d{2}:\d{2})$/;
 
 function shiftDates(value, days) {
   if (typeof value === 'string') {
+    const dt = LOCAL_DATETIME.exec(value);
+    if (dt) return `${shiftDates(dt[1], days)}${dt[2]}`;
     if (!ISO_DAY.test(value)) return value;
     const d = parseDate(value);
     if (!d) return value;

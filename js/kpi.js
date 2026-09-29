@@ -17,6 +17,8 @@ import { hours } from './taskModel.js';
 import { raidScore } from './raid.js';
 import { utilisation, timesheetValue } from './resourceModel.js';
 import { customerMetrics } from './customerSuccess.js';
+import { serviceMetrics, severeOpenByAccount } from './serviceDesk.js';
+import { billingMetrics } from './billing.js';
 import { isApprovedChange, isDecidedChange } from './changeControl.js';
 
 export const KPI_CATEGORIES = [
@@ -27,6 +29,7 @@ export const KPI_CATEGORIES = [
   { id: 'quality', label: 'Quality & Resource', icon: '🧪' },
   { id: 'improvement', label: 'Improvement', icon: '💡' },
   { id: 'customer', label: 'Customer Success', icon: '⭐' },
+  { id: 'service', label: 'Service & Support', icon: '🛠' },
 ];
 
 /**
@@ -73,6 +76,10 @@ export const KPI_DEFS = [
     what: 'Share of billed time left after paying for the people who did it.', unit: 'percent', good: 'high',
     needs: 'Approved timesheets, and a cost and a bill rate for the people on them, on Resources.',
     kri: 'Margin erosion' },
+  { n: 0, id: 'collectionDays', cat: 'cost', name: 'Days to Collect', formula: 'Invoice date → paid date, averaged',
+    what: 'How long the client takes to pay an invoice — the project-level form of receivables turnover.', unit: 'days', good: 'low',
+    needs: 'Billing milestones on Scope & Contract with an invoiced and a paid date.',
+    kri: 'Cash not coming in' },
 
   // --- Scope & change ---
   { n: 9, id: 'requirementsStability', cat: 'scope', name: 'Requirements Stability', formula: 'Unchanged deliverables / total',
@@ -177,6 +184,18 @@ export const KPI_DEFS = [
     what: 'Value earned per unit spent acquiring customers. Three to one is the usual bar.', unit: 'ratio', good: 'high',
     needs: 'Both LTV and CAC.',
     kri: 'Acquisition not paying back' },
+  // --- Service & support (read from the incidents on Service & Support) ---
+  { n: 0, id: 'responseSla', cat: 'service', name: 'Response SLA Met', formula: 'Answered in time / answered',
+    what: 'Share of incidents first answered within their priority\u2019s target.', unit: 'percent', good: 'high',
+    needs: 'Incidents with a priority, a reported time and a first-response time.',
+    kri: 'Customers waiting for an answer' },
+  { n: 0, id: 'resolutionSla', cat: 'service', name: 'Resolution SLA Met', formula: 'Fixed in time / fixed',
+    what: 'Share of incidents resolved within their priority\u2019s target.', unit: 'percent', good: 'high',
+    needs: 'Incidents with a priority, a reported time and a resolved time.',
+    kri: 'Service levels breached' },
+  { n: 0, id: 'mttr', cat: 'service', name: 'Mean Time to Resolve (MTTR)', formula: 'Reported → resolved',
+    what: 'Average calendar hours from an incident being reported to it being fixed.', unit: 'hours', good: 'low',
+    needs: 'Incidents with a reported and a resolved time.' },
   { n: 0, id: 'timeToValue', cat: 'customer', name: 'Time to Value', formula: 'Customer since → Realise value',
     what: 'How long a new customer waits for the outcome they bought.', unit: 'days', good: 'low',
     needs: 'Accounts that have reached Realise value, with a customer-since date.' },
@@ -329,6 +348,7 @@ function costKpis(project, ev) {
     // that way on the card, because a forecast whose assumption is hidden is
     // read as a promise.
     eac: cpi && ev.bac !== null ? ev.bac / cpi : null,
+    collectionDays: billingMetrics(project).dso,
   };
 }
 
@@ -403,9 +423,15 @@ function improvementKpis(project, today) {
   return { lessonsRate, improvementDelivery, _improvement: { lessons: lessons.length, csi: csi.length } };
 }
 
+/** The incidents' numbers, from js/serviceDesk.js, so this page and Service & Support agree. */
+function serviceKpis(project, now) {
+  const m = serviceMetrics(project, now);
+  return { responseSla: m.responseSla, resolutionSla: m.resolutionSla, mttr: m.mttr };
+}
+
 /** The accounts' numbers, from js/customerSuccess.js, so this page and Customer Success agree. */
 function customerKpis(project, today) {
-  const m = customerMetrics(project.customers || [], { grossMargin: project.csGrossMargin, today });
+  const m = customerMetrics(project.customers || [], { grossMargin: project.csGrossMargin, today, severeByAccount: severeOpenByAccount(project) });
   return {
     customerRetention: m.customerRetention,
     churnRate: m.churnRate,
@@ -553,6 +579,7 @@ export function projectKpis(project, { resources = [], absences = [], today = ne
     ...improvementKpis(project, day),
     ...marginKpis(project, resources),
     ...customerKpis(project, day),
+    ...serviceKpis(project, today),
   };
 }
 
@@ -611,6 +638,12 @@ export function kpiTone(def, value) {
     case 'nps': return value >= 30 ? 'good' : value >= 0 ? 'warn' : 'bad';
     case 'ltvCac': return band(3, 1);
     case 'timeToValue': return value <= 90 ? 'good' : value <= 150 ? 'warn' : 'bad';
+    case 'responseSla':
+    case 'resolutionSla': return band(0.95, 0.85);
+    // Against the usual thirty-day terms; a project on different terms sees
+    // its own on the Billing tab, where the overdue invoices are named.
+    case 'collectionDays': return value <= 30 ? 'good' : value <= 45 ? 'warn' : 'bad';
+    case 'mttr': return value <= 8 ? 'good' : value <= 24 ? 'warn' : 'bad';
     case 'scopeChangeRate': return value <= 2 ? 'good' : value <= 5 ? 'warn' : 'bad';
     case 'changeCycleTime': return value <= 5 ? 'good' : value <= 10 ? 'warn' : 'bad';
     case 'riskExposure': return value <= 12 ? 'good' : value <= 30 ? 'warn' : 'bad';

@@ -162,7 +162,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   eq('with no period to step through', await page.isHidden('#btn-prev-period'), true);
   eq('one sheet, for the project that is open', await page.locator('#report-project-cards .rpt-sheet').count(), 1);
   const titles = await page.$$eval('#report-project-cards .rpt-box__title', (e) => e.map((x) => x.textContent));
-  eq('the sections a closure needs', titles, ['WHAT IT SET OUT TO DO', 'DELIVERED', 'SCHEDULE', 'COST', 'SCOPE CHANGES',
+  eq('the sections a closure needs', titles, ['WHAT IT SET OUT TO DO', 'DELIVERED', 'SCHEDULE', 'COST', 'BILLING', 'SCOPE CHANGES',
     'OPEN ITEMS TO HAND OVER', 'LESSONS LEARNED', 'SIGN-OFF', 'ABOUT THIS SUMMARY']);
   const handover = await page.locator('.rpt-box', { hasText: 'OPEN ITEMS TO HAND OVER' }).innerText();
   eq('open tasks are handed over', handover.includes('Influencer contracts'), true);

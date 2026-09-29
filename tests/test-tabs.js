@@ -32,9 +32,9 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
     'tab-planner': ['page-planner', ['Milestones', 'Timeline', 'Gantt', 'Budget & Notes']],
     'tab-tasks': ['page-tasks', ['Task List', 'Priority Board']],
     'tab-raid': ['page-raid', ['Log', 'Dependencies']],
-    'tab-scope': ['page-scope', ['Charter', 'Scope Baseline', 'Deliverables', 'Change Requests', 'Documents']],
+    'tab-scope': ['page-scope', ['Charter', 'Scope Baseline', 'Deliverables', 'Change Requests', 'Billing', 'Documents']],
     'tab-people': ['page-people', ['Team', 'Who Does What', 'Stakeholders & Comms', 'Vendors']],
-    'tab-service': ['page-service', ['Service Levels', 'Go-Live', 'Releases & Change', 'Known Issues']],
+    'tab-service': ['page-service', ['Service Levels', 'Incidents', 'Go-Live', 'Releases & Change', 'Known Issues']],
     'tab-improve': ['page-improve', ['Improvements', 'Lessons']],
     'tab-meetings': ['page-meetings', ['Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']],
     'tab-kpis': ['page-kpis', ['Indicators', 'How They Work', 'PM Framework', 'Business & Leadership']],
@@ -69,8 +69,9 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   console.log('\n--- one section at a time, and the rest are still there ---');
   await page.click('#tab-service .nav-row__label');
   await page.waitForTimeout(500);
-  eq('five registers exist', await page.locator('#page-service .card').count(), 5);
-  // Four tabs for five registers: Releases and Change Control share one.
+  eq('seven cards exist', await page.locator('#page-service .card').count(), 7);
+  // Five tabs for seven cards: Releases and Change Control share one, and the
+  // incident targets sit under Incidents.
   eq('one is showing', (await visibleCards('page-service')).length, 1);
   eq('and it is the first', await visibleCards('page-service'), ['Service Levels (SLA / OLA)']);
   await page.click('#tab-sec-releases');
@@ -153,10 +154,10 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   await page.waitForTimeout(500);
   await page.emulateMedia({ media: 'print' });
   await page.waitForTimeout(300);
-  eq('all five registers print', await page.evaluate(() => {
+  eq('all seven cards print', await page.evaluate(() => {
     const cards = [...document.querySelectorAll('#page-service .card')];
     return cards.filter((c) => getComputedStyle(c).display !== 'none').length;
-  }), 5);
+  }), 7);
   eq('and the strip itself does not',
      await page.evaluate(() => getComputedStyle(document.querySelector('#page-service .page-tabs')).display), 'none');
   await page.emulateMedia({ media: 'screen' });

@@ -19,7 +19,7 @@ export const CEO_KPIS = [
   { area: 'Business', name: 'Gross Margin', fit: 'project', kpi: 'grossMargin', why: 'Margin on delivered, billed time, from approved timesheets and each person’s rates.' },
   { area: 'Business', name: 'Operating Margin', fit: 'none', why: 'Needs company operating costs.' },
   { area: 'Business', name: 'Inventory Turnover', fit: 'none', why: 'No inventory is held here.' },
-  { area: 'Business', name: 'Accounts Receivable Turnover', fit: 'none', why: 'Invoices and payments are not recorded here.' },
+  { area: 'Business', name: 'Accounts Receivable Turnover', fit: 'project', kpi: 'collectionDays', why: 'Days from invoice to payment on this project’s billing milestones — turnover expressed as days, for one contract rather than the whole ledger.' },
   { area: 'Business', name: 'Return on Assets (ROA)', fit: 'none', why: 'Needs a balance sheet.' },
   { area: 'Business', name: 'Return on Equity (ROE)', fit: 'none', why: 'Needs a balance sheet.' },
   { area: 'Business', name: 'Debt to Equity Ratio', fit: 'none', why: 'Needs a balance sheet.' },

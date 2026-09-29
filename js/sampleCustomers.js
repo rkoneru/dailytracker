@@ -65,6 +65,12 @@ export function createCustomerSuccessProgramme() {
       { id: id('ac'), name: 'Litware Media', segment: 'SMB', csm: 'Leo F.', stage: 'Churned', arr: 0, startArr: 24000, start: '2024-06-03', renewal: '2026-06-01', adoption: 22, nps: 4, lastTouch: '2026-05-20', acquisitionCost: 8000,
         stageHistory: h(['Onboard', '2024-06-03'], ['Adopt', '2024-08-12'], ['Renew', '2026-03-02'], ['Churned', '2026-06-01']) },
     ],
+    // Harbour's renewal is already in trouble; an open P2 on it is what the
+    // health score picks up from Service & Support.
+    incidents: [
+      { id: id('inc'), title: 'Harbour: shipment export failing for the EU warehouse', priority: 'P2', service: 'Exports', account: 'Harbour Logistics', reported: '2026-09-18T14:20', responded: '2026-09-18T16:05', resolved: '', status: 'In Progress', assignee: 'Leo F.', knownError: '' },
+      { id: id('inc'), title: 'Contoso: report scheduler skipped a run', priority: 'P3', service: 'Reporting', account: 'Contoso Retail', reported: '2026-09-10T08:00', responded: '2026-09-10T09:30', resolved: '2026-09-11T12:00', status: 'Resolved', assignee: 'Maya O.', knownError: '' },
+    ],
     // Customer success runs on relationships and commercial paper, so the
     // registers that hold those are filled; the rest start empty.
     stakeholders: [

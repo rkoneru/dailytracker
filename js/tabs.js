@@ -58,6 +58,7 @@ export const PAGE_TABS = {
     { id: 'sec-scope-baseline', label: 'Scope Baseline' },
     { id: 'sec-deliverables', label: 'Deliverables' },
     { id: 'sec-change-requests', label: 'Change Requests', sections: ['sec-change-requests', 'sec-cr-workflow', 'sec-cr-route'] },
+    { id: 'sec-billing', label: 'Billing', sections: ['sec-billing-terms', 'sec-billing'] },
     { id: 'sec-documents', label: 'Documents' },
   ],
   'page-people': [
@@ -68,6 +69,7 @@ export const PAGE_TABS = {
   ],
   'page-service': [
     { id: 'sec-service-levels', label: 'Service Levels' },
+    { id: 'sec-incidents', label: 'Incidents', sections: ['sec-incidents', 'sec-incident-targets'] },
     { id: 'sec-sac', label: 'Go-Live' },
     { id: 'sec-releases', label: 'Releases & Change', sections: ['sec-releases', 'sec-changes'] },
     { id: 'sec-known-errors', label: 'Known Issues' },
@@ -109,7 +111,7 @@ export const PAGE_TABS = {
     {
       id: 'sec-kpi-schedule',
       label: 'Indicators',
-      sections: ['sec-kpi-schedule', 'sec-kpi-cost', 'sec-kpi-scope', 'sec-kpi-risk', 'sec-kpi-quality', 'sec-kpi-improvement', 'sec-kpi-customer'],
+      sections: ['sec-kpi-schedule', 'sec-kpi-cost', 'sec-kpi-scope', 'sec-kpi-risk', 'sec-kpi-quality', 'sec-kpi-improvement', 'sec-kpi-customer', 'sec-kpi-service'],
     },
     { id: 'sec-kpi-basis', label: 'How They Work' },
     { id: 'sec-kpi-framework', label: 'PM Framework' },

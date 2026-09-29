@@ -136,6 +136,11 @@ function buildCell(col, row, index, def) {
   if (col.type === 'date') {
     return el('td', { class: `${cls} col-date` }, [inputCell(col, row[col.field], 'date')]);
   }
+  // A local date and time, for clocks that run in hours: when an incident
+  // was reported, answered and fixed.
+  if (col.type === 'datetime') {
+    return el('td', { class: `${cls} col-datetime` }, [inputCell(col, row[col.field], 'datetime-local')]);
+  }
   if (col.type === 'number') {
     const node = inputCell(col, row[col.field], 'number');
     if (col.min != null) node.min = String(col.min);

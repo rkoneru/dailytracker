@@ -18,6 +18,8 @@ import { priorityOf, priorityLabel } from './priority.js';
 import { isApprovedChange, scopeDrift, signOffState } from './changeControl.js';
 import { listUseCases } from './useCaseStore.js';
 import { roiModel, realisation } from './useCaseModel.js';
+import { billingMetrics } from './billing.js';
+import { CLOSED as INCIDENT_CLOSED } from './serviceDesk.js';
 
 // ---------- Report types ----------
 
@@ -333,6 +335,12 @@ function computeClosure(project, p, today) {
       .map((d) => ({ label: d.description || '(untitled dependency)', meta: `Dependency · ${d.status} · ${d.owner || d.party || 'unowned'}` })),
     ...(project.knownErrors || []).filter((k) => k.status !== 'Resolved')
       .map((k) => ({ label: k.symptom || '(untitled known error)', meta: `Known error · ${k.status} · ${k.owner || 'unowned'}` })),
+    // Money still owed, and incidents still open, are handed over like any
+    // other loose end: closing a project does not close either of them.
+    ...(project.billing || []).filter((b) => !['Paid', 'Written off'].includes(b.status))
+      .map((b) => ({ label: b.milestone || '(untitled billing milestone)', meta: `Billing · ${b.status || 'Planned'} · ${money(Number(b.amount) || 0)}${b.invoiceNo ? ` · ${b.invoiceNo}` : ''}` })),
+    ...(project.incidents || []).filter((i) => !INCIDENT_CLOSED.includes(i.status))
+      .map((i) => ({ label: i.title || '(untitled incident)', meta: `Incident · ${i.priority || '—'} · ${i.status || 'New'} · ${i.assignee || 'unassigned'}` })),
     ...(project.vendors || []).filter((v) => v.status === 'Active' || v.status === 'On Hold')
       .map((v) => ({ label: v.name || '(unnamed vendor)', meta: `Vendor contract · ${v.status}${v.end ? ` to ${formatDate(v.end)}` : ''}` })),
   ];
@@ -354,6 +362,7 @@ function computeClosure(project, p, today) {
     changes: changeRequests,
     approvedDays: sum(approved, 'scheduleImpact'),
     approvedCost: sum(approved, 'costImpact'),
+    billing: billingMetrics(project, today),
     labour,
     lessons: project.lessons || [],
     documents: project.documents || [],
@@ -867,6 +876,14 @@ function renderClosure(report, cards, summaryEl) {
           { label: 'Labour, from bookings', meta: c.labour.cost === null ? 'not estimated \u2014 no cost rates' : `${money(c.labour.cost)}${c.labour.unpriced.length ? ` (${c.labour.unpriced.length} unpriced)` : ''}` },
           { label: 'Approved changes', meta: `${money(c.approvedCost)}, ${c.approvedDays} day${c.approvedDays === 1 ? '' : 's'}` },
         ]),
+        listBox('Billing', c.billing.count || c.billing.contract !== null ? [
+          { label: 'Contract value', meta: c.billing.contract === null ? 'never set' : money(c.billing.contract) },
+          { label: 'Billed, including paid', meta: `${money(c.billing.billed)}${c.billing.billedPct !== null ? ` (${Math.round(c.billing.billedPct * 100)}%)` : ''}` },
+          { label: 'Paid', meta: money(c.billing.paid) },
+          { label: 'Still owed', meta: c.billing.outstanding ? `${money(c.billing.outstanding)}${c.billing.overdueCount ? `, ${money(c.billing.overdueAmount)} overdue` : ''}` : 'nothing' },
+          { label: 'Not yet billed', meta: c.billing.contract === null ? '\u2014' : money(Math.max(0, c.billing.contract - c.billing.billed)) },
+          { label: 'Days to collect', meta: c.billing.dso === null ? 'nothing paid yet' : `${c.billing.dso.toFixed(0)} days` },
+        ] : [], { empty: 'No contract value or billing plan on Scope & Contract.' }),
       ]),
       issuesTable('Scope changes', c.changes.map((cr) => ({
         title: cr.title,

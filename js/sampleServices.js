@@ -34,6 +34,8 @@ export function createServiceTransition() {
     dashStatus: 'AT RISK',
     budgetPlanned: 180000,
     budgetActual: 96500,
+    contractValue: 240000,
+    paymentTermsDays: 30,
 
     charterSponsor: 'Helen Ward, COO (client)',
     charterServiceOwner: 'Dev Raman, Service Delivery Manager',
@@ -156,6 +158,20 @@ export function createServiceTransition() {
       { id: id('dl'), name: 'Knowledge transfer record', type: 'Document', owner: 'Tom Byrne', due: '2026-11-14', acceptance: 'Session log, recordings and a competency check signed by both leads.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
     ],
 
+    // Billed on transition milestones. The knowledge-transfer invoice is past
+    // its thirty days, which is what the Billing tab exists to catch.
+    billing: [
+      { id: id('bm'), milestone: 'Mobilisation', amount: 48000, due: '2026-08-10', status: 'Paid', invoiceNo: 'INV-2041', invoiced: '2026-08-10', paid: '2026-09-08', owner: 'Dev Raman' },
+      { id: id('bm'), milestone: 'Knowledge transfer complete', amount: 48000, due: '2026-08-31', status: 'Invoiced', invoiceNo: 'INV-2077', invoiced: '2026-08-31', paid: '', owner: 'Dev Raman' },
+      { id: id('bm'), milestone: 'Parallel run complete', amount: 72000, due: '2026-10-30', status: 'Planned', invoiceNo: '', invoiced: '', paid: '', owner: 'Dev Raman' },
+      { id: id('bm'), milestone: 'Steady-state sign-off', amount: 72000, due: '2026-12-18', status: 'Planned', invoiceNo: '', invoiced: '', paid: '', owner: 'Dev Raman' },
+    ],
+
+    incidents: [
+      { id: id('inc'), title: 'Orders stuck in payment pending', priority: 'P1', service: 'Orders platform', account: 'Orders platform client', reported: '2026-10-01T07:45', responded: '2026-10-01T08:05', resolved: '2026-10-01T10:20', status: 'Resolved', assignee: 'Dev Raman', knownError: 'KE-01' },
+      { id: id('inc'), title: 'Nightly stock sync overran into trading hours', priority: 'P2', service: 'Integrations', account: 'Orders platform client', reported: '2026-10-02T06:30', responded: '2026-10-02T07:10', resolved: '', status: 'In Progress', assignee: 'Dev Raman', knownError: '' },
+    ],
+
     // The client whose service this is: the account the transition is, in
     // the end, meant to keep.
     customers: [
@@ -250,6 +266,8 @@ export function createServiceDeskLaunch() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 64000,
     budgetActual: 21000,
+    contractValue: 64000,
+    paymentTermsDays: 15,
 
     charterSponsor: 'Priya Shah, IT Director',
     charterServiceOwner: 'Owen Clarke, Service Desk Manager',
@@ -333,6 +351,18 @@ export function createServiceDeskLaunch() {
       { id: id('dl'), name: 'Request catalogue', type: 'Service', owner: 'Sara Boyd', due: '2026-10-24', acceptance: 'Twelve request types, each with an owner, a target and a form that does not ask for what IT already knows.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Configured service desk', type: 'Software', owner: 'Ben Iqbal', due: '2026-10-31', acceptance: 'Routing, escalation and reporting work end to end on the pilot data.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Weekly service report', type: 'Report', owner: 'Owen Clarke', due: '2026-11-30', acceptance: 'Volumes, first-response and breaches, produced by the tool rather than by hand.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
+    ],
+
+    // An internal desk has no client invoice, but it is still recharged to
+    // the departments that use it; the same register tracks that.
+    billing: [
+      { id: id('bm'), milestone: 'Design recharge to business units', amount: 16000, due: '2026-09-01', status: 'Paid', invoiceNo: 'RC-114', invoiced: '2026-09-01', paid: '2026-09-12', owner: 'Priya Shah' },
+      { id: id('bm'), milestone: 'Launch recharge to business units', amount: 48000, due: '2026-11-30', status: 'Planned', invoiceNo: '', invoiced: '', paid: '', owner: 'Priya Shah' },
+    ],
+
+    incidents: [
+      { id: id('inc'), title: 'Finance cannot raise purchase requests in the portal', priority: 'P2', service: 'Service desk portal', account: 'Finance department', reported: '2026-10-01T09:10', responded: '2026-10-01T09:40', resolved: '2026-10-01T15:05', status: 'Resolved', assignee: 'Ben Iqbal', knownError: '' },
+      { id: id('inc'), title: 'Password reset emails arrive after an hour', priority: 'P3', service: 'Identity', account: 'Finance department', reported: '2026-10-02T08:30', responded: '', resolved: '', status: 'New', assignee: 'Owen Clarke', knownError: '' },
     ],
 
     // The desk's customers are the departments it serves.

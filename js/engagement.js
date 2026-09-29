@@ -11,8 +11,10 @@
 
 import { getState, scheduleSave, findResource, listAllAllocations, listAbsences } from './state.js';
 import { el } from './dom.js';
-import { mountRegisters, renderAll, renderRosterOptions } from './register.js';
-import { SCOPE_REGISTERS, PEOPLE_REGISTERS, CHARTER_FIELDS } from './registerDefs.js';
+import { mountRegisters, renderAll, renderRosterOptions, refreshDerivedCells } from './register.js';
+import { SCOPE_REGISTERS, PEOPLE_REGISTERS, CHARTER_FIELDS, BILLING } from './registerDefs.js';
+import { billingMetrics, collectionState, termsOf } from './billing.js';
+import { formatDate } from './dates.js';
 import { KEY_ROLES, utilisation } from './resourceModel.js';
 import { notifyProjectDataChanged } from './taskModel.js';
 import { priorityOf, priorityLabel, SCORE_MIN, SCORE_MAX } from './priority.js';
@@ -102,6 +104,48 @@ function bindCharter() {
   });
 }
 
+// ---------- Billing ----------
+
+function money(n) {
+  return `$${Math.round(Number(n) || 0).toLocaleString()}`;
+}
+
+const COLLECTION_TEXT = {
+  paid: (c) => (c.days === null ? 'Paid' : `Paid in ${c.days} days`),
+  'written-off': () => 'Written off',
+  'no-date': () => 'Invoiced — no date, so no due date',
+  overdue: (c) => `Overdue ${c.days} days`,
+  awaiting: (c) => `Due ${formatDate(c.dueBy)}`,
+  disputed: (c) => `Disputed · due ${formatDate(c.dueBy)}`,
+  ready: () => 'Ready to invoice',
+  'late-to-bill': (c) => `Not invoiced, ${c.days} days after billable`,
+  planned: () => 'Planned',
+};
+
+function collectionCell(col, row) {
+  const c = collectionState(row, termsOf(getState()));
+  return el('span', { class: `collection is-${c.state}`, text: COLLECTION_TEXT[c.state](c) });
+}
+
+function renderBillingTerms() {
+  const s = getState();
+  document.querySelectorAll('[data-billing-field]').forEach((input) => {
+    if (document.activeElement !== input) input.value = s[input.dataset.billingField] ?? '';
+  });
+  const m = billingMetrics(s);
+  const host = document.getElementById('billing-summary');
+  if (!host) return;
+  host.replaceChildren(...[
+    ['Scheduled in the plan', money(m.scheduled)],
+    ['Not yet scheduled', m.unscheduled === null ? 'No contract value' : m.unscheduled === 0 ? 'None — the plan adds up' : money(m.unscheduled)],
+    ['Billed', money(m.billed)],
+    ['Paid', money(m.paid)],
+    ['Outstanding', money(m.outstanding)],
+    ['Overdue', m.overdueCount ? `${money(m.overdueAmount)} on ${m.overdueCount}` : 'Nothing'],
+    ['Days to collect', m.dso === null ? 'Not measured — nothing paid yet' : `${m.dso.toFixed(0)} days on average`],
+  ].flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]));
+}
+
 // ---------- Summary strip ----------
 
 const COUNTERS = [
@@ -133,6 +177,24 @@ const COUNTERS = [
     },
     tone: (s) => ((s.changeRequests || []).some((c) => c.status === 'Submitted' || c.status === 'Under Review')
       ? 'is-warn' : 'is-idle'),
+  },
+  {
+    // Billed against the contract, and whether the money came in. Grey until
+    // a contract value exists: a percentage of nothing is not a number.
+    id: 'scope-count-billing',
+    value: (s) => { const m = billingMetrics(s); return m.billedPct === null ? '—' : `${Math.round(m.billedPct * 100)}%`; },
+    sub: (s) => {
+      const m = billingMetrics(s);
+      if (m.contract === null) return 'No contract value set';
+      if (m.overdueCount) return `${money(m.overdueAmount)} overdue on ${m.overdueCount} invoice${m.overdueCount === 1 ? '' : 's'}`;
+      return `${money(m.paid)} paid of ${money(m.contract)}`;
+    },
+    tone: (s) => {
+      const m = billingMetrics(s);
+      if (m.contract === null) return 'is-idle';
+      if (m.overdueCount) return 'is-bad';
+      return m.lateToBill || (m.unscheduled && Math.abs(m.unscheduled) > 0) ? 'is-warn' : 'is-good';
+    },
   },
   {
     // Scope that moved with nobody's approval. Grey before a baseline: without
@@ -280,14 +342,30 @@ export function renderEngagement() {
   renderRosterView();
   renderRosterOptions();
   renderScopeControl();
+  renderBillingTerms();
   renderCounters();
 }
 
 export function initEngagement() {
+  // Before the registers mount, so the billing table's first draw has it.
+  BILLING.renderCell = collectionCell;
+  document.getElementById('sec-billing-terms')?.addEventListener('input', (e) => {
+    const field = e.target.dataset.billingField;
+    if (!field) return;
+    getState()[field] = e.target.value === '' ? '' : Math.max(0, Number(e.target.value) || 0);
+    scheduleSave();
+    refreshDerivedCells(BILLING);
+    renderBillingTerms();
+    renderCounters();
+  });
   renderCharter();
   bindCharter();
   const onChanged = (def) => {
     afterRegisterEdit(def);
+    if (def.key === 'billing') {
+      refreshDerivedCells(BILLING);
+      renderBillingTerms();
+    }
     renderCounters();
     // Deliverable dates reach the Dashboard and the roster feeds every owner
     // field in the app, so an edit here has to travel like a task edit does.

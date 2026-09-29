@@ -125,11 +125,14 @@ export function reachedOn(account, stage) {
  *   renewal       due within 90 days with adoption under 50%: 20 — the
  *                 renewal most likely to be lost is the one arriving on an
  *                 account nobody uses
+ *   incidents     an open P1 or P2 against the account: 20 each. Only ever
+ *                 a penalty — no incidents is not evidence of health, it is
+ *                 the absence of one kind of evidence
  *
  * Fewer than two signals is not enough to call it, so the score is null and
  * the page shows it grey. A churned account has no health: it has an outcome.
  */
-export function healthOf(account, today = new Date()) {
+export function healthOf(account, today = new Date(), { severeOpen = 0 } = {}) {
   if (isChurned(account)) return null;
   const signals = [];
   const adoption = num(account.adoption);
@@ -146,6 +149,7 @@ export function healthOf(account, today = new Date()) {
     const until = daysBetween(today, renewal);
     if (until >= 0 && until <= 90 && adoption < 50) signals.push(20);
   }
+  for (let i = 0; i < severeOpen; i += 1) signals.push(20);
   if (signals.length < 2) return null;
   const score = Math.round(signals.reduce((a, b) => a + b, 0) / signals.length);
   return { score, band: score >= 75 ? 'Healthy' : score >= 50 ? 'Watch' : 'At risk', signals: signals.length };
@@ -158,7 +162,8 @@ export function healthOf(account, today = new Date()) {
  * accounts alone plus the one figure accounts cannot supply: gross margin,
  * which lifetime value needs and which is the business's, not an account's.
  */
-export function customerMetrics(accounts = [], { grossMargin = null, today = new Date() } = {}) {
+export function customerMetrics(accounts = [], { grossMargin = null, today = new Date(), severeByAccount = new Map() } = {}) {
+  const severe = (a) => ({ severeOpen: severeByAccount.get(String(a.name || '').trim().toLowerCase()) || 0 });
   const all = accounts.filter((a) => a.stage);
   const churned = all.filter(isChurned);
   const live = all.filter((a) => !isChurned(a));
@@ -217,7 +222,7 @@ export function customerMetrics(accounts = [], { grossMargin = null, today = new
   const atRisk = live.filter((a) => {
     const renewal = day(a.renewal);
     const until = renewal ? daysBetween(today, renewal) : null;
-    return until !== null && until >= 0 && until <= 90 && healthOf(a, today)?.band === 'At risk';
+    return until !== null && until >= 0 && until <= 90 && healthOf(a, today, severe(a))?.band === 'At risk';
   });
   const arrAtRisk = live.some((a) => day(a.renewal)) ? atRisk.reduce((n, a) => n + (num(a.arr) ?? 0), 0) : null;
 
@@ -228,10 +233,10 @@ export function customerMetrics(accounts = [], { grossMargin = null, today = new
 }
 
 /** Accounts renewing within `days`, soonest first, with how far away each is. */
-export function upcomingRenewals(accounts = [], { days = 180, today = new Date() } = {}) {
+export function upcomingRenewals(accounts = [], { days = 180, today = new Date(), severeByAccount = new Map() } = {}) {
   return accounts
     .filter((a) => !isChurned(a) && day(a.renewal))
-    .map((a) => ({ account: a, until: daysBetween(today, day(a.renewal)), health: healthOf(a, today) }))
+    .map((a) => ({ account: a, until: daysBetween(today, day(a.renewal)), health: healthOf(a, today, { severeOpen: severeByAccount.get(String(a.name || '').trim().toLowerCase()) || 0 }) }))
     .filter((r) => r.until >= -30 && r.until <= days)
     .sort((x, y) => x.until - y.until);
 }

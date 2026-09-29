@@ -9,12 +9,72 @@
 // lesson looks back, so they stay two registers, but they answer the same
 // question and keeping them apart is how the same sentence ends up in both.
 
-import { getState } from './state.js';
-import { mountRegisters, renderAll, renderRosterOptions } from './register.js';
-import { SERVICE_REGISTERS, IMPROVE_REGISTERS } from './registerDefs.js';
+import { getState, scheduleSave } from './state.js';
+import {
+  mountRegisters, renderAll, renderRosterOptions, refreshDerivedCells,
+} from './register.js';
+import { SERVICE_REGISTERS, IMPROVE_REGISTERS, INCIDENTS } from './registerDefs.js';
 import { notifyProjectDataChanged } from './taskModel.js';
+import { el } from './dom.js';
+import {
+  serviceMetrics, targetsOf, incidentSla, formatHours, DEFAULT_TARGETS, PRIORITIES,
+} from './serviceDesk.js';
+
+// ---------- The incident SLA cell and the targets it is judged by ----------
+
+const CLOCK_TEXT = { met: 'met', breached: 'breached', 'at-risk': 'at risk', running: 'running', unknown: '—' };
+
+function slaCell(col, incident) {
+  const sla = incidentSla(incident, targetsOf(getState()));
+  const part = (label, c) => el('span', {
+    class: `sla-clock is-${c.state}`,
+    title: c.target ? `Target ${c.target} h` : 'No target for this priority',
+    text: c.invalid ? `${label}: check the times` : `${label} ${CLOCK_TEXT[c.state]}${c.hours !== null ? ` · ${formatHours(c.hours)}` : ''}`,
+  });
+  return el('div', { class: 'sla-cell' }, [
+    part('Response', sla.response),
+    part('Resolve', sla.resolution),
+    sla.closedWithoutTime ? el('span', { class: 'sla-clock is-breached', text: 'Closed with no resolved time' }) : null,
+  ]);
+}
+
+function renderTargets() {
+  const host = document.getElementById('incident-targets');
+  if (!host) return;
+  const own = getState().incidentTargets || {};
+  host.replaceChildren(el('table', { class: 'data-table incident-targets' }, [
+    el('thead', {}, [el('tr', {}, ['Priority', 'Respond within (h)', 'Resolve within (h)'].map((t) => el('th', { text: t })))]),
+    el('tbody', {}, PRIORITIES.map((p) => el('tr', {}, [
+      el('th', { scope: 'row', text: p }),
+      ...['respond', 'resolve'].map((k) => el('td', {}, [el('input', {
+        type: 'number', class: 'row-input', min: '0', step: '0.5', 'data-target': `${p}.${k}`,
+        'aria-label': `${p} ${k} target in hours`,
+        value: own[p]?.[k] ?? '', placeholder: String(DEFAULT_TARGETS[p][k]),
+      })])),
+    ]))),
+  ]));
+}
 
 const COUNTERS = [
+  {
+    // Worked out from the incidents rather than typed, so it cannot say
+    // "fine" about a queue it has not looked at.
+    id: 'svc-count-incidents',
+    value: (s) => serviceMetrics(s).open,
+    sub: (s) => {
+      const m = serviceMetrics(s);
+      if (!m.total) return 'None logged';
+      if (m.breachedOpen) return `${m.breachedOpen} open past target${m.atRisk ? `, ${m.atRisk} at risk` : ''}`;
+      if (m.atRisk) return `${m.atRisk} close to target`;
+      return m.resolutionSla === null ? 'Nothing resolved yet' : `${Math.round(m.resolutionSla * 100)}% resolved within target`;
+    },
+    tone: (s) => {
+      const m = serviceMetrics(s);
+      if (!m.total) return 'is-idle';
+      if (m.breachedOpen || m.openSevere) return 'is-bad';
+      return m.atRisk ? 'is-warn' : 'is-good';
+    },
+  },
   {
     id: 'svc-count-sla',
     label: 'Service levels breached',
@@ -132,12 +192,26 @@ function renderCounters() {
 
 export function renderService() {
   renderAll([...SERVICE_REGISTERS, ...IMPROVE_REGISTERS]);
+  renderTargets();
   renderRosterOptions();
   renderCounters();
 }
 
 export function initService() {
+  INCIDENTS.renderCell = slaCell;
+  document.getElementById('incident-targets')?.addEventListener('input', (e) => {
+    const path = e.target.dataset.target;
+    if (!path) return;
+    const [p, k] = path.split('.');
+    const s = getState();
+    s.incidentTargets = { ...(s.incidentTargets || {}), [p]: { ...(s.incidentTargets?.[p] || {}), [k]: e.target.value === '' ? '' : Number(e.target.value) } };
+    scheduleSave();
+    // The clocks follow the targets at once, without rebuilding the table.
+    refreshDerivedCells(INCIDENTS);
+    renderCounters();
+  });
   const onChanged = (def) => {
+    if (def.key === 'incidents') refreshDerivedCells(INCIDENTS);
     renderCounters();
     notifyProjectDataChanged(`service:${def.id}`);
   };

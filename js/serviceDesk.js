@@ -200,3 +200,18 @@ export function formatHours(hours) {
   if (hours >= 48) return `${(hours / 24).toFixed(1)} d`;
   return `${hours.toFixed(1)} h`;
 }
+
+/**
+ * Customer satisfaction from the answers recorded on closed incidents: the
+ * share scoring 4 or 5 out of 5, the usual CSAT reading. Null until someone
+ * has answered — a survey nobody returned is not a satisfied customer.
+ */
+export function csatOf(incidents = []) {
+  const scores = incidents.map((i) => Number(i.csat)).filter((n) => Number.isInteger(n) && n >= 1 && n <= 5);
+  if (!scores.length) return { csat: null, average: null, responses: 0 };
+  return {
+    csat: scores.filter((n) => n >= 4).length / scores.length,
+    average: scores.reduce((a, b) => a + b, 0) / scores.length,
+    responses: scores.length,
+  };
+}

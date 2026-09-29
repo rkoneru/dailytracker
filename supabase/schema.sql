@@ -564,3 +564,75 @@ create policy use_cases_delete on public.use_cases for delete
 
 grant select, insert, update, delete on public.use_cases to authenticated;
 grant execute on function public.is_client_partner(uuid) to authenticated;
+
+-- ============================================================ satisfaction surveys
+
+-- A survey sent when an incident closes, answered by someone with no account.
+--
+-- The link carries a random token; only its SHA-256 hash is stored, so reading
+-- this table never yields a working link. Answering is one function that the
+-- anon role may call and nothing else it may touch: the token must match an
+-- unanswered, unexpired request, the score must be 1 to 5, the comment is cut
+-- to 2,000 characters, and a token answers once. Members of the project read
+-- the answers; nobody writes a score directly — there is no update policy —
+-- and a request cannot be created already answered, which is what would let a
+-- member invent a happy customer.
+--
+-- What it does not do: tell who answered. A survey link is a bearer token, and
+-- whoever holds it can answer; that is the nature of emailed surveys, and the
+-- app says so beside every score.
+
+create table if not exists public.incident_surveys (
+  id           uuid primary key default gen_random_uuid(),
+  project_id   uuid not null references public.projects (id) on delete cascade,
+  incident_id  text not null check (char_length(incident_id) between 1 and 200),
+  token_hash   text not null unique check (token_hash ~ '^[0-9a-f]{64}$'),
+  expires_at   timestamptz not null default now() + interval '30 days',
+  score        smallint check (score between 1 and 5),
+  comment      text check (char_length(comment) <= 2000),
+  answered_at  timestamptz,
+  created_by   uuid references auth.users (id) on delete set null default auth.uid(),
+  created_at   timestamptz not null default now()
+);
+
+create index if not exists incident_surveys_project_idx on public.incident_surveys (project_id);
+
+alter table public.incident_surveys enable row level security;
+
+drop policy if exists incident_surveys_read on public.incident_surveys;
+create policy incident_surveys_read on public.incident_surveys for select
+  using (public.can_read_project(project_id));
+
+-- Anyone on the project who writes at all may send a survey — a contributor
+-- closing their own incident included — but only a blank one, expiring within
+-- ninety days.
+drop policy if exists incident_surveys_insert on public.incident_surveys;
+create policy incident_surveys_insert on public.incident_surveys for insert
+  with check (coalesce(public.role_in_project(project_id) <> 'viewer', false)
+              and score is null and comment is null and answered_at is null
+              and expires_at <= now() + interval '90 days');
+
+drop policy if exists incident_surveys_delete on public.incident_surveys;
+create policy incident_surveys_delete on public.incident_surveys for delete
+  using (public.can_write_project(project_id));
+
+create or replace function public.submit_incident_survey(p_token text, p_score integer, p_comment text default '')
+returns boolean language plpgsql security definer set search_path = public as $$
+declare n integer;
+begin
+  if p_token is null or char_length(p_token) < 32 or char_length(p_token) > 128 then return false; end if;
+  if p_score is null or p_score < 1 or p_score > 5 then return false; end if;
+  update public.incident_surveys
+     set score = p_score,
+         comment = left(coalesce(p_comment, ''), 2000),
+         answered_at = now()
+   where token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex')
+     and answered_at is null
+     and expires_at > now();
+  get diagnostics n = row_count;
+  return n = 1;
+end $$;
+
+revoke all on function public.submit_incident_survey(text, integer, text) from public;
+grant select, insert, delete on public.incident_surveys to authenticated;
+grant execute on function public.submit_incident_survey(text, integer, text) to anon, authenticated;

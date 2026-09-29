@@ -560,6 +560,100 @@ begin
   call check_true('once revoked, the former partner sees nothing', n = 0, format('saw %s', n));
 end $$;
 
+-- ============================================================ satisfaction surveys
+
+-- Earlier checks move people's roles about; these need the original cast.
+update public.project_members set role = 'contributor'
+ where project_id = '10000000-0000-4000-8000-000000000001' and user_id = '00000000-0000-4000-8000-000000000003';
+update public.project_members set role = 'viewer'
+ where project_id = '10000000-0000-4000-8000-000000000001' and user_id = '00000000-0000-4000-8000-000000000004';
+
+-- Two requests on the shared project, created as the superuser: one live, one
+-- expired. The tokens are what an emailed link would carry; only their hashes
+-- are in the table.
+insert into public.incident_surveys (id, project_id, incident_id, token_hash, expires_at) values
+  ('50000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'inc-1',
+   encode(sha256(convert_to('live-token-0123456789abcdef0123456789abcdef', 'UTF8')), 'hex'), now() + interval '30 days'),
+  ('50000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'inc-2',
+   encode(sha256(convert_to('expired-token-0123456789abcdef0123456789ab', 'UTF8')), 'hex'), now() - interval '1 day');
+
+do $$
+declare n integer;
+begin
+  n := anon_count('select count(*) from public.incident_surveys');
+  call check_true('anonymous cannot read survey answers', n = -1, format('saw %s', n));
+  n := visible_count('00000000-0000-4000-8000-000000000005', 'select count(*) from public.incident_surveys');
+  call check_true('a stranger sees no survey of the shared project', n = 0, format('saw %s', n));
+  n := visible_count('00000000-0000-4000-8000-000000000004', 'select count(*) from public.incident_surveys');
+  call check_true('a viewer on the project reads its surveys', n = 2, format('saw %s', n));
+end $$;
+
+call check_denied('a viewer cannot send a survey',
+  '00000000-0000-4000-8000-000000000004',
+  $q$insert into public.incident_surveys (project_id, incident_id, token_hash)
+     values ('10000000-0000-4000-8000-000000000001', 'inc-9', repeat('a', 64))$q$);
+
+call check_allowed('a contributor can send a blank one',
+  '00000000-0000-4000-8000-000000000003',
+  $q$insert into public.incident_surveys (project_id, incident_id, token_hash)
+     values ('10000000-0000-4000-8000-000000000001', 'inc-9', repeat('b', 64))$q$);
+
+call check_denied('nobody can send one already answered',
+  '00000000-0000-4000-8000-000000000002',
+  $q$insert into public.incident_surveys (project_id, incident_id, token_hash, score, answered_at)
+     values ('10000000-0000-4000-8000-000000000001', 'inc-9', repeat('c', 64), 5, now())$q$);
+
+call check_denied('nor one that never expires',
+  '00000000-0000-4000-8000-000000000002',
+  $q$insert into public.incident_surveys (project_id, incident_id, token_hash, expires_at)
+     values ('10000000-0000-4000-8000-000000000001', 'inc-9', repeat('d', 64), now() + interval '10 years')$q$);
+
+call check_denied('an editor cannot write a score directly',
+  '00000000-0000-4000-8000-000000000002',
+  $q$update public.incident_surveys set score = 5, answered_at = now()
+     where id = '50000000-0000-4000-8000-000000000001'$q$);
+
+call check_denied('a stranger cannot send one into the shared project',
+  '00000000-0000-4000-8000-000000000005',
+  $q$insert into public.incident_surveys (project_id, incident_id, token_hash)
+     values ('10000000-0000-4000-8000-000000000001', 'inc-9', repeat('e', 64))$q$);
+
+call check_denied('a contributor cannot delete one',
+  '00000000-0000-4000-8000-000000000003',
+  $q$delete from public.incident_surveys where id = '50000000-0000-4000-8000-000000000001'$q$);
+
+-- Answering, as the anon role, through the one function it may call.
+create or replace function anon_submit(p_token text, p_score integer, p_comment text default '')
+returns boolean language plpgsql as $$
+declare ok boolean;
+begin
+  call test_become_anon();
+  ok := public.submit_incident_survey(p_token, p_score, p_comment);
+  reset role;
+  return ok;
+exception when others then
+  reset role;
+  return null;
+end $$;
+
+do $$
+declare ok boolean; answered public.incident_surveys;
+begin
+  ok := anon_submit('guessed-token-0123456789abcdef0123456789ab', 5);
+  call check_true('a guessed token answers nothing', ok = false, format('returned %s', ok));
+  ok := anon_submit('live-token-0123456789abcdef0123456789abcdef', 9);
+  call check_true('a score outside 1 to 5 is refused', ok = false, format('returned %s', ok));
+  ok := anon_submit('expired-token-0123456789abcdef0123456789ab', 4);
+  call check_true('an expired link answers nothing', ok = false, format('returned %s', ok));
+  ok := anon_submit('live-token-0123456789abcdef0123456789abcdef', 4, repeat('x', 5000));
+  select * into answered from public.incident_surveys where id = '50000000-0000-4000-8000-000000000001';
+  call check_true('the right token answers, with the comment cut to 2,000 characters',
+    ok and answered.score = 4 and char_length(answered.comment) = 2000, format('returned %s, score %s', ok, answered.score));
+  ok := anon_submit('live-token-0123456789abcdef0123456789abcdef', 1);
+  select * into answered from public.incident_surveys where id = '50000000-0000-4000-8000-000000000001';
+  call check_true('and only once', ok = false and answered.score = 4, format('returned %s, score now %s', ok, answered.score));
+end $$;
+
 -- ============================================================ report
 
 select name, case when passed then 'ok  ' else 'FAIL' end as result, detail

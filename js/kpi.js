@@ -17,7 +17,7 @@ import { hours } from './taskModel.js';
 import { raidScore } from './raid.js';
 import { utilisation, timesheetValue } from './resourceModel.js';
 import { customerMetrics, accountSignals } from './customerSuccess.js';
-import { serviceMetrics } from './serviceDesk.js';
+import { serviceMetrics, csatOf } from './serviceDesk.js';
 import { billingMetrics } from './billing.js';
 import { isApprovedChange, isDecidedChange } from './changeControl.js';
 
@@ -196,6 +196,10 @@ export const KPI_DEFS = [
   { n: 0, id: 'mttr', cat: 'service', name: 'Mean Time to Resolve (MTTR)', formula: 'Reported → resolved',
     what: 'Average calendar hours from an incident being reported to it being fixed.', unit: 'hours', good: 'low',
     needs: 'Incidents with a reported and a resolved time.' },
+  { n: 0, id: 'csat', cat: 'service', name: 'Customer Satisfaction (CSAT)', formula: 'Answers of 4 or 5 / all answers',
+    what: 'Share of customers satisfied with how their incident was handled, from the survey sent when it closed.', unit: 'percent', good: 'high',
+    needs: 'Survey answers on closed incidents, on Service & Support.',
+    kri: 'Customers unhappy with support' },
   { n: 0, id: 'timeToValue', cat: 'customer', name: 'Time to Value', formula: 'Customer since → Realise value',
     what: 'How long a new customer waits for the outcome they bought.', unit: 'days', good: 'low',
     needs: 'Accounts that have reached Realise value, with a customer-since date.' },
@@ -426,7 +430,7 @@ function improvementKpis(project, today) {
 /** The incidents' numbers, from js/serviceDesk.js, so this page and Service & Support agree. */
 function serviceKpis(project, now) {
   const m = serviceMetrics(project, now);
-  return { responseSla: m.responseSla, resolutionSla: m.resolutionSla, mttr: m.mttr };
+  return { responseSla: m.responseSla, resolutionSla: m.resolutionSla, mttr: m.mttr, csat: csatOf(project.incidents || []).csat };
 }
 
 /** The accounts' numbers, from js/customerSuccess.js, so this page and Customer Success agree. */
@@ -643,6 +647,7 @@ export function kpiTone(def, value) {
     // Against the usual thirty-day terms; a project on different terms sees
     // its own on the Billing tab, where the overdue invoices are named.
     case 'collectionDays': return value <= 30 ? 'good' : value <= 45 ? 'warn' : 'bad';
+    case 'csat': return band(0.85, 0.7);
     case 'mttr': return value <= 8 ? 'good' : value <= 24 ? 'warn' : 'bad';
     case 'scopeChangeRate': return value <= 2 ? 'good' : value <= 5 ? 'warn' : 'bad';
     case 'changeCycleTime': return value <= 5 ? 'good' : value <= 10 ? 'warn' : 'bad';

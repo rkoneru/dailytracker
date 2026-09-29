@@ -112,8 +112,16 @@ async function openSection(page, sectionId) {
  * Capacity, Sync and Trash are tabs of other pages now and have no sidebar row
  * to click, but their ids still name where they are.
  */
+// Started in the page and waited on by a flag rather than awaited through
+// evaluate: under a full parallel run Playwright has dropped ("garbage
+// collected") the promise it was holding for a navigation that builds a
+// large page, failing a suite that had done nothing wrong.
 async function openDestination(page, navId) {
-  await page.evaluate(async (id) => (await import('./js/nav.js')).goToNode(id), navId);
+  await page.evaluate((id) => {
+    window.__navDone = false;
+    import('./js/nav.js').then((m) => m.goToNode(id)).finally(() => { window.__navDone = true; });
+  }, navId);
+  await page.waitForFunction(() => window.__navDone === true);
   await page.waitForTimeout(400);
 }
 

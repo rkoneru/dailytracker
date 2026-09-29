@@ -316,10 +316,17 @@ export function refreshDerivedCells(def) {
     const col = def.columns.find((c) => c.field === node.dataset.readonly);
     if (row && col) node.replaceWith(readonlyNode(col, row[col.field]));
   });
-  tbody.querySelectorAll('td.col-custom').forEach((td) => {
-    const row = rows.get(rowIdOf(td));
-    const col = def.columns.filter((c) => c.type === 'custom')[0];
-    if (row && col && def.renderCell) td.replaceChildren(def.renderCell(col, row));
+  // A register can draw more than one column (the incident log draws its SLA
+  // and its satisfaction), so each drawn cell is matched to its own column by
+  // position in the row rather than all given the first.
+  const custom = def.columns.filter((c) => c.type === 'custom');
+  if (!custom.length || !def.renderCell) return;
+  tbody.querySelectorAll('tr').forEach((tr) => {
+    const row = rows.get(tr.dataset.id);
+    if (!row) return;
+    tr.querySelectorAll(':scope > td.col-custom').forEach((td, i) => {
+      if (custom[i]) td.replaceChildren(def.renderCell(custom[i], row));
+    });
   });
 }
 

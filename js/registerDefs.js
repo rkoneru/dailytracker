@@ -602,6 +602,7 @@ export const INCIDENTS = {
   rowLabel: 'incident',
   addLabel: '+ Log Incident',
   refPrefix: 'INC',
+  hiddenFields: ['survey', 'csat', 'csatComment', 'csatAt'],
   blurb: 'What broke, for whom, and how fast it was answered and fixed. The SLA column is worked out from the times and the priority targets below, round the clock or in business hours as each priority is set — an open incident past its target is already breached.',
   emptyText: 'No incidents logged.',
   searchFields: ['title', 'service', 'account', 'assignee'],
@@ -612,6 +613,7 @@ export const INCIDENTS = {
     { field: 'priority', label: 'Priority', type: 'select', tone: true, options: ['P1', 'P2', 'P3', 'P4'] },
     { field: 'service', label: 'Service', placeholder: 'What is affected' },
     { field: 'account', label: 'Account', type: 'person', list: 'account-names', placeholder: 'Customer affected' },
+    { field: 'contact', label: 'Reported by', type: 'person', list: 'contact-names', placeholder: 'Who, at the customer' },
     { field: 'reported', label: 'Reported', type: 'datetime' },
     { field: 'responded', label: 'First response', type: 'datetime' },
     { field: 'resolved', label: 'Resolved', type: 'datetime' },
@@ -619,9 +621,10 @@ export const INCIDENTS = {
     { field: 'assignee', label: 'Assignee', type: 'person', placeholder: 'Who has it' },
     { field: 'knownError', label: 'Known error', placeholder: 'KE-01, if it is one' },
     { field: '_sla', label: 'SLA', type: 'custom' },
+    { field: '_csat', label: 'Satisfaction', type: 'custom' },
   ],
   newRow: () => ({
-    title: '', priority: 'P3', service: '', account: '', reported: '', responded: '', resolved: '',
+    title: '', priority: 'P3', service: '', account: '', contact: '', reported: '', responded: '', resolved: '',
     status: 'New', assignee: '', knownError: '',
   }),
 };

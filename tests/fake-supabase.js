@@ -2,6 +2,7 @@
 // and PostgREST select/upsert on the two sync tables. Enough to drive the real
 // client and the real engine over a real network hop.
 const http = require('http');
+const crypto = require('crypto');
 
 const db = {
   projects: new Map(),
@@ -11,6 +12,7 @@ const db = {
   profiles: new Map(),
   workspace_policy: new Map(),
   use_cases: new Map(),
+  incident_surveys: new Map(),
 };
 // Tables a test has made disappear, to stand up a database whose schema
 // predates them.
@@ -79,8 +81,23 @@ const server = http.createServer((req, res) => {
         invites: [...db.project_invites.values()],
         policies: [...db.workspace_policy.values()],
         useCases: [...db.use_cases.values()],
+        surveys: [...db.incident_surveys.values()],
         requests,
       });
+    }
+
+    // The survey answer function, as the real one behaves: hash the token,
+    // answer an unanswered, unexpired request once, score 1 to 5.
+    if (url.pathname === '/rest/v1/rpc/submit_incident_survey') {
+      if (hidden.has('incident_surveys')) return send(res, 404, { code: 'PGRST202', message: 'Could not find the function' });
+      const { p_token: token, p_score: score, p_comment: comment = '' } = json || {};
+      if (typeof token !== 'string' || token.length < 32 || token.length > 128 || !(score >= 1 && score <= 5)) return send(res, 200, false);
+      const hash = crypto.createHash('sha256').update(token, 'utf8').digest('hex');
+      const row = [...db.incident_surveys.values()].find((r) => r.token_hash === hash && !r.answered_at
+        && (!r.expires_at || new Date(r.expires_at) > new Date()));
+      if (!row) return send(res, 200, false);
+      Object.assign(row, { score, comment: String(comment).slice(0, 2000), answered_at: new Date().toISOString() });
+      return send(res, 200, true);
     }
 
     const table = url.pathname.replace('/rest/v1/', '');

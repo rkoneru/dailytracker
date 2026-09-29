@@ -9,7 +9,11 @@
 // lesson looks back, so they stay two registers, but they answer the same
 // question and keeping them apart is how the same sentence ends up in both.
 
-import { getState, scheduleSave } from './state.js';
+import { getState, scheduleSave, getActiveProjectId } from './state.js';
+import { prepareSurvey, pullAnswers } from './surveys.js';
+import { confirmAction, toast } from './dialog.js';
+import { formatDate } from './dates.js';
+import { onSyncStatusChange } from './sync.js';
 import {
   mountRegisters, renderAll, renderRosterOptions, refreshDerivedCells,
 } from './register.js';
@@ -18,7 +22,7 @@ import { notifyProjectDataChanged } from './taskModel.js';
 import { el } from './dom.js';
 import {
   serviceMetrics, targetsOf, incidentSla, formatHours, DEFAULT_TARGETS, PRIORITIES,
-  CLOCKS, DEFAULT_CALENDAR,
+  CLOCKS, DEFAULT_CALENDAR, CLOSED,
 } from './serviceDesk.js';
 
 // ---------- The incident SLA cell and the targets it is judged by ----------
@@ -38,6 +42,78 @@ function slaCell(col, incident) {
     part('Resolve', sla.resolution),
     sla.closedWithoutTime ? el('span', { class: 'sla-clock is-breached', text: 'Closed with no resolved time' }) : null,
   ]);
+}
+
+// ---------- Satisfaction, once an incident is closed ----------
+
+// The cell says where the score came from: the survey link (which proves the
+// link was used, not who used it), or a reply someone typed in.
+function csatCell(col, incident) {
+  const closed = CLOSED.includes(incident.status);
+  const score = Number(incident.csat);
+  const hasScore = Number.isInteger(score) && score >= 1 && score <= 5;
+  if (hasScore) {
+    const fromLink = !!incident.csatAt;
+    return el('div', { class: 'csat-cell' }, [
+      el('span', { class: `csat is-${score >= 4 ? 'good' : score === 3 ? 'warn' : 'bad'}`, text: `${score}/5` }),
+      el('span', {
+        class: 'csat-source',
+        title: fromLink ? 'Answered through the survey link. A link is a bearer token: it shows the link was used, not who used it.' : 'Typed in from a reply.',
+        text: fromLink ? `via link, ${formatDate(new Date(incident.csatAt))}` : 'recorded by hand',
+      }),
+      incident.csatComment ? el('span', { class: 'csat-comment', text: `“${incident.csatComment}”` }) : null,
+    ]);
+  }
+  if (!closed) return el('span', { class: 'csat-source', text: 'Asked once it is resolved' });
+  if (!incident.survey) return el('button', { type: 'button', class: 'btn btn-small', 'data-cell-action': 'survey', text: 'Send survey' });
+  const sent = formatDate(incident.survey.sentAt);
+  if (incident.survey.via === 'link') return el('span', { class: 'csat-source', text: `Link sent ${sent} · awaiting` });
+  // A reply by email has nowhere to land but here.
+  return el('div', { class: 'csat-cell' }, [
+    el('span', { class: 'csat-source', text: `Emailed ${sent} · their reply:` }),
+    el('select', { class: 'row-select', 'data-field': 'csat', 'aria-label': 'Satisfaction from their reply, 1 to 5' },
+      [['', '—'], ...[5, 4, 3, 2, 1].map((n) => [String(n), `${n}/5`])].map(([v, t]) => el('option', { value: v, text: t }))),
+  ]);
+}
+
+async function sendSurvey(incidentId) {
+  const s = getState();
+  const incident = (s.incidents || []).find((i) => i.id === incidentId);
+  if (!incident) return;
+  if (!CLOSED.includes(incident.status)) { toast('Resolve the incident first: the survey asks how it went.', 'info'); return; }
+  const who = String(incident.contact || '').trim().toLowerCase();
+  const to = (s.contacts || []).find((c) => String(c.name || '').trim().toLowerCase() === who)?.email || '';
+  const prepared = await prepareSurvey(getActiveProjectId(), incident, { to });
+  incident.survey = { sentAt: toLocalDay(new Date()), via: prepared.via };
+  scheduleSave();
+  refreshDerivedCells(INCIDENTS);
+  const ok = await confirmAction({
+    title: prepared.via === 'link' ? 'Survey link ready' : 'Survey by reply',
+    message: `${prepared.reason ? `${prepared.reason} ` : ''}${to ? `To ${to}. ` : 'No email on file for the reporter — add them on Contacts, or fill in the address in your email. '}`
+      + `
+
+${prepared.email.body}`,
+    confirmLabel: 'Open in email',
+  });
+  if (!ok) return;
+  const a = el('a', { href: prepared.email.href });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function toLocalDay(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+async function refreshAnswers() {
+  const changed = await pullAnswers(getState());
+  if (!changed) return;
+  scheduleSave();
+  refreshDerivedCells(INCIDENTS);
+  renderCounters();
+  notifyProjectDataChanged('service:incidents');
+  toast(`${changed} survey answer${changed === 1 ? '' : 's'} came in.`, 'success');
 }
 
 const WEEKDAYS = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [0, 'Sun']];
@@ -244,10 +320,15 @@ export function renderService() {
   renderTargets();
   renderRosterOptions();
   renderCounters();
+  refreshAnswers();
 }
 
 export function initService() {
-  INCIDENTS.renderCell = slaCell;
+  // One renderer for the incident log's two drawn columns.
+  INCIDENTS.renderCell = (col, row) => (col.field === '_csat' ? csatCell(col, row) : slaCell(col, row));
+  INCIDENTS.onRowAction = (action, id) => { if (action === 'survey') sendSurvey(id); };
+  // Answers arrive after each sync, and whenever the page is drawn.
+  onSyncStatusChange((status) => { if (status?.state === 'synced') refreshAnswers(); });
   const targetsHost = document.getElementById('incident-targets');
   const onCalendar = (e) => {
     if (!('cal' in e.target.dataset) && !('calDay' in e.target.dataset)) return;

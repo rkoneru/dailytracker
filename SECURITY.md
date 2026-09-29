@@ -89,6 +89,30 @@ means they are personal data held by everyone on the project. Keep what is
 commercially sensitive on the use case instead, where only client partners can
 read it.
 
+## Satisfaction surveys: the one thing anonymous visitors can do
+
+A survey emailed when an incident closes is answered by someone with no
+account, so this is the one place the anon key reaches anything at all. It is
+held to exactly one thing:
+
+- **Anonymous visitors can call one function and touch no table.**
+  `submit_incident_survey` records a score of 1 to 5 and a comment (cut to 2,000
+  characters) against an unanswered, unexpired request whose token matches,
+  and only once. The anon role has no grant on `incident_surveys` itself.
+- **Only the token's hash is stored.** The token is made on the device that
+  sends the survey and appears only in the email. Reading the table — which
+  every member of the project can — never yields a working link, and the token
+  is never written into project data.
+- **Nobody writes a score directly.** There is no update policy, and a request
+  cannot be created already answered or set to last more than ninety days, so
+  a member cannot invent a satisfied customer. `tests/rls/attack.sql` attacks
+  all of this, 15 checks of the 82.
+
+What it does not do: prove who answered. A survey link is a bearer token —
+whoever holds the email can answer — and the app says so beside every score
+that came by link. A score typed in from an emailed reply is marked as
+recorded by hand, and is exactly as trustworthy as the person who typed it.
+
 ## Use cases and ROI: the one part not every member can read
 
 Everything above lets every member of a project read everything in it. Use
@@ -102,7 +126,7 @@ own cost figures. They are stored in their own table, `use_cases`, and:
   moved into a workspace where the writer is not a partner.
 - **Only the owner can grant or remove it.** A delegated admin can neither give
   it nor edit the membership of anyone who holds it. `tests/rls/attack.sql`
-  attacks all of this for real, 21 checks of the 67.
+  attacks all of this for real, 21 checks of the 82.
 - **The client never mixes them into project data.** Use cases live under their
   own localStorage key and sync on their own lane; they are not in project
   exports, and converting one into a project copies only the name, outcome,

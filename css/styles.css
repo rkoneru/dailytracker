@@ -1952,7 +1952,7 @@ body { overflow-anchor: none; }
 }
 
 .dialog__title { margin: 0 0 8px; font-size: 17px; }
-.dialog__message { margin: 0; color: var(--color-text-muted); font-size: 14px; line-height: 1.55; }
+.dialog__message { margin: 0; color: var(--color-text-muted); font-size: 14px; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
 .dialog__form { margin: 0; }
 .dialog__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
@@ -6129,3 +6129,12 @@ body.login-open { overflow: hidden; }
 .tone-detractor { background: #fee2e2; color: #7f1d1d; }
 .tone-follow-up-due { background: #fef3c7; color: #78350f; }
 .tone-no-follow-up { background: var(--color-bg); color: var(--color-text-muted); }
+
+/* Satisfaction on a closed incident, and where the score came from. */
+.csat-cell { display: flex; flex-direction: column; gap: 3px; min-width: 140px; }
+.csat { font-weight: 700; font-size: 0.85rem; }
+.csat.is-good { color: var(--color-success-text); }
+.csat.is-warn { color: var(--color-warn-text); }
+.csat.is-bad { color: var(--color-danger-text); }
+.csat-source { font-size: 0.75rem; color: var(--color-text-muted); }
+.csat-comment { font-size: 0.78rem; font-style: italic; }

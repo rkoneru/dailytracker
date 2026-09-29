@@ -179,8 +179,8 @@ export function createServiceTransition() {
     ],
 
     incidents: [
-      { id: id('inc'), title: 'Orders stuck in payment pending', priority: 'P1', service: 'Orders platform', account: 'Orders platform client', reported: '2026-10-01T07:45', responded: '2026-10-01T08:05', resolved: '2026-10-01T10:20', status: 'Resolved', assignee: 'Dev Raman', knownError: 'KE-01' },
-      { id: id('inc'), title: 'Nightly stock sync overran into trading hours', priority: 'P2', service: 'Integrations', account: 'Orders platform client', reported: '2026-10-02T06:30', responded: '2026-10-02T07:10', resolved: '', status: 'In Progress', assignee: 'Dev Raman', knownError: '' },
+      { id: id('inc'), title: 'Orders stuck in payment pending', priority: 'P1', service: 'Orders platform', account: 'Orders platform client', contact: 'Marcus Lee', reported: '2026-10-01T07:45', responded: '2026-10-01T08:05', resolved: '2026-10-01T10:20', status: 'Resolved', assignee: 'Dev Raman', knownError: 'KE-01', survey: { sentAt: '2026-10-01', via: 'reply' }, csat: '4' },
+      { id: id('inc'), title: 'Nightly stock sync overran into trading hours', priority: 'P2', service: 'Integrations', account: 'Orders platform client', contact: 'Marcus Lee', reported: '2026-10-02T06:30', responded: '2026-10-02T07:10', resolved: '', status: 'In Progress', assignee: 'Dev Raman', knownError: '' },
     ],
 
     // The client whose service this is: the account the transition is, in
@@ -379,7 +379,7 @@ export function createServiceDeskLaunch() {
     ],
 
     incidents: [
-      { id: id('inc'), title: 'Finance cannot raise purchase requests in the portal', priority: 'P2', service: 'Service desk portal', account: 'Finance department', reported: '2026-10-01T09:10', responded: '2026-10-01T09:40', resolved: '2026-10-01T15:05', status: 'Resolved', assignee: 'Ben Iqbal', knownError: '' },
+      { id: id('inc'), title: 'Finance cannot raise purchase requests in the portal', priority: 'P2', service: 'Service desk portal', account: 'Finance department', contact: 'Rachel Kim', reported: '2026-10-01T09:10', responded: '2026-10-01T09:40', resolved: '2026-10-01T15:05', status: 'Resolved', assignee: 'Ben Iqbal', knownError: '' },
       { id: id('inc'), title: 'Password reset emails arrive after an hour', priority: 'P3', service: 'Identity', account: 'Finance department', reported: '2026-10-02T08:30', responded: '', resolved: '', status: 'New', assignee: 'Owen Clarke', knownError: '' },
     ],
 

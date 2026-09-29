@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>How did we do?</title>
+<!--
+  The satisfaction survey a customer reaches from an emailed link. It stands
+  alone: no app code and no account.
+
+  The link's fragment carries the token, the workspace's database address and
+  its public (anon) key — fragments are never sent to a server, so none of it
+  appears in a web log. The token is read once and taken out of the address
+  bar, so it is not left in the history or a screenshot. The answer goes to one
+  database function, which accepts it only for an unanswered, unexpired token,
+  once; the anon key reaches nothing else (supabase/schema.sql).
+-->
+<style>
+  :root { --bg: #f7f6fb; --card: #fff; --text: #1f1d2b; --muted: #5d5a6e; --accent: #5b3fd6; --border: #e3def5; --good: #14532d; --bad: #7f1d1d; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #15131d; --card: #1f1c2b; --text: #eeeaf8; --muted: #aaa5c0; --accent: #a996ff; --border: #332c49; --good: #86efac; --bad: #fca5a5; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: 32px 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+  h1 { font-size: 1.4rem; margin: 0 0 6px; }
+  .muted { color: var(--muted); margin: 0 0 18px; }
+  fieldset { border: 0; padding: 0; margin: 0 0 16px; }
+  legend { font-weight: 600; margin-bottom: 8px; }
+  .scores { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .scores label { display: block; text-align: center; border: 1px solid var(--border); border-radius: 8px; padding: 10px 0; cursor: pointer; font-weight: 600; }
+  .scores input { position: absolute; opacity: 0; }
+  .scores input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .scores label:has(input:checked) { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .ends { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  textarea { width: 100%; min-height: 96px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+  button { margin-top: 14px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .message { font-weight: 600; }
+  .message.is-good { color: var(--good); }
+  .message.is-bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <div class="card" id="survey">
+    <h1>How did we do?</h1>
+    <p class="muted" id="subject">About your recent support request.</p>
+    <form id="form">
+      <fieldset>
+        <legend>From 1 (poor) to 5 (excellent)</legend>
+        <div class="scores">
+          <label><input type="radio" name="score" value="1" required><span>1</span></label>
+          <label><input type="radio" name="score" value="2"><span>2</span></label>
+          <label><input type="radio" name="score" value="3"><span>3</span></label>
+          <label><input type="radio" name="score" value="4"><span>4</span></label>
+          <label><input type="radio" name="score" value="5"><span>5</span></label>
+        </div>
+        <div class="ends"><span>Poor</span><span>Excellent</span></div>
+      </fieldset>
+      <label for="comment">Anything you would like us to know? (optional)</label>
+      <textarea id="comment" maxlength="2000"></textarea>
+      <button type="submit" id="send">Send</button>
+    </form>
+    <p class="message" id="message" role="status" hidden></p>
+  </div>
+</main>
+<script>
+(() => {
+  const params = new URLSearchParams(location.hash.slice(1));
+  const token = params.get('t') || '';
+  const api = params.get('u') || '';
+  const key = params.get('k') || '';
+  const subject = params.get('s') || '';
+  // Out of the address bar, history and any screenshot from here on.
+  history.replaceState(null, '', location.pathname + location.search);
+
+  const form = document.getElementById('form');
+  const message = document.getElementById('message');
+  const say = (text, tone) => {
+    message.textContent = text;
+    message.className = `message is-${tone}`;
+    message.hidden = false;
+  };
+  if (subject) document.getElementById('subject').textContent = `About “${subject.slice(0, 200)}”.`;
+
+  // Only a real database address: https, or this machine for local testing.
+  let base = null;
+  try {
+    const u = new URL(api);
+    if (u.protocol === 'https:' || (u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname))) base = u.origin;
+  } catch { base = null; }
+  if (!/^[0-9a-f]{64}$/.test(token) || !base || !key) {
+    form.hidden = true;
+    say('This survey link is incomplete. Please use the link from the email exactly as it was sent.', 'bad');
+    return;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const score = Number(new FormData(form).get('score'));
+    if (!(score >= 1 && score <= 5)) return;
+    const send = document.getElementById('send');
+    send.disabled = true;
+    try {
+      const response = await fetch(`${base}/rest/v1/rpc/submit_incident_survey`, {
+        method: 'POST',
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_token: token, p_score: score, p_comment: document.getElementById('comment').value.slice(0, 2000) }),
+      });
+      const accepted = response.ok ? await response.json() : false;
+      form.hidden = true;
+      if (accepted === true) say('Thank you — your answer has been recorded.', 'good');
+      else say('This link has already been used, or it has expired. Thank you all the same.', 'bad');
+    } catch {
+      send.disabled = false;
+      say('Could not reach the survey. Check your connection and try again.', 'bad');
+    }
+  });
+})();
+</script>
+</body>
+</html>

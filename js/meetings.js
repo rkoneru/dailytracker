@@ -11,10 +11,19 @@ import {
   FOLLOWUP_TYPES, REMINDER_OPTIONS,
   newMeeting, newAgendaItem, newAttendee, newDecision, newAction, newFollowUp,
   newUtterance, stamp, scheduleAgenda, agendaLoad, attendance, actionTally,
-  sortMeetings, transcriptText, parseTranscript, suggestions, formatTime,
+  sortMeetings, transcriptText, parseTranscript, suggestions, formatTime, nextOccurrence,
 } from './meetingModel.js';
 import { createTranscriber, isSupported, PRIVACY_NOTE } from './transcriber.js';
 import { slug } from './register.js';
+import {
+  REPEATS, monthGrid, calendarEvents, addRepeat, icsCalendar,
+} from './meetingCalendar.js';
+import {
+  startAudio, recordingBlocker, formatDuration, formatSize,
+} from './audioRecorder.js';
+import { saveRecording, listRecordings, deleteRecording } from './audioStore.js';
+import { showSection } from './tabs.js';
+import { formatDate } from './dates.js';
 
 // The meetings page: one record per meeting, in the order you actually use it.
 //
@@ -26,6 +35,14 @@ import { slug } from './register.js';
 // An action item is the one thing here that leaves the page: it can become a
 // real task, and stays linked to the one it became. Everything else about a
 // meeting belongs to the meeting.
+//
+// The calendar comes first because it is where a meeting starts: pick the
+// day. It reads the meetings; it holds nothing of its own.
+//
+// Recording records audio, on this device, in every current browser. Live
+// transcription is an optional second layer that only some browsers have and
+// that sends audio away to work, so it is off unless ticked. The old button
+// did only the second, failed silently where it could not, and looked dead.
 
 const NEW_ROW = {
   agenda: newAgendaItem,
@@ -44,7 +61,12 @@ const LIST_LABEL = {
 };
 
 let selectedId = '';
-let transcriber = null;
+// The recording in progress: its audio controller, the meeting it belongs to
+// (kept, so switching meetings mid-recording saves to the right one) and the
+// live transcriber, if one was asked for.
+let session = null;
+let calendarMonth = null;
+let recordingUrls = [];
 let onChanged = () => {};
 
 // ---------- selection ----------
@@ -75,6 +97,7 @@ const OVERVIEW_FIELDS = [
   { field: 'endTime', label: 'End', type: 'time' },
   { field: 'location', label: 'Virtual / location', placeholder: 'e.g. Zoom, or Room 3' },
   { field: 'status', label: 'Status', options: MEETING_STATUSES },
+  { field: 'repeat', label: 'Repeats', options: REPEATS },
   { field: 'owner', label: 'Meeting owner', person: true, placeholder: 'Who called it' },
   { field: 'preparedBy', label: 'Prepared by', person: true, placeholder: 'Who is writing it up' },
   { field: 'purpose', label: 'Meeting purpose', long: true, placeholder: 'What this meeting is for, in a sentence.' },
@@ -328,47 +351,246 @@ function renderSuggestions(meeting) {
   group('Sounds like an action', actions, 'actions');
 }
 
-function setRecorderState(text, live) {
+// ---------- recording ----------
+
+function setRecorderState(text, mode = 'idle') {
   const state = document.getElementById('recorder-state');
   state.textContent = text;
-  state.classList.toggle('is-live', !!live);
-  document.getElementById('btn-record').textContent = live ? '■ Stop recording' : '● Start recording';
-  document.getElementById('recorder').classList.toggle('is-live', !!live);
+  const live = mode === 'live' || mode === 'paused';
+  state.className = `recorder__state is-${mode}`;
+  const record = document.getElementById('btn-record');
+  record.textContent = live ? '■ Stop and save' : mode === 'pending' ? 'Starting…' : '● Start recording';
+  record.disabled = mode === 'pending' || mode === 'saving' || (!live && (!current() || !!recordingBlocker()));
+  const pause = document.getElementById('btn-record-pause');
+  pause.hidden = !live;
+  pause.textContent = mode === 'paused' ? '▶ Resume' : '❚❚ Pause';
+  document.getElementById('recorder').classList.toggle('is-live', mode === 'live');
+  document.getElementById('recorder-transcribe').disabled = live || mode === 'pending';
+  if (!live) {
+    document.getElementById('recorder-level').style.width = '0%';
+    document.getElementById('recorder-interim').textContent = '';
+  }
 }
 
-function startRecording() {
+function showProblem(text) {
+  const note = document.getElementById('recorder-problem');
+  note.textContent = text || '';
+  note.hidden = !text;
+}
+
+async function startRecording() {
   const meeting = current();
-  if (!meeting) return;
-
-  transcriber = createTranscriber({
-    onInterim: (text) => { document.getElementById('recorder-interim').textContent = text; },
-    onFinal: (text, elapsed) => {
-      const live = current();
-      if (!live) return;
-      live.transcript.push(newUtterance(text, { at: stamp(elapsed) }));
-      document.getElementById('recorder-interim').textContent = '';
-      renderTranscript(live);
-      commit();
-    },
-    onError: (err) => {
-      toast(`Recording stopped: ${err}. You can paste a transcript instead.`, 'error');
-      setRecorderState('Not recording', false);
-    },
-    onEnd: () => setRecorderState('Not recording', false),
-  });
-
-  if (!transcriber || !transcriber.start()) {
-    toast('This browser will not record. Paste a transcript instead.', 'error');
+  if (!meeting || session) return;
+  showProblem('');
+  setRecorderState('Asking for the microphone…', 'pending');
+  let controller;
+  try {
+    controller = await startAudio({
+      onLevel: (level) => { document.getElementById('recorder-level').style.width = `${Math.round(level * 100)}%`; },
+      onTick: (ms) => { document.getElementById('recorder-clock').textContent = formatDuration(ms); },
+    });
+  } catch (err) {
+    setRecorderState('Not recording');
+    showProblem(err.message);
     return;
   }
-  setRecorderState('Listening…', true);
+  session = { controller, meetingId: meeting.id, transcriber: null };
+  setRecorderState('Recording', 'live');
+
+  // The transcript is the optional part: if it fails, the recording carries on.
+  if (document.getElementById('recorder-transcribe').checked && isSupported()) {
+    const transcriber = createTranscriber({
+      onInterim: (text) => { document.getElementById('recorder-interim').textContent = text; },
+      onFinal: (text) => {
+        const target = meetings().find((m) => m.id === session?.meetingId);
+        if (!target) return;
+        target.transcript.push(newUtterance(text, { at: stamp(controller.elapsed()) }));
+        document.getElementById('recorder-interim').textContent = '';
+        if (current()?.id === target.id) renderTranscript(target);
+        commit();
+      },
+      onError: (reason) => {
+        showProblem(`Live transcription stopped: ${reason}. The recording carries on.`);
+      },
+    });
+    session.transcriber = transcriber;
+    transcriber?.start();
+  }
 }
 
-function stopRecording() {
-  if (transcriber) transcriber.stop();
-  transcriber = null;
-  document.getElementById('recorder-interim').textContent = '';
-  setRecorderState('Not recording', false);
+async function stopRecording() {
+  if (!session) return;
+  const { controller, meetingId, transcriber } = session;
+  session = null;
+  transcriber?.stop();
+  setRecorderState('Saving…', 'saving');
+  const { blob, mimeType, duration } = await controller.stop();
+  const meeting = meetings().find((m) => m.id === meetingId);
+  if (blob.size) {
+    try {
+      await saveRecording({
+        id: uid(), meetingId, projectId: getActiveProjectId(), createdAt: Date.now(),
+        duration, mimeType, size: blob.size, blob, title: meeting?.name || 'Meeting',
+      });
+      toast(`Recording saved on this device (${formatDuration(duration)}).`, 'success');
+    } catch (err) {
+      showProblem(`The recording could not be saved: ${err.message}`);
+    }
+  } else {
+    showProblem('Nothing was captured — the microphone sent no sound.');
+  }
+  setRecorderState('Not recording');
+  document.getElementById('recorder-clock').textContent = '0:00';
+  if (current()?.id === meetingId) renderRecordings(current());
+}
+
+function togglePause() {
+  if (!session) return;
+  if (session.controller.isPaused()) {
+    session.controller.resume();
+    setRecorderState('Recording', 'live');
+  } else {
+    session.controller.pause();
+    setRecorderState('Paused', 'paused');
+  }
+}
+
+const EXTENSION = { 'audio/mp4': 'm4a', 'audio/ogg': 'ogg', 'audio/webm': 'webm' };
+
+function renderRecordings(meeting) {
+  const host = document.getElementById('recording-list');
+  const empty = document.getElementById('recording-empty');
+  recordingUrls.forEach((u) => URL.revokeObjectURL(u));
+  recordingUrls = [];
+  if (!meeting) { host.replaceChildren(); return; }
+  listRecordings(meeting.id).then((rows) => {
+    if (current()?.id !== meeting.id) return;
+    host.replaceChildren(...rows.map((r) => {
+      const url = URL.createObjectURL(r.blob);
+      recordingUrls.push(url);
+      const ext = EXTENSION[String(r.mimeType || '').split(';')[0]] || 'webm';
+      const when = new Date(r.createdAt);
+      return el('li', { class: 'recording', 'data-recording': r.id }, [
+        el('div', { class: 'recording__meta', text: `${formatDate(when)} ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')} · ${formatDuration(r.duration)} · ${formatSize(r.size)}` }),
+        el('audio', { controls: true, preload: 'metadata', src: url }),
+        el('div', { class: 'recording__actions' }, [
+          el('a', { class: 'btn btn-small btn-ghost', href: url, download: `${slug(meeting.name || 'meeting') || 'meeting'}-${meeting.date || 'recording'}-${r.id.slice(-4)}.${ext}`, text: 'Download' }),
+          el('button', { type: 'button', class: 'btn btn-small btn-ghost', 'data-recording-delete': r.id, text: 'Delete' }),
+        ]),
+      ]);
+    }));
+    empty.hidden = rows.length > 0;
+  }).catch((err) => {
+    host.replaceChildren();
+    empty.hidden = false;
+    empty.textContent = `Recordings cannot be listed here: ${err.message}`;
+  });
+}
+
+function renderRecorder(meeting) {
+  const blocked = recordingBlocker();
+  if (!session) {
+    setRecorderState(blocked ? 'Recording is not available here' : 'Not recording');
+    showProblem(blocked || '');
+  }
+  document.getElementById('recorder-transcribe-wrap').hidden = !isSupported();
+  document.getElementById('transcript-privacy').textContent = isSupported()
+    ? PRIVACY_NOTE
+    : 'This browser cannot transcribe live, so recording makes the audio only. For a transcript, paste one from your meeting tool — that path works everywhere.';
+  renderRecordings(meeting);
+}
+
+// ---------- calendar ----------
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+function chip(e) {
+  const tab = e.kind === 'followUp' || e.kind === 'action' ? 'sec-meeting-actions' : 'sec-meeting-overview';
+  const label = `${e.time ? `${formatTime(e.time)} ` : ''}${e.kind === 'followUp' ? '↻ ' : e.kind === 'action' ? '☐ ' : ''}${e.title}`;
+  const attrs = e.kind === 'repeat'
+    ? { 'data-cal-repeat': e.meetingId, 'data-date': e.date, title: `${e.title} — ${e.status}, not yet held. Open to plan it.` }
+    : { 'data-cal-open': e.meetingId, 'data-cal-tab': tab, title: `${e.title}${e.kind === 'meeting' ? ` — ${e.status}` : ''}` };
+  return el('button', {
+    type: 'button',
+    class: `cal-chip is-${e.kind}${e.status === 'Cancelled' ? ' is-cancelled' : ''}${e.meetingId === selectedId && e.kind === 'meeting' ? ' is-selected' : ''}`,
+    ...attrs,
+    text: label,
+  });
+}
+
+function renderCalendar() {
+  const host = document.getElementById('meeting-calendar');
+  if (!host) return;
+  const today = new Date();
+  if (!calendarMonth) calendarMonth = { y: today.getFullYear(), m: today.getMonth() };
+  const weeks = monthGrid(calendarMonth.y, calendarMonth.m);
+  const events = calendarEvents(meetings(), weeks[0][0], weeks[5][6]);
+  const todayIso = isoOf(today);
+  const monthLabel = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(calendarMonth.y, calendarMonth.m, 1));
+  document.getElementById('meeting-calendar-label').textContent = `Calendar — ${monthLabel}`;
+  const dayName = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const heads = weeks[0].map((d) => dayName.format(new Date(`${d}T00:00:00`)));
+  const inMonth = (d) => Number(d.slice(5, 7)) - 1 === calendarMonth.m;
+  host.replaceChildren(el('table', { class: 'cal-grid', 'aria-label': monthLabel }, [
+    el('thead', {}, [el('tr', {}, heads.map((h) => el('th', { scope: 'col', text: h })))]),
+    el('tbody', {}, weeks.map((week) => el('tr', {}, week.map((d) => {
+      const list = events.get(d) || [];
+      return el('td', { class: `cal-day${inMonth(d) ? '' : ' is-other'}${d === todayIso ? ' is-today' : ''}`, 'data-day': d }, [
+        el('div', { class: 'cal-day__head' }, [
+          el('span', { class: 'cal-day__n', text: String(Number(d.slice(8))) }),
+          el('button', { type: 'button', class: 'cal-day__add no-print', 'data-cal-new': d, 'aria-label': `New meeting on ${formatDate(d)}`, text: '+' }),
+        ]),
+        el('div', { class: 'cal-day__events' }, list.map(chip)),
+      ]);
+    })))),
+  ]));
+
+  // The same thing as a list, which is what reads on a phone.
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 13);
+  const soon = calendarEvents(meetings(), todayIso, isoOf(end));
+  const upcoming = document.getElementById('meeting-upcoming');
+  upcoming.replaceChildren(...(soon.size
+    ? [...soon.entries()].map(([d, list]) => el('li', { class: 'meeting-upcoming__day' }, [
+      el('span', { class: 'meeting-upcoming__date', text: d === todayIso ? `Today, ${formatDate(d)}` : formatDate(d) }),
+      el('div', { class: 'cal-day__events' }, list.map(chip)),
+    ]))
+    : [el('li', { class: 'hint', text: 'Nothing in the next two weeks.' })]));
+}
+
+function openMeeting(id, sectionId = 'sec-meeting-overview') {
+  stopRecordingIfOther(id);
+  selectedId = id;
+  renderMeetings();
+  showSection('page-meetings', sectionId);
+}
+
+function stopRecordingIfOther(id) {
+  if (session && session.meetingId !== id) {
+    stopRecording();
+    toast('The recording was stopped and saved to the meeting it started in.', 'info');
+  }
+}
+
+function createOn(date, from = null) {
+  const meeting = from
+    ? { ...nextOccurrence(from, date), id: uid() }
+    : { ...newMeeting({ date, status: 'Scheduled' }), id: uid() };
+  // The first time a meeting repeats, it becomes the head of its series.
+  if (from && !from.seriesId) from.seriesId = from.id;
+  meetings().push(meeting);
+  commit();
+  openMeeting(meeting.id);
+  if (!from) document.querySelector('[data-meeting-field="name"]')?.focus();
+  return meeting;
+}
+
+function downloadIcs(list, name) {
+  const text = icsCalendar(list, { contacts: getState().contacts || [], calendarName: `${getState().projectName || 'Project'} meetings` });
+  const a = el('a', { href: URL.createObjectURL(new Blob([text], { type: 'text/calendar' })), download: `${slug(name) || 'meetings'}.ics` });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 // ---------- the page ----------
@@ -430,6 +652,7 @@ export function renderMeetings() {
   const list = meetings();
   const meeting = current();
   selectedId = meeting ? meeting.id : '';
+  renderCalendar();
 
   const empty = document.getElementById('meeting-none');
   const hasAny = list.length > 0;
@@ -443,10 +666,10 @@ export function renderMeetings() {
   document.getElementById('btn-delete-meeting').disabled = !hasAny;
 
   renderPicker();
-  document.getElementById('transcript-privacy').textContent = isSupported()
-    ? PRIVACY_NOTE
-    : 'This browser cannot record. Paste a transcript from your meeting tool instead — that path works everywhere.';
-  document.getElementById('btn-record').disabled = !isSupported() || !hasAny;
+  renderRecorder(meeting);
+  const repeats = !!meeting && meeting.repeat && meeting.repeat !== 'None';
+  document.getElementById('btn-meeting-next').hidden = !repeats;
+  document.getElementById('btn-meeting-ics').disabled = !meeting?.date;
 
   if (!meeting) return;
 
@@ -669,18 +892,59 @@ export function initMeetings(navigate) {
   goTo = navigate;
 
   document.getElementById('meeting-picker').addEventListener('change', (e) => {
+    stopRecordingIfOther(e.target.value);
     selectedId = e.target.value;
-    stopRecording();
     renderMeetings();
   });
 
-  document.getElementById('btn-add-meeting').addEventListener('click', () => {
-    const meeting = { ...newMeeting({ date: todayISO(), status: 'Scheduled' }), id: uid() };
-    meetings().push(meeting);
-    selectedId = meeting.id;
-    renderMeetings();
-    commit();
-    document.querySelector('[data-meeting-field="name"]')?.focus();
+  document.getElementById('btn-add-meeting').addEventListener('click', () => createOn(todayISO()));
+
+  // ---- calendar ----
+  document.getElementById('sec-meeting-calendar').addEventListener('click', (e) => {
+    const nav = e.target.closest('[data-cal-nav]')?.dataset.calNav;
+    if (nav !== undefined) {
+      const t = new Date();
+      if (nav === '0') calendarMonth = { y: t.getFullYear(), m: t.getMonth() };
+      else {
+        const d = new Date(calendarMonth.y, calendarMonth.m + Number(nav), 1);
+        calendarMonth = { y: d.getFullYear(), m: d.getMonth() };
+      }
+      renderCalendar();
+      return;
+    }
+    const day = e.target.closest('[data-cal-new]')?.dataset.calNew;
+    if (day) { createOn(day); return; }
+    const open = e.target.closest('[data-cal-open]');
+    if (open) { openMeeting(open.dataset.calOpen, open.dataset.calTab); return; }
+    const repeat = e.target.closest('[data-cal-repeat]');
+    if (repeat) {
+      const from = meetings().find((m) => m.id === repeat.dataset.calRepeat);
+      if (from) {
+        createOn(repeat.dataset.date, from);
+        toast('Planned from the last one: same agenda and invitees, nothing yet decided.', 'success');
+      }
+    }
+  });
+  document.getElementById('btn-meetings-ics').addEventListener('click', () => {
+    const dated = meetings().filter((m) => m.date);
+    if (!dated.length) { toast('No meeting has a date yet.', 'info'); return; }
+    downloadIcs(dated, `${getState().projectName || 'project'}-meetings`);
+    toast(`${dated.length} meeting${dated.length === 1 ? '' : 's'} exported. Open the file to add them to your calendar.`, 'success');
+  });
+  document.getElementById('btn-meeting-ics').addEventListener('click', () => {
+    const meeting = current();
+    if (!meeting?.date) return;
+    downloadIcs([meeting], `${meeting.name || 'meeting'}-${meeting.date}`);
+  });
+  document.getElementById('btn-meeting-next').addEventListener('click', () => {
+    const meeting = current();
+    if (!meeting?.date || !meeting.repeat || meeting.repeat === 'None') return;
+    const series = meetings().filter((m) => (m.seriesId || m.id) === (meeting.seriesId || meeting.id) && m.date);
+    const latest = series.reduce((a, b) => (b.date > a.date ? b : a), meeting);
+    const date = addRepeat(latest.date, latest.repeat || meeting.repeat);
+    if (!date) return;
+    createOn(date, latest);
+    toast(`Next one planned for ${formatDate(date)}.`, 'success');
   });
 
   document.getElementById('btn-delete-meeting').addEventListener('click', async () => {
@@ -693,7 +957,7 @@ export function initMeetings(navigate) {
       tone: 'danger',
     });
     if (!ok) return;
-    stopRecording();
+    if (session?.meetingId === meeting.id) await stopRecording();
     trashRow('meetings', meeting.id);
     selectedId = '';
     renderMeetings();
@@ -710,6 +974,12 @@ export function initMeetings(navigate) {
     // both show its name and date.
     if (field === 'startTime' || field === 'endTime') renderAgenda(meeting);
     if (field === 'name' || field === 'date' || field === 'status') renderPicker();
+    if (['name', 'date', 'startTime', 'status', 'repeat'].includes(field)) renderCalendar();
+    if (field === 'repeat') {
+      if (meeting.repeat !== 'None' && !meeting.seriesId) meeting.seriesId = meeting.id;
+      document.getElementById('btn-meeting-next').hidden = meeting.repeat === 'None';
+    }
+    if (field === 'date') document.getElementById('btn-meeting-ics').disabled = !meeting.date;
     renderCounters(meeting);
     commit();
   });
@@ -759,8 +1029,27 @@ export function initMeetings(navigate) {
   });
 
   document.getElementById('btn-record').addEventListener('click', () => {
-    if (transcriber && transcriber.isRunning()) stopRecording();
+    if (session) stopRecording();
     else startRecording();
+  });
+  document.getElementById('btn-record-pause').addEventListener('click', togglePause);
+  document.getElementById('recording-list').addEventListener('click', async (e) => {
+    const id = e.target.closest('[data-recording-delete]')?.dataset.recordingDelete;
+    if (!id) return;
+    const ok = await confirmAction({
+      title: 'Delete this recording?',
+      message: 'It is removed from this device and cannot be restored. Download it first if you need to keep it.',
+      confirmLabel: 'Delete', tone: 'danger',
+    });
+    if (!ok) return;
+    await deleteRecording(id);
+    renderRecordings(current());
+  });
+  // Closing the tab mid-meeting would lose the recording, so the browser asks.
+  window.addEventListener('beforeunload', (e) => {
+    if (!session) return;
+    e.preventDefault();
+    e.returnValue = '';
   });
 
   document.getElementById('btn-import-transcript').addEventListener('click', () => {

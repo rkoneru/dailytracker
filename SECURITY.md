@@ -79,6 +79,17 @@ job role, and set page access. They deliberately **cannot**:
 Without the third, delegation would be one UPDATE away from a handover. All
 three are enforced by the `project_members_write` policy, not by the UI.
 
+## Meeting recordings
+
+Audio recorded on the Meetings page is kept in this browser's IndexedDB and
+nowhere else: it is not synced, not exported and not in the workspace
+database, so nobody else on the project can play it and another device of
+yours will not have it. Clearing the site's data deletes it. The optional
+live transcription is different: in Chrome and Edge the browser sends the
+audio to its vendor to be recognised, and the page says so beside the switch.
+The transcript text it produces is part of the meeting, and so is project
+data every member can read.
+
 ## Contacts and the activity log
 
 Customer contacts — names, roles, email addresses and phone numbers — and the

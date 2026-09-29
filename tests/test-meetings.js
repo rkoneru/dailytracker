@@ -29,9 +29,9 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   await page.click('#tab-meetings .nav-row__label');
   await page.waitForTimeout(600);
   eq('landed on Meetings', await page.textContent('#page-title'), 'Meetings');
-  eq('the sections are the meeting, in the order it happens',
+  eq('the calendar, then the meeting in the order it happens',
      await page.$$eval('#page-meetings .page-tab', (e) => e.map((x) => x.firstChild.textContent.trim())),
-     ['Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']);
+     ['Calendar', 'Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']);
 
   console.log('\n--- the starter project ships a worked example ---');
   // The newest of the two is the worked example these assertions walk through;

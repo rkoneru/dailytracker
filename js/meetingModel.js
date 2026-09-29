@@ -36,6 +36,10 @@ export function newMeeting(overrides = {}) {
     owner: '',
     preparedBy: '',
     status: 'Scheduled',
+    // How often it recurs, and the first meeting of its series. Each held
+    // occurrence is its own meeting; the calendar projects the rest.
+    repeat: 'None',
+    seriesId: '',
     notes: '',
     outcome: '',
     agenda: [],
@@ -53,6 +57,22 @@ export const newAttendee = (o = {}) => ({ id: mid('at'), name: '', role: '', dep
 export const newDecision = (o = {}) => ({ id: mid('de'), decision: '', tag: 'Operational', impact: 'Medium', ...o });
 export const newAction = (o = {}) => ({ id: mid('ac'), text: '', owner: '', due: '', status: 'Open', taskId: '', ...o });
 export const newFollowUp = (o = {}) => ({ id: mid('fu'), activity: '', purpose: '', owner: '', date: '', type: 'Meeting', reminder: '1 day before', ...o });
+
+/**
+ * The next meeting in a series, prepared from this one: the same name, times,
+ * place, purpose, agenda and invitees, on `date`, with nothing yet decided,
+ * attended or said. Minutes are the one thing that must never be copied.
+ */
+export function nextOccurrence(meeting, date) {
+  return newMeeting({
+    name: meeting.name, date, startTime: meeting.startTime, endTime: meeting.endTime,
+    location: meeting.location, purpose: meeting.purpose, owner: meeting.owner, preparedBy: meeting.preparedBy,
+    repeat: meeting.repeat || 'None',
+    seriesId: meeting.seriesId || meeting.id,
+    agenda: (meeting.agenda || []).map(({ time, topic, lead, minutes }) => newAgendaItem({ time, topic, lead, minutes })),
+    attendees: (meeting.attendees || []).map(({ name, role, department }) => newAttendee({ name, role, department })),
+  });
+}
 
 /** Every nested list, so migration and id regeneration have one place to look. */
 export const MEETING_LISTS = ['agenda', 'attendees', 'decisions', 'actions', 'followUps', 'transcript'];

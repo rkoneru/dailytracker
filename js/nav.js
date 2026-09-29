@@ -212,6 +212,7 @@ export const NAV_TREE = [
         page: 'page-meetings',
         title: 'Meetings',
         children: [
+          { id: 'nav-meeting-calendar', label: 'Calendar', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-calendar' },
           { id: 'nav-meeting-overview', label: 'Overview', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-overview' },
           { id: 'nav-meeting-agenda', label: 'Agenda', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-agenda' },
           { id: 'nav-meeting-attendees', label: 'Attendees', page: 'page-meetings', title: 'Meetings', section: 'sec-meeting-attendees' },

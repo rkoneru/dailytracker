@@ -54,9 +54,11 @@ function findChromium() {
   return candidates.find((candidate) => fs.existsSync(candidate));
 }
 
-async function launch() {
+// `args` adds browser flags: the recording suite passes Chromium's fake
+// microphone, so a real MediaRecorder runs against a synthetic tone.
+async function launch({ args = [] } = {}) {
   const executablePath = findChromium();
-  return chromium.launch({ args: ['--no-sandbox'], ...(executablePath ? { executablePath } : {}) });
+  return chromium.launch({ args: ['--no-sandbox', ...args], ...(executablePath ? { executablePath } : {}) });
 }
 
 // ---------- assertions ----------

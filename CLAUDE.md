@@ -64,6 +64,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/accounting.js` | the accounting link as files: Xero / QuickBooks Online / plain invoice CSVs out, a payments CSV matched back by invoice number. Pure |
 | `js/journey.js` | one use case from sale to success: seven steps read off the deal, the decision and the project it became. Stores nothing |
 | `js/surveys.js`, `survey.html` | satisfaction surveys on closed incidents: a one-time link (hash in `incident_surveys`, answered through `submit_incident_survey`) or, offline, a reply typed in; answers pulled back onto the incident |
+| `js/meetingCalendar.js`, `audioRecorder.js`, `audioStore.js` | the Meetings calendar (month grid, projected repeats, `.ics` export with follow-up alarms), audio recording with MediaRecorder, and recordings kept in IndexedDB on this device only |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
 | `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
@@ -210,6 +211,20 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   `csatAt` is what marks a score as having come by link rather than by hand.
   CSAT is `null` until someone answers. A register with two `custom` columns
   gets each redrawn by position (`refreshDerivedCells`).
+- **A meeting's calendar is a view; its repeats are projections.** Every held
+  occurrence is its own meeting (its own agenda, attendance and minutes), in a
+  series by `seriesId`; the calendar draws the dates after the latest one
+  dashed, and one becomes a meeting only when opened (`nextOccurrence` copies
+  the plan, never the minutes). The `.ics` export writes floating local times,
+  puts the RRULE only on a series' latest meeting, invites attendees whose
+  email is on Contacts, and turns a follow-up's reminder into a VALARM.
+- **Recording records audio; transcription is the optional extra.**
+  `audioRecorder.js` uses MediaRecorder (every current browser) and names why
+  it cannot start — not https, microphone blocked, none, or busy — before or
+  as it happens. Audio goes to IndexedDB on this device, never to sync.
+  Live speech-to-text is off unless ticked, sends audio to the browser vendor
+  in Chrome/Edge, and stops on a fatal error instead of restarting in a loop;
+  if it fails the recording carries on.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

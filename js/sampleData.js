@@ -165,6 +165,8 @@ function createMarketingCampaign() {
         owner: 'Priya N.',
         preparedBy: 'Priya N.',
         status: 'Complete',
+        // Weekly, so the calendar shows the coming stand-ups dashed from day one.
+        repeat: 'Weekly',
         notes: 'Creative is signed off and the asset pack is with the agency.\n'
           + 'Tracking pixel still not firing on checkout — Jordan has a dev ticket open.\n'
           + 'Legal have not come back on the influencer terms; launch plan assumes organic-only fallback.',

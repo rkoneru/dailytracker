@@ -97,6 +97,7 @@ export const PAGE_TABS = {
   ],
   // In the order a meeting happens: prepare, discuss, follow up.
   'page-meetings': [
+    { id: 'sec-meeting-calendar', label: 'Calendar' },
     { id: 'sec-meeting-overview', label: 'Overview & Agenda', sections: ['sec-meeting-overview', 'sec-meeting-attendees', 'sec-meeting-agenda'] },
     { id: 'sec-meeting-notes', label: 'Notes & Decisions', sections: ['sec-meeting-notes', 'sec-meeting-decisions'] },
     { id: 'sec-meeting-actions', label: 'Actions', sections: ['sec-meeting-actions', 'sec-meeting-followups'] },

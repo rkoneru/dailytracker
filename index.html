@@ -1206,8 +1206,38 @@
           </div>
         </section>
 
+        <section class="card" id="sec-meeting-calendar">
+          <div class="card__head">
+            <h2 id="meeting-calendar-label">Calendar</h2>
+            <div class="meeting-calendar__nav no-print">
+              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="-1" aria-label="Previous month">&lsaquo;</button>
+              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="0">Today</button>
+              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="1" aria-label="Next month">&rsaquo;</button>
+              <button type="button" class="btn btn-small" id="btn-meetings-ics">Export calendar (.ics)</button>
+            </div>
+          </div>
+          <p class="hint">
+            Every meeting on its day, with follow-ups and the actions falling due. Press <strong>+</strong> on a day to
+            plan a meeting there. A repeating meeting shows its coming dates dashed; open one to hold it. The export
+            opens in Outlook, Google Calendar or Apple Calendar, and a follow-up&rsquo;s reminder goes in as a real alarm.
+          </p>
+          <div class="meeting-calendar__legend" aria-hidden="true">
+            <span class="cal-chip is-meeting">Meeting</span>
+            <span class="cal-chip is-repeat">Repeat, not yet held</span>
+            <span class="cal-chip is-followUp">Follow-up</span>
+            <span class="cal-chip is-action">Action due</span>
+          </div>
+          <div class="table-scroll"><div id="meeting-calendar"></div></div>
+          <h3 class="uc-sub">Next two weeks</h3>
+          <ul class="meeting-upcoming" id="meeting-upcoming"></ul>
+        </section>
+
         <section class="card" id="sec-meeting-overview">
-          <div class="card__head"><h2>Meeting Overview</h2></div>
+          <div class="card__head">
+            <h2>Meeting Overview</h2>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-meeting-next" title="Plan the next meeting in this series, with the same agenda and invitees">Schedule the next one</button>
+            <button type="button" class="btn btn-small no-print" id="btn-meeting-ics">Add to calendar (.ics)</button>
+          </div>
           <div class="charter-grid" id="meeting-overview-fields"></div>
         </section>
 
@@ -1364,12 +1394,32 @@
             <span class="hint" id="transcript-count"></span>
           </div>
 
-          <p class="hint callout" id="transcript-privacy"></p>
+          <p class="hint">
+            Recordings are kept on this device only, in the browser&rsquo;s own storage. They are not synced to your other
+            devices or to the workspace, and clearing this site&rsquo;s data deletes them &mdash; download any you need to keep.
+          </p>
 
           <div class="recorder no-print" id="recorder">
             <button type="button" class="btn btn-primary" id="btn-record">● Start recording</button>
-            <span class="recorder__state" id="recorder-state">Not recording</span>
+            <button type="button" class="btn btn-ghost" id="btn-record-pause" hidden>❚❚ Pause</button>
+            <span class="recorder__clock" id="recorder-clock" aria-label="Time recorded">0:00</span>
+            <span class="recorder__meter" aria-hidden="true"><span class="recorder__level" id="recorder-level"></span></span>
+            <span class="recorder__state" id="recorder-state" role="status">Not recording</span>
+            <label class="check-inline recorder__transcribe" id="recorder-transcribe-wrap">
+              <input type="checkbox" id="recorder-transcribe"> Transcribe live as well
+            </label>
             <span class="recorder__interim" id="recorder-interim"></span>
+          </div>
+          <p class="hint is-warn" id="recorder-problem" hidden></p>
+          <p class="hint callout" id="transcript-privacy"></p>
+
+          <h3 class="uc-sub">Recordings</h3>
+          <ul class="recordings" id="recording-list"></ul>
+          <p class="hint" id="recording-empty">Nothing recorded for this meeting yet.</p>
+
+          <div class="sync-actions no-print transcript-tools">
+            <button type="button" class="btn btn-small btn-ghost" id="btn-copy-transcript">Copy transcript</button>
+            <button type="button" class="btn btn-small btn-ghost" id="btn-clear-transcript">Clear transcript</button>
           </div>
 
           <details class="meeting-paste no-print" id="transcript-paste">
@@ -1383,8 +1433,6 @@
                       placeholder="[00:00] Jessica Morgan: Let's start with the Q1 numbers."></textarea>
             <div class="sync-actions">
               <button type="button" class="btn btn-small btn-primary" id="btn-import-transcript">Add to transcript</button>
-              <button type="button" class="btn btn-small btn-ghost" id="btn-copy-transcript">Copy transcript</button>
-              <button type="button" class="btn btn-small btn-ghost" id="btn-clear-transcript">Clear transcript</button>
             </div>
           </details>
 

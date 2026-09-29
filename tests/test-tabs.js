@@ -36,7 +36,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
     'tab-people': ['page-people', ['Team', 'Who Does What', 'Stakeholders & Comms', 'Vendors']],
     'tab-service': ['page-service', ['Service Levels', 'Incidents', 'Go-Live', 'Releases & Change', 'Known Issues']],
     'tab-improve': ['page-improve', ['Improvements', 'Lessons']],
-    'tab-meetings': ['page-meetings', ['Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']],
+    'tab-meetings': ['page-meetings', ['Calendar', 'Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']],
     'tab-kpis': ['page-kpis', ['Indicators', 'How They Work', 'PM Framework', 'Business & Leadership']],
     'tab-customers': ['page-customers', ['Accounts', 'Contacts', 'Activity', 'Lifecycle', 'Renewals']],
     'tab-resources': ['page-resources', ['People', 'Allocations', 'Availability', 'Timesheets', 'Capacity']],

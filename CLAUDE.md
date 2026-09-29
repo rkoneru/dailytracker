@@ -222,9 +222,16 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   `audioRecorder.js` uses MediaRecorder (every current browser) and names why
   it cannot start — not https, microphone blocked, none, or busy — before or
   as it happens. Audio goes to IndexedDB on this device, never to sync.
-  Live speech-to-text is off unless ticked, sends audio to the browser vendor
-  in Chrome/Edge, and stops on a fatal error instead of restarting in a loop;
-  if it fails the recording carries on.
+  Capture is a per-device choice (remembered in localStorage): audio and live
+  transcript (the default where both work), audio only, or transcript only —
+  Android and some laptops cannot record and run speech recognition on one
+  microphone at once, and the page names the mode that will work. Live
+  speech-to-text sends audio to the browser vendor in Chrome/Edge, and stops on
+  a fatal error instead of restarting in a loop; if it fails the recording
+  carries on. "Check microphone" tests each piece on the device (version,
+  https, permission, sound, recorder, storage, speech) and names the one that
+  fails. The meter's AudioContext is made inside the click, or Chrome starts
+  it suspended and the meter sits at zero.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

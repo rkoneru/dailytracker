@@ -137,6 +137,9 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   console.log('\n--- recording records ---');
   await openDestination(page, 'nav-meeting-transcript');
   eq('ready before anyone presses anything', [await page.textContent('#recorder-state'), await page.isDisabled('#btn-record')], ['Not recording', false]);
+  const modes = await page.$$eval('#recorder-mode option', (o) => o.map((x) => x.value));
+  eq('audio with a live transcript is the default where the browser has both', [modes, await page.inputValue('#recorder-mode')], [['both', 'audio', 'transcript'], 'both']);
+  await page.selectOption('#recorder-mode', 'audio');
   await page.click('#btn-record');
   await page.waitForFunction(() => document.getElementById('recorder-state').textContent === 'Recording');
   await page.waitForTimeout(1600);
@@ -164,21 +167,42 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   await page.waitForTimeout(400);
   eq('deleting asks, then removes it', await page.locator('#recording-list li').count(), 0);
 
-  console.log('\n--- live transcription is optional, and fails quietly ---');
-  const transcribes = await page.isVisible('#recorder-transcribe-wrap');
-  if (transcribes) {
-    await page.check('#recorder-transcribe');
-    await page.click('#btn-record');
-    await page.waitForFunction(() => document.getElementById('recorder-state').textContent === 'Recording');
-    await page.waitForTimeout(2500);
-    eq('whatever the speech engine does, the recording carries on', await page.textContent('#recorder-state'), 'Recording');
-    eq('and there is no storm of errors', await page.locator('.toast').count() <= 1, true);
-    await page.click('#btn-record');
-    await page.waitForSelector('#recording-list li');
-    eq('the recording is saved', await page.locator('#recording-list li').count(), 1);
-  } else {
-    eq('no live transcription offered where the browser has none', transcribes, false);
-  }
+  console.log('\n--- the choice is remembered on this device ---');
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(800);
+  await openDestination(page, 'nav-meeting-transcript');
+  eq('audio only, still', await page.inputValue('#recorder-mode'), 'audio');
+
+  console.log('\n--- with a live transcript, whatever the speech engine does ---');
+  await page.selectOption('#recorder-mode', 'both');
+  await page.click('#btn-record');
+  await page.waitForFunction(() => document.getElementById('recorder-state').textContent === 'Recording');
+  eq('it says the transcript is listening, or why it is not', (await page.textContent('#recorder-transcript-state')).startsWith('Live transcript')
+     || (await page.textContent('#recorder-problem')).startsWith('Live transcription stopped'), true);
+  await page.waitForTimeout(2500);
+  eq('the recording carries on', await page.textContent('#recorder-state'), 'Recording');
+  eq('and there is no storm of errors', await page.locator('.toast').count() <= 1, true);
+  await page.click('#btn-record');
+  await page.waitForSelector('#recording-list li');
+  eq('the recording is saved', await page.locator('#recording-list li').count(), 1);
+
+  console.log('\n--- a transcript without a recording ---');
+  await page.selectOption('#recorder-mode', 'transcript');
+  await page.click('#btn-record');
+  await page.waitForTimeout(2000);
+  const tState = await page.textContent('#recorder-state');
+  eq('it transcribes, or stops and says why', tState === 'Transcribing'
+     || (tState === 'Not recording' && (await page.textContent('#recorder-problem')).startsWith('Live transcription stopped')), true);
+  if (tState === 'Transcribing') await page.click('#btn-record');
+  await page.waitForTimeout(400);
+  eq('and makes no audio', await page.locator('#recording-list li').count(), 1);
+
+  console.log('\n--- Check microphone says which piece fails ---');
+  await page.click('#btn-mic-check');
+  await page.waitForFunction(() => document.querySelectorAll('#mic-check li').length >= 7 && !document.querySelector('#mic-check .is-wait'), null, { timeout: 20000 });
+  const check = await page.$$eval('#mic-check li', (rows) => rows.map((r) => [r.querySelector('strong').textContent.replace(': ', ''), r.className.replace('mic-check__row is-', '')]));
+  eq('every piece, in order', check.map((c) => c[0]), ['App version', 'Secure page', 'Microphone permission', 'Microphone', 'Recorder', 'Storage on this device', 'Live transcript']);
+  eq('here the page, microphone, recorder and storage all work', check.filter((c) => ['Secure page', 'Microphone', 'Recorder', 'Storage on this device'].includes(c[0])).map((c) => c[1]), ['ok', 'ok', 'ok', 'ok']);
 
   console.log('\n--- a blocked microphone says so, once ---');
   const plain = await launch();
@@ -194,6 +218,9 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   eq('in words, not an error code', /microphone/i.test(problem) && !/not-allowed/.test(problem), true);
   eq('and the recorder is back, not stuck', [await blockedPage.textContent('#recorder-state'), await blockedPage.isDisabled('#btn-record')], ['Not recording', false]);
   eq('no toasts piling up', await blockedPage.locator('.toast').count(), 0);
+  await blockedPage.click('#btn-mic-check');
+  await blockedPage.waitForFunction(() => document.querySelectorAll('#mic-check li').length >= 4 && !document.querySelector('#mic-check li:nth-child(4).is-wait'), null, { timeout: 20000 });
+  eq('and the check points at the microphone', await blockedPage.$eval('#mic-check li:nth-child(4)', (r) => [r.className, /microphone/i.test(r.textContent)]), ['mic-check__row is-bad', true]);
   await plain.close();
 
   const explain = await page.evaluate(async () => {

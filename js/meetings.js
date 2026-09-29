@@ -19,7 +19,7 @@ import {
   REPEATS, monthGrid, calendarEvents, addRepeat, icsCalendar,
 } from './meetingCalendar.js';
 import {
-  startAudio, recordingBlocker, formatDuration, formatSize,
+  startAudio, recordingBlocker, formatDuration, formatSize, meterContext, testMicrophone,
 } from './audioRecorder.js';
 import { saveRecording, listRecordings, deleteRecording } from './audioStore.js';
 import { showSection } from './tabs.js';
@@ -352,6 +352,34 @@ function renderSuggestions(meeting) {
 }
 
 // ---------- recording ----------
+//
+// Three ways to capture, because devices differ in what they can do at once:
+// audio and a live transcript together (the default where both work), audio
+// only, or a live transcript only. Android, and some laptops, will not let a
+// page record and run the browser's speech recogniser on one microphone at
+// the same time; when that happens the page says so and names the mode that
+// will work, rather than leaving a transcript that silently never arrives.
+
+const MODE_KEY = 'projectPlannerRecorderMode_v1';
+const MODES = {
+  both: 'Audio and live transcript',
+  audio: 'Audio only',
+  transcript: 'Live transcript only',
+};
+
+function availableModes() {
+  const canAudio = !recordingBlocker();
+  const canText = isSupported();
+  return Object.keys(MODES).filter((m) => (m === 'both' ? canAudio && canText : m === 'audio' ? canAudio : canText));
+}
+
+// A per-device convenience: which mode this person last chose here.
+function chosenMode() {
+  const modes = availableModes();
+  let saved = '';
+  try { saved = localStorage.getItem(MODE_KEY) || ''; } catch { saved = ''; }
+  return modes.includes(saved) ? saved : modes[0] || '';
+}
 
 function setRecorderState(text, mode = 'idle') {
   const state = document.getElementById('recorder-state');
@@ -360,12 +388,13 @@ function setRecorderState(text, mode = 'idle') {
   state.className = `recorder__state is-${mode}`;
   const record = document.getElementById('btn-record');
   record.textContent = live ? '■ Stop and save' : mode === 'pending' ? 'Starting…' : '● Start recording';
-  record.disabled = mode === 'pending' || mode === 'saving' || (!live && (!current() || !!recordingBlocker()));
+  record.disabled = mode === 'pending' || mode === 'saving' || (!live && (!current() || !availableModes().length));
   const pause = document.getElementById('btn-record-pause');
-  pause.hidden = !live;
+  pause.hidden = !live || !session?.controller;
   pause.textContent = mode === 'paused' ? '▶ Resume' : '❚❚ Pause';
   document.getElementById('recorder').classList.toggle('is-live', mode === 'live');
-  document.getElementById('recorder-transcribe').disabled = live || mode === 'pending';
+  document.getElementById('recorder-mode').disabled = live || mode === 'pending';
+  document.getElementById('btn-mic-check').disabled = live || mode === 'pending';
   if (!live) {
     document.getElementById('recorder-level').style.width = '0%';
     document.getElementById('recorder-interim').textContent = '';
@@ -378,51 +407,97 @@ function showProblem(text) {
   note.hidden = !text;
 }
 
+function showTranscriptState(text) {
+  const note = document.getElementById('recorder-transcript-state');
+  note.textContent = text || '';
+  note.hidden = !text;
+}
+
+function startTranscriber(meetingId, elapsed, { withAudio }) {
+  let lines = 0;
+  showTranscriptState('Live transcript: listening — speak and lines appear below.');
+  const transcriber = createTranscriber({
+    onInterim: (text) => { document.getElementById('recorder-interim').textContent = text; },
+    onFinal: (text) => {
+      const target = meetings().find((m) => m.id === meetingId);
+      if (!target) return;
+      target.transcript.push(newUtterance(text, { at: stamp(elapsed()) }));
+      lines += 1;
+      showTranscriptState(`Live transcript: ${lines} line${lines === 1 ? '' : 's'} so far.`);
+      document.getElementById('recorder-interim').textContent = '';
+      if (current()?.id === target.id) renderTranscript(target);
+      commit();
+    },
+    onError: (reason, code) => {
+      showTranscriptState('');
+      const shared = withAudio && (code === 'audio-capture' || code === 'not-allowed' || code === 'no-session');
+      showProblem(shared
+        ? `Live transcription stopped: ${reason}. This device may not let a page record and transcribe on one microphone at the same time — the recording carries on. For a transcript, choose “${MODES.transcript}” next time, or paste one afterwards.`
+        : `Live transcription stopped: ${reason}.${withAudio ? ' The recording carries on.' : ''}`);
+      if (!withAudio && session) stopRecording();
+    },
+  });
+  if (!transcriber || !transcriber.start()) return null;
+  return transcriber;
+}
+
 async function startRecording() {
   const meeting = current();
   if (!meeting || session) return;
+  const mode = document.getElementById('recorder-mode').value || chosenMode();
   showProblem('');
-  setRecorderState('Asking for the microphone…', 'pending');
+  showTranscriptState('');
+  // Made now, inside the click, so Chrome does not start it suspended.
+  const context = mode === 'transcript' ? null : meterContext();
+  setRecorderState(mode === 'transcript' ? 'Starting the transcript…' : 'Asking for the microphone…', 'pending');
+
+  if (mode === 'transcript') {
+    const began = Date.now();
+    const tick = setInterval(() => { document.getElementById('recorder-clock').textContent = formatDuration(Date.now() - began); }, 250);
+    session = { controller: null, meetingId: meeting.id, transcriber: null, tick };
+    session.transcriber = startTranscriber(meeting.id, () => Date.now() - began, { withAudio: false });
+    if (!session.transcriber) {
+      clearInterval(tick);
+      session = null;
+      setRecorderState('Not recording');
+      showProblem('The browser would not start its speech recogniser.');
+      return;
+    }
+    setRecorderState('Transcribing', 'live');
+    return;
+  }
+
   let controller;
   try {
     controller = await startAudio({
+      audioContext: context,
       onLevel: (level) => { document.getElementById('recorder-level').style.width = `${Math.round(level * 100)}%`; },
       onTick: (ms) => { document.getElementById('recorder-clock').textContent = formatDuration(ms); },
     });
   } catch (err) {
+    context?.close?.().catch(() => {});
     setRecorderState('Not recording');
     showProblem(err.message);
     return;
   }
   session = { controller, meetingId: meeting.id, transcriber: null };
   setRecorderState('Recording', 'live');
-
-  // The transcript is the optional part: if it fails, the recording carries on.
-  if (document.getElementById('recorder-transcribe').checked && isSupported()) {
-    const transcriber = createTranscriber({
-      onInterim: (text) => { document.getElementById('recorder-interim').textContent = text; },
-      onFinal: (text) => {
-        const target = meetings().find((m) => m.id === session?.meetingId);
-        if (!target) return;
-        target.transcript.push(newUtterance(text, { at: stamp(controller.elapsed()) }));
-        document.getElementById('recorder-interim').textContent = '';
-        if (current()?.id === target.id) renderTranscript(target);
-        commit();
-      },
-      onError: (reason) => {
-        showProblem(`Live transcription stopped: ${reason}. The recording carries on.`);
-      },
-    });
-    session.transcriber = transcriber;
-    transcriber?.start();
-  }
+  if (mode === 'both') session.transcriber = startTranscriber(meeting.id, () => controller.elapsed(), { withAudio: true });
 }
 
 async function stopRecording() {
   if (!session) return;
-  const { controller, meetingId, transcriber } = session;
+  const { controller, meetingId, transcriber, tick } = session;
   session = null;
   transcriber?.stop();
+  if (tick) clearInterval(tick);
+  document.getElementById('recorder-clock').textContent = '0:00';
+  if (!controller) {
+    setRecorderState('Not recording');
+    showTranscriptState('');
+    toast('Transcript saved with the meeting.', 'success');
+    return;
+  }
   setRecorderState('Saving…', 'saving');
   const { blob, mimeType, duration } = await controller.stop();
   const meeting = meetings().find((m) => m.id === meetingId);
@@ -434,18 +509,18 @@ async function stopRecording() {
       });
       toast(`Recording saved on this device (${formatDuration(duration)}).`, 'success');
     } catch (err) {
-      showProblem(`The recording could not be saved: ${err.message}`);
+      showProblem(`The recording could not be saved on this device: ${err.message} Private browsing windows often refuse; try a normal window.`);
     }
   } else {
     showProblem('Nothing was captured — the microphone sent no sound.');
   }
   setRecorderState('Not recording');
-  document.getElementById('recorder-clock').textContent = '0:00';
+  showTranscriptState('');
   if (current()?.id === meetingId) renderRecordings(current());
 }
 
 function togglePause() {
-  if (!session) return;
+  if (!session?.controller) return;
   if (session.controller.isPaused()) {
     session.controller.resume();
     setRecorderState('Recording', 'live');
@@ -453,6 +528,83 @@ function togglePause() {
     session.controller.pause();
     setRecorderState('Paused', 'paused');
   }
+}
+
+// ---------- Check microphone ----------
+//
+// Every piece recording depends on, tested on this device, in order, with
+// what to do about the first one that fails. It is how "recording is not
+// working" becomes something a person can act on.
+
+async function runMicCheck() {
+  const list = document.getElementById('mic-check');
+  const button = document.getElementById('btn-mic-check');
+  const context = meterContext();
+  list.hidden = false;
+  button.disabled = true;
+  const rows = [];
+  const draw = () => list.replaceChildren(...rows.map((r) => el('li', { class: `mic-check__row is-${r.state}` }, [
+    el('span', { class: 'mic-check__mark', text: { ok: '✓', bad: '✗', warn: '!', wait: '…' }[r.state] }),
+    el('strong', { text: `${r.label}: ` }),
+    document.createTextNode(r.text),
+  ])));
+  const add = (label, state, text) => { rows.push({ label, state, text }); draw(); return rows[rows.length - 1]; };
+
+  // Which version is running: the cache the service worker serves from.
+  try {
+    const names = (await caches.keys()).filter((n) => n.startsWith('project-planner-')).sort();
+    const reg = await navigator.serviceWorker?.getRegistration?.();
+    add('App version', reg?.waiting ? 'warn' : 'ok', `${names[names.length - 1] || 'not cached'}${reg?.waiting ? ' — a newer version is waiting: press Reload on the banner, or close every tab of the app and open it again.' : ''}`);
+  } catch {
+    add('App version', 'warn', 'could not be read');
+  }
+  add('Secure page', window.isSecureContext ? 'ok' : 'bad', window.isSecureContext
+    ? 'yes (https or localhost)'
+    : 'no — this page is plain http, so the browser will not give it a microphone. Open it over https.');
+  try {
+    const status = await navigator.permissions?.query({ name: 'microphone' });
+    const state = status?.state || 'unknown';
+    add('Microphone permission', state === 'denied' ? 'bad' : state === 'granted' ? 'ok' : 'warn',
+      state === 'denied' ? 'blocked for this site — allow it from the icon in the address bar, then check again.'
+        : state === 'prompt' ? 'not decided yet — the browser will ask.' : state === 'granted' ? 'allowed' : 'this browser does not say');
+  } catch {
+    add('Microphone permission', 'warn', 'this browser does not say');
+  }
+  const mic = add('Microphone', 'wait', 'listening for 1.5 seconds — say something…');
+  const heard = await testMicrophone(1500, context);
+  Object.assign(mic, { state: heard.ok ? 'ok' : 'bad', text: heard.message });
+  draw();
+  add('Recorder', typeof MediaRecorder === 'undefined' ? 'bad' : 'ok', typeof MediaRecorder === 'undefined'
+    ? 'this browser cannot record audio'
+    : `records as ${['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find((t) => MediaRecorder.isTypeSupported?.(t)) || 'the browser’s default format'}`);
+  try {
+    const id = `check-${Date.now()}`;
+    await saveRecording({ id, meetingId: '__check', createdAt: Date.now(), duration: 0, mimeType: 'text/plain', size: 1, blob: new Blob(['x']) });
+    await deleteRecording(id);
+    add('Storage on this device', 'ok', 'recordings can be saved');
+  } catch (err) {
+    add('Storage on this device', 'bad', `recordings cannot be saved (${err.message}). Private windows often refuse.`);
+  }
+  if (!isSupported()) {
+    add('Live transcript', 'warn', 'this browser has no speech recogniser (Firefox, and some others). Record audio, and paste a transcript from your meeting tool.');
+  } else {
+    const row = add('Live transcript', 'wait', 'listening for 5 seconds — say a sentence…');
+    const result = await new Promise((resolve) => {
+      let said = '';
+      let done = false;
+      const finish = (r) => { if (done) return; done = true; t?.stop(); resolve(r); };
+      const t = createTranscriber({
+        onInterim: (text) => { said = text || said; },
+        onFinal: (text) => { said = text; finish({ ok: true, text: `heard “${text}”` }); },
+        onError: (reason) => finish({ ok: false, text: reason }),
+      });
+      if (!t || !t.start()) finish({ ok: false, text: 'the speech recogniser would not start' });
+      setTimeout(() => finish(said ? { ok: true, text: `heard “${said}”` } : { ok: false, text: 'nothing was recognised — speak up, or the browser’s speech service may be unavailable here' }), 5000);
+    });
+    Object.assign(row, { state: result.ok ? 'ok' : 'bad', text: result.text });
+    draw();
+  }
+  button.disabled = !!session;
 }
 
 const EXTENSION = { 'audio/mp4': 'm4a', 'audio/ogg': 'ogg', 'audio/webm': 'webm' };
@@ -488,12 +640,17 @@ function renderRecordings(meeting) {
 }
 
 function renderRecorder(meeting) {
-  const blocked = recordingBlocker();
+  const modes = availableModes();
+  const select = document.getElementById('recorder-mode');
   if (!session) {
-    setRecorderState(blocked ? 'Recording is not available here' : 'Not recording');
-    showProblem(blocked || '');
+    const want = chosenMode();
+    select.replaceChildren(...modes.map((m) => el('option', { value: m, text: MODES[m], selected: m === want })));
+    const blocked = recordingBlocker();
+    setRecorderState(modes.length ? 'Not recording' : 'Recording is not available here');
+    showProblem(!modes.length ? blocked
+      : blocked ? `Audio cannot be recorded here: ${blocked} A live transcript still can.` : '');
   }
-  document.getElementById('recorder-transcribe-wrap').hidden = !isSupported();
+  select.closest('label').hidden = modes.length < 2;
   document.getElementById('transcript-privacy').textContent = isSupported()
     ? PRIVACY_NOTE
     : 'This browser cannot transcribe live, so recording makes the audio only. For a transcript, paste one from your meeting tool — that path works everywhere.';
@@ -1033,6 +1190,10 @@ export function initMeetings(navigate) {
     else startRecording();
   });
   document.getElementById('btn-record-pause').addEventListener('click', togglePause);
+  document.getElementById('recorder-mode').addEventListener('change', (e) => {
+    try { localStorage.setItem(MODE_KEY, e.target.value); } catch { /* a convenience only */ }
+  });
+  document.getElementById('btn-mic-check').addEventListener('click', runMicCheck);
   document.getElementById('recording-list').addEventListener('click', async (e) => {
     const id = e.target.closest('[data-recording-delete]')?.dataset.recordingDelete;
     if (!id) return;

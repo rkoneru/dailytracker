@@ -1405,12 +1405,15 @@
             <span class="recorder__clock" id="recorder-clock" aria-label="Time recorded">0:00</span>
             <span class="recorder__meter" aria-hidden="true"><span class="recorder__level" id="recorder-level"></span></span>
             <span class="recorder__state" id="recorder-state" role="status">Not recording</span>
-            <label class="check-inline recorder__transcribe" id="recorder-transcribe-wrap">
-              <input type="checkbox" id="recorder-transcribe"> Transcribe live as well
+            <label class="field-label recorder__mode">Capture
+              <select class="field-input" id="recorder-mode" aria-label="What to capture"></select>
             </label>
+            <button type="button" class="btn btn-small btn-ghost" id="btn-mic-check">Check microphone</button>
             <span class="recorder__interim" id="recorder-interim"></span>
           </div>
+          <p class="hint" id="recorder-transcript-state" hidden></p>
           <p class="hint is-warn" id="recorder-problem" hidden></p>
+          <ul class="mic-check" id="mic-check" hidden></ul>
           <p class="hint callout" id="transcript-privacy"></p>
 
           <h3 class="uc-sub">Recordings</h3>

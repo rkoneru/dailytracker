@@ -48,11 +48,26 @@ function pickType() {
 }
 
 /**
+ * An AudioContext for the level meter, made while the click that asked for it
+ * is still being handled. Chrome starts one made later — after the microphone
+ * prompt, say — suspended, and a suspended meter sits at zero, which reads as
+ * a recorder that is not working when it is.
+ */
+export function meterContext() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    return Ctx ? new Ctx() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Starts recording. Resolves to a controller, or rejects with an Error whose
  * message is already fit to show. `onLevel(0..1)` and `onTick(ms)` drive the
- * meter and the clock.
+ * meter and the clock; `audioContext` is one from meterContext().
  */
-export async function startAudio({ onLevel, onTick } = {}) {
+export async function startAudio({ onLevel, onTick, audioContext = null } = {}) {
   const blocked = recordingBlocker();
   if (blocked) throw new Error(blocked);
   let stream;
@@ -74,11 +89,11 @@ export async function startAudio({ onLevel, onTick } = {}) {
   const tick = setInterval(() => onTick?.(now()), 250);
 
   // The meter is a nicety: a browser without Web Audio still records.
-  let audio = null;
+  let audio = audioContext;
   let frame = 0;
   try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    audio = new Ctx();
+    if (!audio) audio = meterContext();
+    await audio.resume?.();
     const analyser = audio.createAnalyser();
     analyser.fftSize = 512;
     audio.createMediaStreamSource(stream).connect(analyser);
@@ -155,4 +170,44 @@ export function formatDuration(ms) {
 export function formatSize(bytes) {
   if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/**
+ * Opens the microphone for `ms`, listens, and closes it again. Resolves to
+ * { ok, peak, message } — for the Check microphone button, which is how a
+ * person finds out which part of recording fails on their own device.
+ */
+export async function testMicrophone(ms = 1500, audioContext = null) {
+  const blocked = recordingBlocker();
+  if (blocked) return { ok: false, peak: 0, message: blocked };
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    return { ok: false, peak: 0, message: explainMicError(err) };
+  }
+  let peak = 0;
+  const audio = audioContext || meterContext();
+  try {
+    await audio?.resume?.();
+    const analyser = audio.createAnalyser();
+    analyser.fftSize = 512;
+    audio.createMediaStreamSource(stream).connect(analyser);
+    const data = new Uint8Array(analyser.fftSize);
+    const until = Date.now() + ms;
+    while (Date.now() < until) {
+      analyser.getByteTimeDomainData(data);
+      for (let i = 0; i < data.length; i += 1) peak = Math.max(peak, Math.abs(data[i] - 128));
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  } catch {
+    peak = -1;
+  } finally {
+    stream.getTracks().forEach((t) => t.stop());
+    audio?.close?.().catch(() => {});
+  }
+  if (peak < 0) return { ok: true, peak: 0, message: 'The microphone opens. (The level could not be measured in this browser.)' };
+  return peak > 3
+    ? { ok: true, peak, message: 'The microphone opens and sound is coming through.' }
+    : { ok: false, peak, message: 'The microphone opens but is silent — check it is not muted, and that the right input is chosen in the system’s sound settings.' };
 }

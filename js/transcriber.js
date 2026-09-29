@@ -35,7 +35,7 @@ export function isSupported() {
  */
 export const PRIVACY_NOTE = 'Live transcription is done by your browser. In Chrome and Edge that means the '
   + 'audio is sent to the browser vendor to be recognised — unlike the rest of this app, it does not stay '
-  + 'on your device. Leave it off and only the recording is made, on this device.';
+  + 'on your device. Choose “Audio only” and nothing leaves this device.';
 
 // The errors that mean listening cannot work at all, as against the ones the
 // engine throws during an ordinary pause. Restarting after one of these is
@@ -87,7 +87,7 @@ export function createTranscriber({ onInterim, onFinal, onError, onEnd, lang = '
     // are not worth interrupting anyone over; the rest are.
     if (event.error === 'no-speech' || event.error === 'aborted') return;
     fatal = true;
-    if (onError) onError(FATAL[event.error] || `the browser stopped listening (${event.error})`);
+    if (onError) onError(FATAL[event.error] || `the browser stopped listening (${event.error})`, event.error);
   });
 
   recognition.addEventListener('end', () => {
@@ -105,7 +105,7 @@ export function createTranscriber({ onInterim, onFinal, onError, onEnd, lang = '
       }
     }
     if (running && !stopping && !fatal && emptyRestarts >= 5 && onError) {
-      onError('the browser keeps stopping without hearing anything');
+      onError('the browser keeps stopping without hearing anything', 'no-session');
     }
     running = false;
     stopping = false;
@@ -124,7 +124,7 @@ export function createTranscriber({ onInterim, onFinal, onError, onEnd, lang = '
         running = true;
         return true;
       } catch (err) {
-        if (onError) onError(err.message || 'could-not-start');
+        if (onError) onError(err.message || 'it could not start', 'could-not-start');
         return false;
       }
     },

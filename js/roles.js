@@ -283,6 +283,7 @@ export const RESTRICTED_PAGES = {
   'nav-uc-evaluate': ['client-partner'],
   'nav-uc-roi': ['client-partner'],
   'nav-uc-decision': ['client-partner'],
+  'nav-uc-client': ['client-partner'],
   'nav-uc-value': ['client-partner'],
 };
 

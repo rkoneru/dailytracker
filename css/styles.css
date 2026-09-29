@@ -6075,3 +6075,6 @@ body.login-open { overflow: hidden; }
 .uc-lines td.col-num .row-input { min-width: 110px; }
 .uc-lines td .row-input[type="month"] { min-width: 150px; }
 #sec-uc-decision .cr-approval > .btn { align-self: flex-start; }
+.uc-client-notes { margin: 10px 0 0; padding-left: 18px; font-size: 0.85rem; color: var(--color-text-muted); }
+.uc-client-notes li { margin: 3px 0; }
+#uc-client-table tr.is-unmeasured td { color: var(--color-text-muted); }

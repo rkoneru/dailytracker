@@ -315,3 +315,160 @@ export function mergeUseCases({ local = {}, remote = [], base = {}, canPush = ()
   });
   return { merged, push };
 }
+
+// ---------- A client's use cases, together ----------
+//
+// Each use case is decided on its own. A client with several needs the view
+// across them too, because three things are only visible there:
+//
+//   * Shared costs — a platform three use cases all need — are entered once on
+//     the client. Charging them to every use case would triple them; charging
+//     them to the first would make it look terrible and the rest look free.
+//     They stay at client level unless the partner chooses to spread them by
+//     each use case's share of the benefit.
+//   * Overlapping benefits — two use cases both claiming the same hours — are
+//     tagged with the same pool, and a pool counts once, at its largest claim.
+//     Adding them up would promise the client savings they cannot have twice.
+//   * Order — a use case that needs another in place first comes after it.
+//     Then the stronger score, then the larger NPV. A dependency loop is
+//     reported rather than silently broken.
+//
+// The combined model runs all of them as if they started together; the order
+// changes when benefits arrive, not what they add up to, and the view says so.
+
+export const CLIENT = 'client';
+
+function yearOneCost(costs = []) {
+  return costs.reduce((n, c) => n + (num(c.amount) ?? 0), 0);
+}
+
+/** Benefit pools across a set of use cases: each pool's claims, and what double counting would add. */
+export function benefitPools(useCases) {
+  const pools = new Map();
+  useCases.forEach((uc) => (uc.benefits || []).forEach((line) => {
+    const key = String(line.pool || '').trim().toLowerCase();
+    const value = annualBenefit(line);
+    if (!key || value === null) return;
+    if (!pools.has(key)) pools.set(key, { name: String(line.pool).trim(), claims: [] });
+    pools.get(key).claims.push({ ucId: uc.id, label: line.label || '', annual: value });
+  }));
+  return [...pools.values()].map((p) => {
+    const max = Math.max(...p.claims.map((c) => c.annual));
+    const sum = p.claims.reduce((n, c) => n + c.annual, 0);
+    return { ...p, counted: max, removed: sum - max, overlapping: p.claims.length > 1 };
+  });
+}
+
+/** Dependencies first, then score, then NPV. Returns the order and any loop found. */
+function recommendedOrder(rows) {
+  const byId = new Map(rows.map((r) => [r.uc.id, r]));
+  const rank = (a, b) => (b.evaluation?.score ?? -1) - (a.evaluation?.score ?? -1)
+    || (b.model?.expected.npv ?? -Infinity) - (a.model?.expected.npv ?? -Infinity);
+  const placed = [];
+  const done = new Set();
+  let remaining = [...rows];
+  let loop = false;
+  while (remaining.length) {
+    const ready = remaining.filter((r) => {
+      const need = r.uc.dependsOn;
+      return !need || !byId.has(need) || done.has(need);
+    }).sort(rank);
+    if (!ready.length) {
+      loop = true;
+      remaining.sort(rank).forEach((r) => placed.push(r));
+      break;
+    }
+    const next = ready[0];
+    placed.push(next);
+    done.add(next.uc.id);
+    remaining = remaining.filter((r) => r !== next);
+  }
+  return { order: placed.map((r) => r.uc.id), loop };
+}
+
+/**
+ * Everything the client view shows, from the client record and its use cases.
+ * `client.allocation` is 'client' (shared costs held at client level, the
+ * default) or 'benefit' (spread by share of expected benefit).
+ */
+export function clientPortfolio(client, allUseCases) {
+  const members = allUseCases.filter((uc) => uc.clientId === client.id && uc.type !== CLIENT);
+  const rows = members.map((uc) => {
+    const decision = decisionOf(uc);
+    const evaluation = evaluate(uc);
+    return {
+      uc,
+      evaluation,
+      model: roiModel(uc),
+      declined: decision?.outcome === 'No-go',
+      parked: evaluation?.band === 'Park',
+      yearOne: yearOneCost(uc.costs),
+      annualBenefit: (uc.benefits || []).map(annualBenefit).filter((v) => v !== null).reduce((a, b) => a + b, 0),
+    };
+  });
+  const candidates = rows.filter((r) => !r.declined && !r.parked);
+  const pools = benefitPools(candidates.map((r) => r.uc));
+
+  // Shared costs over the horizon, and in year one.
+  const sharedCosts = client.sharedCosts || [];
+  const sharedModel = sharedCosts.some((c) => num(c.amount)) ? scenario({ costs: sharedCosts, assumptions: client.assumptions }, 1) : null;
+  const sharedTotal = sharedModel ? sharedModel.totalCost : 0;
+  const sharedYearOne = yearOneCost(sharedCosts);
+
+  // Spread by share of expected benefit, if chosen.
+  const benefitTotal = candidates.reduce((n, r) => n + r.annualBenefit, 0);
+  rows.forEach((r) => {
+    const share = client.allocation === 'benefit' && candidates.includes(r) && benefitTotal > 0 ? r.annualBenefit / benefitTotal : 0;
+    r.allocatedShared = Math.round(sharedTotal * share);
+    if (client.allocation === 'benefit' && r.model && candidates.includes(r)) {
+      const cost = r.model.expected.totalCost + r.allocatedShared;
+      r.roiAfterShared = cost > 0 ? (r.model.expected.totalBenefit - cost) / cost : null;
+    } else {
+      r.roiAfterShared = null;
+    }
+  });
+
+  // One synthetic use case for the combined model: every candidate's costs,
+  // the shared costs once, unpooled benefits as they are, each pool once.
+  const pooledKeys = new Set(pools.map((p) => p.name.toLowerCase()));
+  const combinedUc = {
+    assumptions: client.assumptions || {},
+    costs: [...candidates.flatMap((r) => r.uc.costs || []), ...sharedCosts],
+    benefits: [
+      ...candidates.flatMap((r) => (r.uc.benefits || []).filter((l) => !pooledKeys.has(String(l.pool || '').trim().toLowerCase()))),
+      ...pools.map((p) => ({ label: p.name, kind: 'Cost avoided', annual: p.counted })),
+    ],
+  };
+  const combined = roiModel(combinedUc);
+
+  const { order, loop } = recommendedOrder(candidates);
+  // What fits the client's first-year budget, taking the order as given and
+  // the shared costs first, since nothing runs without them.
+  const budget = num(client.budget);
+  const fundable = new Set();
+  if (budget !== null) {
+    let spent = sharedYearOne;
+    order.forEach((id) => {
+      const r = rows.find((x) => x.uc.id === id);
+      if (spent + r.yearOne <= budget) {
+        spent += r.yearOne;
+        fundable.add(id);
+      }
+    });
+  }
+
+  return {
+    rows,
+    candidates: candidates.map((r) => r.uc.id),
+    order,
+    loop,
+    pools,
+    overlapRemoved: pools.reduce((n, p) => n + p.removed, 0),
+    sharedTotal,
+    sharedYearOne,
+    combined,
+    budget,
+    fundable,
+    yearOneTotal: sharedYearOne + candidates.reduce((n, r) => n + r.yearOne, 0),
+  };
+}

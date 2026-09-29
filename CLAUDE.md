@@ -57,7 +57,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
 | `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks; WBS codes derived from the order |
 | `js/customerSuccess.js`, `customerSuccessPage.js`, `sampleCustomers.js` | the CSM lifecycle (six ordered stages with gates, Churned as an exit), health score, retention/NRR/NPS/LTV/CAC, and the Customer Success page over the `customers` register |
-| `js/useCaseModel.js`, `useCaseStore.js`, `useCaseSync.js`, `useCasesPage.js` | Use Cases & ROI: weighted evaluator, monthly ROI model (ROI %, payback, NPV, low/expected/high), signed go/no-go, conversion to a project, value realisation. Own storage key and own sync lane to the `use_cases` table |
+| `js/useCaseModel.js`, `useCaseStore.js`, `useCaseSync.js`, `useCasesPage.js` | Use Cases & ROI: weighted evaluator, monthly ROI model (ROI %, payback, NPV, low/expected/high), signed go/no-go, conversion to a project, value realisation, and the Client View (`clientPortfolio`). Own storage key and own sync lane to the `use_cases` table; client records are rows there too, `type: 'client'` |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
 | `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
@@ -141,6 +141,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   never go into an export. `RESTRICTED_PAGES` in `roles.js` offers the page to
   the client-partner job role only — page hiding, not the protection. A decision
   is signed against `decisionContent`; move a score or a number and it lapses.
+- **A use case is decided alone; a client is seen whole.** `clientPortfolio`
+  counts shared costs once (held at client level unless spread by benefit
+  share), counts a benefit `pool` claimed by several use cases once at its
+  largest claim, orders by `dependsOn` then score then NPV (reporting loops,
+  leaving out Park and No-go), and checks first-year cost against the client's
+  budget with shared costs taken first. Client records share the use case
+  store and table so they get the same row level security.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

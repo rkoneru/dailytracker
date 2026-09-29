@@ -23,17 +23,21 @@ import { confirmAction, toast } from './dialog.js';
 import { requestSignature, signatureView } from './signature.js';
 import { METHODOLOGIES } from './methodology.js';
 import { goToNode } from './nav.js';
+import { showSection } from './tabs.js';
 import { formatDate } from './dates.js';
 import {
   listUseCases, getUseCase, createUseCase, touchUseCase, deleteUseCase, onUseCasesChange,
+  listClients, getClient, createClient,
 } from './useCaseStore.js';
 import { useCaseSyncState, onUseCaseSyncChange } from './useCaseSync.js';
 import {
   CRITERIA, weightsOf, evaluate, DEFAULT_ASSUMPTIONS, BENEFIT_KINDS, annualBenefit,
   roiModel, openAssumptions, decisionContent, DECISION_SIGNERS, decisionOf, STAGES, stageOf, realisation,
+  clientPortfolio, benefitPools,
 } from './useCaseModel.js';
 
 let selectedId = '';
+let selectedClientId = '';
 let editing = false;
 
 const money = (n) => (n === null || n === undefined ? '—' : `$${Math.round(n).toLocaleString()}`);
@@ -115,6 +119,9 @@ function renderIntake(uc) {
   host.replaceChildren(
     field('Use case', 'name', uc, { wide: true, placeholder: 'What it is, in a line' }),
     field('Client', 'client', uc, { placeholder: 'Organisation' }),
+    field('Client record', 'clientId', uc, {
+      options: [['', 'Not linked'], ...listClients().map((c) => [c.id, c.name || 'Unnamed client']), ['__new', '+ New client record from this name']],
+    }),
     field('Client sponsor', 'sponsor', uc, { placeholder: 'Who signs the go/no-go for them' }),
     field('Client partner', 'partner', uc, { placeholder: 'Who owns it on our side' }),
     field('People affected', 'usersAffected', uc, { type: 'number' }),
@@ -155,7 +162,7 @@ function renderEvalResult(uc) {
   out.className = `hint uc-eval-result ${result ? `is-${result.band.toLowerCase()}` : 'is-unscored'}`;
 }
 
-function linesTable(uc, key, columns, addLabel) {
+function linesTable(uc, key, columns, addLabel, prefix = 'uc') {
   const lines = uc[key] || [];
   return el('div', { class: 'uc-lines' }, [
     el('div', { class: 'table-scroll' }, [el('table', { class: 'data-table' }, [
@@ -163,20 +170,20 @@ function linesTable(uc, key, columns, addLabel) {
       el('tbody', {}, lines.map((line, i) => el('tr', {}, [
         ...columns.map((c) => el('td', { class: c.cls || '' }, [c.render(line, `${key}.${i}.${c.field}`)])),
         el('td', { class: 'col-action no-print' }, [el('button', {
-          type: 'button', class: 'icon-btn', 'data-uc-remove': `${key}.${i}`, 'aria-label': `Remove ${line.label || 'line'}`, text: '🗑',
+          type: 'button', class: 'icon-btn', [`data-${prefix}-remove`]: `${key}.${i}`, 'aria-label': `Remove ${line.label || 'line'}`, text: '🗑',
         })]),
       ]))),
     ])]),
-    el('button', { type: 'button', class: 'btn btn-small no-print', 'data-uc-add': key, text: addLabel }),
+    el('button', { type: 'button', class: 'btn btn-small no-print', [`data-${prefix}-add`]: key, text: addLabel }),
   ]);
 }
 
-const input = (type, extra = {}) => (line, path) => el('input', {
-  type, class: 'row-input', 'data-uc': path, value: line[path.split('.').pop()] ?? '', ...extra,
+const input = (type, extra = {}, prefix = 'uc') => (line, path) => el('input', {
+  type, class: 'row-input', [`data-${prefix}`]: path, value: line[path.split('.').pop()] ?? '', ...extra,
 });
-const select = (options) => (line, path) => el('select', { class: 'row-select', 'data-uc': path },
+const select = (options, prefix = 'uc') => (line, path) => el('select', { class: 'row-select', [`data-${prefix}`]: path },
   options.map((o) => el('option', { value: o, text: o, selected: line[path.split('.').pop()] === o })));
-const check = (line, path) => el('input', { type: 'checkbox', 'data-uc': path, checked: !!line[path.split('.').pop()], 'aria-label': 'An assumption, not a sourced figure' });
+const check = (line, path, prefix = 'uc') => el('input', { type: 'checkbox', [`data-${prefix}`]: path, checked: !!line[path.split('.').pop()], 'aria-label': 'An assumption, not a sourced figure' });
 
 function renderRoi(uc) {
   const host = document.getElementById('uc-roi');
@@ -209,8 +216,13 @@ function renderRoi(uc) {
       { field: 'rate', label: 'Loaded rate', cls: 'col-num', render: input('number', { min: '0' }) },
       { field: 'annual', label: 'Or $ / year', cls: 'col-num', render: input('number', { step: '1000', min: '0' }) },
       { field: 'source', label: 'Source', render: input('text', { placeholder: 'Time study, finance…' }) },
+      // Two use cases for one client claiming the same hours share a pool,
+      // and the client view counts a pool once.
+      { field: 'pool', label: 'Shared pool', render: input('text', { placeholder: 'e.g. AP hours', list: 'uc-pool-list' }) },
       { field: 'assumption', label: 'Assumed', cls: 'col-check', render: check },
     ], '+ Add benefit'),
+    el('datalist', { id: 'uc-pool-list' }, benefitPools(listUseCases().filter((x) => x.clientId && x.clientId === uc.clientId))
+      .map((p) => el('option', { value: p.name }))),
     el('div', { id: 'uc-roi-results' }),
   );
   renderRoiResults(uc);
@@ -405,6 +417,156 @@ export function renderUseCases() {
   renderDecision(uc);
   renderValue(uc);
   renderSteps(uc);
+  renderClient();
+}
+
+// ---------- Client view ----------
+
+function unlinkedGroups() {
+  const groups = new Map();
+  listUseCases().forEach((uc) => {
+    const name = String(uc.client || '').trim();
+    if (uc.clientId && getClient(uc.clientId)) return;
+    if (!name) return;
+    const key = name.toLowerCase();
+    if (!groups.has(key)) groups.set(key, { name, ids: [] });
+    groups.get(key).ids.push(uc.id);
+  });
+  return [...groups.values()];
+}
+
+function clientField(label, path, client, opts = {}) {
+  const node = field(label, path, client, opts);
+  node.querySelectorAll('[data-uc]').forEach((n) => {
+    n.dataset.cl = n.dataset.uc;
+    delete n.dataset.uc;
+  });
+  return node;
+}
+
+export function renderClient() {
+  const host = document.getElementById('uc-client');
+  if (!host) return;
+  const uc = current();
+  const clients = listClients();
+  if (!getClient(selectedClientId)) selectedClientId = (uc && getClient(uc.clientId) ? uc.clientId : clients[0]?.id) || '';
+  const client = getClient(selectedClientId);
+
+  const unlinked = unlinkedGroups();
+  const parts = [
+    el('div', { class: 'uc-bar no-print' }, [
+      el('label', { class: 'field-label uc-bar__picker' }, [document.createTextNode('Showing'),
+        el('select', { class: 'field-input', id: 'uc-client-picker' }, clients.length
+          ? clients.map((c) => el('option', { value: c.id, text: c.name || 'Unnamed client', selected: c.id === selectedClientId }))
+          : [el('option', { value: '', text: 'No client records yet' })])]),
+      el('button', { type: 'button', class: 'btn btn-small btn-primary', 'data-cl-action': 'new', text: '+ New client' }),
+      client ? el('button', { type: 'button', class: 'btn btn-small btn-ghost', 'data-cl-action': 'delete', text: 'Delete client record' }) : null,
+    ]),
+    ...unlinked.map((g) => el('p', { class: 'uc-open' }, [
+      document.createTextNode(`${g.ids.length} use case${g.ids.length === 1 ? '' : 's'} name “${g.name}” but ${g.ids.length === 1 ? 'is' : 'are'} not linked to a client record. `),
+      el('button', { type: 'button', class: 'btn btn-small', 'data-cl-adopt': g.name, text: `Create “${g.name}” and link ${g.ids.length === 1 ? 'it' : 'them'}` }),
+    ])),
+  ];
+  if (!client) {
+    parts.push(el('p', { class: 'hint', text: 'Start a client record to see its use cases side by side: shared costs once, overlapping benefits once, and an order to do them in.' }));
+    host.replaceChildren(...parts);
+    return;
+  }
+
+  parts.push(
+    el('div', { class: 'charter-grid' }, [
+      clientField('Client', 'name', client, { placeholder: 'Organisation' }),
+      clientField('Executive sponsor', 'sponsor', client, { placeholder: 'Who owns the budget' }),
+      clientField('First-year budget', 'budget', client, { type: 'number', placeholder: 'What they can fund this year' }),
+      clientField('Shared costs', 'allocation', client, {
+        options: [['client', 'Keep at client level'], ['benefit', 'Spread by share of benefit']],
+      }),
+      clientField('Notes', 'notes', client, { long: true, placeholder: 'What the client is trying to achieve this year' }),
+    ]),
+    el('h3', { class: 'uc-sub', text: 'Shared costs (entered once, for the whole client)' }),
+    linesTable(client, 'sharedCosts', [
+      { field: 'label', label: 'Cost', render: input('text', { placeholder: 'Data platform, integration layer…' }, 'cl') },
+      { field: 'type', label: 'When', render: select(['One-off', 'Annual'], 'cl') },
+      { field: 'amount', label: 'Amount', cls: 'col-num', render: input('number', { step: '1000', min: '0' }, 'cl') },
+      { field: 'source', label: 'Source', render: input('text', { placeholder: 'Quote, estimate…' }, 'cl') },
+    ], '+ Add shared cost', 'cl'),
+    el('div', { id: 'uc-client-read' }),
+  );
+  host.replaceChildren(...parts);
+  renderClientRead(client);
+}
+
+function renderClientRead(client) {
+  const host = document.getElementById('uc-client-read');
+  if (!host) return;
+  const all = listUseCases();
+  const p = clientPortfolio(client, all);
+  if (!p.rows.length) {
+    host.replaceChildren(el('p', { class: 'hint', text: 'No use cases are linked to this client yet. Link one from its Intake tab.' }));
+    return;
+  }
+  const byId = new Map(p.rows.map((r) => [r.uc.id, r]));
+  const position = new Map(p.order.map((id, i) => [id, i + 1]));
+  const spread = client.allocation === 'benefit';
+  const rows = [...p.order.map((id) => byId.get(id)), ...p.rows.filter((r) => !position.has(r.uc.id))];
+
+  const table = el('div', { class: 'table-scroll' }, [el('table', { class: 'data-table', id: 'uc-client-table' }, [
+    el('thead', {}, [el('tr', {}, ['Order', 'Use case', 'Stage', 'Score', 'ROI', ...(spread ? ['ROI after shared'] : []), 'NPV', 'Payback', 'Year-one cost', 'Needs first', 'Budget']
+      .map((t) => el('th', { text: t })))]),
+    el('tbody', {}, rows.map((r) => {
+      const id = r.uc.id;
+      const why = r.declined ? 'Declined' : r.parked ? 'Parked on score' : '';
+      return el('tr', { 'data-uc-row': id, class: why ? 'is-unmeasured' : '' }, [
+        el('td', { class: 'col-num', text: position.has(id) ? String(position.get(id)) : '—' }),
+        el('td', {}, [el('button', { type: 'button', class: 'link-btn', 'data-cl-open': id, text: r.uc.name || 'Untitled use case' })]),
+        el('td', { text: why || stageOf(r.uc) }),
+        el('td', { text: r.evaluation ? `${r.evaluation.score} · ${r.evaluation.band}` : 'Not scored' }),
+        el('td', { class: 'col-num', text: r.model && r.model.expected.roi !== null ? pct(r.model.expected.roi) : '—' }),
+        ...(spread ? [el('td', { class: 'col-num', text: r.roiAfterShared === null ? '—' : pct(r.roiAfterShared) })] : []),
+        el('td', { class: 'col-num', text: r.model ? money(r.model.expected.npv) : '—' }),
+        el('td', { text: r.model?.expected.payback ? `Month ${r.model.expected.payback}` : '—' }),
+        el('td', { class: 'col-num', text: money(r.yearOne) }),
+        el('td', {}, [el('select', { class: 'row-select', 'data-cl-dep': id, 'aria-label': `What ${r.uc.name || 'this'} needs first` },
+          [el('option', { value: '', text: 'Nothing' }),
+            ...p.rows.filter((o) => o.uc.id !== id).map((o) => el('option', { value: o.uc.id, text: o.uc.name || 'Untitled', selected: r.uc.dependsOn === o.uc.id }))])]),
+        el('td', { text: p.budget === null ? '—' : p.fundable.has(id) ? 'Fits' : position.has(id) ? 'Over budget' : '—' }),
+      ]);
+    })),
+  ])]);
+
+  const c = p.combined;
+  const combined = c ? el('div', { class: 'table-scroll' }, [el('table', { class: 'data-table uc-results', id: 'uc-combined-table' }, [
+    el('thead', {}, [el('tr', {}, ['', 'Low', 'Expected', 'High'].map((t) => el('th', { text: t })))]),
+    el('tbody', {}, [
+      ['Total benefit', (x) => money(x.totalBenefit)],
+      ['Total cost, shared costs once', (x) => money(x.totalCost)],
+      ['ROI', (x) => (x.roi === null ? '—' : pct(x.roi))],
+      [`NPV at ${c.assumptions.discountRate}%`, (x) => money(x.npv)],
+      ['Payback', (x) => (x.payback ? `Month ${x.payback}` : `Not within ${c.assumptions.horizonYears} years`)],
+    ].map(([label, fn]) => el('tr', {}, [
+      el('th', { scope: 'row', text: label }),
+      ...['low', 'expected', 'high'].map((k) => el('td', { class: `col-num ${k === 'expected' ? 'is-expected' : ''}`, text: fn(c[k]) })),
+    ]))),
+  ])]) : el('p', { class: 'hint is-unmeasured', text: 'Not modelled: none of the recommended use cases has costs or benefits yet.' });
+
+  const notes = [
+    `Shared costs: ${money(p.sharedTotal)} over the horizon, counted once${spread ? ' and spread by share of benefit in the table above' : ', held at client level'}.`,
+    p.overlapRemoved > 0
+      ? `Overlap removed: ${money(p.overlapRemoved)} a year that more than one use case claimed from the same pool (${p.pools.filter((x) => x.overlapping).map((x) => x.name).join(', ')}).`
+      : 'No overlapping benefit claims.',
+    p.budget === null
+      ? 'No first-year budget set, so nothing is checked against one.'
+      : `First-year cost of everything recommended: ${money(p.yearOneTotal)} against a budget of ${money(p.budget)}. ${p.fundable.size} of ${p.order.length} fit${p.sharedYearOne ? `, after ${money(p.sharedYearOne)} of shared costs` : ''}.`,
+    'The combined figures run everything as if it started together: the order changes when benefit arrives, not what it adds up to.',
+  ];
+  host.replaceChildren(...[
+    el('h3', { class: 'uc-sub', text: 'Side by side, in the recommended order' }),
+    p.loop ? el('p', { class: 'uc-open', id: 'uc-client-loop', text: 'Two or more use cases each need the other first. The order below breaks the loop by score; fix the “Needs first” choices.' }) : null,
+    table,
+    el('h3', { class: 'uc-sub', text: 'Together' }),
+    combined,
+    el('ul', { class: 'uc-client-notes', id: 'uc-client-notes' }, notes.map((t) => el('li', { text: t }))),
+  ].filter(Boolean));
 }
 
 // ---------- Actions ----------
@@ -492,6 +654,20 @@ function bind() {
   page.addEventListener('change', (e) => {
     const uc = current();
     if (e.target.id === 'uc-picker') { selectedId = e.target.value; renderUseCases(); return; }
+    if (e.target.dataset.uc === 'clientId' && uc) {
+      if (e.target.value === '__new') {
+        const client = createClient(uc.projectId, { name: uc.client || 'New client', sponsor: '' });
+        uc.clientId = client.id;
+        selectedClientId = client.id;
+      } else {
+        uc.clientId = e.target.value;
+        const client = getClient(uc.clientId);
+        if (client) uc.client = client.name;
+      }
+      commit(uc);
+      renderUseCases();
+      return;
+    }
     if (e.target.id === 'uc-outcome' && uc) {
       // A new outcome needs new signatures: nobody signed this one.
       uc.decision = e.target.value ? { outcome: e.target.value, signatures: {} } : null;
@@ -536,6 +712,88 @@ function bind() {
     if (go && uc) {
       switchProject(uc.convertedProjectId);
       goToNode(go);
+    }
+  });
+
+  // The client view writes to the client record, and its "needs first"
+  // choices to the other use cases — never to the one on the other tabs.
+  const clientHost = document.getElementById('uc-client');
+  const clientEdit = (e) => {
+    const client = getClient(selectedClientId);
+    const path = e.target.dataset.cl;
+    if (!client || !path) return false;
+    setPath(client, path, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
+    commit(client);
+    renderClientRead(client);
+    return true;
+  };
+  clientHost.addEventListener('input', clientEdit);
+  clientHost.addEventListener('change', (e) => {
+    if (e.target.id === 'uc-client-picker') { selectedClientId = e.target.value; renderClient(); return; }
+    const dep = e.target.dataset.clDep;
+    if (dep) {
+      const other = getUseCase(dep);
+      if (!other) return;
+      other.dependsOn = e.target.value;
+      commit(other);
+      renderClientRead(getClient(selectedClientId));
+      return;
+    }
+    if (e.target.tagName === 'SELECT') clientEdit(e);
+  });
+  clientHost.addEventListener('click', async (e) => {
+    const client = getClient(selectedClientId);
+    const action = e.target.closest('[data-cl-action]')?.dataset.clAction;
+    const add = e.target.closest('[data-cl-add]')?.dataset.clAdd;
+    const remove = e.target.closest('[data-cl-remove]')?.dataset.clRemove;
+    const adopt = e.target.closest('[data-cl-adopt]')?.dataset.clAdopt;
+    const open = e.target.closest('[data-cl-open]')?.dataset.clOpen;
+    if (action === 'new') {
+      const created = createClient(getActiveProjectId(), { name: 'New client' });
+      selectedClientId = created.id;
+      renderClient();
+      document.querySelector('#uc-client [data-cl="name"]')?.focus();
+      return;
+    }
+    if (action === 'delete' && client) {
+      const ok = await confirmAction({
+        title: `Delete the client record “${client.name || 'Unnamed client'}”?`,
+        message: 'Its shared costs go with it. Its use cases stay, unlinked, with their own numbers.',
+        confirmLabel: 'Delete', tone: 'danger',
+      });
+      if (!ok) return;
+      listUseCases().filter((u) => u.clientId === client.id).forEach((u) => { u.clientId = ''; commit(u); });
+      deleteUseCase(client.id);
+      selectedClientId = '';
+      renderUseCases();
+      return;
+    }
+    if (adopt) {
+      const members = listUseCases().filter((u) => String(u.client || '').trim().toLowerCase() === adopt.toLowerCase() && !getClient(u.clientId));
+      const created = createClient(members[0]?.projectId || getActiveProjectId(), { name: adopt, sponsor: members[0]?.sponsor || '' });
+      members.forEach((u) => { u.clientId = created.id; commit(u); });
+      selectedClientId = created.id;
+      renderUseCases();
+      toast(`${adopt}: ${members.length} use case${members.length === 1 ? '' : 's'} linked.`, 'success');
+      return;
+    }
+    if (add && client) {
+      client[add] = [...(client[add] || []), { label: '', type: 'One-off', amount: '', source: '' }];
+      commit(client);
+      renderClient();
+      return;
+    }
+    if (remove && client) {
+      const [key, index] = remove.split('.');
+      client[key] = (client[key] || []).filter((_, i) => i !== Number(index));
+      commit(client);
+      renderClient();
+      return;
+    }
+    if (open) {
+      selectedId = open;
+      renderUseCases();
+      showSection('page-usecases', 'sec-uc-roi');
     }
   });
 

@@ -98,6 +98,8 @@ own cost figures. They are stored in their own table, `use_cases`, and:
   exports, and converting one into a project copies only the name, outcome,
   problem, sponsor, value and fit scores and the planned budget — never the
   benefits, rates, ROI, NPV, assumptions or signatures.
+- **Client records are rows in the same table**, so a client's budget and
+  shared costs have exactly the same protection as its use cases.
 - **Losing access removes the local copy.** A device that synced a use case and
   then stops receiving it drops it on the next sync instead of uploading it
   again.

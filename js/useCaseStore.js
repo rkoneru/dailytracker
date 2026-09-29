@@ -45,16 +45,53 @@ function uid() {
   return crypto.randomUUID ? crypto.randomUUID() : `uc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-/** Every live use case, newest first. */
+/** Every live use case, newest first. Client records share the store, not this list. */
 export function listUseCases() {
   return Object.values(load())
-    .filter((uc) => !uc.deletedAt)
+    .filter((uc) => !uc.deletedAt && uc.type !== 'client')
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+// Client records sit in the same store and the same table as the use cases,
+// on purpose: a client's budget and shared costs are as commercial as the
+// models, so they get exactly the same row level security, and a client
+// partner who can see a client's use cases can see the client.
+
+export function listClients() {
+  return Object.values(load())
+    .filter((c) => !c.deletedAt && c.type === 'client')
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+
+export function getClient(id) {
+  const c = load()[id];
+  return c && !c.deletedAt && c.type === 'client' ? c : null;
+}
+
+export function createClient(projectId, fields = {}) {
+  const now = Date.now();
+  const client = {
+    id: uid(),
+    type: 'client',
+    projectId,
+    name: '',
+    sponsor: '',
+    budget: '',
+    notes: '',
+    allocation: 'client',
+    sharedCosts: [],
+    createdAt: now,
+    ...fields,
+    rev: now,
+  };
+  load()[client.id] = client;
+  save();
+  return client;
 }
 
 export function getUseCase(id) {
   const uc = load()[id];
-  return uc && !uc.deletedAt ? uc : null;
+  return uc && !uc.deletedAt && uc.type !== 'client' ? uc : null;
 }
 
 export function createUseCase(projectId, fields = {}) {

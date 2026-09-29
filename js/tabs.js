@@ -77,6 +77,7 @@ export const PAGE_TABS = {
     { id: 'sec-uc-evaluate', label: 'Evaluate' },
     { id: 'sec-uc-roi', label: 'ROI' },
     { id: 'sec-uc-decision', label: 'Decision' },
+    { id: 'sec-uc-client', label: 'Client View' },
     { id: 'sec-uc-value', label: 'Delivery & Value' },
   ],
   'page-customers': [

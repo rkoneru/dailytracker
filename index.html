@@ -2058,6 +2058,23 @@
           </label>
         </div>
 
+        <section class="card" id="sec-my-week">
+          <div class="card__head hf-head">
+            <h2>My week</h2>
+            <span class="hint" id="week-board-range"></span>
+            <div class="cal-nav no-print">
+              <button type="button" class="btn btn-small btn-ghost" data-wb-nav="-1" aria-label="Previous week">‹</button>
+              <button type="button" class="btn btn-small btn-ghost" data-wb-nav="0">This week</button>
+              <button type="button" class="btn btn-small btn-ghost" data-wb-nav="1" aria-label="Next week">›</button>
+            </div>
+          </div>
+          <p class="hint">
+            Focus, plan, execute, review. Your projects, meetings and recorded wins are read off every project; your objectives,
+            focus blocks and review are your own planning sheet, kept on this device only and never synced.
+          </p>
+          <div class="wb" id="week-board"></div>
+        </section>
+
         <div class="tally-row" id="mywork-tallies">
           <div class="tally tally--bad">
             <span class="tally__value" id="mywork-count-overdue">0</span>

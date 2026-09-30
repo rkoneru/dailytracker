@@ -18,6 +18,7 @@ import { getMe, setMe, isMine, onMeChange } from './me.js';
 import { WORK_REGISTERS, isOpenRow } from './registerDefs.js';
 import { effectiveDecision } from './changeControl.js';
 import { formatDate } from './dates.js';
+import { renderWeekBoard, initWeekBoard } from './weekBoardPage.js';
 
 let onGo = null;
 let scope = 'mine';       // 'mine' | 'everyone'
@@ -195,6 +196,7 @@ export function renderMyWork() {
 
   const needsName = scope === 'mine' && !me;
   document.getElementById('mywork-noname').hidden = !needsName;
+  renderWeekBoard();
 
   const rows = needsName ? [] : gather(me);
   renderCounts(rows);
@@ -223,12 +225,20 @@ export function renderMyWork() {
 
 export function initMyWork(go) {
   onGo = go;
+  initWeekBoard(go);
   const host = document.getElementById('mywork-buckets');
   if (!host) return;
 
   const name = document.getElementById('mywork-name');
-  name.addEventListener('change', () => { setMe(name.value); renderMyWork(); });
-  name.addEventListener('blur', () => { setMe(name.value); renderMyWork(); });
+  // Only a real change redraws: leaving the field unchanged must not rebuild
+  // the page under whatever the person has just moved to.
+  const commitName = () => {
+    if (name.value.trim() === getMe()) return;
+    setMe(name.value);
+    renderMyWork();
+  };
+  name.addEventListener('change', commitName);
+  name.addEventListener('blur', commitName);
 
   document.getElementById('mywork-scope').addEventListener('change', (e) => {
     scope = e.target.value;

@@ -6722,3 +6722,32 @@ body.login-open { overflow: hidden; }
 .jm-cell input:checked + .jm-dot { border: 0; }
 .jm-cell.is-navy input:checked + .jm-dot { background: #1e2a4a; } .jm-cell.is-blue input:checked + .jm-dot { background: #2f4f8f; } .jm-cell.is-green input:checked + .jm-dot { background: #4caf50; } .jm-cell.is-red input:checked + .jm-dot { background: #d8433a; } .jm-cell.is-orange input:checked + .jm-dot { background: #f08a24; }
 .jm-cell input:focus-visible + .jm-dot { box-shadow: var(--focus-ring); }
+
+/* My week: the weekly planning board. */
+.wb { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+.wb-card { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 10px 12px; display: grid; gap: 8px; align-content: start; font-size: 13px; }
+.wb-card header { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.wb-card__n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #a16207; color: #fff; font-size: 11px; font-weight: 800; }
+.wb-card header .hint { flex-basis: 100%; }
+.wb-objectives { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.wb-objectives li { display: flex; gap: 8px; align-items: center; }
+.wb-objectives .row-input { flex: 1; min-width: 0; }
+.wb-table { width: 100%; border-collapse: collapse; }
+.wb-table td { padding: 4px 4px; border-bottom: 1px solid var(--color-border); }
+.wb-progress { display: flex; gap: 6px; align-items: center; justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.wb-bar { width: 70px; height: 6px; border-radius: 3px; background: var(--color-bg); overflow: hidden; }
+.wb-bar span { display: block; height: 100%; background: #57534e; }
+.wb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.wb-list li { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) auto; gap: 8px; align-items: baseline; }
+.wb-day { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); }
+.wb-focus { display: grid; gap: 4px; }
+.wb-focus label { display: grid; grid-template-columns: 3.5em minmax(0, 1fr); gap: 8px; align-items: center; }
+.wb-list li.hint { display: block; }
+/* On a phone a My Work row wraps: kind and title on one line, the rest below. */
+@media (max-width: 600px) {
+  .work-row { flex-wrap: wrap; gap: 4px 10px; }
+  .work-row__kind { flex: 0 0 100%; }
+  .work-row__title { flex: 1 1 100%; white-space: normal; }
+  .work-row__project.is-current { display: none; }
+  .work-row__due { flex: 0 0 auto; margin-left: auto; }
+}

@@ -67,6 +67,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/meetingCalendar.js`, `audioRecorder.js`, `audioStore.js` | the Meetings calendar (month grid, projected repeats, `.ics` export with follow-up alarms), audio recording with MediaRecorder, and recordings kept in IndexedDB on this device only |
 | `js/sprints.js`, `sprintsPage.js` | sprint planning on Tasks: capacity from the project's bookings and leave at a focus factor, load from estimates, a nine-step derived checklist, per-person load, a commitment tied to the backlog, velocity from closed sprints |
 | `js/capacityPlan.js` | Resources, week by week: the capacity calendar (load against the time each person had that week), who is free now / in 1–2 / 3–4 weeks, skill demand vs supply from the skills each booking needs, and named fixes for over-allocation. Pure |
+| `js/escalation.js` | risk review on the RAID page: the heat map of open risks (a square filters the log), the log's own reasons to escalate, the escalation pack (why, impact, options, recommendation, who decides, by when) and the decision recorded against it. Pure |
 | `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
@@ -256,6 +257,12 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   that much time free; with no such person it says so and names the other
   levers. Skill demand is only what bookings declare in their `skills` field —
   a skill nobody has booked is supply, not a shortage.
+- **An escalation is a pack, not a status.** `item.escalation` on a RAID row
+  holds why, impact, options, recommendation, who decides and by when; it
+  cannot be sent until `packMissing` is empty. The app suggests escalating
+  (`suggestedTriggers`: past due, a decision waiting over ten days, the top
+  band) but never escalates by itself. Overdue is worked out from `decideBy`
+  and the absence of a decision, never picked.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

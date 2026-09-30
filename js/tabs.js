@@ -51,7 +51,8 @@ export const PAGE_TABS = {
     { id: 'sec-sprints', label: 'Sprints' },
   ],
   'page-raid': [
-    { id: 'sec-raid-log', label: 'Log' },
+    { id: 'sec-raid-log', label: 'Log', sections: ['sec-raid-heatmap', 'sec-raid-log'] },
+    { id: 'sec-raid-escalations', label: 'Escalations' },
     { id: 'sec-dependencies', label: 'Dependencies' },
   ],
   'page-scope': [

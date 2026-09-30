@@ -1156,6 +1156,28 @@
 
         <section class="stat-cards stat-cards--4" id="raid-summary"></section>
 
+        <section class="card" id="sec-raid-heatmap">
+          <div class="card__head">
+            <h2>Risk heat map</h2>
+            <span class="hint" id="raid-heatmap-filter"></span>
+          </div>
+          <p class="hint">Open risks by likelihood and impact. Pick a square to show just those risks in the log below.</p>
+          <div class="table-scroll"><div id="raid-heatmap"></div></div>
+        </section>
+
+        <section class="card" id="sec-raid-escalations">
+          <div class="card__head">
+            <h2>Escalations</h2>
+            <span class="hint" id="raid-escalation-count"></span>
+          </div>
+          <p class="hint">
+            A clear path from signal to action: why it is being escalated, the impact, the options (not just the problem),
+            a recommendation, who decides and by when. Send it, record the decision, then follow it up in the log until the
+            item closes. An escalation past its date with no decision is overdue.
+          </p>
+          <div id="raid-escalations"></div>
+        </section>
+
         <section class="card" id="sec-raid-log">
           <div class="card__head">
             <h2>Log</h2>

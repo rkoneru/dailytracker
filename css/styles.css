@@ -6253,3 +6253,35 @@ body.login-open { overflow: hidden; }
 .skill-status.is-shortage { color: var(--color-danger-text); }
 .skill-status.is-low { color: var(--color-warn-text); }
 .skill-status.is-balanced { color: var(--color-success-text); }
+
+/* Risk heat map and escalation packs. */
+.risk-heatmap { border-collapse: separate; border-spacing: 4px; }
+.risk-heatmap th { font-size: 12px; font-weight: 600; color: var(--color-text-muted); padding: 2px 6px; text-align: center; }
+.risk-heatmap th[scope="row"] { text-align: right; }
+.heat-cell { width: 72px; height: 44px; border: 0; border-radius: 6px; font: inherit; font-weight: 800; font-size: 16px; cursor: pointer; }
+.heat-cell.is-low { background: #dcfce7; color: #14532d; }
+.heat-cell.is-med { background: #fef3c7; color: #78350f; }
+.heat-cell.is-high { background: #fee2e2; color: #7f1d1d; }
+.heat-cell.is-empty { opacity: 0.45; font-weight: 400; }
+.heat-cell.is-picked { outline: 3px solid var(--color-primary); outline-offset: 1px; }
+@media (prefers-color-scheme: dark) {
+  .heat-cell.is-low { background: #14361f; color: #bbf7d0; }
+  .heat-cell.is-med { background: #3d2f12; color: #fde68a; }
+  .heat-cell.is-high { background: #4a1d1d; color: #fecaca; }
+}
+.raid-escalate { white-space: nowrap; }
+.raid-escalate.is-suggested { color: var(--color-warn-text); font-weight: 700; }
+.raid-escalate.is-escalated { color: var(--color-danger-text); }
+.escalation { border: 1px solid var(--color-border); border-left: 4px solid var(--color-border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; display: grid; gap: 10px; }
+.escalation.is-awaiting { border-left-color: var(--color-primary); }
+.escalation.is-overdue { border-left-color: #dc2626; }
+.escalation.is-decided { border-left-color: #16a34a; }
+.escalation__head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: baseline; }
+.escalation__state { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--color-bg); }
+.escalation__state.is-overdue { color: var(--color-danger-text); }
+.escalation__state.is-decided { color: var(--color-success-text); }
+.escalation__why { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.escalation__why legend { font-size: 12px; font-weight: 700; color: var(--color-text-muted); margin-bottom: 4px; }
+.escalation__decision { display: grid; gap: 6px; }
+.check-inline { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
+.hint.is-warn { color: var(--color-warn-text); }

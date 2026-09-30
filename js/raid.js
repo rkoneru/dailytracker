@@ -4,6 +4,12 @@ import { makeSortable, reorderById } from './dragReorder.js';
 import { el } from './dom.js';
 import { mountRegisters, renderAll } from './register.js';
 import { BLOCKER_REGISTERS } from './registerDefs.js';
+import {
+  TRIGGERS, shouldEscalate, newPack, packMissing, packText, escalations, heatMap,
+} from './escalation.js';
+import { showSection } from './tabs.js';
+import { confirmAction, toast } from './dialog.js';
+import { formatDate } from './dates.js';
 
 // Dependencies used to be a RAID type. They now have a register of their own,
 // directly below this log, recording direction, party and needed-by — things a
@@ -76,7 +82,12 @@ let typeFilter = '';
 let statusFilter = 'open';
 let searchTerm = '';
 
+// A square picked on the heat map: open risks of exactly that likelihood and
+// severity. Cleared from the note beside the map.
+let cellFilter = null;
+
 function matchesFilters(item) {
+  if (cellFilter && !(item.type === 'Risk' && isOpen(item) && item.likelihood === cellFilter.likelihood && item.severity === cellFilter.severity)) return false;
   if (typeFilter && item.type !== typeFilter) return false;
   if (statusFilter === 'open' && !isOpen(item)) return false;
   if (statusFilter === 'closed' && isOpen(item)) return false;
@@ -116,9 +127,120 @@ function renderRow(item) {
     el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'closed', value: item.closed || '' })]),
     el('td', {}, [el('input', { class: 'row-input', 'data-field': 'action', value: item.action || '', placeholder: 'Mitigation / next step' })]),
     el('td', { class: 'col-action no-print' }, [
+      el('button', {
+        type: 'button',
+        class: `btn btn-small btn-ghost raid-escalate${shouldEscalate(item) ? ' is-suggested' : ''}${item.escalation ? ' is-escalated' : ''}`,
+        'data-action': 'escalate-raid',
+        title: item.escalation ? 'Open its escalation' : shouldEscalate(item) ? 'The log suggests escalating this' : 'Escalate',
+        text: item.escalation ? 'Escalated ▸' : shouldEscalate(item) ? 'Escalate?' : 'Escalate',
+      }),
       el('button', { type: 'button', class: 'icon-btn', 'data-action': 'delete-raid', 'aria-label': 'Delete entry', text: '🗑' }),
     ]),
   ]);
+}
+
+// ---------- Heat map ----------
+
+const IMPACT_COLS = ['Low', 'Medium', 'High', 'Critical'];
+const LIKELIHOOD_ROWS = ['High', 'Medium', 'Low'];
+
+function renderHeatMap() {
+  const host = document.getElementById('raid-heatmap');
+  if (!host) return;
+  const grid = heatMap(getState());
+  const tone = (like, sev) => {
+    const score = raidScore({ likelihood: like, severity: sev });
+    return score >= 9 ? 'high' : score >= 4 ? 'med' : 'low';
+  };
+  host.replaceChildren(el('table', { class: 'risk-heatmap', id: 'risk-heatmap' }, [
+    el('thead', {}, [el('tr', {}, [el('th', { text: 'Likelihood ↓  Impact →' }), ...IMPACT_COLS.map((c) => el('th', { text: c }))])]),
+    el('tbody', {}, LIKELIHOOD_ROWS.map((like) => el('tr', {}, [
+      el('th', { scope: 'row', text: like }),
+      ...IMPACT_COLS.map((sev) => {
+        const n = grid[`${like}|${sev}`] || 0;
+        const picked = cellFilter && cellFilter.likelihood === like && cellFilter.severity === sev;
+        return el('td', {}, [el('button', {
+          type: 'button',
+          class: `heat-cell is-${tone(like, sev)}${n ? '' : ' is-empty'}${picked ? ' is-picked' : ''}`,
+          'data-like': like, 'data-sev': sev,
+          'aria-label': `${n} open risk${n === 1 ? '' : 's'}, ${like} likelihood, ${sev} impact`,
+          text: n ? String(n) : '·',
+        })]);
+      }),
+    ]))),
+  ]));
+  const note = document.getElementById('raid-heatmap-filter');
+  note.replaceChildren(...(cellFilter
+    ? [document.createTextNode(`Showing ${cellFilter.likelihood} likelihood × ${cellFilter.severity} impact · `), el('button', { type: 'button', class: 'link-btn', 'data-action': 'clear-heat', text: 'show all' })]
+    : []));
+}
+
+// ---------- Escalations ----------
+
+const STATE_TEXT = { draft: 'Draft — not sent', awaiting: 'Awaiting decision', overdue: 'Overdue — no decision by the date', decided: 'Decided' };
+
+function packField(label, key, pack, { long = false, type = 'text', list = '' } = {}) {
+  const input = long
+    ? el('textarea', { class: 'field-input', rows: key === 'options' ? 3 : 2, 'data-pack': key, value: pack[key] || '', placeholder: key === 'options' ? 'One option per line — bring alternatives, not just the problem' : '' })
+    : el('input', { class: 'field-input', type, 'data-pack': key, value: pack[key] || '' });
+  if (list) input.setAttribute('list', list);
+  return el('label', { class: `charter-field ${long ? 'charter-field--wide' : ''}` }, [el('span', { class: 'charter-field__label', text: label }), input]);
+}
+
+function escalationCard(item, state) {
+  const p = item.escalation;
+  const missing = packMissing(p);
+  return el('article', { class: `escalation is-${state}`, 'data-id': item.id }, [
+    el('header', { class: 'escalation__head' }, [
+      el('strong', { text: item.title || 'Untitled' }),
+      el('span', { class: `escalation__state is-${state}`, text: STATE_TEXT[state] }),
+      el('span', { class: 'hint', text: `${item.type} · ${item.owner || 'no owner'}${p.sentAt ? ` · sent ${formatDate(new Date(p.sentAt))}` : ''}` }),
+    ]),
+    el('fieldset', { class: 'escalation__why' }, [
+      el('legend', { text: 'Escalate when' }),
+      ...TRIGGERS.map((t) => el('label', { class: 'check-inline' }, [
+        el('input', { type: 'checkbox', 'data-trigger': t.id, checked: (p.triggers || []).includes(t.id), disabled: state === 'decided' }), document.createTextNode(t.label),
+      ])),
+    ]),
+    el('div', { class: 'charter-grid' }, [
+      packField('Impact — scope, timing, cost, customer, team', 'impact', p, { long: true }),
+      packField('Options', 'options', p, { long: true }),
+      packField('Recommendation', 'recommendation', p, { long: true }),
+      packField('Who decides', 'to', p, { list: 'roster-names' }),
+      packField('Decision needed by', 'decideBy', p, { type: 'date' }),
+    ]),
+    el('p', { class: `hint ${missing.length ? 'is-warn' : ''}`, 'data-missing': '', text: missing.length ? `Before sending, add ${missing.join(', ')}.` : 'Ready to send.' }),
+    el('div', { class: 'sync-actions no-print' }, [
+      el('button', { type: 'button', class: 'btn btn-small btn-primary', 'data-esc': 'send', disabled: state === 'decided', text: p.sentAt ? 'Send again' : 'Send the pack' }),
+      el('button', { type: 'button', class: 'btn btn-small btn-ghost', 'data-esc': 'withdraw', hidden: !!p.sentAt, text: 'Discard draft' }),
+    ]),
+    el('div', { class: 'escalation__decision' }, [
+      packField('Decision taken', 'decision', p, { long: true }),
+      p.decidedAt
+        ? el('p', { class: 'hint', text: `Decided ${formatDate(new Date(p.decidedAt))}. Follow it up in the log: check, update, act, and close the item when done.` })
+        : el('button', { type: 'button', class: 'btn btn-small', 'data-esc': 'decide', disabled: !p.sentAt, text: 'Record the decision' }),
+    ]),
+  ]);
+}
+
+function renderEscalations() {
+  const host = document.getElementById('raid-escalations');
+  if (!host) return;
+  const list = escalations(getState());
+  const open = list.filter((x) => x.state !== 'decided');
+  const overdue = list.filter((x) => x.state === 'overdue').length;
+  document.getElementById('raid-escalation-count').textContent = list.length
+    ? `${open.length} open${overdue ? `, ${overdue} overdue` : ''}` : '';
+  host.replaceChildren(...(list.length
+    ? list.map(({ item, state }) => escalationCard(item, state))
+    : [el('p', { class: 'hint', text: 'Nothing escalated. Press Escalate on a row of the log — the ones the log suggests say “Escalate?”.' })]));
+}
+
+function refreshPackNote(card, item) {
+  const missing = packMissing(item.escalation);
+  const note = card.querySelector('[data-missing]');
+  note.textContent = missing.length ? `Before sending, add ${missing.join(', ')}.` : 'Ready to send.';
+  note.className = `hint ${missing.length ? 'is-warn' : ''}`;
 }
 
 function applyFilters() {
@@ -160,6 +282,8 @@ function renderSummary() {
 
 export function renderRaid() {
   renderAll(BLOCKER_REGISTERS);
+  renderHeatMap();
+  renderEscalations();
   const state = getState();
   const tbody = document.getElementById('raid-body');
   tbody.innerHTML = '';
@@ -200,10 +324,24 @@ function bindTable(onChanged) {
     row.replaceChild(scoreCell(item), row.querySelector('.col-score'));
     applyFilters();
     renderSummary();
+    renderHeatMap();
     onChanged();
   });
 
   tbody.addEventListener('click', (e) => {
+    if (e.target.closest('[data-action="escalate-raid"]')) {
+      const item = findById(getState().raid, rowIdOf(e.target));
+      if (!item) return;
+      if (!item.escalation) {
+        item.escalation = newPack(item);
+        scheduleSave();
+        onChanged();
+        renderRaid();
+      }
+      showSection('page-raid', 'sec-raid-escalations');
+      document.querySelector(`#raid-escalations [data-id="${item.id}"] [data-pack="impact"]`)?.focus();
+      return;
+    }
     if (!e.target.closest('[data-action="delete-raid"]')) return;
     const id = rowIdOf(e.target);
     const entry = trashRow('raid', id);
@@ -269,11 +407,90 @@ function bindControls(onChanged) {
   });
 }
 
+function bindEscalations(onChanged) {
+  const host = document.getElementById('raid-escalations');
+  const itemOf = (target) => findById(getState().raid, target.closest('[data-id]')?.dataset.id);
+  host.addEventListener('input', (e) => {
+    const key = e.target.dataset.pack;
+    const item = itemOf(e.target);
+    if (!key || !item?.escalation) return;
+    item.escalation[key] = e.target.value;
+    scheduleSave();
+    refreshPackNote(e.target.closest('.escalation'), item);
+    onChanged();
+  });
+  host.addEventListener('change', (e) => {
+    const trigger = e.target.dataset.trigger;
+    const item = itemOf(e.target);
+    if (!trigger || !item?.escalation) return;
+    const set = new Set(item.escalation.triggers || []);
+    if (e.target.checked) set.add(trigger); else set.delete(trigger);
+    item.escalation.triggers = [...set];
+    scheduleSave();
+    refreshPackNote(e.target.closest('.escalation'), item);
+  });
+  host.addEventListener('click', async (e) => {
+    const action = e.target.closest('[data-esc]')?.dataset.esc;
+    const item = itemOf(e.target);
+    if (!action || !item?.escalation) return;
+    const p = item.escalation;
+    if (action === 'send') {
+      const missing = packMissing(p);
+      if (missing.length) { toast(`Add ${missing.join(', ')} first — a decision-maker needs them to decide.`, 'error'); return; }
+      const text = packText(item, { projectName: getState().projectName });
+      try { await navigator.clipboard.writeText(text); } catch { /* shown below anyway */ }
+      const ok = await confirmAction({ title: 'Send the escalation', message: `Copied to the clipboard:\n\n${text}`, confirmLabel: 'Open in email' });
+      p.sentAt = new Date().toISOString();
+      item.status = 'Escalated';
+      scheduleSave();
+      onChanged();
+      renderRaid();
+      if (ok) {
+        const a = el('a', { href: `mailto:?subject=${encodeURIComponent(`Escalation: ${item.title || ''}`)}&body=${encodeURIComponent(text)}` });
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      return;
+    }
+    if (action === 'withdraw') {
+      delete item.escalation;
+      scheduleSave();
+      onChanged();
+      renderRaid();
+      return;
+    }
+    if (action === 'decide') {
+      if (!String(p.decision || '').trim()) { toast('Write down what was decided first.', 'error'); return; }
+      p.decidedAt = new Date().toISOString();
+      // Back to being worked: the decision is the start of the follow-up.
+      if (item.status === 'Escalated') item.status = 'In Progress';
+      scheduleSave();
+      onChanged();
+      renderRaid();
+      toast('Decision recorded. Follow it up in the log and close the item when done.', 'success');
+    }
+  });
+
+  document.getElementById('sec-raid-heatmap').addEventListener('click', (e) => {
+    if (e.target.closest('[data-action="clear-heat"]')) cellFilter = null;
+    const cell = e.target.closest('.heat-cell');
+    if (cell) {
+      const same = cellFilter && cellFilter.likelihood === cell.dataset.like && cellFilter.severity === cell.dataset.sev;
+      cellFilter = same ? null : { likelihood: cell.dataset.like, severity: cell.dataset.sev };
+    }
+    if (!cell && !e.target.closest('[data-action="clear-heat"]')) return;
+    renderHeatMap();
+    applyFilters();
+  });
+}
+
 export function initRaid({ onChanged } = {}) {
   const notify = onChanged || (() => {});
   renderRaid();
   bindTable(notify);
   bindControls(notify);
+  bindEscalations(notify);
   // Dependencies sit under the RAID log rather than on a commercial page:
   // "what is in our way" is one question, and a dependency is the half of the
   // answer that belongs to someone else. They were a RAID type until the

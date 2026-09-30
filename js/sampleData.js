@@ -79,6 +79,28 @@ const id = (prefix) => `${prefix}${++idCounter}`;
 // milestone marks the campaign going live, so the Dashboard lists them once.
 const LIVE_CAMPAIGN_ID = 'sample-deliverable-live-campaign';
 
+// A status history for sample tasks, read off their own dates: created a few
+// days before they start, started on their start date, finished on their end
+// date, put on hold two days in. Nothing is dated after the status date, since
+// history is what already happened. It is what gives the Flow KPIs something
+// to say on a fresh copy, and it moves with the template like any other date.
+function withFlowHistory(tasks, asOf) {
+  const shift = (iso, n) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    const x = new Date(y, m - 1, d + n);
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  };
+  return tasks.map((t) => {
+    const created = `${shift(t.start, -4)}T09:00`;
+    const history = [{ status: 'Not Started', blocked: false, at: created }];
+    const add = (entry) => { if (entry.at.slice(0, 10) <= asOf) history.push(entry); };
+    if (t.status !== 'Not Started') add({ status: 'In Progress', blocked: false, at: `${t.start}T09:00` });
+    if (t.status === 'On Hold') add({ status: 'On Hold', blocked: true, at: `${shift(t.start, 2)}T11:00` });
+    if (t.status === 'Complete') add({ status: 'Complete', blocked: false, at: `${t.end}T17:00` });
+    return { ...t, createdAt: created, statusHistory: history };
+  });
+}
+
 function createMarketingCampaign() {
   return {
     projectName: 'Social Media Marketing Campaign',
@@ -257,7 +279,7 @@ function createMarketingCampaign() {
         ],
       },
     ],
-    dashTasks: [
+    dashTasks: withFlowHistory([
       { id: id('d'), name: 'Campaign strategy & brief', assigned: 'Priya N.', start: '2026-09-01', end: '2026-09-02', baseStart: '2026-09-01', baseEnd: '2026-09-02', status: 'Complete', prio: 'High', comments: 'Signed off by marketing lead.', estimate: 12, spent: 11, rework: 0 },
       { id: id('d'), name: 'Creative asset design', assigned: 'Marcus T.', start: '2026-09-02', end: '2026-09-05', baseStart: '2026-09-02', baseEnd: '2026-09-05', status: 'Complete', prio: 'High', comments: 'All variants approved.', estimate: 40, spent: 46, rework: 6 },
       { id: id('d'), name: 'Ad account & tracking setup', assigned: 'Jordan K.', start: '2026-09-03', end: '2026-09-06', baseStart: '2026-08-30', baseEnd: '2026-09-02', status: 'In Progress', prio: 'Medium', comments: 'Pixel verification pending.', estimate: 16, spent: 14, rework: 2 },
@@ -267,7 +289,7 @@ function createMarketingCampaign() {
       { id: id('d'), name: 'Weekly reporting', assigned: 'Priya N.', start: '2026-09-12', end: '2026-09-30', baseStart: '2026-09-12', baseEnd: '2026-09-30', status: 'Not Started', prio: 'Low', comments: '', estimate: 18, spent: 0, rework: 0 },
       { id: id('d'), name: 'Mid-campaign optimization', assigned: 'Jordan K.', start: '2026-09-14', end: '2026-09-18', baseStart: '2026-09-14', baseEnd: '2026-09-18', status: 'Overdue', prio: 'High', comments: 'Needs budget reallocation decision.', estimate: 12, spent: 3, rework: 0 },
       { id: id('d'), name: 'Campaign wrap report', assigned: 'Priya N.', start: '2026-09-27', end: '2026-09-30', baseStart: '2026-09-27', baseEnd: '2026-09-30', status: 'Not Started', prio: 'Medium', comments: '', estimate: 14, spent: 0, rework: 0 },
-    ],
+    ], '2026-09-08'),
   };
 }
 

@@ -116,7 +116,7 @@ export const PAGE_TABS = {
     {
       id: 'sec-kpi-schedule',
       label: 'Indicators',
-      sections: ['sec-kpi-schedule', 'sec-kpi-cost', 'sec-kpi-scope', 'sec-kpi-risk', 'sec-kpi-quality', 'sec-kpi-improvement', 'sec-kpi-customer', 'sec-kpi-service'],
+      sections: ['sec-kpi-schedule', 'sec-kpi-cost', 'sec-kpi-scope', 'sec-kpi-risk', 'sec-kpi-quality', 'sec-kpi-improvement', 'sec-kpi-customer', 'sec-kpi-service', 'sec-kpi-flow'],
     },
     { id: 'sec-kpi-basis', label: 'How They Work' },
     { id: 'sec-kpi-framework', label: 'PM Framework' },

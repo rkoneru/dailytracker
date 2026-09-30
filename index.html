@@ -1531,9 +1531,22 @@
         <section class="card" id="sec-kpi-service">
           <div class="card__head">
             <h2>Service &amp; Support KPIs</h2>
-            <span class="hint">Read from the incidents on Service &amp; Support, in calendar hours.</span>
+            <span class="hint">Read from the incidents on Service &amp; Support, against each priority&rsquo;s clock.</span>
           </div>
           <div class="kpi-grid" id="kpi-grid-service"></div>
+        </section>
+
+        <section class="card" id="sec-kpi-flow">
+          <div class="card__head">
+            <h2>Flow KPIs</h2>
+            <span class="hint">How work moves, read from each task&rsquo;s recorded status changes.</span>
+          </div>
+          <p class="hint">
+            Track the flow, not just the output. These show where work waits &mdash; to guide decisions and find
+            bottlenecks, never to rank or punish people. A measure counts only what the app saw happen: a task that
+            existed before its history began adds nothing to lead or cycle time until its next move.
+          </p>
+          <div class="kpi-grid" id="kpi-grid-flow"></div>
         </section>
 
         <section class="card card--quiet" id="sec-kpi-basis">

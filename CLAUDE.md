@@ -53,7 +53,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/identity.js`, `policy.js`, `roles.js` | who you are, what pages you get |
 | `js/login.js`, `demoAccounts.js` | the sign-in screen and the six invented people behind it (one of them a client partner) |
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
-| `js/kpi.js`, `kpiPage.js` | the 40 indicators in eight categories, numbered in display order; `ceoKpis.js` maps a company-level (CEO) KPI set onto them and says why the rest are not held |
+| `js/kpi.js`, `kpiPage.js` | the 46 indicators in nine categories, numbered in display order; `ceoKpis.js` maps a company-level (CEO) KPI set onto them and says why the rest are not held |
 | `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
 | `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks; WBS codes derived from the order |
 | `js/customerSuccess.js`, `customerSuccessPage.js`, `sampleCustomers.js` | the CSM lifecycle (six ordered stages with gates, Churned as an exit), health score, retention/NRR/NPS/LTV/CAC, and the Customer Success page over the `customers` register |
@@ -65,6 +65,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/journey.js` | one use case from sale to success: seven steps read off the deal, the decision and the project it became. Stores nothing |
 | `js/surveys.js`, `survey.html` | satisfaction surveys on closed incidents: a one-time link (hash in `incident_surveys`, answered through `submit_incident_survey`) or, offline, a reply typed in; answers pulled back onto the incident |
 | `js/meetingCalendar.js`, `audioRecorder.js`, `audioStore.js` | the Meetings calendar (month grid, projected repeats, `.ics` export with follow-up alarms), audio recording with MediaRecorder, and recordings kept in IndexedDB on this device only |
+| `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
 | `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
@@ -232,6 +233,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   https, permission, sound, recorder, storage, speech) and names the one that
   fails. The meter's AudioContext is made inside the click, or Chrome starts
   it suspended and the meter sits at zero.
+- **Flow is measured from what was seen, not what was typed.** `recordChanges`
+  in `state.js` calls `recordTaskFlow` on every save, so every path that edits
+  a task appends to its `statusHistory` (status, blocked, local time) — none
+  of them has to remember. A task first seen already underway gets a `seen`
+  entry and adds nothing to lead or cycle time; `newTask` stamps `createdAt`
+  so work made here does. Throughput needs a week of history, and each flow
+  KPI is `null` until something could answer it.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

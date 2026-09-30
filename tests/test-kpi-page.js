@@ -27,18 +27,18 @@ const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require(
   await page.click('#tab-kpis .nav-row__label');
   await page.waitForTimeout(600);
   eq('landed on the KPI page', await page.textContent('#page-title'), 'Project KPIs');
-  eq('forty cards', await page.locator('.kpi-card').count(), 40);
-  eq('and a row explaining each', await page.locator('#kpi-basis-body tr').count(), 40);
-  eq('eight categories', await page.evaluate(() => ['schedule', 'cost', 'scope', 'risk', 'quality', 'improvement', 'customer', 'service']
-    .map((c) => document.querySelectorAll(`#kpi-grid-${c} .kpi-card`).length)), [4, 6, 5, 5, 5, 2, 9, 4]);
+  eq('forty-six cards', await page.locator('.kpi-card').count(), 46);
+  eq('and a row explaining each', await page.locator('#kpi-basis-body tr').count(), 46);
+  eq('nine categories', await page.evaluate(() => ['schedule', 'cost', 'scope', 'risk', 'quality', 'improvement', 'customer', 'service', 'flow']
+    .map((c) => document.querySelectorAll(`#kpi-grid-${c} .kpi-card`).length)), [4, 6, 5, 5, 5, 2, 9, 4, 6]);
   eq('numbered in the order they are shown', await page.$$eval('.kpi-card .kpi-card__n', (e) => e.map((x) => Number(x.textContent))),
-     Array.from({ length: 40 }, (_, i) => i + 1));
+     Array.from({ length: 46 }, (_, i) => i + 1));
 
   console.log('\n--- the starter project answers every project indicator, and admits the rest ---');
   // A marketing campaign has no customer accounts, no rates on its people and
   // no closed decisions, so those read "not measured" and say what would
   // measure them — rather than the starter being padded with data to look full.
-  eq('coverage is stated', await page.textContent('#kpi-coverage'), '23 of 40 measured');
+  eq('coverage is stated', await page.textContent('#kpi-coverage'), '29 of 46 measured');
   eq('only the ones it has no data for read as unmeasured',
      await page.$$eval('.kpi-card.is-unmeasured', (e) => e.map((x) => x.dataset.kpi)),
      ['grossMargin', 'collectionDays', 'decisionSpeed', 'improvementDelivery', 'customerRetention', 'churnRate', 'grr', 'nrr', 'nps', 'ltv', 'cac', 'ltvCac', 'timeToValue',
@@ -81,7 +81,7 @@ const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require(
   await page.waitForTimeout(900);
   await page.click('#tab-kpis .nav-row__label');
   await page.waitForTimeout(700);
-  eq('still every card', await page.locator('.kpi-card').count(), 40);
+  eq('still every card', await page.locator('.kpi-card').count(), 46);
   eq('most of them unmeasured', (await page.locator('.kpi-card.is-unmeasured').count()) > 10, true);
   eq('SPI is not invented', await cardValue('spi'), 'Not measured');
   eq('nor is a perfect CPI', await cardValue('cpi'), 'Not measured');

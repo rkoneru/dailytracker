@@ -5,6 +5,7 @@
 // options and colours have to come from one place or the two tables drift.
 
 import { parseDate, daysBetween } from './charts.js';
+import { localStamp } from './flow.js';
 
 export const STATUS_OPTIONS = ['Not Started', 'In Progress', 'Complete', 'Overdue', 'On Hold'];
 export const PRIORITY_OPTIONS = ['High', 'Medium', 'Low'];
@@ -41,6 +42,8 @@ export function newTask() {
     // buy nothing and cost a merge conflict every time two people touched the
     // same task from different devices.
     checklist: [], estimate: '', spent: '', rework: '', dependsOn: [],
+    // When it was made, and every status it has moved through since (flow.js).
+    createdAt: localStamp(), statusHistory: [],
   };
 }
 

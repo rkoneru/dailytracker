@@ -6,6 +6,7 @@ import { snapshotOf, diffSnapshots } from './changeLog.js';
 import { sanitiseMethodology, sanitisePhase } from './methodology.js';
 import { layOut, sanitiseActivity } from './ganttModel.js';
 import { todayISO, toLocalISO } from './dates.js';
+import { recordTaskFlow } from './flow.js';
 
 const STORAGE_KEY = 'projectPlannerStore_v2';
 const LEGACY_STORAGE_KEY = 'projectPlannerData_v1';
@@ -763,6 +764,11 @@ function recordChanges() {
   const s = getStore();
   const project = s.projects[s.activeProjectId];
   if (!project) return;
+
+  // Every status change, from any page, is written to the task's own history
+  // here — the one place every edit passes through — so flow metrics have
+  // something true to measure.
+  recordTaskFlow(project);
 
   const next = snapshotOf(project);
 

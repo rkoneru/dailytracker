@@ -19,6 +19,7 @@ import { utilisation, timesheetValue } from './resourceModel.js';
 import { customerMetrics, accountSignals } from './customerSuccess.js';
 import { serviceMetrics, csatOf } from './serviceDesk.js';
 import { billingMetrics } from './billing.js';
+import { flowMetrics } from './flow.js';
 import { isApprovedChange, isDecidedChange } from './changeControl.js';
 
 export const KPI_CATEGORIES = [
@@ -30,6 +31,7 @@ export const KPI_CATEGORIES = [
   { id: 'improvement', label: 'Improvement', icon: '💡' },
   { id: 'customer', label: 'Customer Success', icon: '⭐' },
   { id: 'service', label: 'Service & Support', icon: '🛠' },
+  { id: 'flow', label: 'Flow', icon: '🌊' },
 ];
 
 /**
@@ -205,9 +207,32 @@ export const KPI_DEFS = [
     needs: 'Accounts that have reached Realise value, with a customer-since date.' },
 ];
 
+// --- Flow ---
+KPI_DEFS.push(
+  { n: 0, id: 'leadTime', cat: 'flow', name: 'Lead Time', formula: 'Created → done',
+    what: 'How long a piece of work takes to reach done from the moment it is asked for.', unit: 'days', good: 'low',
+    needs: 'Tasks created and finished in this app, so both ends were seen happen.' },
+  { n: 0, id: 'cycleTime', cat: 'flow', name: 'Cycle Time', formula: 'Started → done',
+    what: 'How long work takes once somebody has actually started it.', unit: 'days', good: 'low',
+    needs: 'Tasks seen moving to In Progress and then to Complete.' },
+  { n: 0, id: 'throughput', cat: 'flow', name: 'Throughput', formula: 'Tasks done per week, last four weeks',
+    what: 'How much gets finished, and whether that is changing.', unit: 'perWeek', good: 'high',
+    needs: 'At least a week of task history.' },
+  { n: 0, id: 'wip', cat: 'flow', name: 'Work in Progress', formula: 'Tasks in progress now',
+    what: 'How many things are started and not finished. High WIP slows everything and lengthens lead time.', unit: 'count', good: 'low',
+    needs: 'Tasks on the Task Tracker.' },
+  { n: 0, id: 'blockedShare', cat: 'flow', name: 'Blocked Time', formula: 'Time blocked / time in progress',
+    what: 'How much of the time work was underway it could not move: on hold, or waiting on unfinished work.', unit: 'percent', good: 'low',
+    needs: 'Task history covering work that was started.', kri: 'Hidden waiting and dependency friction' },
+  { n: 0, id: 'predictability', cat: 'flow', name: 'Predictability', formula: 'Done by its baseline date / done',
+    what: 'How often work lands when it was promised, over the last four weeks.', unit: 'percent', good: 'high',
+    needs: 'Tasks finished in the last four weeks with a baseline or end date.', kri: 'Commitments not being kept' },
+);
+
 // Numbered in the order the page shows them, category by category, so the
 // cards read 1, 2, 3 however many are added to any one category.
 KPI_DEFS.sort((a, b) => KPI_CATEGORIES.findIndex((c) => c.id === a.cat) - KPI_CATEGORIES.findIndex((c) => c.id === b.cat));
+
 KPI_DEFS.forEach((def, i) => { def.n = i + 1; });
 
 export const KPI_BY_ID = new Map(KPI_DEFS.map((d) => [d.id, d]));
@@ -428,6 +453,11 @@ function improvementKpis(project, today) {
 }
 
 /** The incidents' numbers, from js/serviceDesk.js, so this page and Service & Support agree. */
+function flowKpis(project, now) {
+  const f = flowMetrics(project, now);
+  return { leadTime: f.leadTime, cycleTime: f.cycleTime, throughput: f.throughput, wip: f.wip, blockedShare: f.blockedShare, predictability: f.predictability };
+}
+
 function serviceKpis(project, now) {
   const m = serviceMetrics(project, now);
   return { responseSla: m.responseSla, resolutionSla: m.resolutionSla, mttr: m.mttr, csat: csatOf(project.incidents || []).csat };
@@ -584,6 +614,7 @@ export function projectKpis(project, { resources = [], absences = [], today = ne
     ...marginKpis(project, resources),
     ...customerKpis(project, day),
     ...serviceKpis(project, today),
+    ...flowKpis(project, today),
   };
 }
 
@@ -599,6 +630,7 @@ export function formatKpi(def, value) {
     case 'hours': return `${value > 0 && def.good === 'high' ? '+' : ''}${Math.round(value)} h`;
     case 'rate': return value.toFixed(2);
     case 'count': return String(Math.round(value));
+    case 'perWeek': return `${value.toFixed(1)} / wk`;
     case 'score': return String(Math.round(value));
     case 'money': return `$${Math.round(value).toLocaleString()}`;
     case 'ratio': return `${value.toFixed(1)} : 1`;
@@ -648,6 +680,10 @@ export function kpiTone(def, value) {
     // its own on the Billing tab, where the overdue invoices are named.
     case 'collectionDays': return value <= 30 ? 'good' : value <= 45 ? 'warn' : 'bad';
     case 'csat': return band(0.85, 0.7);
+    case 'leadTime': return value <= 14 ? 'good' : value <= 30 ? 'warn' : 'bad';
+    case 'cycleTime': return value <= 7 ? 'good' : value <= 14 ? 'warn' : 'bad';
+    case 'blockedShare': return value <= 0.1 ? 'good' : value <= 0.25 ? 'warn' : 'bad';
+    case 'predictability': return band(0.8, 0.6);
     case 'mttr': return value <= 8 ? 'good' : value <= 24 ? 'warn' : 'bad';
     case 'scopeChangeRate': return value <= 2 ? 'good' : value <= 5 ? 'warn' : 'bad';
     case 'changeCycleTime': return value <= 5 ? 'good' : value <= 10 ? 'warn' : 'bad';

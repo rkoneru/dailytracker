@@ -238,6 +238,7 @@ export const NAV_TREE = [
           { id: 'nav-kpi-improvement', label: 'Improvement', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-improvement' },
           { id: 'nav-kpi-customer', label: 'Customer Success', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-customer' },
           { id: 'nav-kpi-service', label: 'Service & Support', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-service' },
+          { id: 'nav-kpi-flow', label: 'Flow', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-flow' },
           { id: 'nav-kpi-basis', label: 'How These Work', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-basis' },
           { id: 'nav-kpi-framework', label: 'PM Framework', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-framework' },
           { id: 'nav-kpi-ceo', label: 'Business & Leadership', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-ceo' },

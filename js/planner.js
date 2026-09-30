@@ -248,7 +248,7 @@ function gateCard(m, today) {
       el('span', { class: 'charter-field__label', text: `Entry criteria — what must be true before the gate${open ? ` · ${open} open` : ''}` }),
       el('ul', { class: 'gate-criteria__list' }, criteria.map((c) => el('li', { 'data-criterion': c.id }, [
         el('input', { type: 'checkbox', 'data-criterion-field': 'met', checked: !!c.met, disabled: decided, 'aria-label': 'Met' }),
-        el('input', { class: 'row-input', 'data-criterion-field': 'text', value: c.text || '', placeholder: 'e.g. Requirements signed off by the sponsor', disabled: decided }),
+        el('input', { class: 'row-input', 'data-criterion-field': 'text', value: c.text || '', placeholder: 'e.g. Requirements signed off by the sponsor', 'aria-label': 'Entry criterion', disabled: decided }),
         el('button', { type: 'button', class: 'icon-btn no-print', 'data-gate': 'remove-criterion', 'aria-label': 'Remove criterion', text: '✕', disabled: decided }),
       ]))),
       !decided && el('button', { type: 'button', class: 'btn btn-small btn-ghost no-print', 'data-gate': 'add-criterion', text: '+ Criterion' }),

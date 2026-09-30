@@ -81,6 +81,29 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   await page.waitForTimeout(300);
   eq('the Gantt then offers to open it rather than start another', await page.$$eval('#gantt-ownership [data-gantt="open-handoff"]', (e) => e.length), 1);
 
+  console.log('\n--- phase roll-ups, arrows and labels ---');
+  const roll = await page.evaluate(async () => {
+    const m = await import('/js/ganttModel.js');
+    const project = {
+      methodology: 'project',
+      ganttActivities: [
+        { id: 'a', phase: 'executing', name: 'Short', start: '2026-10-01', end: '2026-10-02', progress: 100 },
+        { id: 'b', phase: 'executing', name: 'Long', start: '2026-10-03', end: '2026-10-20', progress: 0 },
+      ],
+      milestones: [{ id: 'm', text: 'Build complete', phase: 'executing', due: '2026-10-20' }, { id: 'n', text: 'Untagged', due: '2026-10-21' }],
+    };
+    const [x] = m.phaseSummaries(project);
+    return [x.label, x.start, x.end, x.days, x.progress, x.milestones.map((y) => y.id), m.phaseSummaries({ ...project, methodology: 'mlops' }).length];
+  });
+  eq('a phase rolls up its span, days and length-weighted progress; its milestones ride on it', roll, ['Executing', '2026-10-01', '2026-10-20', 20, 10, ['m'], 0]);
+  await openDestination(page, 'nav-gantt');
+  await page.waitForTimeout(400);
+  eq('each phase gets a summary row', await page.$$eval('#gantt-body .gantt-phase', (e) => e.map((x) => x.dataset.phase)), ['initiating', 'planning', 'executing', 'monitoring', 'closing']);
+  eq('an arrow for every link', await page.$$eval('#gantt-body .gantt-link', (e) => e.length), await page.evaluate(async () => (await import('/js/state.js')).getState().ganttActivities.filter((a) => a.after).length));
+  eq('critical links are drawn as critical', await page.$$eval('#gantt-body .gantt-link.is-critical', (e) => e.length), 3);
+  eq('each bar says its days', await page.$$eval('#gantt-body .gantt-bar__days', (e) => e.every((x) => /^\d+ d$/.test(x.textContent))), true);
+  eq('the phase rows are not editable rows', await page.$$eval('#gantt-body .gantt-phase input', (e) => e.length), 0);
+
   console.log('\n--- layout ---');
   await page.setViewportSize({ width: 390, height: 900 });
   await page.waitForTimeout(300);

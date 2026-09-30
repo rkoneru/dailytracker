@@ -17,7 +17,7 @@ import { formatDate, parseDate, toLocalISO } from './dates.js';
 import { METHODOLOGIES, methodOf, findPhase, sanitisePhase } from './methodology.js';
 import {
   layOut, orderedActivities, activitySpan, chartWindow, newActivity, wbsCodes, dependencyIssues, markers,
-  criticalPath, ownershipFindings,
+  criticalPath, ownershipFindings, phaseSummaries, activityDays,
 } from './ganttModel.js';
 import { gateState, GATE_STATE_TEXT } from './gates.js';
 import { showSection } from './tabs.js';
@@ -106,8 +106,9 @@ function afterSelect(activity, rows, codes) {
 // Milestones and gates across the top: the dates the plan steers to, drawn on
 // the same scale as the phases. They are the milestone rows on the Milestones
 // tab, not copies — a diamond opens its row there.
-function renderMarks(state, today) {
-  const marks = markers(state);
+function renderMarks(state, today, onPhases = new Set()) {
+  // A milestone tagged to a phase sits on that phase's bar instead; one place each.
+  const marks = markers(state).filter((m) => !onPhases.has(m.id));
   if (!marks.length) return null;
   const byId = new Map((state.milestones || []).map((m) => [m.id, m]));
   return el('div', { class: 'gantt-marks' }, [
@@ -193,6 +194,7 @@ function renderRow(activity, method, first, wbs, rows, codes, conflicted, cp) {
       text: cp.critical.includes(activity.id) ? 'critical' : cp.float.get(activity.id) > 0 ? `+${cp.float.get(activity.id)}d` : '',
     }),
     el('span', { class: 'gantt-bar__done', style: `width:${activity.progress || 0}%` }),
+    (activity.progress || 0) > 0 && el('span', { class: 'gantt-bar__pct', 'aria-hidden': 'true', text: `${activity.progress}%` }),
     el('span', { class: 'gantt-bar__handle gantt-bar__handle--start', title: 'Drag to change the start date' }),
     el('span', { class: 'gantt-bar__handle gantt-bar__handle--end', title: 'Drag to change the end date' }),
   ]) : el('span', { class: 'gantt-row__undated', text: 'No dates — type them in' });
@@ -222,8 +224,96 @@ function renderRow(activity, method, first, wbs, rows, codes, conflicted, cp) {
       value: String(activity.progress || 0), 'aria-label': `Per cent done, ${name}`,
     }),
     el('button', { type: 'button', class: 'icon-btn no-print', 'data-gantt': 'delete', 'aria-label': `Remove ${name}`, title: 'Remove', text: '🗑' }),
-    el('div', { class: 'gantt-row__track' }, [bar]),
+    el('div', { class: 'gantt-row__track' }, [
+      bar,
+      span && el('span', { class: 'gantt-bar__days', 'aria-hidden': 'true', style: `left:calc(${pct(dayIndex(span.end) + 1)} + 4px)`, text: `${activityDays(activity)} d` }),
+    ]),
   ]);
+}
+
+// A phase's own row: its span, days and progress rolled up from its
+// activities, with the milestones tagged to it as diamonds on the bar. It is
+// read-only — the activities beneath it are what is edited.
+function renderPhaseRow(summary) {
+  const from = dayIndex(parseDate(summary.start));
+  const to = dayIndex(parseDate(summary.end));
+  return el('div', { class: 'gantt-phase', 'data-phase': summary.phase }, [
+    el('span', { class: 'gantt-row__phase', text: summary.n }),
+    el('span', {}),
+    el('strong', { class: 'gantt-phase__name', text: summary.label }),
+    el('span', { class: 'gantt-phase__date', text: formatDate(summary.start, 'day') }),
+    el('span', { class: 'gantt-phase__date', text: formatDate(summary.end, 'day') }),
+    el('span', { class: 'gantt-phase__pct', text: `${summary.progress}%` }),
+    el('span', { class: 'gantt-phase__days', text: `${summary.days} d` }),
+    el('div', { class: 'gantt-row__track' }, [
+      el('div', {
+        class: 'gantt-phase__bar', role: 'img',
+        'aria-label': `${summary.label}: ${formatDate(summary.start, 'day')} to ${formatDate(summary.end, 'day')}, ${summary.days} days, ${summary.progress}% done`,
+        style: `left:${pct(from)};width:${pct(to - from + 1)}`,
+      }, [el('span', { class: 'gantt-phase__done', style: `width:${summary.progress}%` })]),
+      ...summary.milestones.map((m) => el('button', {
+        type: 'button', class: `gantt-phase__mark${m.gate ? ' is-gate' : ''}${m.done ? ' is-done' : ''}`,
+        style: `left:${pct(dayIndex(parseDate(m.date)) + 0.5)}`, 'data-mark': m.id,
+        title: `${m.gate ? 'Gate' : 'Milestone'}: ${m.name}, ${formatDate(m.date, 'day')}`, 'aria-label': `${m.gate ? 'Gate' : 'Milestone'}: ${m.name}`,
+      })),
+    ]),
+  ]);
+}
+
+// Arrows from each activity's end to the start of what follows it, and the
+// weekends shaded — drawn over the rows once they are laid out, because both
+// depend on where the bars actually landed.
+function drawOverlay() {
+  const body = document.getElementById('gantt-body');
+  body.querySelector('.gantt-overlay')?.remove();
+  const state = getState();
+  const tracks = body.querySelectorAll('.gantt-row__track');
+  if (!win || !tracks.length) return;
+  const origin = body.getBoundingClientRect();
+  const first = tracks[0].getBoundingClientRect();
+  const perDay = first.width / win.days;
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', 'gantt-overlay');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('width', String(body.scrollWidth));
+  svg.setAttribute('height', String(body.scrollHeight));
+  const make = (tag, attrs) => { const n = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, String(v))); return n; };
+  const defs = make('defs', {});
+  ['plain', 'critical'].forEach((kind) => {
+    const marker = make('marker', { id: `gantt-arrow-${kind}`, viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 7, markerHeight: 7, orient: 'auto' });
+    marker.appendChild(make('path', { d: 'M0,0 L8,4 L0,8 z', class: `gantt-arrowhead is-${kind}` }));
+    defs.appendChild(marker);
+  });
+  svg.appendChild(defs);
+  // Weekends, when a day is wide enough to show one.
+  if (perDay >= 4) {
+    for (let i = 0; i < win.days; i += 1) {
+      const d = addDays(win.start, i);
+      if (d.getDay() !== 0 && d.getDay() !== 6) continue;
+      svg.appendChild(make('rect', { class: 'gantt-weekend', x: first.left - origin.left + i * perDay, y: 0, width: perDay, height: body.scrollHeight }));
+    }
+  }
+  const cp = criticalPath(state);
+  const barOf = (id) => body.querySelector(`.gantt-row[data-id="${id}"] .gantt-bar`)?.getBoundingClientRect();
+  (state.ganttActivities || []).filter((a) => a.after).forEach((a) => {
+    const from = barOf(a.after);
+    const to = barOf(a.id);
+    if (!from || !to) return;
+    const x1 = from.right - origin.left;
+    const y1 = from.top + from.height / 2 - origin.top;
+    const x2 = to.left - origin.left;
+    const y2 = to.top + to.height / 2 - origin.top;
+    const out = x1 + 6;
+    // Room to run straight in: down, then across. Otherwise loop back
+    // between the rows, the way a plan that overlaps has to be drawn.
+    const d = x2 - 6 >= out
+      ? `M${x1},${y1} H${out} V${y2} H${x2}`
+      : `M${x1},${y1} H${out} V${(y1 + y2) / 2} H${x2 - 8} V${y2} H${x2}`;
+    const critical = cp.critical.includes(a.id) && cp.critical.includes(a.after);
+    svg.appendChild(make('path', { d, class: `gantt-link${critical ? ' is-critical' : ''}`, 'marker-end': `url(#gantt-arrow-${critical ? 'critical' : 'plain'})`, 'data-link': `${a.after}>${a.id}` }));
+  });
+  body.appendChild(svg);
 }
 
 function renderEmpty(state, method) {
@@ -286,12 +376,16 @@ export function renderGantt() {
   const cp = criticalPath(state);
   renderCritical(state, rows, cp);
   // No milestones is no marker row; replaceChildren would print a null.
-  body.replaceChildren(...[renderMarks(state, today), ...rows.map((a) => {
+  const summaries = new Map(phaseSummaries(state).map((s) => [s.phase, s]));
+  const onPhases = new Set([...summaries.values()].flatMap((s) => s.milestones.map((m) => m.id)));
+  body.replaceChildren(...[renderMarks(state, today, onPhases), ...rows.flatMap((a) => {
     const known = method && findPhase(method.id, a.phase) ? a.phase : '?';
     const first = known !== lastPhase;
     lastPhase = known;
-    return renderRow(a, method, first, codes.get(a.id), rows, codes, conflicted, cp);
+    const row = renderRow(a, method, first, codes.get(a.id), rows, codes, conflicted, cp);
+    return first && summaries.has(known) ? [renderPhaseRow(summaries.get(known)), row] : [row];
   })].filter(Boolean));
+  drawOverlay();
 }
 
 // ---------- editing ----------
@@ -532,5 +626,13 @@ export function initGantt({ onMethodChange: onChange } = {}) {
   onSectionShown((pageId, ids) => {
     if (pageId === 'page-planner' && ids.includes('sec-gantt') && stale) renderGantt();
   });
+  // The arrows are drawn where the bars landed, so a resize redraws them.
+  if (typeof window.ResizeObserver === 'function') {
+    let width = 0;
+    new window.ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      if (w && w !== width) { width = w; drawOverlay(); }
+    }).observe(document.getElementById('gantt-body'));
+  }
   renderGantt();
 }

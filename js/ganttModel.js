@@ -298,3 +298,41 @@ export function ownershipFindings(project) {
   }));
   return { handoffs, clashes };
 }
+
+/**
+ * One summary per phase of a lifecycle, rolled up from its activities: the
+ * span from the first start to the last end, the days it covers, progress
+ * weighted by each activity's length (a two-day task at 100% is not half of
+ * a phase that also holds a twenty-day one at 0%), and the milestones tagged
+ * to the phase, which the chart draws as diamonds on the phase's bar.
+ * Derived on every draw; nothing is stored. A practice has no phases in
+ * sequence, so it has no roll-ups.
+ */
+export function phaseSummaries(project) {
+  const method = methodOf(project);
+  if (!method || method.kind !== 'lifecycle') return [];
+  const acts = orderedActivities(project);
+  return method.phases.map((phase) => {
+    const mine = acts.filter((a) => a.phase === phase.id);
+    const spans = mine.map((a) => ({ a, s: activitySpan(a) })).filter((x) => x.s);
+    if (!spans.length) return null;
+    const start = new Date(Math.min(...spans.map((x) => x.s.start)));
+    const end = new Date(Math.max(...spans.map((x) => x.s.end)));
+    const weight = spans.reduce((n, x) => n + daysBetween(x.s.start, x.s.end) + 1, 0);
+    const done = spans.reduce((n, x) => n + (daysBetween(x.s.start, x.s.end) + 1) * ((Number(x.a.progress) || 0) / 100), 0);
+    return {
+      phase: phase.id, n: phase.n, label: phase.label,
+      start: toLocalISO(start), end: toLocalISO(end), days: daysBetween(start, end) + 1,
+      progress: weight ? Math.round((done / weight) * 100) : 0,
+      activities: mine.map((a) => a.id),
+      milestones: (project.milestones || []).filter((m) => m.phase === phase.id && parseDate(m.due))
+        .map((m) => ({ id: m.id, name: m.text || 'Untitled', date: m.due, done: !!m.done, gate: m.kind === 'gate' })),
+    };
+  }).filter(Boolean);
+}
+
+/** Inclusive days an activity runs, or null without dates. */
+export function activityDays(activity) {
+  const span = activitySpan(activity);
+  return span ? daysBetween(span.start, span.end) + 1 : null;
+}

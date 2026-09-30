@@ -6540,3 +6540,38 @@ body.login-open { overflow: hidden; }
 .ai-risk.is-covered .sprint-check__mark { color: var(--color-success-text); }
 .ai-risk.is-gap { border-color: #d97706; }
 .ai-risk.is-gap .sprint-check__mark { color: var(--color-danger-text); }
+
+/* Gantt: phase roll-ups, day and per-cent labels, arrows and weekends. */
+.gantt__body { position: relative; }
+.gantt-phase { display: grid; grid-template-columns: var(--gantt-cols); align-items: center; gap: 0 8px; min-width: 1000px; padding: 6px 0; border-top: 2px solid var(--color-border); background: var(--color-bg); font-size: 13px; }
+.gantt-phase__name { font-size: 13.5px; }
+.gantt-phase__date, .gantt-phase__days { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.gantt-phase__pct { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gantt-phase__days { font-size: 11px; text-align: center; }
+.gantt-phase .gantt-row__track { height: 26px; }
+.gantt-phase__bar { position: absolute; top: 8px; height: 10px; border-radius: 2px; background: #c4b5fd; overflow: visible; }
+.gantt-phase__bar::before, .gantt-phase__bar::after { content: ''; position: absolute; bottom: -5px; border: 5px solid transparent; }
+.gantt-phase__bar::before { left: 0; border-left-color: #6d4aeb; border-top-color: #6d4aeb; }
+.gantt-phase__bar::after { right: 0; border-right-color: #6d4aeb; border-top-color: #6d4aeb; }
+.gantt-phase__done { position: absolute; inset: 0 auto 0 0; background: #6d4aeb; border-radius: 2px; }
+.gantt-phase__mark { position: absolute; top: 5px; width: 14px; height: 14px; padding: 0; border: 2px solid #2563eb; background: var(--color-surface); transform: translateX(-50%) rotate(45deg); cursor: pointer; z-index: 2; }
+.gantt-phase__mark.is-gate { border-color: #16a34a; }
+.gantt-phase__mark.is-done { background: #2563eb; }
+.gantt-phase__mark.is-gate.is-done { background: #16a34a; }
+.gantt-bar__pct { position: absolute; left: 8px; top: 0; bottom: 0; display: grid; place-items: center; font-size: 10.5px; font-weight: 700; color: #fff; z-index: 1; pointer-events: none; text-shadow: 0 0 2px rgba(0, 0, 0, 0.35); }
+.gantt-bar__days { position: absolute; top: 0; line-height: 34px; font-size: 11px; color: var(--color-text-muted); white-space: nowrap; pointer-events: none; }
+.gantt-overlay { position: absolute; inset: 0 auto auto 0; pointer-events: none; overflow: visible; }
+.gantt-weekend { fill: var(--color-text); opacity: 0.04; }
+.gantt-link { fill: none; stroke: #64748b; stroke-width: 1.4; }
+.gantt-link.is-critical { stroke: #ea580c; stroke-dasharray: 4 3; }
+.gantt-arrowhead.is-plain { fill: #64748b; }
+.gantt-arrowhead.is-critical { fill: #ea580c; }
+@media (max-width: 600px) {
+  .gantt-phase { min-width: 0; grid-template-columns: 34px minmax(0, 1fr) auto; grid-template-areas: 'n name pct' 'track track track'; gap: 4px 8px; }
+  .gantt-phase > :nth-child(1) { grid-area: n; }
+  .gantt-phase .gantt-phase__name { grid-area: name; }
+  .gantt-phase .gantt-phase__pct { grid-area: pct; }
+  .gantt-phase .gantt-row__track { grid-area: track; }
+  .gantt-phase > :nth-child(2), .gantt-phase .gantt-phase__date, .gantt-phase .gantt-phase__days { display: none; }
+  .gantt-overlay { display: none; }
+}

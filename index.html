@@ -1402,9 +1402,13 @@
           <div class="card__head">
             <h2 id="meeting-calendar-label">Calendar</h2>
             <div class="meeting-calendar__nav no-print">
-              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="-1" aria-label="Previous month">&lsaquo;</button>
+              <span class="seg" role="group" aria-label="Calendar view">
+                <button type="button" class="btn btn-small btn-ghost" data-cal-view="week" aria-pressed="false">Week</button>
+                <button type="button" class="btn btn-small btn-ghost" data-cal-view="month" aria-pressed="true">Month</button>
+              </span>
+              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="-1" aria-label="Previous">&lsaquo;</button>
               <button type="button" class="btn btn-small btn-ghost" data-cal-nav="0">Today</button>
-              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="1" aria-label="Next month">&rsaquo;</button>
+              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="1" aria-label="Next">&rsaquo;</button>
               <button type="button" class="btn btn-small" id="btn-meetings-ics">Export calendar (.ics)</button>
             </div>
           </div>
@@ -1418,6 +1422,7 @@
             <span class="cal-chip is-repeat">Repeat, not yet held</span>
             <span class="cal-chip is-followUp">Follow-up</span>
             <span class="cal-chip is-action">Action due</span>
+            <span class="cal-legend-modes">👥 In person · 🎥 Video · 📞 Phone · 🏠 On site</span>
           </div>
           <div class="table-scroll"><div id="meeting-calendar"></div></div>
           <h3 class="uc-sub">Next two weeks</h3>

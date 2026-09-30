@@ -33,6 +33,16 @@ export const MEETING_ROLES = [
   { id: 'Observer', does: 'Listens only — could read the notes instead' },
 ];
 
+// How people meet: the calendar draws each with its own mark, so a day of
+// back-to-back calls reads differently from a day on site.
+export const MEETING_MODES = [
+  { id: 'In person', icon: '👥' },
+  { id: 'Video', icon: '🎥' },
+  { id: 'Phone', icon: '📞' },
+  { id: 'On site', icon: '🏠' },
+];
+export const modeIcon = (mode) => MEETING_MODES.find((m) => m.id === mode)?.icon || '';
+
 export const OUTPUT_TYPES = ['Decision', 'Approval', 'Plan', 'Alignment', 'Status update', 'Ideas', 'Problem solved'];
 const NEEDS_DECIDER = ['decision', 'approval'];
 export const LEAN_LIMIT = 8;
@@ -51,6 +61,7 @@ export function newMeeting(overrides = {}) {
     startTime: '',
     endTime: '',
     location: '',
+    mode: '',
     purpose: '',
     // What the meeting should produce, and what people should read first.
     expectedOutput: '',
@@ -91,7 +102,7 @@ export const newFollowUp = (o = {}) => ({ id: mid('fu'), activity: '', purpose: 
 export function nextOccurrence(meeting, date) {
   return newMeeting({
     name: meeting.name, date, startTime: meeting.startTime, endTime: meeting.endTime,
-    location: meeting.location, purpose: meeting.purpose, owner: meeting.owner, preparedBy: meeting.preparedBy,
+    location: meeting.location, mode: meeting.mode || '', purpose: meeting.purpose, owner: meeting.owner, preparedBy: meeting.preparedBy,
     expectedOutput: meeting.expectedOutput || '', preRead: meeting.preRead || '',
     repeat: meeting.repeat || 'None',
     seriesId: meeting.seriesId || meeting.id,

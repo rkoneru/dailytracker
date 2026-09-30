@@ -49,6 +49,50 @@ export function addRepeat(dateISO, repeat, n = 1) {
   return iso(d);
 }
 
+/** The seven ISO dates, Monday first, of the week holding `dateISO`. */
+export function weekDays(dateISO) {
+  const d = day(dateISO);
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => iso(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)));
+}
+
+const minutes = (t) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+
+/**
+ * Where each timed event sits in a day column, and the hours the week needs
+ * to show: 8 to 18 by default, widened to hold the earliest and latest.
+ * An untimed event is all-day. A meeting with no end runs an hour.
+ */
+export function weekLayout(eventsByDay, days) {
+  let from = 8 * 60;
+  let to = 18 * 60;
+  const placed = new Map();
+  days.forEach((d) => {
+    const list = eventsByDay.get(d) || [];
+    const timed = [];
+    const allDay = [];
+    list.forEach((e) => {
+      const s = minutes(e.time);
+      if (s === null || (e.kind !== 'meeting' && e.kind !== 'repeat')) { allDay.push(e); return; }
+      const end = minutes(e.end);
+      const f = end !== null && end > s ? end : s + 60;
+      from = Math.min(from, Math.floor(s / 60) * 60);
+      to = Math.max(to, Math.ceil(f / 60) * 60);
+      timed.push({ ...e, startMin: s, endMin: f });
+    });
+    // Side by side when they overlap: each takes a lane, the first free one.
+    const lanes = [];
+    timed.sort((a, b) => a.startMin - b.startMin).forEach((e) => {
+      const lane = lanes.findIndex((endAt) => endAt <= e.startMin);
+      e.lane = lane === -1 ? lanes.length : lane;
+      lanes[e.lane] = e.endMin;
+    });
+    timed.forEach((e) => { e.lanes = lanes.length; });
+    placed.set(d, { timed, allDay });
+  });
+  return { from, to, days: placed };
+}
+
 /** Six weeks of ISO dates, Monday first, covering `month` (0-based) of `year`. */
 export function monthGrid(year, month) {
   const first = new Date(year, month, 1);
@@ -98,7 +142,7 @@ export function calendarEvents(meetings = [], fromISO, toISO) {
   const events = [];
   meetings.forEach((m) => {
     if (inRange(m.date)) {
-      events.push({ kind: 'meeting', date: m.date, time: m.startTime || '', title: m.name || 'Untitled meeting', meetingId: m.id, status: m.status || 'Scheduled' });
+      events.push({ kind: 'meeting', date: m.date, time: m.startTime || '', end: m.endTime || '', mode: m.mode || '', title: m.name || 'Untitled meeting', meetingId: m.id, status: m.status || 'Scheduled' });
     }
     (m.followUps || []).forEach((f) => {
       if (inRange(f.date)) events.push({ kind: 'followUp', date: f.date, time: '', title: f.activity || 'Follow-up', meetingId: m.id, status: f.type || '' });
@@ -108,7 +152,7 @@ export function calendarEvents(meetings = [], fromISO, toISO) {
     });
   });
   projectedRepeats(meetings, toISO).forEach(({ date, from }) => {
-    if (inRange(date)) events.push({ kind: 'repeat', date, time: from.startTime || '', title: from.name || 'Untitled meeting', meetingId: from.id, status: from.repeat });
+    if (inRange(date)) events.push({ kind: 'repeat', date, time: from.startTime || '', end: from.endTime || '', mode: from.mode || '', title: from.name || 'Untitled meeting', meetingId: from.id, status: from.repeat });
   });
   const order = { meeting: 0, repeat: 1, followUp: 2, action: 3 };
   events.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '99').localeCompare(b.time || '99') || order[a.kind] - order[b.kind]);

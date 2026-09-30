@@ -12,12 +12,12 @@ import {
   newMeeting, newAgendaItem, newAttendee, newDecision, newAction, newFollowUp,
   newUtterance, stamp, scheduleAgenda, agendaLoad, attendance, actionTally,
   sortMeetings, transcriptText, parseTranscript, suggestions, formatTime, nextOccurrence,
-  MEETING_ROLES, OUTPUT_TYPES, readiness, absentOwners,
+  MEETING_ROLES, OUTPUT_TYPES, readiness, absentOwners, MEETING_MODES, modeIcon,
 } from './meetingModel.js';
 import { createTranscriber, isSupported, PRIVACY_NOTE } from './transcriber.js';
 import { slug } from './register.js';
 import {
-  REPEATS, monthGrid, calendarEvents, addRepeat, icsCalendar,
+  REPEATS, monthGrid, calendarEvents, addRepeat, icsCalendar, weekDays, weekLayout,
 } from './meetingCalendar.js';
 import {
   startAudio, recordingBlocker, formatDuration, formatSize, meterContext, testMicrophone,
@@ -99,6 +99,7 @@ const OVERVIEW_FIELDS = [
   { field: 'startTime', label: 'Start', type: 'time' },
   { field: 'endTime', label: 'End', type: 'time' },
   { field: 'location', label: 'Virtual / location', placeholder: 'e.g. Zoom, or Room 3' },
+  { field: 'mode', label: 'How', options: ['', ...MEETING_MODES.map((m) => m.id)] },
   { field: 'status', label: 'Status', options: MEETING_STATUSES },
   { field: 'repeat', label: 'Repeats', options: REPEATS },
   { field: 'owner', label: 'Meeting owner', person: true, placeholder: 'Who called it' },
@@ -118,7 +119,7 @@ function overviewField(meeting, def) {
   if (def.options) {
     input = el('select', { class: 'field-input', 'data-meeting-field': def.field });
     def.options.forEach((opt) => input.appendChild(
-      el('option', { value: opt, text: opt, selected: meeting[def.field] === opt })));
+      el('option', { value: opt, text: opt ? `${modeIcon(opt) ? `${modeIcon(opt)} ` : ''}${opt}` : '—', selected: (meeting[def.field] || '') === opt })));
   } else if (def.long) {
     input = el('textarea', { class: 'field-input', rows: '2', 'data-meeting-field': def.field, placeholder: def.placeholder || '' });
     input.value = meeting[def.field] || '';
@@ -722,7 +723,7 @@ const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getD
 
 function chip(e) {
   const tab = e.kind === 'followUp' || e.kind === 'action' ? 'sec-meeting-actions' : 'sec-meeting-overview';
-  const label = `${e.time ? `${formatTime(e.time)} ` : ''}${e.kind === 'followUp' ? '↻ ' : e.kind === 'action' ? '☐ ' : ''}${e.title}`;
+  const label = `${e.time ? `${formatTime(e.time)} ` : ''}${e.kind === 'followUp' ? '↻ ' : e.kind === 'action' ? '☐ ' : ''}${modeIcon(e.mode) ? `${modeIcon(e.mode)} ` : ''}${e.title}`;
   const attrs = e.kind === 'repeat'
     ? { 'data-cal-repeat': e.meetingId, 'data-date': e.date, title: `${e.title} — ${e.status}, not yet held. Open to plan it.` }
     : { 'data-cal-open': e.meetingId, 'data-cal-tab': tab, title: `${e.title}${e.kind === 'meeting' ? ` — ${e.status}` : ''}` };
@@ -734,10 +735,61 @@ function chip(e) {
   });
 }
 
+// Month or week: a per-device view choice, remembered, never synced.
+const VIEW_KEY = 'projectPlannerMeetingView_v1';
+let calendarView = (() => { try { return localStorage.getItem(VIEW_KEY) === 'week' ? 'week' : 'month'; } catch { return 'month'; } })();
+let calendarWeek = null;
+const HOUR_PX = 48;
+
+function renderWeek(host, today) {
+  if (!calendarWeek) calendarWeek = isoOf(today);
+  const days = weekDays(calendarWeek);
+  const events = calendarEvents(meetings(), days[0], days[6]);
+  const layout = weekLayout(events, days);
+  const todayIso = isoOf(today);
+  const fmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+  const dayName = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const at = (d) => new Date(`${d}T00:00:00`);
+  document.getElementById('meeting-calendar-label').textContent = `Calendar — ${fmt.format(at(days[0]))} to ${fmt.format(at(days[6]))}`;
+  const hours = [];
+  for (let m = layout.from; m < layout.to; m += 60) hours.push(m);
+  const height = ((layout.to - layout.from) / 60) * HOUR_PX;
+  const nowMin = today.getHours() * 60 + today.getMinutes();
+  host.replaceChildren(el('div', { class: 'wk', role: 'grid', 'aria-label': 'Week', 'data-from': String(layout.from) }, [
+    el('div', { class: 'wk-corner' }),
+    ...days.map((d) => el('div', { class: `wk-head${d === todayIso ? ' is-today' : ''}${[0, 6].includes(at(d).getDay()) ? ' is-weekend' : ''}`, role: 'columnheader' }, [
+      el('span', { class: 'wk-head__day', text: dayName.format(at(d)) }), el('span', { class: 'wk-head__n', text: String(at(d).getDate()) }),
+    ])),
+    el('div', { class: 'wk-allday-label', text: 'All day' }),
+    ...days.map((d) => el('div', { class: 'wk-allday', 'data-day': d }, layout.days.get(d).allDay.map(chip))),
+    el('div', { class: 'wk-hours', style: `height:${height}px` }, hours.map((m) => el('span', { class: 'wk-hour', style: `top:${((m - layout.from) / 60) * HOUR_PX}px`, text: formatTime(`${String(m / 60).padStart(2, '0')}:00`) }))),
+    ...days.map((d) => el('div', {
+      class: `wk-col${d === todayIso ? ' is-today' : ''}${[0, 6].includes(at(d).getDay()) ? ' is-weekend' : ''}`, 'data-cal-slot': d, style: `height:${height}px`, title: 'Pick a time to plan a meeting',
+    }, [
+      ...layout.days.get(d).timed.map((e) => {
+        const c = chip(e);
+        c.classList.add('wk-event');
+        c.style.top = `${((e.startMin - layout.from) / 60) * HOUR_PX}px`;
+        c.style.height = `${Math.max(18, ((e.endMin - e.startMin) / 60) * HOUR_PX - 2)}px`;
+        c.style.left = `${(e.lane / e.lanes) * 100}%`;
+        c.style.width = `calc(${100 / e.lanes}% - 2px)`;
+        return c;
+      }),
+      d === todayIso && nowMin >= layout.from && nowMin <= layout.to && el('span', { class: 'wk-now', style: `top:${((nowMin - layout.from) / 60) * HOUR_PX}px`, title: `Now, ${formatTime(`${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`)}` }),
+    ])),
+  ]));
+}
+
 function renderCalendar() {
   const host = document.getElementById('meeting-calendar');
   if (!host) return;
   const today = new Date();
+  document.querySelectorAll('#sec-meeting-calendar [data-cal-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.calView === calendarView)));
+  if (calendarView === 'week') {
+    renderWeek(host, today);
+    renderUpcoming(today);
+    return;
+  }
   if (!calendarMonth) calendarMonth = { y: today.getFullYear(), m: today.getMonth() };
   const weeks = monthGrid(calendarMonth.y, calendarMonth.m);
   const events = calendarEvents(meetings(), weeks[0][0], weeks[5][6]);
@@ -761,7 +813,12 @@ function renderCalendar() {
     })))),
   ]));
 
-  // The same thing as a list, which is what reads on a phone.
+  renderUpcoming(today);
+}
+
+// The same thing as a list, which is what reads on a phone.
+function renderUpcoming(today) {
+  const todayIso = isoOf(today);
   const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 13);
   const soon = calendarEvents(meetings(), todayIso, isoOf(end));
   const upcoming = document.getElementById('meeting-upcoming');
@@ -787,10 +844,11 @@ function stopRecordingIfOther(id) {
   }
 }
 
-function createOn(date, from = null) {
+function createOn(date, from = null, time = '') {
+  const end = time ? `${String(Math.min(23, Number(time.slice(0, 2)) + 1)).padStart(2, '0')}${time.slice(2)}` : '';
   const meeting = from
     ? { ...nextOccurrence(from, date), id: uid() }
-    : { ...newMeeting({ date, status: 'Scheduled' }), id: uid() };
+    : { ...newMeeting({ date, status: 'Scheduled', startTime: time, endTime: end }), id: uid() };
   // The first time a meeting repeats, it becomes the head of its series.
   if (from && !from.seriesId) from.seriesId = from.id;
   meetings().push(meeting);
@@ -1130,7 +1188,20 @@ export function initMeetings(navigate) {
   });
 
   document.getElementById('sec-meeting-calendar').addEventListener('click', (e) => {
+    const view = e.target.closest('[data-cal-view]')?.dataset.calView;
+    if (view) {
+      calendarView = view;
+      try { localStorage.setItem(VIEW_KEY, view); } catch { /* a view preference; losing it is harmless */ }
+      renderCalendar();
+      return;
+    }
     const nav = e.target.closest('[data-cal-nav]')?.dataset.calNav;
+    if (nav !== undefined && calendarView === 'week') {
+      const base = new Date(`${calendarWeek || isoOf(new Date())}T00:00:00`);
+      calendarWeek = nav === '0' ? isoOf(new Date()) : isoOf(new Date(base.getFullYear(), base.getMonth(), base.getDate() + Number(nav) * 7));
+      renderCalendar();
+      return;
+    }
     if (nav !== undefined) {
       const t = new Date();
       if (nav === '0') calendarMonth = { y: t.getFullYear(), m: t.getMonth() };
@@ -1143,6 +1214,16 @@ export function initMeetings(navigate) {
     }
     const day = e.target.closest('[data-cal-new]')?.dataset.calNew;
     if (day) { createOn(day); return; }
+    const slot = e.target.closest('[data-cal-slot]');
+    if (slot && e.target === slot) {
+      // The half hour that was clicked, from where in the column: the grid
+      // says which hour its top row is.
+      const from = Number(slot.closest('.wk').dataset.from) || 480;
+      const y = e.clientY - slot.getBoundingClientRect().top;
+      const mins = Math.min(23 * 60 + 30, Math.max(0, Math.floor((from + (y / HOUR_PX) * 60) / 30) * 30));
+      createOn(slot.dataset.calSlot, null, `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`);
+      return;
+    }
     const open = e.target.closest('[data-cal-open]');
     if (open) { openMeeting(open.dataset.calOpen, open.dataset.calTab); return; }
     const repeat = e.target.closest('[data-cal-repeat]');

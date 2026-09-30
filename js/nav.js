@@ -93,6 +93,7 @@ export const NAV_TREE = [
         children: [
           { id: 'nav-task-list', label: 'Task List', page: 'page-tasks', title: 'Tasks', section: 'sec-task-list' },
           { id: 'nav-task-board', label: 'Priority Board', page: 'page-tasks', title: 'Tasks', section: 'sec-task-board' },
+          { id: 'nav-sprints', label: 'Sprints', page: 'page-tasks', title: 'Tasks', section: 'sec-sprints' },
           { id: 'nav-task-help', label: 'Legend & Tips', page: 'page-tasks', title: 'Tasks', section: 'sec-task-help' },
         ],
       },

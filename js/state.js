@@ -267,6 +267,9 @@ function migrateProject(data) {
   // are not six more row kinds.
   if (!Array.isArray(data.meetings)) data.meetings = [];
   data.meetings.forEach(migrateMeeting);
+  // Sprints hold a goal, a window and a commitment; the work in one is each
+  // task's own `sprintId`.
+  if (!Array.isArray(data.sprints)) data.sprints = [];
   migrateRegisters(data);
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are
@@ -969,7 +972,7 @@ export function createProject({ name, templateKey, methodology } = {}) {
  */
 function regenerateRowIds(project) {
   const collections = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog',
-    'allocations', 'timesheets', 'ganttActivities', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
+    'allocations', 'timesheets', 'ganttActivities', 'sprints', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
 
   const remap = new Map();
   collections.forEach((key) => {
@@ -984,6 +987,7 @@ function regenerateRowIds(project) {
 
   (project.dashTasks || []).forEach((task) => {
     if (Array.isArray(task.dependsOn)) task.dependsOn = task.dependsOn.map(swap);
+    if (task.sprintId) task.sprintId = swap(task.sprintId);
     // Checklist items are not project rows — they live inside the task — but
     // they carry ids of their own and two identical tasks would share them.
     if (Array.isArray(task.checklist)) {

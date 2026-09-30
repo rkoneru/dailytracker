@@ -34,6 +34,9 @@ export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog
   // follow-ups and transcript nested inside it, so the whole minute travels
   // as a unit rather than as six collections that can half-arrive.
   'meetings',
+  // Sprints: the goal, window and commitment. The work in one is the tasks'
+  // own `sprintId`, so moving a task between sprints is an edit to the task.
+  'sprints',
   // The lifecycle Gantt's activities — their own rows, not the tasks'.
   'ganttActivities',
   ...REGISTER_KEYS];

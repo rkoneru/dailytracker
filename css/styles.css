@@ -6210,3 +6210,16 @@ body.login-open { overflow: hidden; }
 .mic-check__row.is-warn .mic-check__mark { color: var(--color-warn-text); }
 .mic-check__row.is-wait { color: var(--color-text-muted); }
 @media (max-width: 600px) { .recorder__mode { margin-left: 0; width: 100%; } }
+
+/* Sprint planning: the step-by-step checks. */
+.sprint-checks { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.sprint-check { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 13.5px; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius); }
+.sprint-check__n { font-size: 11px; font-weight: 700; color: var(--color-text-muted); min-width: 1.2em; }
+.sprint-check__mark { font-weight: 700; }
+.sprint-check.is-ok .sprint-check__mark { color: var(--color-success-text); }
+.sprint-check.is-bad .sprint-check__mark { color: var(--color-danger-text); }
+.sprint-check.is-wait { color: var(--color-text-muted); }
+.sprint-check__detail { color: var(--color-text-muted); }
+.sprint-warnings li { color: var(--color-warn-text); }
+#sprint-summary.is-over dd:nth-of-type(3) { color: var(--color-danger-text); font-weight: 700; }
+.col-action .btn { white-space: nowrap; }

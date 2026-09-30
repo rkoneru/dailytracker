@@ -65,6 +65,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/journey.js` | one use case from sale to success: seven steps read off the deal, the decision and the project it became. Stores nothing |
 | `js/surveys.js`, `survey.html` | satisfaction surveys on closed incidents: a one-time link (hash in `incident_surveys`, answered through `submit_incident_survey`) or, offline, a reply typed in; answers pulled back onto the incident |
 | `js/meetingCalendar.js`, `audioRecorder.js`, `audioStore.js` | the Meetings calendar (month grid, projected repeats, `.ics` export with follow-up alarms), audio recording with MediaRecorder, and recordings kept in IndexedDB on this device only |
+| `js/sprints.js`, `sprintsPage.js` | sprint planning on Tasks: capacity from the project's bookings and leave at a focus factor, load from estimates, a nine-step derived checklist, per-person load, a commitment tied to the backlog, velocity from closed sprints |
 | `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
@@ -240,6 +241,14 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   entry and adds nothing to lead or cycle time; `newTask` stamps `createdAt`
   so work made here does. Throughput needs a week of history, and each flow
   KPI is `null` until something could answer it.
+- **A sprint's plan is checked, not ticked.** `planningChecks` works each
+  step out from the plan (goal, items, estimates, owners, capacity, fit, each
+  person's own load, dependencies outside the sprint); only the commitment and
+  the sharing are events. The commitment is a fingerprint of the backlog's ids
+  and estimates, so re-estimating or adding an item after it lapses. The work
+  in a sprint is each task's `sprintId`; `sprints` is its own synced kind. A
+  sprint closed in the app snapshots `closed: { committed, delivered }`, so
+  carrying its unfinished items forward cannot shrink what it committed.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

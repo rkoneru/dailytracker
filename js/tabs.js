@@ -48,6 +48,7 @@ export const PAGE_TABS = {
     // The legend explains the list, so it sits under it rather than a tab away.
     { id: 'sec-task-list', label: 'Task List', sections: ['sec-task-list', 'sec-task-help'] },
     { id: 'sec-task-board', label: 'Priority Board' },
+    { id: 'sec-sprints', label: 'Sprints' },
   ],
   'page-raid': [
     { id: 'sec-raid-log', label: 'Log' },

@@ -20,6 +20,7 @@ import { offerUndo } from './trash.js';
 import { toast } from './dialog.js';
 import { onSectionShown } from './tabs.js';
 import { formatDate } from './dates.js';
+import { renderSprints, initSprints } from './sprintsPage.js';
 
 // The board's columns. Priority is the primary split, with two extra columns for
 // work that has left the priority conversation: on hold and done.
@@ -522,8 +523,8 @@ export function renderBoard() {
 // screen. The hidden one is marked stale instead of rebuilt, and built when
 // its tab is opened — rebuilding the board on every keystroke typed into the
 // list is most of what made typing lag in a large project.
-const stale = { 'sec-task-list': false, 'sec-task-board': false };
-const RENDER = { 'sec-task-list': () => renderTracker(), 'sec-task-board': () => renderBoard() };
+const stale = { 'sec-task-list': false, 'sec-task-board': false, 'sec-sprints': false };
+const RENDER = { 'sec-task-list': () => renderTracker(), 'sec-task-board': () => renderBoard(), 'sec-sprints': () => renderSprints() };
 
 function sectionOnScreen(id) {
   const section = document.getElementById(id);
@@ -826,6 +827,7 @@ export function renderTasksPage() {
   renderTallies();
   renderIfShown('sec-task-list');
   renderIfShown('sec-task-board');
+  renderIfShown('sec-sprints');
 }
 
 export function initTasks() {
@@ -833,6 +835,7 @@ export function initTasks() {
   renderTasksPage();
   bindTracker();
   bindBoard();
+  initSprints();
   onSectionShown((pageId, ids) => {
     if (pageId !== 'page-tasks') return;
     ids.forEach((id) => {

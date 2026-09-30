@@ -465,6 +465,56 @@
           <div class="board" id="priority-board"></div>
         </section>
 
+        <section class="card" id="sec-sprints">
+          <div class="card__head">
+            <h2>Sprint Planning</h2>
+            <span class="hint" id="sprint-ready"></span>
+          </div>
+          <p class="hint">
+            A clear goal, the work chosen for it, and a check that the team has the time. Capacity is read from who is
+            booked on this project for the sprint&rsquo;s dates on Resources, less their leave, at the focus factor. The
+            checklist is worked out from the plan; the commitment is recorded against the backlog as it stands, and
+            changing an item afterwards asks the team again.
+          </p>
+          <div class="uc-bar no-print">
+            <label class="field-label uc-bar__picker">Sprint
+              <select class="field-input" id="sprint-picker"></select>
+            </label>
+            <button type="button" class="btn btn-small btn-primary" id="btn-sprint-new">+ New sprint</button>
+            <button type="button" class="btn btn-small btn-ghost" id="btn-sprint-delete">Delete</button>
+          </div>
+          <p class="hint" id="sprint-none">No sprints yet. Start one to plan the next block of work.</p>
+          <div id="sprint-body" hidden>
+            <div class="charter-grid" id="sprint-fields"></div>
+            <dl class="uc-summary" id="sprint-summary"></dl>
+            <h3 class="uc-sub">Planning, step by step</h3>
+            <ol class="sprint-checks" id="sprint-checks"></ol>
+            <ul class="uc-client-notes sprint-warnings" id="sprint-warnings" hidden></ul>
+            <div class="sync-actions no-print">
+              <button type="button" class="btn btn-small btn-primary" id="btn-sprint-commit">Record the team&rsquo;s commitment</button>
+              <button type="button" class="btn btn-small" id="btn-sprint-share">Share the plan</button>
+              <button type="button" class="btn btn-small btn-ghost" id="btn-sprint-carry" hidden></button>
+            </div>
+            <h3 class="uc-sub">In this sprint</h3>
+            <div class="table-scroll"><table class="data-table" id="sprint-items-table">
+              <thead><tr><th class="col-wide">Item</th><th>Owner</th><th class="col-num">Estimate</th><th>Status</th><th class="col-action no-print"></th></tr></thead>
+              <tbody id="sprint-items"></tbody>
+            </table></div>
+            <h3 class="uc-sub">Team capacity</h3>
+            <ul class="uc-client-notes" id="sprint-people"></ul>
+            <h3 class="uc-sub">Candidates, highest priority first</h3>
+            <div class="table-scroll"><table class="data-table" id="sprint-candidates-table">
+              <thead><tr><th class="col-wide">Task</th><th>Priority</th><th class="col-num">Estimate</th><th>Owner</th><th class="col-action no-print"></th></tr></thead>
+              <tbody id="sprint-candidates"></tbody>
+            </table></div>
+            <h3 class="uc-sub">Velocity</h3>
+            <div class="table-scroll"><table class="data-table">
+              <thead><tr><th>Sprint</th><th class="col-num">Committed</th><th class="col-num">Delivered by its end</th><th class="col-num">Delivered</th></tr></thead>
+              <tbody id="sprint-velocity"></tbody>
+            </table></div>
+          </div>
+        </section>
+
         <div class="dash-row dash-row--2" id="sec-task-help">
           <section class="card card--quiet">
             <div class="card__head"><h2>Legend</h2></div>

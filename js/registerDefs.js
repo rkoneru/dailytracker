@@ -603,6 +603,8 @@ export const INCIDENTS = {
   addLabel: '+ Log Incident',
   refPrefix: 'INC',
   hiddenFields: ['survey', 'csat', 'csatComment', 'csatAt'],
+  // A problem worth solving for good starts an 8D report (js/eightD.js).
+  rowActions: [{ action: '8d', label: 'Start an 8D problem report', text: '8D ▸' }],
   blurb: 'What broke, for whom, and how fast it was answered and fixed. The SLA column is worked out from the times and the priority targets below, round the clock or in business hours as each priority is set — an open incident past its target is already breached.',
   emptyText: 'No incidents logged.',
   searchFields: ['title', 'service', 'account', 'assignee'],

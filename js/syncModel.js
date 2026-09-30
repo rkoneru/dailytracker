@@ -40,6 +40,8 @@ export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog
   // Handoff records: what passed from one owner to another, and the signed
   // acceptance. The work itself moves on the rows it lives in.
   'handoffs',
+  // 8D problem-solving reports: one row each, the disciplines nested inside.
+  'problems',
   // The lifecycle Gantt's activities — their own rows, not the tasks'.
   'ganttActivities',
   ...REGISTER_KEYS];

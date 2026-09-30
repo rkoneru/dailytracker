@@ -1046,6 +1046,25 @@
         </section>
 
         <div id="improve-registers"></div>
+
+        <section class="card" id="sec-8d">
+          <div class="card__head hf-head">
+            <h2>Problem solving (8D)</h2>
+            <span class="hint" id="d8-state"></span>
+            <select class="field-input field-input--auto no-print" id="d8-picker" aria-label="Which 8D report"></select>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-d8-new">+ New 8D</button>
+            <button type="button" class="btn btn-small no-print" data-dact="copy">Copy the report</button>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-d8-delete">Delete</button>
+          </div>
+          <p class="hint">
+            Eight disciplines to solve a problem so it stays solved: team, problem, containment, root cause, corrective actions,
+            validation, prevention, and closure. Each one&rsquo;s status is worked out from what is written in it; validation needs the
+            measure before and after. Start one from an incident with its &ldquo;8D&rdquo; action. Great teams solve problems; strong systems prevent them.
+          </p>
+          <p class="hint" id="d8-none">No 8D reports yet.</p>
+          <ol class="d8-strip" id="d8-strip"></ol>
+          <div id="d8-body" hidden></div>
+        </section>
       </div>
     </section>
 

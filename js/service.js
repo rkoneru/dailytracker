@@ -15,11 +15,12 @@ import { confirmAction, toast } from './dialog.js';
 import { formatDate } from './dates.js';
 import { onSyncStatusChange } from './sync.js';
 import {
-  mountRegisters, renderAll, renderRosterOptions, refreshDerivedCells,
+  mountRegisters, renderAll, renderRosterOptions, refreshDerivedCells, refFor,
 } from './register.js';
 import { SERVICE_REGISTERS, IMPROVE_REGISTERS, INCIDENTS } from './registerDefs.js';
 import { notifyProjectDataChanged } from './taskModel.js';
 import { el } from './dom.js';
+import { initEightD, renderEightD, startFromIncident } from './eightDPage.js';
 import {
   serviceMetrics, targetsOf, incidentSla, formatHours, DEFAULT_TARGETS, PRIORITIES,
   CLOCKS, DEFAULT_CALENDAR, CLOSED,
@@ -317,6 +318,7 @@ function renderCounters() {
 
 export function renderService() {
   renderAll([...SERVICE_REGISTERS, ...IMPROVE_REGISTERS]);
+  renderEightD();
   renderTargets();
   renderRosterOptions();
   renderCounters();
@@ -326,7 +328,15 @@ export function renderService() {
 export function initService() {
   // One renderer for the incident log's two drawn columns.
   INCIDENTS.renderCell = (col, row) => (col.field === '_csat' ? csatCell(col, row) : slaCell(col, row));
-  INCIDENTS.onRowAction = (action, id) => { if (action === 'survey') sendSurvey(id); };
+  INCIDENTS.onRowAction = (action, id) => {
+    if (action === 'survey') sendSurvey(id);
+    if (action === '8d') {
+      const list = getState().incidents || [];
+      const incident = list.find((x) => x.id === id);
+      if (incident) startFromIncident(incident, refFor(INCIDENTS.refPrefix, list.indexOf(incident)));
+    }
+  };
+  initEightD();
   // Answers arrive after each sync, and whenever the page is drawn.
   onSyncStatusChange((status) => { if (status?.state === 'synced') refreshAnswers(); });
   const targetsHost = document.getElementById('incident-targets');

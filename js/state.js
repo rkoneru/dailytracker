@@ -275,6 +275,7 @@ function migrateProject(data) {
   // task's own `sprintId`.
   if (!Array.isArray(data.sprints)) data.sprints = [];
   if (!Array.isArray(data.handoffs)) data.handoffs = [];
+  if (!Array.isArray(data.problems)) data.problems = [];
   migrateRegisters(data);
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are
@@ -390,6 +391,7 @@ const TRASH_LABELS = {
   timesheets: 'Timesheet entry',
   meetings: 'Meeting',
   handoffs: 'Handoff',
+  problems: '8D report',
   project: 'Project',
 };
 
@@ -980,7 +982,7 @@ export function createProject({ name, templateKey, methodology } = {}) {
  */
 function regenerateRowIds(project) {
   const collections = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog',
-    'allocations', 'timesheets', 'ganttActivities', 'sprints', 'handoffs', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
+    'allocations', 'timesheets', 'ganttActivities', 'sprints', 'handoffs', 'problems', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
 
   const remap = new Map();
   collections.forEach((key) => {

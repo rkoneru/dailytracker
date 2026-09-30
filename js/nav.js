@@ -185,6 +185,7 @@ export const NAV_TREE = [
         children: [
           { id: 'nav-csi', label: 'Improvements', page: 'page-improve', title: 'Improvement & Lessons', section: 'sec-csi' },
           { id: 'nav-lessons', label: 'Lessons Learned', page: 'page-improve', title: 'Improvement & Lessons', section: 'sec-lessons' },
+          { id: 'nav-8d', label: 'Problem Solving (8D)', page: 'page-improve', title: 'Improvement & Lessons', section: 'sec-8d' },
         ],
       },
       {

@@ -99,6 +99,7 @@ export const PAGE_TABS = {
   'page-improve': [
     { id: 'sec-csi', label: 'Improvements' },
     { id: 'sec-lessons', label: 'Lessons' },
+    { id: 'sec-8d', label: 'Problem Solving (8D)' },
   ],
   // In the order a meeting happens: prepare, discuss, follow up.
   'page-meetings': [

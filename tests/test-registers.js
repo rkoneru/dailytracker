@@ -46,7 +46,7 @@ const { eq, done } = createChecks();
   await page.click('#tab-improve');
   await page.waitForTimeout(600);
   eq('improvement & lessons', await page.$$eval('#page-improve .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Improvements (CSI)', 'Lessons Learned']);
+     ['Improvements (CSI)', 'Lessons Learned', 'Problem solving (8D)']);
 
   // Dependencies sit under the RAID log: "what is in our way" is one question.
   await page.click('#tab-raid');
@@ -59,7 +59,7 @@ const { eq, done } = createChecks();
   // called Service Acceptance Criteria.
   eq('plain names carry the formal one',
      await page.$$eval('#page-service .card__head h2, #page-improve .card__head h2',
-       (e) => e.map((x) => x.textContent).filter((t) => /\(/.test(t)).length), 5);
+       (e) => e.map((x) => x.textContent).filter((t) => /\(/.test(t)).length), 6);
 
   console.log('\n--- the vocabulary is the PMP/ITIL one, not a generic one ---');
   // The default template is a marketing campaign, so these registers start

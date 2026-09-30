@@ -74,6 +74,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/blueprint.js`, `blueprintPage.js` | the Plan page's Approach tab: the hybrid delivery blueprint — ten inputs scored low/medium/high, the predictable/adaptive blend, which elements go which way and why, and the five-part setup checked against what the project has |
 | `js/portfolioDash.js` | Portfolio at a glance: projects complete / in progress / overdue, tasks by status (a CSS conic donut), tasks delivered per month from status history — months before any history are `null`, drawn grey. Pure |
 | `js/handoff.js`, `handoffPage.js` | handoffs on People & Stakeholders: the package read off the project for the current owner, five derived stages, diagnostic checks, a refusal to store anything that looks like a credential, signed acceptance, and the transfer that moves the work |
+| `js/eightD.js`, `eightDPage.js` | 8D problem solving on Improvement & Lessons: D1–D8 with each discipline's status worked out from its content, five whys and a six-M fishbone, before/after validation, prevention, lessons sent to the Lessons register, closure by three signatures; started from an incident's "8D" action |
 | `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
@@ -306,6 +307,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   keeps what was `handedOver` so moving the work does not lapse it but editing
   the record does; `applyTransfer` moves only items still in the old owner's
   name, after the list is shown. `handoffs` is its own synced kind.
+- **An 8D closes on evidence and signatures.** `disciplineState` works each
+  D out from what is written; D6 passes only when `validation` shows the
+  measure after is better than before (averages of typed values; an empty
+  side is `null`, never zero). The report closes when all eight are complete,
+  which for D8 means three signatures over `problemContent` — an edit after
+  signing reopens it. Lessons go to the `lessons` register and the report
+  keeps their ids. `problems` is its own synced kind.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

@@ -71,6 +71,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/gates.js` | decision gates on milestones (`kind: 'gate'`): one owner, entry criteria, options, default path, the recorded decision; the milestone check (not a task, not a progress figure, not a vague date, scarce, owned). Pure |
 | `js/rhythm.js`, `rhythmPage.js` | the operating rhythm on Meetings: daily/weekly/monthly cadences (purpose, length, focus, output), who attends what (R/C/I), "escalate when" triggers read off the project, the setup checklist, and a cadence's meeting series |
 | `js/horizons.js`, `horizonsPage.js` | the Plan page's Horizons tab: Now (this week), Next (2–6 weeks), Future (beyond) read off tasks, milestones, gates, phases, dependencies, RAID and bookings, with what each still needs; the weekly check-in (done, next, blocking) |
+| `js/blueprint.js`, `blueprintPage.js` | the Plan page's Approach tab: the hybrid delivery blueprint — ten inputs scored low/medium/high, the predictable/adaptive blend, which elements go which way and why, and the five-part setup checked against what the project has |
 | `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
@@ -288,6 +289,12 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   change requests, dependencies at risk, top-band risks, overloads, SPI/CPI
   under 0.9, budget over — and is `null` when nothing could answer it. A
   stand-up repeats `Weekdays` (RRULE BYDAY=MO..FR).
+- **The blueprint stores ten judgements and nothing else.** `blueprint.inputs`
+  holds the 1–3 scores; the blend, the elements and the setup are worked out by
+  `synthesise`, which refuses (`ready: false`) with fewer than six scored and
+  names the inputs it took as medium. `setupInPlace` checks each part against
+  the project — sprints, gates, a scope baseline and Gantt, rhythm meetings,
+  logged risks — so a recommendation says when it is not yet built.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

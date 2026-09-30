@@ -243,12 +243,13 @@ export function renderGantt() {
   let lastPhase = null;
   const codes = wbsCodes(state);
   const conflicted = renderIssues(state);
-  body.replaceChildren(renderMarks(state, today), ...rows.map((a) => {
+  // No milestones is no marker row; replaceChildren would print a null.
+  body.replaceChildren(...[renderMarks(state, today), ...rows.map((a) => {
     const known = method && findPhase(method.id, a.phase) ? a.phase : '?';
     const first = known !== lastPhase;
     lastPhase = known;
     return renderRow(a, method, first, codes.get(a.id), rows, codes, conflicted);
-  }).filter(Boolean));
+  })].filter(Boolean));
 }
 
 // ---------- editing ----------

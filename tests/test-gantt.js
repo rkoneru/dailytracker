@@ -41,7 +41,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   console.log('\n--- an older project with no lifecycle is asked for one, not given one ---');
   await openGantt();
   eq('the tab sits next to the Timeline', await page.$$eval('#page-planner .page-tab', (els) => els.map((e) => e.textContent.replace(/\d+$/, ''))),
-     ['Milestones & Gates', 'Timeline', 'Gantt', 'Horizons', 'Budget & Notes']);
+     ['Milestones & Gates', 'Timeline', 'Gantt', 'Horizons', 'Budget & Notes', 'Approach']);
   eq('the starter project has no lifecycle', (await state()).methodology, '');
   eq('so the Gantt offers to choose one', await page.isVisible('#gantt-empty-choose'), true);
   await page.click('#sec-gantt [data-gantt="layout"]');
@@ -83,6 +83,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   eq('phases follow one another', laid[1].start, addDaysISO(laid[0].end, 1));
   eq('Monitoring & Controlling runs alongside Executing', [laid[3].start, laid[3].end], [laid[2].start, laid[2].end]);
   eq('the header names the lifecycle', (await page.textContent('#gantt-method')).startsWith('Project Lifecycle'), true);
+  eq('with no milestones there is no marker row, and nothing printed in its place', [await page.locator('#gantt-body .gantt-marks').count(), (await page.textContent('#gantt-body')).includes('null')], [0, false]);
 
   console.log('\n--- dragging a bar moves the activity and nothing else ---');
   const tasksBefore = JSON.stringify((await state()).dashTasks);

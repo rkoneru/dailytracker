@@ -9,6 +9,7 @@ import { el } from './dom.js';
 import { onSectionShown } from './tabs.js';
 import { initGantt, renderGantt } from './gantt.js';
 import { initHorizons, renderHorizons } from './horizonsPage.js';
+import { initBlueprint, renderBlueprint } from './blueprintPage.js';
 import { refFor } from './register.js';
 import { METHODOLOGIES, methodOf, phasesOf, phaseProgress, sanitisePhase } from './methodology.js';
 import { toLocalISO, formatDate } from './dates.js';
@@ -916,6 +917,7 @@ function commitChange() {
 export function renderPlannerShared() {
   renderMilestones();
   renderHorizons();
+  renderBlueprint();
   renderTicks();
   renderBaselineNote();
   renderCostEstimate();
@@ -1082,6 +1084,7 @@ export function initPlanner() {
   bindMilestones();
   bindGates();
   initHorizons();
+  initBlueprint();
   bindOpenTasks();
   bindTicks();
   initGantt({ onMethodChange: () => { renderMethod(); renderMilestones(); } });

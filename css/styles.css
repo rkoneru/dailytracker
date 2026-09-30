@@ -6656,3 +6656,21 @@ body.login-open { overflow: hidden; }
 .wk-event { position: absolute !important; margin: 0 1px; overflow: hidden; text-align: left; align-content: start; white-space: normal !important; line-height: 1.25; z-index: 1; }
 .wk-now { position: absolute; left: -4px; right: 0; height: 2px; background: #2563eb; z-index: 2; pointer-events: none; }
 .wk-now::before { content: ''; position: absolute; left: 0; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #2563eb; }
+
+/* The project plan document. */
+.plan-smart { list-style: none; margin: 0 0 12px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; }
+.plan-smart__item { display: flex; gap: 8px; align-items: baseline; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 6px 10px; font-size: 13px; }
+.plan-smart__letter { width: 22px; height: 22px; border-radius: 5px; display: grid; place-items: center; font-weight: 800; color: #fff; background: #94a3b8; flex: none; }
+.plan-smart__item.is-ok .plan-smart__letter { background: #16a34a; }
+.plan-smart__item.is-bad .plan-smart__letter { background: #dc2626; }
+.plan-sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.plan-section { border: 1px solid var(--color-border); border-left: 4px solid var(--color-border); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+.plan-section.is-filled { border-left-color: #16a34a; }
+.plan-section.is-partial { border-left-color: #d97706; }
+.plan-section.is-empty { border-left-color: #dc2626; }
+.plan-section.is-na { border-style: dashed; }
+.plan-section header { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.plan-section__n { font-weight: 800; color: var(--color-primary); min-width: 1.4em; }
+.plan-section__status { font-size: 11px; font-weight: 700; color: var(--color-text-muted); }
+.plan-section header .link-btn { margin-left: auto; font-size: 12px; }
+.plan-section ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; }

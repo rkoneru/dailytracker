@@ -187,6 +187,9 @@ function createMarketingCampaign() {
         endTime: '10:00',
         location: 'Virtual (Meet)',
         purpose: 'Unblock the week and agree the paid/organic split ahead of launch.',
+        expectedOutput: 'Decision',
+        preRead: 'Launch checklist and the week-one media plan (shared drive, /campaign/launch).',
+        preReadShared: true,
         owner: 'Priya N.',
         preparedBy: 'Priya N.',
         status: 'Complete',
@@ -204,10 +207,10 @@ function createMarketingCampaign() {
           { id: id('ag'), time: '', topic: 'Next steps', lead: 'Priya N.', minutes: 5 },
         ],
         attendees: [
-          { id: id('at'), name: 'Priya N.', role: 'Campaign Lead', department: 'Marketing', attended: true },
-          { id: id('at'), name: 'Marcus T.', role: 'Creative Director', department: 'Design', attended: true },
-          { id: id('at'), name: 'Jordan K.', role: 'Paid Media Manager', department: 'Northside Agency', attended: true },
-          { id: id('at'), name: 'Legal', role: 'Contract review', department: 'Legal', attended: false },
+          { id: id('at'), name: 'Priya N.', role: 'Campaign Lead', meetingRole: 'Decision maker', department: 'Marketing', attended: true },
+          { id: id('at'), name: 'Marcus T.', role: 'Creative Director', meetingRole: 'Note keeper', department: 'Design', attended: true },
+          { id: id('at'), name: 'Jordan K.', role: 'Paid Media Manager', meetingRole: 'Subject expert', department: 'Northside Agency', attended: true },
+          { id: id('at'), name: 'Legal', role: 'Contract review', meetingRole: 'Action owner', department: 'Legal', attended: false },
         ],
         decisions: [
           { id: id('de'), decision: 'Launch on the 8th without influencer content if contracts have not landed.', tag: 'Operational', impact: 'High' },
@@ -217,6 +220,7 @@ function createMarketingCampaign() {
           { id: id('ac'), text: 'Chase legal on the influencer terms', owner: 'Priya N.', due: '2026-09-10', status: 'In Progress', taskId: '' },
           { id: id('ac'), text: 'Fix the checkout tracking pixel', owner: 'Jordan K.', due: '2026-09-11', status: 'In Progress', taskId: '' },
           { id: id('ac'), text: 'Prepare organic-only fallback creative', owner: 'Marcus T.', due: '2026-09-09', status: 'Done', taskId: '' },
+          { id: id('ac'), text: 'Return the influencer terms with comments', owner: 'Legal', due: '2026-09-10', status: 'Open', taskId: '' },
         ],
         followUps: [
           { id: id('fu'), activity: 'Week one performance review', purpose: 'Decide the paid/organic split on real data', owner: 'Jordan K.', date: '2026-09-15', type: 'Review', reminder: '1 day before' },

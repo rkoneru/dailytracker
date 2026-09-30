@@ -12,6 +12,7 @@ import {
   newMeeting, newAgendaItem, newAttendee, newDecision, newAction, newFollowUp,
   newUtterance, stamp, scheduleAgenda, agendaLoad, attendance, actionTally,
   sortMeetings, transcriptText, parseTranscript, suggestions, formatTime, nextOccurrence,
+  MEETING_ROLES, OUTPUT_TYPES, readiness, absentOwners,
 } from './meetingModel.js';
 import { createTranscriber, isSupported, PRIVACY_NOTE } from './transcriber.js';
 import { slug } from './register.js';
@@ -101,10 +102,17 @@ const OVERVIEW_FIELDS = [
   { field: 'owner', label: 'Meeting owner', person: true, placeholder: 'Who called it' },
   { field: 'preparedBy', label: 'Prepared by', person: true, placeholder: 'Who is writing it up' },
   { field: 'purpose', label: 'Meeting purpose', long: true, placeholder: 'What this meeting is for, in a sentence.' },
+  { field: 'expectedOutput', label: 'Expected output', list: 'meeting-outputs', placeholder: 'Decision, plan, alignment…' },
+  { field: 'preRead', label: 'Pre-read and inputs', long: true, placeholder: 'What people should read first, with links.' },
+  { field: 'preReadShared', label: 'Pre-read shared with the invitees', check: true },
 ];
 
 function overviewField(meeting, def) {
   let input;
+  if (def.check) {
+    input = el('input', { type: 'checkbox', 'data-meeting-field': def.field, checked: !!meeting[def.field] });
+    return el('label', { class: 'check-inline' }, [input, document.createTextNode(def.label)]);
+  }
   if (def.options) {
     input = el('select', { class: 'field-input', 'data-meeting-field': def.field });
     def.options.forEach((opt) => input.appendChild(
@@ -121,6 +129,7 @@ function overviewField(meeting, def) {
       placeholder: def.placeholder || '',
     });
     if (def.person) input.setAttribute('list', 'roster-names');
+    if (def.list) input.setAttribute('list', def.list);
   }
   return el('label', { class: `field-label${def.long ? ' field-label--block' : ''}` },
     [document.createTextNode(def.label), input]);
@@ -130,6 +139,47 @@ function renderOverview(meeting) {
   const host = document.getElementById('meeting-overview-fields');
   host.innerHTML = '';
   OVERVIEW_FIELDS.forEach((def) => host.appendChild(overviewField(meeting, def)));
+  if (!document.getElementById('meeting-outputs')) {
+    document.body.appendChild(el('datalist', { id: 'meeting-outputs' }, OUTPUT_TYPES.map((t) => el('option', { value: t }))));
+  }
+}
+
+// Derived, so it is redrawn on every edit that could move it; it holds no
+// inputs of its own, so redrawing never drops a caret.
+function renderReadiness(meeting) {
+  const host = document.getElementById('meeting-readiness');
+  if (!host) return;
+  const { checks, done, of } = readiness(meeting);
+  document.getElementById('meeting-readiness-count').textContent = `${done} of ${of} ready`;
+  host.replaceChildren(...checks.map((c) => el('li', {
+    class: `sprint-check ${c.na ? 'is-na' : c.ok ? 'is-ok' : 'is-bad'}`, 'data-ready': c.id,
+  }, [
+    el('span', { class: 'sprint-check__mark', 'aria-hidden': 'true', text: c.na ? '–' : c.ok ? '✓' : '✗' }),
+    el('span', {}, [el('strong', { text: c.label }), c.detail && el('span', { class: 'hint', text: ` — ${c.detail}` })]),
+  ])));
+}
+
+function renderAbsentOwners(meeting) {
+  const host = document.getElementById('meeting-absent-owners');
+  if (!host) return;
+  const flags = absentOwners(meeting);
+  const present = (meeting.attendees || []).filter((a) => a.attended && String(a.name || '').trim()).map((a) => a.name);
+  host.hidden = flags.length === 0;
+  host.replaceChildren(...(flags.length ? [
+    el('strong', { text: `Absent action owner${flags.length === 1 ? '' : 's'}` }),
+    el('ul', {}, flags.map(({ action, owner }) => el('li', { 'data-action-id': action.id }, [
+      document.createTextNode(`${owner} owns “${action.text || 'an action'}” but did not attend. `),
+      el('label', { class: 'check-inline' }, [
+        document.createTextNode('Reassign to'),
+        el('select', { class: 'row-select', 'data-reassign': '', 'aria-label': 'Reassign to' }, [
+          el('option', { value: '', text: '— pick —' }),
+          ...present.map((n) => el('option', { value: n, text: n })),
+        ]),
+      ]),
+      document.createTextNode(' or '),
+      el('button', { type: 'button', class: 'link-btn', 'data-confirm-owner': '', text: `confirmed with ${owner}` }),
+    ]))),
+  ] : []));
 }
 
 // ---------- tables ----------
@@ -211,7 +261,13 @@ function renderAttendees(meeting) {
     body.appendChild(el('tr', { 'data-id': person.id, 'data-list': 'attendees', draggable: true }, [
       el('td', { class: 'col-drag no-print' }, [dragHandle()]),
       personCell(person, 'name'),
-      textCell(person, 'role', 'Their role'),
+      textCell(person, 'role', 'Their job title'),
+      el('td', { class: 'col-status' }, [el('select', {
+        class: 'row-select', 'data-field': 'meetingRole', 'aria-label': 'Meeting role',
+      }, [
+        el('option', { value: '', text: '— why invited —', selected: !person.meetingRole }),
+        ...MEETING_ROLES.map((r) => el('option', { value: r.id, text: r.id, title: r.does, selected: person.meetingRole === r.id })),
+      ])]),
       textCell(person, 'department', 'Department'),
       el('td', { class: 'col-check' }, [el('input', {
         type: 'checkbox', 'data-field': 'attended', checked: !!person.attended, 'aria-label': 'Attended',
@@ -799,6 +855,9 @@ function renderCounters(meeting) {
       : tally.total ? `${tally.done} already done` : 'No actions yet',
     !tally.total ? 'idle' : tally.unowned ? 'bad' : tally.open ? 'warn' : 'good');
 
+  renderReadiness(meeting);
+  renderAbsentOwners(meeting);
+
   const badge = document.getElementById('meeting-status-badge');
   badge.textContent = meeting.name
     ? `${meeting.status} · ${meeting.date || 'no date'}${meeting.startTime ? ` ${formatTime(meeting.startTime)}` : ''}`
@@ -934,7 +993,7 @@ function bindTable(bodyId, name) {
     const found = rowFrom(e.target);
     if (!found || !found.row) return;
     found.row[field] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    if (e.target.tagName === 'SELECT') {
+    if (e.target.tagName === 'SELECT' && field !== 'meetingRole') {
       e.target.className = `row-select tone-${slug(e.target.value) || 'none'}`;
     }
     // An action closed here closes the task it became, and the other way round
@@ -1126,7 +1185,7 @@ export function initMeetings(navigate) {
     if (!field) return;
     const meeting = current();
     if (!meeting) return;
-    meeting[field] = e.target.value;
+    meeting[field] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     // The agenda hangs off the meeting's start time, and the picker and badge
     // both show its name and date.
     if (field === 'startTime' || field === 'endTime') renderAgenda(meeting);
@@ -1152,6 +1211,34 @@ export function initMeetings(navigate) {
 
   document.querySelectorAll('[data-meeting-add]').forEach((button) => {
     button.addEventListener('click', () => addRow(button.dataset.meetingAdd));
+  });
+
+  const absentHost = document.getElementById('meeting-absent-owners');
+  const flaggedAction = (target) => {
+    const meeting = current();
+    const id = target.closest('[data-action-id]')?.dataset.actionId;
+    return meeting && { meeting, action: (meeting.actions || []).find((a) => a.id === id) };
+  };
+  absentHost.addEventListener('change', (e) => {
+    if (!e.target.matches('[data-reassign]') || !e.target.value) return;
+    const found = flaggedAction(e.target);
+    if (!found?.action) return;
+    found.action.owner = e.target.value;
+    // The task it became, if any, follows its owner.
+    const task = found.action.taskId && (getState().dashTasks || []).find((t) => t.id === found.action.taskId);
+    if (task) { task.assigned = found.action.owner; notifyProjectDataChanged('meetings:action-owner'); }
+    renderActions(found.meeting);
+    renderCounters(found.meeting);
+    commit();
+    toast(`Reassigned to ${found.action.owner}.`, 'success');
+  });
+  absentHost.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-confirm-owner]')) return;
+    const found = flaggedAction(e.target);
+    if (!found?.action) return;
+    found.action.ownerConfirmed = true;
+    renderCounters(found.meeting);
+    commit();
   });
 
   bindTable('agenda-body', 'agenda');

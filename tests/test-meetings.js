@@ -42,7 +42,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   eq('with an agenda', sample.agenda.length, 4);
   eq('attendees', sample.attendees.length, 4);
   eq('decisions', sample.decisions.length, 2);
-  eq('actions', sample.actions.length, 3);
+  eq('actions', sample.actions.length, 4);
   eq('follow-ups', sample.followUps.length, 2);
   eq('and a transcript', sample.transcript.length, 4);
 

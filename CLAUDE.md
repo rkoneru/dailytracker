@@ -222,6 +222,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   the plan, never the minutes). The `.ics` export writes floating local times,
   puts the RRULE only on a series' latest meeting, invites attendees whose
   email is on Contacts, and turns a follow-up's reminder into a VALARM.
+- **A meeting's readiness is derived; its roles are on the invite.** Each
+  attendee has a `meetingRole` (why they are there); `readinessChecks` reads
+  purpose, expected output, decision maker (only when a decision or approval
+  is expected), facilitator, note keeper, a timed agenda that fits, a shared
+  pre-read and a lean invite list off the meeting. A check that does not apply
+  is `na` and left out of the count. `absentOwners` flags open actions owned by
+  an invitee who did not come, only once attendance is taken.
 - **Recording records audio; transcription is the optional extra.**
   `audioRecorder.js` uses MediaRecorder (every current browser) and names why
   it cannot start — not https, microphone blocked, none, or busy — before or

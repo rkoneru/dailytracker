@@ -6285,3 +6285,11 @@ body.login-open { overflow: hidden; }
 .escalation__decision { display: grid; gap: 6px; }
 .check-inline { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
 .hint.is-warn { color: var(--color-warn-text); }
+
+/* Meeting readiness and absent action owners. */
+.meeting-readiness { margin-top: 14px; }
+.meeting-readiness h3 { font-size: 15px; margin: 0 0 4px; }
+.sprint-check.is-na { color: var(--color-text-muted); border-style: dashed; }
+.meeting-absent { border: 1px solid var(--color-border); border-left: 4px solid #d97706; border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; font-size: 14px; }
+.meeting-absent ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 6px; }
+.meeting-absent .row-select { width: auto; }

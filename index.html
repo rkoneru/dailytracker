@@ -1311,6 +1311,11 @@
             <button type="button" class="btn btn-small no-print" id="btn-meeting-ics">Add to calendar (.ics)</button>
           </div>
           <div class="charter-grid" id="meeting-overview-fields"></div>
+          <div class="meeting-readiness">
+            <h3>Before you meet <span class="hint" id="meeting-readiness-count"></span></h3>
+            <p class="hint">Worked out from the meeting as written: purpose, output, who decides, who runs it, who keeps the notes, a timed agenda, inputs shared, and a reason for everyone invited.</p>
+            <ul class="sprint-checks" id="meeting-readiness"></ul>
+          </div>
         </section>
 
         <section class="card" id="sec-meeting-agenda">
@@ -1351,6 +1356,8 @@
           <p class="hint">
             &ldquo;Invite the team&rdquo; pulls everyone allocated to this project from Resources,
             so the list matches who is actually booked rather than who was on the last invite.
+            Give everyone a meeting role — decision maker, facilitator, note keeper, subject expert,
+            contributor, action owner, sponsor or observer. Anyone who is only observing could read the notes instead.
           </p>
           <div class="table-scroll">
             <table class="data-table" id="attendee-table">
@@ -1358,7 +1365,8 @@
                 <tr>
                   <th class="col-drag no-print"></th>
                   <th class="col-name">Attendee</th>
-                  <th>Role</th>
+                  <th>Job title</th>
+                  <th class="col-status">Meeting role</th>
                   <th>Department</th>
                   <th class="col-check">Attended</th>
                   <th class="col-action no-print"></th>
@@ -1409,6 +1417,7 @@
             Send an action to the Task Tracker and it becomes a real task with an owner and a due
             date. The two stay linked, so ticking it off there closes it here.
           </p>
+          <div class="meeting-absent no-print" id="meeting-absent-owners" hidden></div>
           <div class="table-scroll">
             <table class="data-table" id="action-table">
               <thead>

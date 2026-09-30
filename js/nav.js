@@ -41,6 +41,7 @@ export const NAV_TREE = [
         // so a saved link, a role's home and a page-access policy still resolve.
         children: [
           { id: 'nav-portfolio-all', label: 'All projects', page: 'page-portfolio', title: 'Portfolio', section: 'sec-portfolio-all' },
+          { id: 'nav-roadmap', label: 'Roadmap', page: 'page-portfolio', title: 'Portfolio', section: 'sec-roadmap' },
           { id: 'tab-ai-portfolio', label: 'AI initiatives', page: 'page-portfolio', title: 'Portfolio', section: 'page-ai-portfolio' },
           { id: 'tab-planning-layers', label: 'Planning layers', page: 'page-portfolio', title: 'Portfolio', section: 'page-planning-layers' },
         ],

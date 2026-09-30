@@ -17,6 +17,7 @@ import { raidCounts } from './raid.js';
 import { formatDate } from './dates.js';
 import { priorityOf, priorityLabel } from './priority.js';
 import { portfolioOverview } from './portfolioDash.js';
+import { roadmap, RISK_BANDS } from './roadmap.js';
 
 let onGo = null;
 let sortKey = 'due';
@@ -265,6 +266,72 @@ function renderOverview(projects) {
   );
 }
 
+// ---------- roadmap ----------
+
+const DAY = 86400000;
+
+/** Packs items into as few sub-rows as they fit without overlapping. */
+function pack(items) {
+  const rows = [];
+  [...items].sort((a, b) => a.start.localeCompare(b.start)).forEach((item) => {
+    const row = rows.find((r) => r[r.length - 1].end < item.start);
+    if (row) row.push(item); else rows.push([item]);
+  });
+  return rows;
+}
+
+function renderRoadmap(projects) {
+  const host = document.getElementById('roadmap-body');
+  if (!host) return;
+  const map = roadmap(projects);
+  if (!map.window) {
+    host.replaceChildren(el('p', { class: 'hint', text: 'Nothing is dated yet. Lay out a Gantt or date the tasks, and each project appears here as a lane.' }));
+    return;
+  }
+  const { start, days } = map.window;
+  const at = (iso) => `${((parseDate(iso) - start) / DAY / days) * 100}%`;
+  const span = (a, b) => `${(((parseDate(b) - parseDate(a)) / DAY + 1) / days) * 100}%`;
+  const months = [];
+  for (let d = new Date(start); d <= map.window.end; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) months.push(new Date(d));
+  const quarterly = months.length > 12;
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const scale = el('div', { class: 'rm-row rm-scale' }, [
+    el('span', { class: 'rm-label' }),
+    el('div', { class: 'rm-track' }, months.filter((m) => !quarterly || m.getMonth() % 3 === 0).map((m) => el('span', {
+      class: 'rm-tick', style: `left:${((m - start) / DAY / days) * 100}%`,
+      text: quarterly ? `Q${Math.floor(m.getMonth() / 3) + 1} ${m.getFullYear()}` : formatDate(m, 'month'),
+    }))),
+  ]);
+  const goalRows = map.goals.map((g) => el('div', { class: 'rm-row rm-goal', 'data-goal': g.name }, [
+    el('span', { class: 'rm-label' }, [el('span', { class: 'rm-kind', text: 'Goal' }), el('strong', { text: g.name })]),
+    el('div', { class: 'rm-track' }, g.points.map((p) => el('span', {
+      class: 'rm-diamond', style: `left:${at(p.date)}`, title: `${p.project}: due ${formatDate(p.date)}${p.completion === null ? '' : `, ${p.completion}% done`}`,
+    }, [el('span', { class: 'rm-diamond__text', text: p.completion === null ? p.project : `${p.project} · ${p.completion}%` })]))),
+  ]));
+  const laneRows = map.lanes.map((lane) => {
+    const rows = pack(lane.items);
+    return el('div', { class: 'rm-row rm-lane', 'data-project': lane.id }, [
+      el('button', { type: 'button', class: 'rm-label link-btn', 'data-rm-open': lane.id, title: 'Open this project' }, [
+        el('strong', { text: lane.name }),
+        el('span', { class: `rm-band is-${lane.band}`, text: RISK_BANDS.find((b) => b.id === lane.band).label }),
+      ]),
+      el('div', { class: 'rm-track', style: `height:${(rows.length + (lane.marks.length ? 1 : 0)) * 30 + 8}px` }, [
+        ...lane.marks.map((m) => el('span', {
+          class: `rm-mark${m.gate ? ' is-gate' : ''}${m.done ? ' is-done' : ''}`, style: `left:${at(m.date)};top:6px`,
+          title: `${m.gate ? 'Gate' : 'Milestone'}: ${m.name}, ${formatDate(m.date)}`,
+        })),
+        ...rows.flatMap((row, r) => row.map((item) => el('div', {
+          class: `rm-item is-${item.risk}${item.late ? ' is-late' : ''}`, 'data-item': item.id,
+          style: `left:${at(item.start)};width:${span(item.start, item.end)};top:${(r + (lane.marks.length ? 1 : 0)) * 30 + 6}px`,
+          title: `${item.name}: ${formatDate(item.start)} – ${formatDate(item.end)}, ${item.progress}% done${item.late ? ' — late' : ''}`,
+        }, [el('span', { class: 'rm-item__name', text: item.name }), el('span', { class: 'rm-item__end' })]))),
+      ]),
+    ]);
+  });
+  host.replaceChildren(el('div', { class: 'rm', style: `--rm-today:${at(todayIso)}` }, [scale, ...goalRows, ...laneRows]));
+}
+
 export function renderPortfolio() {
   const body = document.getElementById('portfolio-body');
   if (!body) return;
@@ -280,6 +347,7 @@ export function renderPortfolio() {
 
   renderPortfolioTiles(rows);
   renderOverview(listFullProjects());
+  renderRoadmap(listFullProjects());
 
   const activeId = getActiveProjectId();
   body.innerHTML = '';
@@ -366,6 +434,11 @@ export function initPortfolio(go) {
   head.addEventListener('click', (e) => sortBy(e.target.closest('.pf-th')?.dataset.key));
   head.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortBy(e.target.closest('.pf-th')?.dataset.key); }
+  });
+
+  document.getElementById('roadmap-body')?.addEventListener('click', (e) => {
+    const id = e.target.closest('[data-rm-open]')?.dataset.rmOpen;
+    if (id) onGo({ projectId: id, navId: 'nav-gantt', rowId: '' });
   });
 
   const body = document.getElementById('portfolio-body');

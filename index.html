@@ -2456,6 +2456,23 @@
           <p class="hint" id="portfolio-empty" hidden>No projects yet.</p>
         </section>
         </div>
+        <section class="card" id="sec-roadmap">
+          <div class="card__head">
+            <h2>Roadmap</h2>
+            <span class="hint">Every project on one time scale. Pick a project to open its Gantt.</span>
+          </div>
+          <p class="hint">
+            Each lane is a project&rsquo;s own plan &mdash; its Gantt activities, or its span when it has none &mdash; with its milestones
+            and gates above. Each item ends in its risk colour: the project&rsquo;s open-risk band, red when the item is late, grey when no
+            risk has been logged at all. Goals along the top are the strategic objectives on the projects&rsquo; charters.
+          </p>
+          <ul class="rm-legend">
+            <li><span class="rm-dot is-tbc"></span>No risks logged</li><li><span class="rm-dot is-ok"></span>OK</li>
+            <li><span class="rm-dot is-low"></span>Low risk</li><li><span class="rm-dot is-med"></span>Medium risk</li>
+            <li><span class="rm-dot is-high"></span>High risk or late</li>
+          </ul>
+          <div class="table-scroll"><div id="roadmap-body"></div></div>
+        </section>
         <div class="merged-page" id="page-ai-portfolio" role="region" aria-label="AI Portfolio">
         <header class="dash-header">
           <div class="dash-header__title"><span>AI Portfolio</span></div>

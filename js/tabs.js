@@ -35,6 +35,7 @@ export const PAGE_TABS = {
   // Portfolio, Capacity, Sync, Trash — are now a tab of the page they belong to.
   'page-portfolio': [
     { id: 'sec-portfolio-all', label: 'All projects' },
+    { id: 'sec-roadmap', label: 'Roadmap' },
     { id: 'sec-ai-portfolio', label: 'AI initiatives', sections: ['page-ai-portfolio'] },
     { id: 'sec-planning-layers', label: 'Planning layers', sections: ['page-planning-layers'] },
   ],

@@ -542,6 +542,8 @@
             <div class="sync-actions no-print">
               <button type="button" class="btn btn-small btn-primary" id="btn-sprint-commit">Record the team&rsquo;s commitment</button>
               <button type="button" class="btn btn-small" id="btn-sprint-share">Share the plan</button>
+              <button type="button" class="btn btn-small" id="btn-sprint-summary">Sprint summary</button>
+              <button type="button" class="btn btn-small" id="btn-sprint-retro">Draft the retrospective</button>
               <button type="button" class="btn btn-small btn-ghost" id="btn-sprint-carry" hidden></button>
             </div>
             <h3 class="uc-sub">In this sprint</h3>
@@ -1268,6 +1270,19 @@
           </div>
           <p class="hint">Open risks by likelihood and impact. Pick a square to show just those risks in the log below.</p>
           <div class="table-scroll"><div id="raid-heatmap"></div></div>
+        </section>
+
+        <section class="card" id="sec-raid-ai" hidden>
+          <div class="card__head">
+            <h2>AI-specific risks</h2>
+            <span class="hint" id="raid-ai-count"></span>
+          </div>
+          <p class="hint">
+            The risks that kill AI projects are not in the old playbook. This project runs an AI method, so each one is checked
+            against the log — by the category it was raised under or by what its words say. One nobody has raised is the gap,
+            not a pass. And AI projects do not end at launch: drift and retraining belong on the log before go-live.
+          </p>
+          <ul class="ai-risks" id="raid-ai-risks"></ul>
         </section>
 
         <section class="card" id="sec-raid-escalations">

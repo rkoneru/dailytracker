@@ -16,6 +16,10 @@ import {
   getState, scheduleSave, uid, listResources, listAbsences,
 } from './state.js';
 import { notifyProjectDataChanged } from './taskModel.js';
+import { summaryText as reviewText, retroDraft, retroNotes } from './sprintReview.js';
+import { newMeeting, newAgendaItem, newAttendee } from './meetingModel.js';
+import { selectMeeting } from './meetings.js';
+import { goToNode } from './nav.js';
 import { confirmAction, toast } from './dialog.js';
 import { formatDate } from './dates.js';
 import { getMe } from './me.js';
@@ -323,6 +327,41 @@ export function initSprints() {
         a.click();
         a.remove();
       }
+      return;
+    }
+    if (e.target.id === 'btn-sprint-summary') {
+      const text = reviewText(getState(), sprint);
+      try { await navigator.clipboard.writeText(text); } catch { /* the dialog shows it anyway */ }
+      await confirmAction({ title: `${sprint.name || 'Sprint'} summary`, message: `Copied to the clipboard:\n\n${text}`, confirmLabel: 'Done' });
+      return;
+    }
+    if (e.target.id === 'btn-sprint-retro') {
+      const state = getState();
+      if (!Array.isArray(state.meetings)) state.meetings = [];
+      let retro = state.meetings.find((m) => m.retroFor === sprint.id);
+      if (!retro) {
+        const draft = retroDraft(state, sprint);
+        const id = uid();
+        retro = newMeeting({
+          id, seriesId: '', retroFor: sprint.id,
+          name: `${sprint.name || 'Sprint'} retrospective`,
+          date: sprint.end || '', startTime: '15:00', endTime: '16:00',
+          purpose: `Look back at ${sprint.name || 'the sprint'} and agree what to change.`,
+          expectedOutput: 'Plan',
+          agenda: [
+            newAgendaItem({ topic: 'What went well', minutes: 15, time: '15:00' }),
+            newAgendaItem({ topic: 'What did not', minutes: 20 }),
+            newAgendaItem({ topic: 'Actions: owner and date for each', minutes: 20 }),
+          ],
+          attendees: draft.people.map((name) => newAttendee({ name, meetingRole: 'Contributor' })),
+          notes: retroNotes(draft),
+        });
+        state.meetings.push(retro);
+        commit({ structural: true });
+        toast('Retrospective drafted from the sprint’s record. The team decides the actions.', 'success');
+      }
+      selectMeeting(retro.id);
+      goToNode('nav-meeting-notes');
       return;
     }
     if (e.target.id === 'btn-sprint-carry') {

@@ -10,6 +10,8 @@ import {
 import { showSection } from './tabs.js';
 import { confirmAction, toast } from './dialog.js';
 import { formatDate } from './dates.js';
+import { AI_RISKS, aiRiskCoverage, aiRiskRow } from './aiRisk.js';
+import { methodOf } from './methodology.js';
 
 // Dependencies used to be a RAID type. They now have a register of their own,
 // directly below this log, recording direction, party and needed-by — things a
@@ -223,6 +225,44 @@ function escalationCard(item, state) {
   ]);
 }
 
+// ---------- AI-specific risks ----------
+
+function renderAiRisks() {
+  const section = document.getElementById('sec-raid-ai');
+  if (!section) return;
+  const state = getState();
+  const method = methodOf(state);
+  const coverage = aiRiskCoverage(state, method);
+  // Shown only for AI work; the tab strip leaves a hidden card out.
+  section.hidden = !coverage;
+  if (!coverage) return;
+  const covered = coverage.filter((c) => c.covered).length;
+  document.getElementById('raid-ai-count').textContent = `${covered} of ${AI_RISKS.length} on the log · ${method.label}`;
+  document.getElementById('raid-ai-risks').replaceChildren(...coverage.map((c) => el('li', { class: `ai-risk ${c.covered ? 'is-covered' : 'is-gap'}`, 'data-ai-risk': c.id }, [
+    el('span', { class: 'sprint-check__mark', 'aria-hidden': 'true', text: c.covered ? '✓' : '✗' }),
+    el('span', { class: 'ai-risk__body' }, [
+      el('strong', { text: c.label }),
+      el('span', { class: 'hint', text: c.covered ? ` — ${c.covering.map((r) => r.title || 'untitled').slice(0, 2).join('; ')}${c.open ? '' : ' (closed)'}` : ` — ${c.ask}` }),
+    ]),
+    !c.covered && el('button', { type: 'button', class: 'btn btn-small btn-ghost no-print', 'data-action': 'raise-ai-risk', 'data-risk': c.id, text: 'Raise it' }),
+  ])));
+}
+
+function bindAiRisks(onChanged) {
+  document.getElementById('raid-ai-risks')?.addEventListener('click', (e) => {
+    const id = e.target.closest('[data-action="raise-ai-risk"]')?.dataset.risk;
+    const risk = AI_RISKS.find((r) => r.id === id);
+    if (!risk) return;
+    const row = { id: uid(), ...aiRiskRow(risk, todayISO()) };
+    getState().raid.push(row);
+    scheduleSave();
+    onChanged();
+    renderRaid();
+    document.querySelector(`#raid-body tr[data-id="${row.id}"] [data-field="owner"]`)?.focus();
+    toast(`Raised on the log. Give it an owner and an action.`, 'success');
+  });
+}
+
 function renderEscalations() {
   const host = document.getElementById('raid-escalations');
   if (!host) return;
@@ -283,6 +323,7 @@ function renderSummary() {
 export function renderRaid() {
   renderAll(BLOCKER_REGISTERS);
   renderHeatMap();
+  renderAiRisks();
   renderEscalations();
   const state = getState();
   const tbody = document.getElementById('raid-body');
@@ -491,6 +532,7 @@ export function initRaid({ onChanged } = {}) {
   bindTable(notify);
   bindControls(notify);
   bindEscalations(notify);
+  bindAiRisks(notify);
   // Dependencies sit under the RAID log rather than on a commercial page:
   // "what is in our way" is one question, and a dependency is the half of the
   // answer that belongs to someone else. They were a RAID type until the

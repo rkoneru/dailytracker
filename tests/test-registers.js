@@ -52,7 +52,7 @@ const { eq, done } = createChecks();
   await page.click('#tab-raid');
   await page.waitForTimeout(600);
   eq('blockers live together', await page.$$eval('#page-raid .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Risk heat map', 'Escalations', 'Log', 'Dependencies']);
+     ['Risk heat map', 'AI-specific risks', 'Escalations', 'Log', 'Dependencies']);
 
   // Titles lead with what the thing is and keep the discipline's term in
   // brackets, so a tester finds the go-live checklist without knowing it is

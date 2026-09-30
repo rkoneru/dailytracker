@@ -6532,3 +6532,11 @@ body.login-open { overflow: hidden; }
 .pf-kpi.is-unmeasured .pf-kpi__v { color: var(--color-text-muted); font-weight: 400; }
 .pf-quote { font-style: italic; margin-top: 8px; }
 @media (prefers-color-scheme: dark) { .pf-tier__lead { color: #93c5fd; } .pf-tier__lead.is-lagging { color: #5eead4; } }
+
+/* AI-specific risks on the RAID page. */
+.ai-risks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ai-risk { display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: 13.5px; }
+.ai-risk__body { flex: 1; min-width: 0; }
+.ai-risk.is-covered .sprint-check__mark { color: var(--color-success-text); }
+.ai-risk.is-gap { border-color: #d97706; }
+.ai-risk.is-gap .sprint-check__mark { color: var(--color-danger-text); }

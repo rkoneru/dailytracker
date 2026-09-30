@@ -1379,6 +1379,11 @@ export function initMeetings(navigate) {
   renderMeetings();
 }
 
+/** Which meeting the page shows next time it is drawn. */
+export function selectMeeting(id) {
+  selectedId = id;
+}
+
 export function setMeetingsChangedHandler(fn) {
   onChanged = fn;
 }

@@ -5704,7 +5704,7 @@ body.login-open { overflow: hidden; }
   --gantt-week-offset: 0%;
   overflow-x: auto;
 }
-.gantt__head, .gantt-row {
+.gantt__head, .gantt-row, .gantt-marks {
   display: grid;
   grid-template-columns: var(--gantt-cols);
   align-items: center;
@@ -5837,12 +5837,14 @@ body.login-open { overflow: hidden; }
   }
   .gantt-row__phase { grid-area: phase; }
   .gantt-row__wbs { grid-area: wbs; }
-  .gantt-row__name { grid-area: name; }
+  .gantt-row__what { grid-area: name; }
   .gantt-row [data-field="start"] { grid-area: start; }
   .gantt-row [data-field="end"] { grid-area: end; }
   .gantt-row__done { grid-area: done; }
   .gantt-row [data-gantt="delete"] { grid-area: act; }
   .gantt-row__track { grid-area: track; }
+  .gantt-marks { min-width: 0; grid-template-columns: 1fr; }
+  .gantt-marks .gantt-marks__label { grid-column: auto; }
 }
 
 /* A page that used to stand alone and is now a tab of another (AI Portfolio,
@@ -6293,3 +6295,39 @@ body.login-open { overflow: hidden; }
 .meeting-absent { border: 1px solid var(--color-border); border-left: 4px solid #d97706; border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; font-size: 14px; }
 .meeting-absent ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 6px; }
 .meeting-absent .row-select { width: auto; }
+
+/* Milestone check and decision gates. */
+.ms-findings { border: 1px solid var(--color-border); border-left: 4px solid #d97706; border-radius: var(--radius); padding: 10px 12px; margin: 10px 0; font-size: 14px; display: grid; gap: 8px; }
+.ms-finding__rule { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--color-text-muted); }
+.ms-finding ul { margin: 2px 0 0; padding-left: 18px; }
+.gate-card { border: 1px solid var(--color-border); border-left: 4px solid var(--color-border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; display: grid; gap: 10px; }
+.gate-card.is-ready { border-left-color: var(--color-primary); }
+.gate-card.is-overdue, .gate-card.is-stop { border-left-color: #dc2626; }
+.gate-card.is-go, .gate-card.is-conditions { border-left-color: #16a34a; }
+.gate-card.is-hold, .gate-card.is-not-ready { border-left-color: #d97706; }
+.gate-state.is-go, .gate-state.is-conditions { color: var(--color-success-text); }
+.gate-state.is-overdue, .gate-state.is-stop { color: var(--color-danger-text); }
+.gate-criteria__list { list-style: none; margin: 4px 0; padding: 0; display: grid; gap: 4px; }
+.gate-criteria__list li { display: flex; gap: 8px; align-items: center; }
+.gate-criteria__list .row-input { flex: 1; min-width: 0; }
+.gate-decision { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gate-decision .field-input { flex: 1; min-width: 12em; }
+.gate-decision p { margin: 0; font-weight: 600; }
+
+/* Milestones and gates across the top of the Gantt, and bars out of order. */
+.gantt-marks { padding: 5px 0; border-bottom: 1px solid var(--color-border); }
+.gantt-marks .gantt-marks__label { grid-column: 1 / -2; font-size: 12px; font-weight: 700; color: var(--color-text-muted); padding-left: 8px; }
+.gantt-marks .gantt-row__track { height: 44px; }
+/* Only the diamond takes the click: a long name must not cover its neighbour. */
+.gantt-mark { pointer-events: none; position: absolute; top: 2px; transform: translateX(-50%); padding: 0 2px; border: 0; background: none; display: flex; flex-direction: column; align-items: center; cursor: pointer; color: #2563eb; }
+.gantt-mark::before { pointer-events: auto; content: ''; width: 12px; height: 12px; margin: 3px 0 5px; border: 2px solid currentColor; background: var(--color-surface, #fff); transform: rotate(45deg); }
+.gantt-mark.is-gate { color: #16a34a; }
+.gantt-mark.is-done::before, .gantt-mark.is-go::before, .gantt-mark.is-conditions::before { background: currentColor; }
+.gantt-mark.is-overdue, .gantt-mark.is-stop { color: #dc2626; }
+.gantt-mark:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+.gantt-mark__name { font-size: 10.5px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-muted); }
+.gantt-bar__after { position: absolute; left: 3px; top: 0; bottom: 0; display: grid; place-items: center; font-size: 11px; color: #fff; z-index: 1; pointer-events: none; }
+.gantt-row.is-conflict .gantt-bar { box-shadow: inset 0 0 0 2px #dc2626; }
+.gantt-row__what { display: grid; gap: 4px; min-width: 0; }
+.gantt-row__who { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 4px; }
+.gantt-row .gantt-row__who .field-input { min-height: 28px; font-size: 12px; padding: 2px 6px; }

@@ -203,8 +203,9 @@
             <button type="button" class="btn btn-small no-print" data-action="add-milestone">+ Add Milestone</button>
           </div>
           <p class="hint no-print">
-            A date you are steering to. Point one at a deliverable when it marks that deliverable
-            landing, and the Dashboard will list it once rather than twice.
+            A result you are steering to — &ldquo;Design complete&rdquo;, not &ldquo;Design&rdquo;. Point one at a deliverable when
+            it marks that deliverable landing, and the Dashboard will list it once rather than twice. Make it a
+            <strong>gate</strong> where a decision says what happens next: one owner, entry criteria, options and a default path.
           </p>
           <div class="table-scroll">
             <table class="data-table" id="milestones-table">
@@ -213,6 +214,8 @@
                   <th class="col-drag no-print"></th>
                   <th class="col-num">#</th>
                   <th>Milestone</th>
+                  <th class="col-status">Kind</th>
+                  <th class="col-assignee">Owner</th>
                   <th class="col-progress">Progress</th>
                   <th class="col-date">Due</th>
                   <th class="col-phase" id="milestone-phase-head" hidden>Phase</th>
@@ -224,9 +227,22 @@
               <tbody id="milestones-body"></tbody>
             </table>
           </div>
+          <div class="ms-findings" id="milestone-findings" hidden></div>
           <label class="field-label field-label--block">Achievement / Reward
             <span class="editable" contenteditable="true" data-field="reward" data-placeholder="What's the reward for hitting these milestones?"></span>
           </label>
+        </section>
+
+        <section class="card" id="sec-gates">
+          <div class="card__head">
+            <h2>Decision gates</h2>
+            <span class="hint" id="gate-count"></span>
+          </div>
+          <p class="hint">
+            A point where a decision determines what&rsquo;s next. Write the entry criteria before the gate, agree the options
+            and the default path, then record the owner&rsquo;s decision. Go passes the gate; Hold and Stop leave it open.
+          </p>
+          <div id="gate-cards"></div>
         </section>
 
         <section class="card" id="sec-ticks">
@@ -271,7 +287,7 @@
             <h2>Gantt</h2>
             <span class="hint gantt-method" id="gantt-method"></span>
           </div>
-          <p class="hint">The project&rsquo;s lifecycle as activities with their own dates, kept apart from the tasks: moving a phase moves the plan, not forty tasks. Drag a bar to move it, drag either end to change a date, or type the dates in.</p>
+          <p class="hint">The project&rsquo;s lifecycle as activities with their own dates, kept apart from the tasks: moving a phase moves the plan, not forty tasks. Drag a bar to move it, drag either end to change a date, or type the dates in. Give each activity an owner and say what it follows; milestones and gates from the Milestones tab sit across the top.</p>
           <div class="gantt-empty" id="gantt-empty" hidden>
             <p id="gantt-empty-text"></p>
             <div class="gantt-empty__choose" id="gantt-empty-choose" hidden>
@@ -294,7 +310,7 @@
             <div class="gantt__head" aria-hidden="true">
               <span class="gantt__col-phase"></span>
               <span class="gantt__col-wbs" title="Work breakdown code: phase, then activity">WBS</span>
-              <span class="gantt__col-name">Activity</span>
+              <span class="gantt__col-name">Activity · owner · follows</span>
               <span class="gantt__col-date">Start</span>
               <span class="gantt__col-date">End</span>
               <span class="gantt__col-done">Done %</span>
@@ -303,6 +319,7 @@
             </div>
             <div class="gantt__body" id="gantt-body"></div>
           </div>
+          <div class="ms-findings" id="gantt-issues" hidden></div>
         </section>
 
         <section class="card" id="sec-budget">

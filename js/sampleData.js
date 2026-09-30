@@ -115,7 +115,17 @@ function createMarketingCampaign() {
     milestones: [
       { id: id('m'), text: 'Creative assets approved', progress: 5, due: '2026-09-05', done: true, achieved: '2026-09-05' },
       { id: id('m'), text: 'Campaign launch', progress: 3, due: '2026-09-08', done: false, deliverableId: LIVE_CAMPAIGN_ID },
-      { id: id('m'), text: 'Mid-campaign performance review', progress: 1, due: '2026-09-18', done: false },
+      {
+        id: id('m'), text: 'Mid-campaign budget decision', kind: 'gate', owner: 'Priya N.', progress: 1, due: '2026-09-18', done: false,
+        reviewDate: '2026-09-17',
+        criteria: [
+          { id: id('gc'), text: 'A full week of performance data', met: true },
+          { id: id('gc'), text: 'Checkout attribution verified', met: false },
+        ],
+        options: 'Shift budget to paid\nKeep the 60/40 split\nShift budget to organic',
+        defaultPath: 'Keep the 60/40 split',
+        decision: '', decisionNote: '', decidedAt: '', decidedBy: '',
+      },
       { id: id('m'), text: 'Campaign wrap + report', progress: 0, due: '2026-09-30', done: false },
     ],
     dashDate: '2026-09-08',
@@ -314,7 +324,18 @@ function createSoftwareRelease() {
     milestones: [
       { id: id('m'), text: 'Feature freeze', progress: 4, due: '2026-10-10', done: false },
       { id: id('m'), text: 'Code complete', progress: 2, due: '2026-10-17', done: false },
-      { id: id('m'), text: 'QA sign-off', progress: 0, due: '2026-10-24', done: false },
+      {
+        id: id('m'), text: 'Launch approval', kind: 'gate', owner: 'Alex R.', progress: 0, due: '2026-10-24', done: false,
+        reviewDate: '2026-10-23',
+        criteria: [
+          { id: id('gc'), text: 'No open P1 defects', met: false },
+          { id: id('gc'), text: 'Performance within the agreed budget', met: false },
+          { id: id('gc'), text: 'Rollback rehearsed', met: false },
+        ],
+        options: 'Release on the 30th\nRelease without the billing module\nSlip a week',
+        defaultPath: 'Slip a week',
+        decision: '', decisionNote: '', decidedAt: '', decidedBy: '',
+      },
       { id: id('m'), text: 'Release day', progress: 0, due: '2026-10-30', done: false },
     ],
     dashDate: '2026-10-12',

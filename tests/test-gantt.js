@@ -41,7 +41,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   console.log('\n--- an older project with no lifecycle is asked for one, not given one ---');
   await openGantt();
   eq('the tab sits next to the Timeline', await page.$$eval('#page-planner .page-tab', (els) => els.map((e) => e.textContent.replace(/\d+$/, ''))),
-     ['Milestones', 'Timeline', 'Gantt', 'Budget & Notes']);
+     ['Milestones & Gates', 'Timeline', 'Gantt', 'Budget & Notes']);
   eq('the starter project has no lifecycle', (await state()).methodology, '');
   eq('so the Gantt offers to choose one', await page.isVisible('#gantt-empty-choose'), true);
   await page.click('#sec-gantt [data-gantt="layout"]');

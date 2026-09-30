@@ -39,7 +39,7 @@ export const PAGE_TABS = {
     { id: 'sec-planning-layers', label: 'Planning layers', sections: ['page-planning-layers'] },
   ],
   'page-planner': [
-    { id: 'sec-milestones', label: 'Milestones', sections: ['sec-method', 'sec-milestones'] },
+    { id: 'sec-milestones', label: 'Milestones & Gates', sections: ['sec-method', 'sec-milestones', 'sec-gates'] },
     { id: 'sec-ticks', label: 'Timeline' },
     { id: 'sec-gantt', label: 'Gantt' },
     { id: 'sec-budget', label: 'Budget & Notes', sections: ['sec-budget', 'sec-notes'] },

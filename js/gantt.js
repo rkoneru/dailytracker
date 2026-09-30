@@ -15,7 +15,11 @@ import { getState, scheduleSave, uid, trashRow } from './state.js';
 import { el } from './dom.js';
 import { formatDate, parseDate, toLocalISO } from './dates.js';
 import { METHODOLOGIES, methodOf, findPhase, sanitisePhase } from './methodology.js';
-import { layOut, orderedActivities, activitySpan, chartWindow, newActivity, wbsCodes } from './ganttModel.js';
+import {
+  layOut, orderedActivities, activitySpan, chartWindow, newActivity, wbsCodes, dependencyIssues, markers,
+} from './ganttModel.js';
+import { gateState, GATE_STATE_TEXT } from './gates.js';
+import { showSection } from './tabs.js';
 import { offerUndo, offerUndoAction } from './trash.js';
 import { confirmAction } from './dialog.js';
 import { onSectionShown } from './tabs.js';
@@ -86,7 +90,55 @@ function phaseChip(method, activity, first) {
   });
 }
 
-function renderRow(activity, method, first, wbs) {
+function afterSelect(activity, rows, codes) {
+  return el('select', { class: 'field-input gantt-row__after', 'data-field': 'after', 'aria-label': `Follows, ${activity.name || 'activity'}` }, [
+    el('option', { value: '', text: '— starts any time —', selected: !activity.after }),
+    ...rows.filter((r) => r.id !== activity.id).map((r) => el('option', {
+      value: r.id, selected: r.id === activity.after, text: `after ${codes.get(r.id) ? `${codes.get(r.id)} ` : ''}${r.name || 'Untitled'}`,
+    })),
+  ]);
+}
+
+// Milestones and gates across the top: the dates the plan steers to, drawn on
+// the same scale as the phases. They are the milestone rows on the Milestones
+// tab, not copies — a diamond opens its row there.
+function renderMarks(state, today) {
+  const marks = markers(state);
+  if (!marks.length) return null;
+  const byId = new Map((state.milestones || []).map((m) => [m.id, m]));
+  return el('div', { class: 'gantt-marks' }, [
+    el('span', { class: 'gantt-marks__label', text: 'Milestones & gates' }),
+    el('div', { class: 'gantt-row__track' }, marks.map((mk) => {
+      const at = dayIndex(parseDate(mk.date));
+      const state2 = mk.gate ? gateState(byId.get(mk.id), today) : null;
+      const label = `${mk.gate ? 'Gate' : 'Milestone'}: ${mk.name}, ${formatDate(mk.date, 'day')}${state2 ? ` — ${GATE_STATE_TEXT[state2]}` : mk.done ? ' — reached' : ''}`;
+      return el('button', {
+        type: 'button',
+        class: `gantt-mark ${mk.gate ? 'is-gate' : 'is-milestone'}${mk.done ? ' is-done' : ''}${state2 ? ` is-${state2}` : ''}`,
+        style: `left:${pct(at + 0.5)}`,
+        'data-mark': mk.id,
+        'aria-label': label,
+        title: label,
+      }, [el('span', { class: 'gantt-mark__name', text: mk.name })]);
+    })),
+  ]);
+}
+
+function renderIssues(state) {
+  const host = document.getElementById('gantt-issues');
+  const issues = dependencyIssues(state);
+  host.hidden = issues.length === 0;
+  host.replaceChildren(...(issues.length ? [
+    el('strong', { text: 'Out of order' }),
+    el('ul', {}, issues.map((i) => el('li', { 'data-issue': i.id }, [
+      document.createTextNode(`${i.text} `),
+      i.fix && el('button', { type: 'button', class: 'link-btn no-print', 'data-gantt': 'fix', 'data-id': i.id, text: `Move it to start ${formatDate(i.fix.start, 'day')}` }),
+    ]))),
+  ] : []));
+  return new Set(issues.map((i) => i.id));
+}
+
+function renderRow(activity, method, first, wbs, rows, codes, conflicted) {
   const span = activitySpan(activity);
   const name = activity.name || 'Untitled activity';
   const orphan = !method || !findPhase(method.id, activity.phase);
@@ -101,21 +153,30 @@ function renderRow(activity, method, first, wbs) {
     style: `left:${pct(dayIndex(span.start))};width:${pct(dayIndex(span.end) - dayIndex(span.start) + 1)}`,
     title: `${name}: ${spanText(span)}`,
   }, [
+    activity.after && el('span', { class: 'gantt-bar__after', 'aria-hidden': 'true', text: '↳' }),
     el('span', { class: 'gantt-bar__done', style: `width:${activity.progress || 0}%` }),
     el('span', { class: 'gantt-bar__handle gantt-bar__handle--start', title: 'Drag to change the start date' }),
     el('span', { class: 'gantt-bar__handle gantt-bar__handle--end', title: 'Drag to change the end date' }),
   ]) : el('span', { class: 'gantt-row__undated', text: 'No dates — type them in' });
 
   return el('div', {
-    class: `gantt-row${first ? ' is-phase-start' : ''}${orphan ? ' is-orphan' : ''}${method && method.kind === 'practice' ? ' is-practice' : ''}`,
+    class: `gantt-row${first ? ' is-phase-start' : ''}${orphan ? ' is-orphan' : ''}${method && method.kind === 'practice' ? ' is-practice' : ''}${conflicted.has(activity.id) ? ' is-conflict' : ''}`,
     'data-id': activity.id,
   }, [
     phaseChip(method, activity, first),
     el('span', { class: 'gantt-row__wbs', title: wbs ? `Work breakdown code ${wbs}` : '', text: wbs || '' }),
-    el('input', {
-      class: 'field-input gantt-row__name', 'data-field': 'name', value: activity.name || '',
-      placeholder: 'Activity', 'aria-label': phase ? `Activity in ${phase.label}` : 'Activity',
-    }),
+    // Name, owner and what it follows share one column, stacked: three more
+    // columns would push the chart off a laptop screen.
+    el('div', { class: 'gantt-row__what' }, [
+      el('input', {
+        class: 'field-input gantt-row__name', 'data-field': 'name', value: activity.name || '',
+        placeholder: 'Activity', 'aria-label': phase ? `Activity in ${phase.label}` : 'Activity',
+      }),
+      el('div', { class: 'gantt-row__who' }, [
+        el('input', { class: 'field-input gantt-row__owner', 'data-field': 'owner', value: activity.owner || '', placeholder: 'Owner', list: 'roster-names', 'aria-label': `Owner, ${name}` }),
+        afterSelect(activity, rows, codes),
+      ]),
+    ]),
     el('input', { type: 'date', class: 'field-input gantt-row__date', 'data-field': 'start', value: activity.start || '', 'aria-label': `Start, ${name}` }),
     el('input', { type: 'date', class: 'field-input gantt-row__date', 'data-field': 'end', value: activity.end || '', 'aria-label': `End, ${name}` }),
     el('input', {
@@ -169,9 +230,11 @@ export function renderGantt() {
   renderToolbar(method);
 
   const rows = orderedActivities(state);
-  win = chartWindow(rows);
+  // No activities, no chart: the milestones alone are the Milestones tab's.
+  win = rows.length ? chartWindow([...rows, ...markers(state).map((m) => ({ start: m.date, end: m.date }))]) : null;
   const body = document.getElementById('gantt-body');
   if (!win) {
+    document.getElementById('gantt-issues').hidden = true;
     body.replaceChildren();
     return;
   }
@@ -179,12 +242,13 @@ export function renderGantt() {
   renderScale(today);
   let lastPhase = null;
   const codes = wbsCodes(state);
-  body.replaceChildren(...rows.map((a) => {
+  const conflicted = renderIssues(state);
+  body.replaceChildren(renderMarks(state, today), ...rows.map((a) => {
     const known = method && findPhase(method.id, a.phase) ? a.phase : '?';
     const first = known !== lastPhase;
     lastPhase = known;
-    return renderRow(a, method, first, codes.get(a.id));
-  }));
+    return renderRow(a, method, first, codes.get(a.id), rows, codes, conflicted);
+  }).filter(Boolean));
 }
 
 // ---------- editing ----------
@@ -297,19 +361,21 @@ function bindBody() {
   // Typing a name is saved as it is typed and redraws nothing, so the field
   // keeps focus; a date or a percentage redraws, because it moves the bar.
   body.addEventListener('input', (e) => {
-    if (e.target.dataset.field !== 'name') return;
+    if (e.target.dataset.field !== 'name' && e.target.dataset.field !== 'owner') return;
     const activity = findActivity(e.target.closest('.gantt-row').dataset.id);
     if (!activity) return;
-    activity.name = e.target.value;
+    activity[e.target.dataset.field] = e.target.value;
     commit();
   });
 
   body.addEventListener('change', (e) => {
     const field = e.target.dataset.field;
-    if (field !== 'start' && field !== 'end' && field !== 'progress') return;
+    if (field !== 'start' && field !== 'end' && field !== 'progress' && field !== 'after') return;
     const activity = findActivity(e.target.closest('.gantt-row').dataset.id);
     if (!activity) return;
-    if (field === 'progress') {
+    if (field === 'after') {
+      activity.after = e.target.value;
+    } else if (field === 'progress') {
       const n = Math.round(Number(e.target.value));
       activity.progress = Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
     } else {
@@ -326,6 +392,12 @@ function bindBody() {
   });
 
   body.addEventListener('click', (e) => {
+    const mark = e.target.closest('[data-mark]');
+    if (mark) {
+      showSection('page-planner', 'sec-milestones');
+      document.querySelector(`#milestones-body tr[data-id="${mark.dataset.mark}"] [data-field="text"]`)?.focus();
+      return;
+    }
     if (!e.target.closest('[data-gantt="delete"]')) return;
     const id = e.target.closest('.gantt-row').dataset.id;
     const entry = trashRow('ganttActivities', id);
@@ -344,6 +416,11 @@ function bindControls() {
   document.getElementById('sec-gantt').addEventListener('click', async (e) => {
     const action = e.target.closest('[data-gantt]')?.dataset.gantt;
     const state = getState();
+    if (action === 'fix') {
+      const issue = dependencyIssues(state).find((i) => i.id === e.target.closest('[data-id]').dataset.id && i.fix);
+      if (issue) apply(issue.id, parseDate(issue.fix.start), parseDate(issue.fix.end));
+      return;
+    }
     if (action === 'layout') {
       let method = methodOf(state);
       if (!method) {

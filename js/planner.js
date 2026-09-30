@@ -13,6 +13,9 @@ import { METHODOLOGIES, methodOf, phasesOf, phaseProgress, sanitisePhase } from 
 import { toLocalISO, formatDate } from './dates.js';
 import { labourEstimate } from './resourceModel.js';
 import { projectWindow } from './ganttModel.js';
+import {
+  isGate, gateDefaults, gateState, GATE_STATE_TEXT, GATE_DECISIONS, decisionPatch, milestoneFindings, newCriterion, optionLines,
+} from './gates.js';
 
 function findById(list, id) {
   return list.find((item) => item.id === id);
@@ -181,7 +184,12 @@ function renderMilestones() {
     const tr = el('tr', { 'data-id': m.id, draggable: true }, [
       dragHandleCell(),
       el('td', { class: 'col-num', text: String(index + 1) }),
-      el('td', {}, [el('input', { class: 'row-input', 'data-field': 'text', value: m.text || '', placeholder: 'Milestone name' })]),
+      el('td', {}, [el('input', { class: 'row-input', 'data-field': 'text', value: m.text || '', placeholder: isGate(m) ? 'The decision, e.g. Scope approval' : 'The result, e.g. Design complete' })]),
+      el('td', { class: 'col-status' }, [el('select', { class: 'row-select', 'data-field': 'kind', 'aria-label': 'Milestone or decision gate' }, [
+        el('option', { value: 'milestone', text: '◆ Milestone', selected: !isGate(m) }),
+        el('option', { value: 'gate', text: '◈ Gate', selected: isGate(m) }),
+      ])]),
+      el('td', { class: 'col-assignee' }, [el('input', { class: 'row-input', 'data-field': 'owner', value: m.owner || '', placeholder: isGate(m) ? 'Who decides' : 'Owner', list: 'roster-names', 'aria-label': 'Owner' })]),
       el('td', { class: 'col-progress' }, [segments]),
       el('td', { class: 'col-date' }, [el('input', { type: 'date', class: 'row-input', 'data-field': 'due', value: m.due || '' })]),
       phases.length ? el('td', { class: 'col-phase' }, [phaseSelect(m, phases)]) : null,
@@ -191,6 +199,171 @@ function renderMilestones() {
     ]);
     tbody.appendChild(tr);
   });
+  renderGates();
+  renderFindings();
+}
+
+// ---------- Decision gates ----------
+//
+// Each gate gets a card: the entry criteria, the options and the default path
+// agreed beforehand, and the decision. The card holds no copy of the name,
+// date or owner — those are the milestone row's, one home each.
+
+function renderFindings() {
+  const host = document.getElementById('milestone-findings');
+  if (!host) return;
+  const findings = milestoneFindings(getState());
+  host.hidden = findings.length === 0;
+  const byRule = new Map();
+  findings.forEach((f) => byRule.set(f.rule, [...(byRule.get(f.rule) || []), f]));
+  host.replaceChildren(
+    el('strong', { text: `Milestone check · ${findings.length} to look at` }),
+    ...[...byRule].map(([rule, list]) => el('div', { class: 'ms-finding', 'data-rule': rule }, [
+      el('span', { class: 'ms-finding__rule', text: rule }),
+      el('ul', {}, list.map((f) => el('li', { text: f.text }))),
+    ])),
+  );
+}
+
+function gateCard(m, today) {
+  const state = gateState(m, today);
+  const criteria = m.criteria || [];
+  const open = criteria.filter((c) => String(c.text || '').trim() && !c.met).length;
+  const decided = !!m.decision;
+  const field = (label, key, { long = false, type = 'text', placeholder = '' } = {}) => el('label', { class: `charter-field ${long ? 'charter-field--wide' : ''}` }, [
+    el('span', { class: 'charter-field__label', text: label }),
+    long
+      ? el('textarea', { class: 'field-input', rows: 2, 'data-gate-field': key, value: m[key] || '', placeholder, disabled: decided })
+      : el('input', { class: 'field-input', type, 'data-gate-field': key, value: m[key] || '', placeholder, disabled: decided }),
+  ]);
+  return el('article', { class: `gate-card is-${state}`, 'data-id': m.id }, [
+    el('header', { class: 'escalation__head' }, [
+      el('strong', { text: `◈ ${m.text || 'Untitled gate'}` }),
+      el('span', { class: `escalation__state gate-state is-${state}`, 'data-gate-state': '', text: GATE_STATE_TEXT[state] }),
+      el('span', { class: 'hint', text: `${m.due ? formatDate(m.due) : 'no date'} · ${m.owner ? `decided by ${m.owner}` : 'nobody owns it'}` }),
+    ]),
+    el('div', { class: 'gate-criteria' }, [
+      el('span', { class: 'charter-field__label', text: `Entry criteria — what must be true before the gate${open ? ` · ${open} open` : ''}` }),
+      el('ul', { class: 'gate-criteria__list' }, criteria.map((c) => el('li', { 'data-criterion': c.id }, [
+        el('input', { type: 'checkbox', 'data-criterion-field': 'met', checked: !!c.met, disabled: decided, 'aria-label': 'Met' }),
+        el('input', { class: 'row-input', 'data-criterion-field': 'text', value: c.text || '', placeholder: 'e.g. Requirements signed off by the sponsor', disabled: decided }),
+        el('button', { type: 'button', class: 'icon-btn no-print', 'data-gate': 'remove-criterion', 'aria-label': 'Remove criterion', text: '✕', disabled: decided }),
+      ]))),
+      !decided && el('button', { type: 'button', class: 'btn btn-small btn-ghost no-print', 'data-gate': 'add-criterion', text: '+ Criterion' }),
+    ]),
+    el('div', { class: 'charter-grid' }, [
+      field('Options — one per line', 'options', { long: true, placeholder: 'Go to build\nGo with a reduced scope\nHold two weeks for the data' }),
+      field('Default path if nothing changes', 'defaultPath', { placeholder: 'e.g. Go with reduced scope' }),
+      field('Review booked for', 'reviewDate', { type: 'date' }),
+    ]),
+    decided
+      ? el('div', { class: 'gate-decision' }, [
+        el('p', { text: `${m.decision}${m.decidedBy ? ` — ${m.decidedBy}` : ''}${m.decidedAt ? `, ${formatDate(m.decidedAt.slice(0, 10))}` : ''}${m.decisionNote ? `. ${m.decisionNote}` : ''}` }),
+        el('button', { type: 'button', class: 'btn btn-small btn-ghost no-print', 'data-gate': 'reopen', text: 'Reopen the gate' }),
+      ])
+      : el('div', { class: 'gate-decision no-print' }, [
+        el('select', { class: 'row-select', 'data-gate-decision': '', 'aria-label': 'Decision' }, [
+          el('option', { value: '', text: '— decision —' }),
+          ...GATE_DECISIONS.map((d) => el('option', { value: d, text: d })),
+        ]),
+        el('input', { class: 'field-input', 'data-gate-note': '', placeholder: 'Conditions, or why', 'aria-label': 'Decision note' }),
+        el('button', { type: 'button', class: 'btn btn-small btn-primary', 'data-gate': 'decide', text: 'Record the decision' }),
+      ]),
+  ]);
+}
+
+function renderGates() {
+  const host = document.getElementById('gate-cards');
+  if (!host) return;
+  const today = new Date();
+  const list = getState().milestones.filter(isGate);
+  document.getElementById('gate-count').textContent = list.length
+    ? `${list.filter((m) => !m.decision).length} to decide` : '';
+  host.replaceChildren(...(list.length
+    ? list.map((m) => gateCard(m, today))
+    : [el('p', { class: 'hint', text: 'No gates yet. Turn a milestone into a gate where a decision says what happens next — scope approval, build readiness, launch approval.' })]));
+}
+
+function refreshGateState(card, m) {
+  const state = gateState(m, new Date());
+  card.className = `gate-card is-${state}`;
+  const badge = card.querySelector('[data-gate-state]');
+  badge.textContent = GATE_STATE_TEXT[state];
+  badge.className = `escalation__state gate-state is-${state}`;
+}
+
+function bindGates() {
+  const host = document.getElementById('gate-cards');
+  const gateOf = (target) => findById(getState().milestones, target.closest('.gate-card')?.dataset.id);
+  host.addEventListener('input', (e) => {
+    const m = gateOf(e.target);
+    if (!m) return;
+    const key = e.target.dataset.gateField;
+    if (key) m[key] = e.target.value;
+    const cField = e.target.dataset.criterionField;
+    if (cField) {
+      const c = (m.criteria || []).find((x) => x.id === e.target.closest('[data-criterion]').dataset.criterion);
+      if (!c) return;
+      c[cField] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    }
+    if (!key && !cField) return;
+    commitChange();
+    refreshGateState(e.target.closest('.gate-card'), m);
+    renderFindings();
+  });
+  host.addEventListener('click', async (e) => {
+    const action = e.target.closest('[data-gate]')?.dataset.gate;
+    const m = action && gateOf(e.target);
+    if (!m) return;
+    if (action === 'add-criterion') {
+      m.criteria = [...(m.criteria || []), newCriterion(uid())];
+      commitChange();
+      renderGates();
+      host.querySelector(`.gate-card[data-id="${m.id}"] li:last-child [data-criterion-field="text"]`)?.focus();
+      return;
+    }
+    if (action === 'remove-criterion') {
+      const id = e.target.closest('[data-criterion]').dataset.criterion;
+      m.criteria = (m.criteria || []).filter((c) => c.id !== id);
+      commitChange();
+      renderGates();
+      renderFindings();
+      return;
+    }
+    if (action === 'reopen') {
+      Object.assign(m, decisionPatch(m, ''), { decisionNote: '' });
+      commitChange();
+      renderMilestones();
+      renderMethod();
+      return;
+    }
+    if (action === 'decide') {
+      const card = e.target.closest('.gate-card');
+      const decision = card.querySelector('[data-gate-decision]').value;
+      const note = card.querySelector('[data-gate-note]').value.trim();
+      if (!decision) { toast('Pick the decision first.', 'error'); return; }
+      if (!String(m.owner || '').trim()) { toast('Name who owns this gate first — one person, one decision.', 'error'); return; }
+      if (decision === 'Go with conditions' && !note) { toast('Write the conditions down.', 'error'); return; }
+      const open = (m.criteria || []).filter((c) => String(c.text || '').trim() && !c.met).length;
+      const passes = decision.startsWith('Go');
+      const ok = await confirmAction({
+        title: `${decision}: ${m.text || 'this gate'}`,
+        message: [
+          `Recorded as ${m.owner}'s decision.`,
+          passes ? 'The gate is passed, so the milestone is marked done today.' : 'The milestone stays open.',
+          open && passes ? `${open} entry criteri${open === 1 ? 'on is' : 'a are'} not met.` : '',
+          optionLines(m.options).length && !optionLines(m.options).some((o) => o.toLowerCase() === decision.toLowerCase()) && m.defaultPath ? `The default path was: ${m.defaultPath}.` : '',
+        ].filter(Boolean).join('\n'),
+        confirmLabel: 'Record it',
+      });
+      if (!ok) return;
+      Object.assign(m, decisionPatch(m, decision, { by: m.owner, at: new Date().toISOString() }), { decisionNote: note });
+      commitChange();
+      renderMilestones();
+      renderMethod();
+      toast(passes ? 'Gate passed.' : `Gate: ${decision}.`, 'success');
+    }
+  });
 }
 
 function bindMilestones() {
@@ -199,17 +372,30 @@ function bindMilestones() {
   tbody.addEventListener('input', (e) => {
     const field = e.target.dataset.field;
     if (!field) return;
+    if (field === 'kind') return;
     const item = findById(getState().milestones, rowIdOf(e.target));
     if (!item) return;
     item[field] = e.target.value;
     commitChange();
+    renderFindings();
+    // The gate card shows the name, date and owner; it holds no inputs for
+    // them, so redrawing it never drops a caret.
+    if (isGate(item)) renderGates();
   });
 
   tbody.addEventListener('change', (e) => {
     const field = e.target.dataset.field;
-    if (field !== 'done' && field !== 'deliverableId' && field !== 'phase') return;
+    if (field !== 'done' && field !== 'deliverableId' && field !== 'phase' && field !== 'kind') return;
     const item = findById(getState().milestones, rowIdOf(e.target));
     if (!item) return;
+    if (field === 'kind') {
+      item.kind = e.target.value;
+      if (isGate(item)) Object.assign(item, gateDefaults(item));
+      commitChange();
+      renderGates();
+      renderFindings();
+      return;
+    }
     if (field === 'done') {
       item.done = e.target.checked;
       // Stamped when it is ticked, cleared when it is un-ticked. Without this
@@ -256,7 +442,7 @@ function bindMilestones() {
   });
 
   document.querySelector('#page-planner [data-action="add-milestone"]').addEventListener('click', () => {
-    getState().milestones.push({ id: uid(), text: '', progress: 0, due: '', done: false, achieved: '' });
+    getState().milestones.push({ id: uid(), text: '', kind: 'milestone', owner: '', progress: 0, due: '', done: false, achieved: '' });
     commitChange();
     renderMilestones();
   });
@@ -892,6 +1078,7 @@ export function initPlanner() {
   renderPlanner();
   bindMethod();
   bindMilestones();
+  bindGates();
   bindOpenTasks();
   bindTicks();
   initGantt({ onMethodChange: () => { renderMethod(); renderMilestones(); } });

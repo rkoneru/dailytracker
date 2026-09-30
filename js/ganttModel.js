@@ -21,7 +21,7 @@ const DAY_MS = 86400000;
 const DEFAULT_PHASE_DAYS = 14;
 
 export function newActivity(fields = {}) {
-  return { name: '', phase: '', start: '', end: '', progress: 0, ...fields };
+  return { name: '', phase: '', start: '', end: '', progress: 0, owner: '', after: '', ...fields };
 }
 
 function addDays(date, n) {
@@ -77,10 +77,19 @@ export function layOut(project, method = methodOf(project), idFor = () => '') {
   });
   phases.filter((p) => p.alongside).forEach((phase) => span.set(phase.id, span.get(phase.alongside)));
 
-  return phases.map((phase) => {
+  const rows = phases.map((phase) => {
     const { from, to } = span.get(phase.id);
     return newActivity({ id: idFor(), phase: phase.id, name: phase.label, start: toLocalISO(from), end: toLocalISO(to) });
   });
+  // A lifecycle's phases follow one another, so each is laid out after the
+  // one before it; a phase that runs alongside another follows nothing.
+  let prev = null;
+  rows.forEach((row, i) => {
+    if (phases[i].alongside) return;
+    if (prev && prev.id && row.id) row.after = prev.id;
+    prev = row;
+  });
+  return rows;
 }
 
 /**
@@ -151,5 +160,56 @@ export function sanitiseActivity(row) {
     start: parseDate(row.start) ? row.start : '',
     end: parseDate(row.end) ? row.end : '',
     progress: Number.isFinite(progress) ? Math.min(100, Math.max(0, progress)) : 0,
+    owner: typeof row.owner === 'string' ? row.owner : '',
+    // The activity this one follows, finish to start. One predecessor each:
+    // it is the sequence a sponsor reads off a Gantt, not a network diagram.
+    after: typeof row.after === 'string' && row.after !== row.id ? row.after : '',
   };
+}
+
+/**
+ * Where the plan breaks its own order: an activity that starts before the one
+ * it follows has finished, or a loop of activities each waiting on the next.
+ * Each overlap comes with the fix — the same length, starting the day after —
+ * so the page can offer to make it rather than just report it.
+ */
+export function dependencyIssues(project) {
+  const list = project.ganttActivities || [];
+  const byId = new Map(list.map((a) => [a.id, a]));
+  const issues = [];
+  list.forEach((a) => {
+    if (!a.after) return;
+    const before = byId.get(a.after);
+    if (!before) { issues.push({ id: a.id, kind: 'missing', text: `“${a.name || 'An activity'}” follows an activity that is no longer in the plan.` }); return; }
+    // A loop: follow the chain back and meet yourself.
+    const seen = new Set([a.id]);
+    for (let cur = before; cur; cur = byId.get(cur.after)) {
+      if (seen.has(cur.id)) {
+        if (cur.id === a.id) issues.push({ id: a.id, kind: 'loop', text: `“${a.name || 'An activity'}” waits on itself through a loop of dependencies.` });
+        break;
+      }
+      seen.add(cur.id);
+      if (!cur.after) break;
+    }
+    const mine = activitySpan(a);
+    const theirs = activitySpan(before);
+    if (!mine || !theirs || mine.start > theirs.end) return;
+    const overlap = daysBetween(mine.start, theirs.end) + 1;
+    const length = daysBetween(mine.start, mine.end);
+    const start = addDays(theirs.end, 1);
+    issues.push({
+      id: a.id, afterId: before.id, kind: 'overlap', overlap,
+      text: `“${a.name || 'An activity'}” starts ${overlap} day${overlap === 1 ? '' : 's'} before “${before.name || 'the activity it follows'}” finishes.`,
+      fix: { start: toLocalISO(start), end: toLocalISO(addDays(start, length)) },
+    });
+  });
+  return issues;
+}
+
+/** Milestones and gates with a date, for the Gantt's marker row. */
+export function markers(project) {
+  return (project.milestones || [])
+    .filter((m) => parseDate(m.due))
+    .map((m) => ({ id: m.id, name: m.text || (m.kind === 'gate' ? 'Untitled gate' : 'Untitled milestone'), date: m.due, gate: m.kind === 'gate', done: !!m.done }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }

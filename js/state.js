@@ -238,6 +238,10 @@ function migrateProject(data) {
     // planned without one, and guessing a phase from a milestone's wording
     // would put a made-up answer where the project has a real blank.
     if (m.phase === undefined) m.phase = '';
+    // A decision gate is a milestone with a decision attached (js/gates.js).
+    // Every milestone saved before gates existed is a plain milestone.
+    if (m.kind === undefined) m.kind = 'milestone';
+    if (m.owner === undefined) m.owner = '';
   });
   // The method this project is run by — a CPMAI or CRISP-DM phase set, or an
   // MLOps/LLMOps capability set. Empty means "no named method", which is what

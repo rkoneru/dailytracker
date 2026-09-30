@@ -55,7 +55,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/playbook.js`, `workflow.js`, `wizard.js` | the Task Execution Map: data, config, overlay |
 | `js/kpi.js`, `kpiPage.js` | the 46 indicators in nine categories, numbered in display order; `ceoKpis.js` maps a company-level (CEO) KPI set onto them and says why the rest are not held |
 | `js/methodology.js` | the general Project Lifecycle, CPMAI, CRISP-DM, SDLC, ADLC, Agentic DLC, MLOps, LLMOps as data; `ai` says which count as AI work; phase progress derived from milestones |
-| `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, laid out from the method's phases, never linked to tasks; WBS codes derived from the order |
+| `js/ganttModel.js`, `gantt.js` | the Plan page's Gantt: lifecycle activities with their own dates, owners and one predecessor (`after`), laid out from the method's phases, never linked to tasks; WBS codes derived from the order; milestones and gates drawn across the top; `dependencyIssues` flags an activity starting before the one it follows |
 | `js/customerSuccess.js`, `customerSuccessPage.js`, `sampleCustomers.js` | the CSM lifecycle (six ordered stages with gates, Churned as an exit), health score, retention/NRR/NPS/LTV/CAC, and the Customer Success page over the `customers` register |
 | `js/useCaseModel.js`, `useCaseStore.js`, `useCaseSync.js`, `useCasesPage.js` | Use Cases & ROI: weighted evaluator, monthly ROI model (ROI %, payback, NPV, low/expected/high), signed go/no-go, conversion to a project, value realisation, and the Client View (`clientPortfolio`). Own storage key and own sync lane to the `use_cases` table; client records are rows there too, `type: 'client'` |
 | `js/serviceDesk.js`, `billing.js` | incident SLA clocks (priority targets, overridable per project) and billing collection state, days to collect. Pure |
@@ -68,6 +68,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/sprints.js`, `sprintsPage.js` | sprint planning on Tasks: capacity from the project's bookings and leave at a focus factor, load from estimates, a nine-step derived checklist, per-person load, a commitment tied to the backlog, velocity from closed sprints |
 | `js/capacityPlan.js` | Resources, week by week: the capacity calendar (load against the time each person had that week), who is free now / in 1–2 / 3–4 weeks, skill demand vs supply from the skills each booking needs, and named fixes for over-allocation. Pure |
 | `js/escalation.js` | risk review on the RAID page: the heat map of open risks (a square filters the log), the log's own reasons to escalate, the escalation pack (why, impact, options, recommendation, who decides, by when) and the decision recorded against it. Pure |
+| `js/gates.js` | decision gates on milestones (`kind: 'gate'`): one owner, entry criteria, options, default path, the recorded decision; the milestone check (not a task, not a progress figure, not a vague date, scarce, owned). Pure |
 | `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
@@ -270,6 +271,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   (`suggestedTriggers`: past due, a decision waiting over ten days, the top
   band) but never escalates by itself. Overdue is worked out from `decideBy`
   and the absence of a decision, never picked.
+- **A gate is a milestone with a decision, and its state is worked out.**
+  `gateState` reads the entry criteria and the date: no criteria, not ready,
+  ready, overdue once the date passes undecided. The decision needs the gate's
+  owner (one person, one decision); Go and Go with conditions pass the gate
+  and mark the milestone done (`decisionPatch`), Hold and Stop leave it open.
+  The gate card holds no copy of the name, date or owner — those are the
+  milestone row's.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

@@ -101,6 +101,9 @@ const { APP_URL, API_URL, launch, createChecks, openDestination, chooseLifecycle
   eq('one request in the database, for this incident', [dump.surveys.length, request.incident_id === await app.evaluate(async () => (await import('/js/state.js')).getState().incidents[1].id)], [1, true]);
   eq('holding a hash, not the token', /^[0-9a-f]{64}$/.test(request.token_hash) && request.token_hash !== token && !JSON.stringify(request).includes(token), true);
   eq('and the token is nowhere in the project', await app.evaluate((t) => Object.keys(localStorage).some((k) => (localStorage.getItem(k) || '').includes(t)), token), false);
+  // The cell redraws once the request is saved; under a loaded run that can
+  // land after the dialog closes, so wait for it rather than read it once.
+  await app.locator('#sec-incidents tbody tr:nth-child(2) .col-custom').nth(1).filter({ hasText: 'Link sent' }).waitFor({ timeout: 5000 }).catch(() => {});
   eq('the cell says it is waiting', (await cell(app, 2)).includes('Link sent'), true);
 
   console.log('\n--- the customer answers, with no account ---');

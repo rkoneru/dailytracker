@@ -128,7 +128,7 @@ export const PAGE_TABS = {
       sections: ['sec-kpi-schedule', 'sec-kpi-cost', 'sec-kpi-scope', 'sec-kpi-risk', 'sec-kpi-quality', 'sec-kpi-improvement', 'sec-kpi-customer', 'sec-kpi-service', 'sec-kpi-flow'],
     },
     { id: 'sec-kpi-basis', label: 'How They Work' },
-    { id: 'sec-kpi-framework', label: 'PM Framework' },
+    { id: 'sec-kpi-framework', label: 'PM Framework', sections: ['sec-kpi-pillars', 'sec-kpi-framework'] },
     { id: 'sec-kpi-performance', label: 'Inputs → Results' },
     { id: 'sec-kpi-ceo', label: 'Business & Leadership' },
   ],

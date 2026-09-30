@@ -1,10 +1,11 @@
 import { el } from './dom.js';
-import { getState, listResources, listAbsences } from './state.js';
+import { getState, listResources, listAbsences, listAllAllocations } from './state.js';
 import {
   KPI_CATEGORIES, KPI_DEFS, projectKpis, formatKpi, kpiTone, coverage,
 } from './kpi.js';
 import { CEO_KPIS, FIT_LABEL } from './ceoKpis.js';
 import { TIERS } from './perfFramework.js';
+import { pillarChecks } from './pillars.js';
 import { goToNode } from './nav.js';
 
 // The KPI page: a card per indicator, grouped by category, and a table that
@@ -150,6 +151,25 @@ function renderFramework(values) {
   ])));
 }
 
+// Twelve pillars, each a handful of questions answered from the record.
+function renderPillars(project) {
+  const host = document.getElementById('kpi-pillars-body');
+  if (!host) return;
+  const pillars = pillarChecks(project, { resources: listResources(), allocations: listAllAllocations(), absences: listAbsences() });
+  const strong = pillars.filter((p) => p.score !== null && p.score >= 0.75).length;
+  document.getElementById('kpi-pillars-count').textContent = `${strong} of 12 strong`;
+  host.replaceChildren(...pillars.map((p) => el('article', {
+    class: `pillar ${p.score === null ? 'is-idle' : p.score >= 0.75 ? 'is-good' : p.score >= 0.4 ? 'is-warn' : 'is-bad'}`, 'data-pillar': p.id,
+  }, [
+    el('header', { class: 'pillar__head' }, [el('strong', { text: p.label }), el('span', { class: 'pillar__score', text: p.counted ? `${p.passed}/${p.counted}` : '—' })]),
+    el('p', { class: 'hint', text: p.focus.join(' · ') }),
+    el('ul', {}, p.checks.map((c) => el('li', { class: `pillar__check ${c.na ? 'is-na' : c.ok ? 'is-ok' : 'is-bad'}`, 'data-check': c.id }, [
+      el('span', { class: 'sprint-check__mark', 'aria-hidden': 'true', text: c.na ? '–' : c.ok ? '✓' : '✗' }),
+      el('button', { type: 'button', class: 'link-btn', 'data-pillar-go': c.home, text: c.label }),
+    ]))),
+  ])));
+}
+
 export function renderKpis() {
   const project = getState();
   if (!project) return;
@@ -169,6 +189,7 @@ export function renderKpis() {
   renderBasis(values);
   renderCeoMap(values);
   renderFramework(values);
+  renderPillars(project);
 
   const { measured, total } = coverage(values);
   const badge = document.getElementById('kpi-coverage');
@@ -176,6 +197,10 @@ export function renderKpis() {
 }
 
 export function initKpis() {
+  document.getElementById('kpi-pillars-body')?.addEventListener('click', (e) => {
+    const node = e.target.closest('[data-pillar-go]')?.dataset.pillarGo;
+    if (node) goToNode(node);
+  });
   ['kpi-ceo-body', 'kpi-framework-body'].forEach((id) => document.getElementById(id)?.addEventListener('click', (e) => {
     const cat = e.target.closest('[data-ceo-kpi]')?.dataset.ceoKpi;
     if (cat) goToNode(`nav-kpi-${cat}`);

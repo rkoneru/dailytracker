@@ -6674,3 +6674,20 @@ body.login-open { overflow: hidden; }
 .plan-section__status { font-size: 11px; font-weight: 700; color: var(--color-text-muted); }
 .plan-section header .link-btn { margin-left: auto; font-size: 12px; }
 .plan-section ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; }
+
+/* Twelve pillars. */
+.pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.pillar { border: 1px solid var(--color-border); border-top: 4px solid #eab308; border-radius: var(--radius); padding: 8px 12px; display: grid; gap: 4px; align-content: start; font-size: 13px; }
+.pillar.is-good { border-top-color: #16a34a; }
+.pillar.is-warn { border-top-color: #d97706; }
+.pillar.is-bad { border-top-color: #dc2626; }
+.pillar.is-idle { border-top-color: var(--color-border); }
+.pillar__head { display: flex; justify-content: space-between; align-items: baseline; }
+.pillar__score { font-weight: 800; font-variant-numeric: tabular-nums; }
+.pillar p { margin: 0; }
+.pillar ul { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 2px; }
+.pillar__check { display: flex; gap: 6px; align-items: baseline; }
+.pillar__check .link-btn { text-align: left; }
+.pillar__check.is-ok .sprint-check__mark { color: var(--color-success-text); }
+.pillar__check.is-bad .sprint-check__mark { color: var(--color-danger-text); }
+.pillar__check.is-na { color: var(--color-text-muted); }

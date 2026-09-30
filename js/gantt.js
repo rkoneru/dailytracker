@@ -17,7 +17,7 @@ import { formatDate, parseDate, toLocalISO } from './dates.js';
 import { METHODOLOGIES, methodOf, findPhase, sanitisePhase } from './methodology.js';
 import {
   layOut, orderedActivities, activitySpan, chartWindow, newActivity, wbsCodes, dependencyIssues, markers,
-  criticalPath, ownershipFindings, phaseSummaries, activityDays,
+  criticalPath, ownershipFindings, phaseSummaries, activityDays, stepTasks,
 } from './ganttModel.js';
 import { gateState, GATE_STATE_TEXT } from './gates.js';
 import { showSection } from './tabs.js';
@@ -186,7 +186,7 @@ function renderRow(activity, method, first, wbs, rows, codes, conflicted, cp) {
     'aria-label': `${name}, ${spanText(span)}, ${activity.progress || 0}% done${cp.critical.includes(activity.id) ? ', on the critical path' : cp.float.get(activity.id) > 0 ? `, ${cp.float.get(activity.id)} days float` : ''}`,
     'aria-describedby': 'gantt-keys',
     style: `left:${pct(dayIndex(span.start))};width:${pct(dayIndex(span.end) - dayIndex(span.start) + 1)}`,
-    title: `${name}: ${spanText(span)}`,
+    title: `${name}: ${spanText(span)}${stepTasks(method, activity).length ? `\n${stepTasks(method, activity).map((t) => `• ${t}`).join('\n')}` : ''}`,
   }, [
     activity.after && el('span', { class: 'gantt-bar__after', 'aria-hidden': 'true', text: '↳' }),
     cp.float.has(activity.id) && el('span', {

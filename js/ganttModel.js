@@ -77,19 +77,33 @@ export function layOut(project, method = methodOf(project), idFor = () => '') {
   });
   phases.filter((p) => p.alongside).forEach((phase) => span.set(phase.id, span.get(phase.alongside)));
 
-  const rows = phases.map((phase) => {
+  // A phase that names its steps is laid out as those steps, end to end
+  // within the phase's span; one without is a single activity.
+  const rows = [];
+  phases.forEach((phase) => {
     const { from, to } = span.get(phase.id);
-    return newActivity({ id: idFor(), phase: phase.id, name: phase.label, start: toLocalISO(from), end: toLocalISO(to) });
+    const steps = phase.steps || [];
+    if (!steps.length) {
+      rows.push({ row: newActivity({ id: idFor(), phase: phase.id, name: phase.label, start: toLocalISO(from), end: toLocalISO(to) }), alongside: !!phase.alongside });
+      return;
+    }
+    const total = daysBetween(from, to) + 1;
+    let at = 0;
+    steps.forEach((step, i) => {
+      const days = i === steps.length - 1 ? total - at : Math.max(1, Math.floor(total / steps.length));
+      rows.push({ row: newActivity({ id: idFor(), phase: phase.id, name: step.label, start: toLocalISO(addDays(from, at)), end: toLocalISO(addDays(from, Math.min(total, at + days) - 1)) }), alongside: false });
+      at += days;
+    });
   });
   // A lifecycle's phases follow one another, so each is laid out after the
   // one before it; a phase that runs alongside another follows nothing.
   let prev = null;
-  rows.forEach((row, i) => {
-    if (phases[i].alongside) return;
+  rows.forEach(({ row, alongside }) => {
+    if (alongside) return;
     if (prev && prev.id && row.id) row.after = prev.id;
     prev = row;
   });
-  return rows;
+  return rows.map(({ row }) => row);
 }
 
 /**
@@ -329,6 +343,12 @@ export function phaseSummaries(project) {
         .map((m) => ({ id: m.id, name: m.text || 'Untitled', date: m.due, done: !!m.done, gate: m.kind === 'gate' })),
     };
   }).filter(Boolean);
+}
+
+/** The tasks a lifecycle step is made of, when the activity is one of its named steps. */
+export function stepTasks(method, activity) {
+  const phase = method?.phases.find((p) => p.id === activity.phase);
+  return phase?.steps?.find((s) => s.label === activity.name)?.tasks || [];
 }
 
 /** Inclusive days an activity runs, or null without dates. */

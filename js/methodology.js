@@ -439,9 +439,77 @@ const PROJECT_LIFECYCLE = {
   ],
 };
 
+// Web redesign, after Goto and Cotler's "Web ReDesign: Workflow that Works".
+// Its phases carry their named steps (`steps`), so laying the Gantt out gives
+// the three stages of each phase as activities rather than one bar per phase
+// — the book's point is that each phase is a sequence of distinct pieces of
+// work, and a single bar hides which one is late. Each step lists the tasks
+// it is made of, shown with the activity.
+const WEB_REDESIGN = {
+  id: 'web',
+  ai: false,
+  kind: 'lifecycle',
+  label: 'Web Redesign',
+  full: 'Web ReDesign: Workflow that Works',
+  origin: 'Kelly Goto and Emily Cotler’s five-phase workflow for redesigning a website.',
+  suits: 'Rebuilding or relaunching a website or web app with content, design and build in one plan.',
+  phases: [
+    {
+      id: 'define', n: '1', label: 'Defining the Project',
+      asks: 'Who is the site for, what must it do, and what will it cost?',
+      gate: 'Kick-off: goals agreed, a creative brief, a budget and a schedule, and the team assembled.',
+      steps: [
+        { label: 'Discovery', tasks: ['Gathering information', 'Understanding your audience', 'Identifying backend programming', 'Analysing your industry'] },
+        { label: 'Planning', tasks: ['Setting the budget', 'Creating schedules', 'Assigning the project team', 'Setting up staging areas', 'Planning for user testing'] },
+        { label: 'Clarification', tasks: ['Determining overall goals', 'Preparing the creative brief'] },
+      ],
+    },
+    {
+      id: 'structure', n: '2', label: 'Developing Site Structure',
+      asks: 'What content is there, how is it organised, and what does each page do?',
+      gate: 'Content plan, sitemap and wireframes approved, with naming conventions set.',
+      steps: [
+        { label: 'Content view', tasks: ['Addressing content', 'Addressing existing content', 'Outlining content', 'Creating the content delivery plan'] },
+        { label: 'Site view', tasks: ['Sitemapping', 'Addressing existing site organisation', 'Setting naming conventions'] },
+        { label: 'Page view', tasks: ['Wireframing', 'Addressing navigation', 'Naming and labelling', 'Defining key user tasks'] },
+      ],
+    },
+    {
+      id: 'design', n: '3', label: 'Visual Design & Testing',
+      asks: 'Does the design meet the site’s goals, and does it work when clicked?',
+      gate: 'Design approved, the HTML protosite tested, and graphic templates and a style guide handed off.',
+      steps: [
+        { label: 'Creating', tasks: ['Reviewing site goals', 'Developing concepts', 'Presenting designs and gathering feedback'] },
+        { label: 'Confirming', tasks: ['Creating the HTML protosite', 'Testing functionality'] },
+        { label: 'Handing off', tasks: ['Creating graphic templates', 'Creating a design style guide'] },
+      ],
+    },
+    {
+      id: 'production', n: '4', label: 'Production & QA',
+      asks: 'Is it built to the guidelines, and does it pass QA?',
+      gate: 'A QA plan run, bugs prioritised and fixed, and the final check passed.',
+      steps: [
+        { label: 'Prepping', tasks: ['Establishing guidelines', 'Assessing project status', 'Setting the file structure'] },
+        { label: 'Building', tasks: ['Slicing and optimising', 'Creating HTML templates and pages', 'Implementing light scripting', 'Populating pages', 'Integrating backend code'] },
+        { label: 'Testing', tasks: ['Creating a QA plan', 'Conducting QA testing', 'Prioritising and fixing bugs', 'Conducting the final check'] },
+      ],
+    },
+    {
+      id: 'launch', n: '5', label: 'Launch & Beyond',
+      asks: 'Is it live, handed over, and looked after?',
+      gate: 'The site launched and announced, the hand-off packet delivered, and a maintenance plan with an owner.',
+      steps: [
+        { label: 'Delivery', tasks: ['Completing the style guide', 'Creating the hand-off packet', 'Archiving documentation', 'Conducting the post-mortem', 'Scheduling maintenance training'] },
+        { label: 'Launch', tasks: ['Preparing the announcement plan', 'Registering with search engines', 'Launching the site'] },
+        { label: 'Maintenance', tasks: ['Assessing maintenance team capabilities', 'Developing the maintenance plan', 'Measuring success', 'Confirming site security'] },
+      ],
+    },
+  ],
+};
+
 // The general lifecycle first: it is the right answer for most projects, and
 // the AI and software lifecycles are the specialisations.
-export const METHODOLOGIES = [PROJECT_LIFECYCLE, CPMAI, CRISP_DM, SDLC, ADLC, AGENTIC_DLC, MLOPS, LLMOPS];
+export const METHODOLOGIES = [PROJECT_LIFECYCLE, CPMAI, CRISP_DM, SDLC, WEB_REDESIGN, ADLC, AGENTIC_DLC, MLOPS, LLMOPS];
 
 export function findMethod(id) {
   return METHODOLOGIES.find((m) => m.id === id) || null;

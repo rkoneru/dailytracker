@@ -69,7 +69,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   await openDestination(page, 'tab-customers');
   await page.waitForTimeout(400);
   eq('it is in the menu, under Run & Support', await page.textContent('#page-title'), 'Customer Success');
-  eq('five tabs', await page.$$eval('#page-customers .page-tab', (e) => e.map((x) => x.firstChild.textContent.trim())), ['Accounts', 'Contacts', 'Activity', 'Lifecycle', 'Renewals']);
+  eq('six tabs, the journey map last', await page.$$eval('#page-customers .page-tab', (e) => e.map((x) => x.firstChild.textContent.trim())), ['Accounts', 'Contacts', 'Activity', 'Lifecycle', 'Renewals', 'Journey Map']);
   eq('eight accounts', await page.locator('#customers-body tr').count(), 8);
   eq('the tiles read the accounts', await page.$$eval('#page-customers .kpi .kpi__value', (e) => e.map((x) => x.textContent)),
     ['88%', '108%', '14', '$60,000']);

@@ -25,6 +25,7 @@ import { createUseCase, listUseCases, listClients } from './useCaseStore.js';
 import { openUseCase } from './useCasesPage.js';
 import { getActiveProjectId } from './state.js';
 import { toast } from './dialog.js';
+import { initJourneyMap, renderJourneyMap } from './journeyMapPage.js';
 
 // ---------- The loop back to sales ----------
 //
@@ -261,11 +262,13 @@ export function renderCustomerSuccess() {
   renderEconomics();
   renderLifecycle();
   renderRenewals();
+  renderJourneyMap();
   lifecycleStale = false;
   renewalsStale = false;
 }
 
 export function initCustomerSuccess() {
+  initJourneyMap();
   CUSTOMERS.renderCell = healthCell;
   CONTACTS.renderCell = lastActivityCell;
   // Read at every draw, so a role or policy change takes the action away.

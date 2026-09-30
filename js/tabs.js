@@ -97,6 +97,7 @@ export const PAGE_TABS = {
     { id: 'sec-activities', label: 'Activity' },
     { id: 'sec-cs-lifecycle', label: 'Lifecycle' },
     { id: 'sec-cs-renewals', label: 'Renewals' },
+    { id: 'sec-cs-journey', label: 'Journey Map' },
   ],
   'page-improve': [
     { id: 'sec-csi', label: 'Improvements' },

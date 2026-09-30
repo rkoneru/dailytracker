@@ -6691,3 +6691,34 @@ body.login-open { overflow: hidden; }
 .pillar__check.is-ok .sprint-check__mark { color: var(--color-success-text); }
 .pillar__check.is-bad .sprint-check__mark { color: var(--color-danger-text); }
 .pillar__check.is-na { color: var(--color-text-muted); }
+
+/* Customer journey map. */
+.jm { display: grid; gap: 4px 3px; align-items: center; font-size: 12px; min-width: max-content; }
+.jm-label { grid-column: 1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--color-text-muted); padding-right: 8px; }
+.jm-label--head { margin-top: 8px; }
+.jm-stage { position: relative; display: flex; align-items: center; padding: 6px 20px 6px 10px; color: #fff; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 8px 50%); }
+.jm-stage__input { flex: 1; min-width: 0; border: 0; background: transparent; color: #fff; font: inherit; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; text-align: center; }
+.jm-stage .jm-x { color: rgba(255, 255, 255, 0.8); }
+.jm-steps__input { width: 100%; border: 0; border-radius: 6px; padding: 6px; font: inherit; font-size: 11.5px; color: #fff; resize: vertical; }
+.is-navy.jm-stage, .is-navy.jm-steps .jm-steps__input { background: #1e2a4a; }
+.is-blue.jm-stage, .is-blue.jm-steps .jm-steps__input { background: #2f4f8f; }
+.is-green.jm-stage, .is-green.jm-steps .jm-steps__input { background: #4caf50; }
+.is-red.jm-stage, .is-red.jm-steps .jm-steps__input { background: #d8433a; }
+.is-orange.jm-stage, .is-orange.jm-steps .jm-steps__input { background: #f08a24; }
+.jm-tp { display: grid; justify-items: center; gap: 2px; }
+.jm-tp__input { width: 76px; border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 4px; font: inherit; font-size: 11px; text-align: center; background: var(--color-surface); color: var(--color-text); }
+.jm-x { border: 0; background: none; color: var(--color-text-muted); cursor: pointer; font-size: 10px; padding: 0 2px; }
+.jm-add { width: 26px; height: 26px; border-radius: 50%; border: 2px dashed var(--color-border); background: none; color: var(--color-text-muted); cursor: pointer; justify-self: center; }
+.jm-count { display: grid; place-items: center; }
+.jm-count__n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; }
+.jm-count__n.is-navy { background: #1e2a4a; } .jm-count__n.is-blue { background: #2f4f8f; } .jm-count__n.is-green { background: #4caf50; } .jm-count__n.is-red { background: #d8433a; } .jm-count__n.is-orange { background: #f08a24; }
+.jm-count__n.is-hollow { background: none; border: 3px solid currentColor; color: var(--color-text); }
+.jm-dept { display: flex; gap: 4px; align-items: center; text-transform: none; letter-spacing: 0; font-weight: 400; border-bottom: 1px solid var(--color-border); }
+.jm-dept__input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 12.5px; color: var(--color-text); }
+.jm-dept__n { font-size: 11px; font-weight: 700; color: var(--color-text-muted); }
+.jm-cell { position: relative; display: grid; place-items: center; height: 26px; border-bottom: 1px solid var(--color-border); cursor: pointer; }
+.jm-cell input { position: absolute; top: 0; left: 0; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.jm-dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px dashed var(--color-border); }
+.jm-cell input:checked + .jm-dot { border: 0; }
+.jm-cell.is-navy input:checked + .jm-dot { background: #1e2a4a; } .jm-cell.is-blue input:checked + .jm-dot { background: #2f4f8f; } .jm-cell.is-green input:checked + .jm-dot { background: #4caf50; } .jm-cell.is-red input:checked + .jm-dot { background: #d8433a; } .jm-cell.is-orange input:checked + .jm-dot { background: #f08a24; }
+.jm-cell input:focus-visible + .jm-dot { box-shadow: var(--focus-ring); }

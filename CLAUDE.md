@@ -72,6 +72,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/rhythm.js`, `rhythmPage.js` | the operating rhythm on Meetings: daily/weekly/monthly cadences (purpose, length, focus, output), who attends what (R/C/I), "escalate when" triggers read off the project, the setup checklist, and a cadence's meeting series |
 | `js/horizons.js`, `horizonsPage.js` | the Plan page's Horizons tab: Now (this week), Next (2–6 weeks), Future (beyond) read off tasks, milestones, gates, phases, dependencies, RAID and bookings, with what each still needs; the weekly check-in (done, next, blocking) |
 | `js/blueprint.js`, `blueprintPage.js` | the Plan page's Approach tab: the hybrid delivery blueprint — ten inputs scored low/medium/high, the predictable/adaptive blend, which elements go which way and why, and the five-part setup checked against what the project has |
+| `js/portfolioDash.js` | Portfolio at a glance: projects complete / in progress / overdue, tasks by status (a CSS conic donut), tasks delivered per month from status history — months before any history are `null`, drawn grey. Pure |
 | `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |

@@ -16,6 +16,7 @@ import { parseDate } from './charts.js';
 import { raidCounts } from './raid.js';
 import { formatDate } from './dates.js';
 import { priorityOf, priorityLabel } from './priority.js';
+import { portfolioOverview } from './portfolioDash.js';
 
 let onGo = null;
 let sortKey = 'due';
@@ -210,6 +211,60 @@ function renderPortfolioTiles(rows) {
   document.getElementById('portfolio-tiles-empty').hidden = rows.length > 0;
 }
 
+// ---------- at a glance ----------
+
+const TASK_COLOURS = { Complete: '#16a34a', 'In Progress': '#2563eb', 'Not Started': '#94a3b8', 'On Hold': '#d97706', overdue: '#dc2626' };
+
+function renderOverview(projects) {
+  const host = document.getElementById('portfolio-overview');
+  if (!host) return;
+  const o = portfolioOverview(projects);
+  const tile = (id, label, value, sub, tone = '') => el('div', { class: `pf-glance ${tone}`, 'data-glance': id }, [
+    el('span', { class: 'pf-glance__label', text: label }),
+    el('span', { class: 'pf-glance__value', text: value }),
+    sub && el('span', { class: 'pf-sub', text: sub }),
+  ]);
+  // A donut from a conic gradient: no chart library, and it prints.
+  let at = 0;
+  const stops = o.tasks.filter((t) => t.count).map((t) => {
+    const from = at;
+    at += (t.count / o.totalTasks) * 360;
+    return `${TASK_COLOURS[t.id]} ${from}deg ${at}deg`;
+  });
+  const max = Math.max(1, ...o.delivered.map((m) => m.count || 0));
+  host.replaceChildren(
+    el('div', { class: 'pf-glance-row' }, [
+      tile('projects', 'Projects', String(o.projects)),
+      tile('complete', 'Completed', String(o.stages.complete), '', o.stages.complete ? 'is-good' : ''),
+      tile('in-progress', 'In progress', String(o.stages['in-progress']), o.stages['not-started'] ? `${o.stages['not-started']} not started` : ''),
+      tile('overdue', 'Overdue', String(o.stages.overdue), 'past their due date', o.stages.overdue ? 'is-bad' : ''),
+      tile('completion', 'Task completion', o.completion === null ? '—' : `${o.completion}%`, `${o.totalTasks} tasks`),
+    ]),
+    el('div', { class: 'pf-charts' }, [
+      el('figure', { class: 'pf-chart' }, [
+        el('figcaption', { text: 'Tasks by status' }),
+        el('div', { class: 'pf-donut-wrap' }, [
+          el('div', { class: 'pf-donut', role: 'img', 'aria-label': o.tasks.map((t) => `${t.label} ${t.count}`).join(', '), style: `background:${stops.length ? `conic-gradient(${stops.join(', ')})` : 'var(--color-bg)'}` }),
+          el('ul', { class: 'pf-legend' }, o.tasks.map((t) => el('li', { 'data-status': t.id }, [
+            el('span', { class: 'pf-legend__swatch', style: `background:${TASK_COLOURS[t.id]}` }),
+            document.createTextNode(`${t.label} `),
+            el('strong', { text: String(t.count) }),
+          ]))),
+        ]),
+      ]),
+      el('figure', { class: 'pf-chart' }, [
+        el('figcaption', { text: 'Tasks delivered per month' }),
+        el('div', { class: 'pf-months', role: 'img', 'aria-label': o.delivered.map((m) => `${m.label} ${m.count === null ? 'not recorded' : m.count}`).join(', ') }, o.delivered.map((m) => el('div', { class: `pf-month${m.count === null ? ' is-unmeasured' : ''}`, 'data-month': m.month, title: m.count === null ? `${m.label}: not recorded — no status history reaches back this far` : `${m.label}: ${m.count} delivered` }, [
+          el('span', { class: 'pf-month__n', text: m.count === null ? '—' : String(m.count) }),
+          el('span', { class: 'pf-month__fill', style: `height:${m.count === null ? 100 : Math.round((m.count / max) * 100)}%` }),
+          el('span', { class: 'pf-month__label', text: m.label }),
+        ]))),
+        el('p', { class: 'hint', text: 'From each task’s status history. Grey months are before any history was recorded — unmeasured, not zero.' }),
+      ]),
+    ]),
+  );
+}
+
 export function renderPortfolio() {
   const body = document.getElementById('portfolio-body');
   if (!body) return;
@@ -224,6 +279,7 @@ export function renderPortfolio() {
   });
 
   renderPortfolioTiles(rows);
+  renderOverview(listFullProjects());
 
   const activeId = getActiveProjectId();
   body.innerHTML = '';

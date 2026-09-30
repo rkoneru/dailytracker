@@ -17,6 +17,7 @@ import { formatDate, parseDate, toLocalISO } from './dates.js';
 import { METHODOLOGIES, methodOf, findPhase, sanitisePhase } from './methodology.js';
 import {
   layOut, orderedActivities, activitySpan, chartWindow, newActivity, wbsCodes, dependencyIssues, markers,
+  criticalPath, ownershipFindings,
 } from './ganttModel.js';
 import { gateState, GATE_STATE_TEXT } from './gates.js';
 import { showSection } from './tabs.js';
@@ -138,7 +139,32 @@ function renderIssues(state) {
   return new Set(issues.map((i) => i.id));
 }
 
-function renderRow(activity, method, first, wbs, rows, codes, conflicted) {
+// The critical path, in words above the chart, and who hands to whom below it.
+function renderCritical(state, rows, cp) {
+  const host = document.getElementById('gantt-critical');
+  const names = new Map(rows.map((a) => [a.id, a.name || 'Untitled']));
+  const linked = rows.some((a) => a.after);
+  host.replaceChildren(...(cp.critical.length > 1
+    ? [el('strong', { text: `Critical path · ${cp.days} days: ` }), document.createTextNode(`${cp.critical.map((id) => names.get(id)).join(' → ')}. `),
+      el('span', { class: 'hint', text: 'These have no float — any slip moves the end date. Everything else can slip by the days shown.' })]
+    : [el('span', { class: 'hint', text: linked ? 'No chain of linked activities runs to the end date, so nothing here is critical by its links alone.' : 'Say what each activity follows to see the critical path.' })]));
+
+  const own = ownershipFindings(state);
+  const box = document.getElementById('gantt-ownership');
+  box.hidden = !own.handoffs.length && !own.clashes.length;
+  box.replaceChildren(
+    ...(own.handoffs.length ? [
+      el('strong', { text: `Handoffs · ${own.handoffs.length}` }),
+      el('ul', {}, own.handoffs.map((h) => el('li', { 'data-handoff': h.id, text: `${h.from} → ${h.to}: “${h.fromName}” to “${h.toName}”${h.date ? `, ${formatDate(h.date, 'day')}` : ''}. Make the transfer explicit — what is done, what is open, who to ask.` }))),
+    ] : []),
+    ...(own.clashes.length ? [
+      el('strong', { text: `Shared owners · ${own.clashes.length}` }),
+      el('ul', {}, own.clashes.map((c) => el('li', { 'data-clash': c.ids.join(' '), text: `${c.owner} owns “${c.a}” and “${c.b}” at once, for ${c.days} day${c.days === 1 ? '' : 's'}.` }))),
+    ] : []),
+  );
+}
+
+function renderRow(activity, method, first, wbs, rows, codes, conflicted, cp) {
   const span = activitySpan(activity);
   const name = activity.name || 'Untitled activity';
   const orphan = !method || !findPhase(method.id, activity.phase);
@@ -148,19 +174,23 @@ function renderRow(activity, method, first, wbs, rows, codes, conflicted) {
     class: 'gantt-bar',
     tabindex: '0',
     role: 'group',
-    'aria-label': `${name}, ${spanText(span)}, ${activity.progress || 0}% done`,
+    'aria-label': `${name}, ${spanText(span)}, ${activity.progress || 0}% done${cp.critical.includes(activity.id) ? ', on the critical path' : cp.float.get(activity.id) > 0 ? `, ${cp.float.get(activity.id)} days float` : ''}`,
     'aria-describedby': 'gantt-keys',
     style: `left:${pct(dayIndex(span.start))};width:${pct(dayIndex(span.end) - dayIndex(span.start) + 1)}`,
     title: `${name}: ${spanText(span)}`,
   }, [
     activity.after && el('span', { class: 'gantt-bar__after', 'aria-hidden': 'true', text: '↳' }),
+    cp.float.has(activity.id) && el('span', {
+      class: 'gantt-bar__float', 'data-float': String(cp.float.get(activity.id)),
+      text: cp.critical.includes(activity.id) ? 'critical' : cp.float.get(activity.id) > 0 ? `+${cp.float.get(activity.id)}d` : '',
+    }),
     el('span', { class: 'gantt-bar__done', style: `width:${activity.progress || 0}%` }),
     el('span', { class: 'gantt-bar__handle gantt-bar__handle--start', title: 'Drag to change the start date' }),
     el('span', { class: 'gantt-bar__handle gantt-bar__handle--end', title: 'Drag to change the end date' }),
   ]) : el('span', { class: 'gantt-row__undated', text: 'No dates — type them in' });
 
   return el('div', {
-    class: `gantt-row${first ? ' is-phase-start' : ''}${orphan ? ' is-orphan' : ''}${method && method.kind === 'practice' ? ' is-practice' : ''}${conflicted.has(activity.id) ? ' is-conflict' : ''}`,
+    class: `gantt-row${first ? ' is-phase-start' : ''}${orphan ? ' is-orphan' : ''}${method && method.kind === 'practice' ? ' is-practice' : ''}${conflicted.has(activity.id) ? ' is-conflict' : ''}${cp.critical.includes(activity.id) ? ' is-critical' : ''}`,
     'data-id': activity.id,
   }, [
     phaseChip(method, activity, first),
@@ -235,6 +265,8 @@ export function renderGantt() {
   const body = document.getElementById('gantt-body');
   if (!win) {
     document.getElementById('gantt-issues').hidden = true;
+    document.getElementById('gantt-ownership').hidden = true;
+    document.getElementById('gantt-critical').replaceChildren();
     body.replaceChildren();
     return;
   }
@@ -243,12 +275,14 @@ export function renderGantt() {
   let lastPhase = null;
   const codes = wbsCodes(state);
   const conflicted = renderIssues(state);
+  const cp = criticalPath(state);
+  renderCritical(state, rows, cp);
   // No milestones is no marker row; replaceChildren would print a null.
   body.replaceChildren(...[renderMarks(state, today), ...rows.map((a) => {
     const known = method && findPhase(method.id, a.phase) ? a.phase : '?';
     const first = known !== lastPhase;
     lastPhase = known;
-    return renderRow(a, method, first, codes.get(a.id), rows, codes, conflicted);
+    return renderRow(a, method, first, codes.get(a.id), rows, codes, conflicted, cp);
   })].filter(Boolean));
 }
 

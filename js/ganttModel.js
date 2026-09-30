@@ -213,3 +213,88 @@ export function markers(project) {
     .map((m) => ({ id: m.id, name: m.text || (m.kind === 'gate' ? 'Untitled gate' : 'Untitled milestone'), date: m.due, gate: m.kind === 'gate', done: !!m.done }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/**
+ * The critical path through the plan as dated: a backward pass over the
+ * `after` links from the plan's own last day. An activity's float is how many
+ * days it can slip before it pushes something that follows it, or the end;
+ * the activities with none are the critical path, and they are what decides
+ * the date. Negative float is an activity already overlapping what it
+ * follows — `dependencyIssues` names those.
+ *
+ * Returns { float: Map(id → days), critical: [ids in order], days, end }.
+ */
+export function criticalPath(project) {
+  const list = (project.ganttActivities || []).filter((a) => activitySpan(a));
+  if (!list.length) return { float: new Map(), critical: [], days: 0, end: null };
+  const byId = new Map(list.map((a) => [a.id, a]));
+  const span = new Map(list.map((a) => [a.id, activitySpan(a)]));
+  const successors = new Map(list.map((a) => [a.id, []]));
+  list.forEach((a) => { if (a.after && byId.has(a.after)) successors.get(a.after).push(a.id); });
+  const end = new Date(Math.max(...list.map((a) => span.get(a.id).end)));
+
+  const lateFinish = new Map();
+  const visiting = new Set();
+  const lf = (id) => {
+    if (lateFinish.has(id)) return lateFinish.get(id);
+    if (visiting.has(id)) return end; // a loop: dependencyIssues reports it
+    visiting.add(id);
+    let best = end;
+    successors.get(id).forEach((s) => {
+      const sStart = addDays(lf(s), -daysBetween(span.get(s).start, span.get(s).end));
+      const limit = addDays(sStart, -1);
+      if (limit < best) best = limit;
+    });
+    visiting.delete(id);
+    lateFinish.set(id, best);
+    return best;
+  };
+  const float = new Map(list.map((a) => [a.id, daysBetween(span.get(a.id).end, lf(a.id))]));
+
+  // Walk forward from a zero-float activity with no predecessor on the path.
+  const zero = (id) => float.get(id) <= 0;
+  const starts = list.filter((a) => zero(a.id) && !(a.after && byId.has(a.after) && zero(a.after)))
+    .sort((a, b) => span.get(a.id).start - span.get(b.id).start);
+  let critical = [];
+  starts.forEach((a) => {
+    const chain = [a.id];
+    for (let next = successors.get(a.id).find(zero); next; next = successors.get(next).find(zero)) {
+      if (chain.includes(next)) break;
+      chain.push(next);
+    }
+    const reaches = daysBetween(span.get(chain[chain.length - 1]).end, end) === 0;
+    if (reaches && chain.length > critical.length) critical = chain;
+  });
+  const days = critical.length ? daysBetween(span.get(critical[0]).start, span.get(critical[critical.length - 1]).end) + 1 : 0;
+  return { float, critical, days, end: toLocalISO(end) };
+}
+
+/**
+ * Where the plan passes work from one owner to another along a link, and
+ * where one owner is booked on two activities at the same time. A handoff
+ * is a transfer of responsibility that should be explicit; a shared owner is
+ * the resource clash that breaks a plan without anyone moving a date.
+ */
+export function ownershipFindings(project) {
+  const list = project.ganttActivities || [];
+  const byId = new Map(list.map((a) => [a.id, a]));
+  const who = (a) => String(a.owner || '').trim();
+  const handoffs = list
+    .filter((a) => a.after && byId.has(a.after) && who(a) && who(byId.get(a.after)) && who(a).toLowerCase() !== who(byId.get(a.after)).toLowerCase())
+    .map((a) => {
+      const from = byId.get(a.after);
+      return { id: a.id, fromId: from.id, from: who(from), to: who(a), fromName: from.name || 'Untitled', toName: a.name || 'Untitled', date: from.end || '' };
+    });
+  const clashes = [];
+  const owned = list.filter((a) => who(a) && activitySpan(a));
+  owned.forEach((a, i) => owned.slice(i + 1).forEach((b) => {
+    if (who(a).toLowerCase() !== who(b).toLowerCase()) return;
+    const x = activitySpan(a);
+    const y = activitySpan(b);
+    const from = x.start > y.start ? x.start : y.start;
+    const to = x.end < y.end ? x.end : y.end;
+    if (from > to) return;
+    clashes.push({ owner: who(a), a: a.name || 'Untitled', b: b.name || 'Untitled', ids: [a.id, b.id], days: daysBetween(from, to) + 1 });
+  }));
+  return { handoffs, clashes };
+}

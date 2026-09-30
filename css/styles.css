@@ -6445,3 +6445,11 @@ body.login-open { overflow: hidden; }
 .pf-month.is-unmeasured .pf-month__fill { background: repeating-linear-gradient(45deg, var(--color-border) 0 4px, transparent 4px 8px); }
 .pf-month.is-unmeasured .pf-month__n { color: var(--color-text-muted); font-weight: 400; }
 .pf-month__label { font-size: 11.5px; color: var(--color-text-muted); }
+
+/* Critical path and float on the Gantt. */
+.gantt-critical { margin: 6px 0 8px; font-size: 14px; }
+.gantt-row.is-critical .gantt-bar { box-shadow: inset 0 0 0 2px #ea580c; }
+.gantt-row.is-conflict.is-critical .gantt-bar { box-shadow: inset 0 0 0 2px #dc2626; }
+.gantt-bar__float { position: absolute; right: 12px; top: 0; bottom: 0; display: grid; place-items: center; font-size: 10.5px; font-weight: 700; color: #fff; z-index: 1; pointer-events: none; text-shadow: 0 0 2px rgba(0, 0, 0, 0.4); }
+.gantt-row:not(.is-critical) .gantt-bar__float { color: var(--color-text); text-shadow: none; }
+.gantt-ownership { border-left-color: #7c3aed; }

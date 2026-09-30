@@ -8,6 +8,7 @@ import { notifyProjectDataChanged, isOverdue, clampProgress } from './taskModel.
 import { el } from './dom.js';
 import { onSectionShown } from './tabs.js';
 import { initGantt, renderGantt } from './gantt.js';
+import { initHorizons, renderHorizons } from './horizonsPage.js';
 import { refFor } from './register.js';
 import { METHODOLOGIES, methodOf, phasesOf, phaseProgress, sanitisePhase } from './methodology.js';
 import { toLocalISO, formatDate } from './dates.js';
@@ -914,6 +915,7 @@ function commitChange() {
 /** Re-renders the views the Planner shows of shared data. */
 export function renderPlannerShared() {
   renderMilestones();
+  renderHorizons();
   renderTicks();
   renderBaselineNote();
   renderCostEstimate();
@@ -1079,6 +1081,7 @@ export function initPlanner() {
   bindMethod();
   bindMilestones();
   bindGates();
+  initHorizons();
   bindOpenTasks();
   bindTicks();
   initGantt({ onMethodChange: () => { renderMethod(); renderMilestones(); } });

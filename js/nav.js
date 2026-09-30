@@ -107,6 +107,7 @@ export const NAV_TREE = [
           { id: 'nav-milestones', label: 'Milestones', page: 'page-planner', title: 'Plan', section: 'sec-milestones' },
           { id: 'nav-ticks', label: 'Timeline', page: 'page-planner', title: 'Plan', section: 'sec-ticks' },
           { id: 'nav-gantt', label: 'Gantt', page: 'page-planner', title: 'Plan', section: 'sec-gantt' },
+          { id: 'nav-horizons', label: 'Horizons & Check-in', page: 'page-planner', title: 'Plan', section: 'sec-horizons' },
           { id: 'nav-budget', label: 'Budget & Baseline', page: 'page-planner', title: 'Plan', section: 'sec-budget' },
           { id: 'nav-notes', label: 'Notes', page: 'page-planner', title: 'Plan', section: 'sec-notes' },
         ],

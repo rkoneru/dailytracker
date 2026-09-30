@@ -70,6 +70,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/escalation.js` | risk review on the RAID page: the heat map of open risks (a square filters the log), the log's own reasons to escalate, the escalation pack (why, impact, options, recommendation, who decides, by when) and the decision recorded against it. Pure |
 | `js/gates.js` | decision gates on milestones (`kind: 'gate'`): one owner, entry criteria, options, default path, the recorded decision; the milestone check (not a task, not a progress figure, not a vague date, scarce, owned). Pure |
 | `js/rhythm.js`, `rhythmPage.js` | the operating rhythm on Meetings: daily/weekly/monthly cadences (purpose, length, focus, output), who attends what (R/C/I), "escalate when" triggers read off the project, the setup checklist, and a cadence's meeting series |
+| `js/horizons.js`, `horizonsPage.js` | the Plan page's Horizons tab: Now (this week), Next (2–6 weeks), Future (beyond) read off tasks, milestones, gates, phases, dependencies, RAID and bookings, with what each still needs; the weekly check-in (done, next, blocking) |
 | `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |

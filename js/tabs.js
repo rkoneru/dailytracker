@@ -42,6 +42,7 @@ export const PAGE_TABS = {
     { id: 'sec-milestones', label: 'Milestones & Gates', sections: ['sec-method', 'sec-milestones', 'sec-gates'] },
     { id: 'sec-ticks', label: 'Timeline' },
     { id: 'sec-gantt', label: 'Gantt' },
+    { id: 'sec-horizons', label: 'Horizons' },
     { id: 'sec-budget', label: 'Budget & Notes', sections: ['sec-budget', 'sec-notes'] },
   ],
   'page-tasks': [

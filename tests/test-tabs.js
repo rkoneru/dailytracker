@@ -29,7 +29,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   console.log('\n--- every multi-section page gets a strip ---');
   const pages = {
     'tab-portfolio': ['page-portfolio', ['All projects', 'AI initiatives', 'Planning layers']],
-    'tab-planner': ['page-planner', ['Milestones & Gates', 'Timeline', 'Gantt', 'Budget & Notes']],
+    'tab-planner': ['page-planner', ['Milestones & Gates', 'Timeline', 'Gantt', 'Horizons', 'Budget & Notes']],
     'tab-tasks': ['page-tasks', ['Task List', 'Priority Board', 'Sprints']],
     'tab-raid': ['page-raid', ['Log', 'Escalations', 'Dependencies']],
     'tab-scope': ['page-scope', ['Charter', 'Scope Baseline', 'Deliverables', 'Change Requests', 'Billing', 'Documents']],

@@ -1930,6 +1930,7 @@
                   <th class="col-num">%</th>
                   <th class="col-date">From</th>
                   <th class="col-date">To</th>
+                  <th>Needs skills</th>
                   <th class="col-check" title="Billable to the client">Bill</th>
                   <th class="col-action no-print"></th>
                 </tr>
@@ -1938,6 +1939,46 @@
             </table>
           </div>
           <p class="hint" id="allocations-empty" hidden>Nobody is booked on anything yet.</p>
+        </section>
+
+        <section class="card" id="sec-skill-balance">
+          <div class="card__head">
+            <h2>Skill demand vs availability</h2>
+            <span class="hint" id="skill-balance-count"></span>
+          </div>
+          <p class="hint">
+            Demand is the bookings in this window that name the skills they need, in full-time people. Available is the
+            time the people holding each skill have in the window, after leave. A shortage is a skill booked beyond the
+            people who have it.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table" id="skill-balance-table">
+              <thead><tr><th>Skill</th><th class="col-num">Demand</th><th class="col-num">Available</th><th class="col-num">Gap</th><th>Status</th></tr></thead>
+              <tbody id="skill-balance-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="skill-balance-empty" hidden>No booking names the skills it needs yet. Add them in the Needs skills column above.</p>
+        </section>
+
+        <section class="card" id="sec-capacity-calendar">
+          <div class="card__head">
+            <h2>Capacity calendar</h2>
+            <span class="hint" id="capacity-calendar-range"></span>
+          </div>
+          <p class="hint">
+            Each person&rsquo;s bookings, week by week, as a share of the time they had that week &mdash; so a week of leave
+            shows as more loaded, not less. Twelve weeks from the start of the window above.
+          </p>
+          <div class="capacity-legend" aria-hidden="true">
+            <span class="cap-cell is-optimal">1–70% optimal</span>
+            <span class="cap-cell is-high">71–100% high</span>
+            <span class="cap-cell is-over">101%+ over allocated</span>
+            <span class="cap-cell is-free">free</span>
+            <span class="cap-cell is-away">away</span>
+          </div>
+          <div class="table-scroll"><div id="capacity-heatmap"></div></div>
+          <h3 class="uc-sub">Who is free, and when</h3>
+          <div class="availability-outlook" id="availability-outlook"></div>
         </section>
 
         <div class="dash-row dash-row--2" id="sec-availability">
@@ -2013,6 +2054,8 @@
             <span class="hint" id="conflicts-count">Nothing to flag</span>
           </div>
           <ul class="conflict-list" id="resource-conflicts"></ul>
+          <h3 class="uc-sub" id="resource-fixes-head" hidden>Recommended action</h3>
+          <ul class="conflict-list" id="resource-fixes"></ul>
           <p class="hint" id="conflicts-empty" hidden>
             No over-allocation, no bookings across leave, and every project has its key roles filled.
           </p>

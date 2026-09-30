@@ -589,8 +589,9 @@ function adoptLegacyRosters(projects) {
           email: row.email || '',
           org: ['Internal', 'Client', 'Partner', 'Contractor'].includes(row.org) ? row.org : 'Internal',
           title: row.role || '',
-          // A roster never recorded these, and inventing them would be worse
-          // than leaving them for someone to fill in.
+          // A template's roster can say what the person knows; an old one never
+          // did, and inventing skills would be worse than leaving them blank.
+          skills: String(row.has || '').split(',').map((x) => x.trim()).filter(Boolean).map((name) => ({ name, level: 'Working' })),
           status: row.status === 'Rolled off' ? 'Left' : 'Allocated',
           notes: row.org && !['Internal', 'Client', 'Partner', 'Contractor'].includes(row.org)
             ? `Organisation on the old roster: ${row.org}` : '',
@@ -612,6 +613,7 @@ function adoptLegacyRosters(projects) {
           to: row.end || '',
           billable: true,
           notes: '',
+          skills: row.skills || '',
         });
       }
       adopted += 1;

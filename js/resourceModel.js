@@ -125,6 +125,8 @@ export function newAllocation(seed = {}) {
   return {
     resourceId: '', name: '', role: '', keyRole: '',
     percent: 50, from: '', to: '', billable: true, notes: '',
+    // What the booking needs, comma separated: skill demand is read off this.
+    skills: '',
     ...seed,
   };
 }

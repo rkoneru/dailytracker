@@ -125,9 +125,9 @@ export const PAGE_TABS = {
   ],
   'page-resources': [
     { id: 'sec-people', label: 'People' },
-    { id: 'sec-allocations', label: 'Allocations' },
+    { id: 'sec-allocations', label: 'Allocations', sections: ['sec-allocations', 'sec-skill-balance'] },
     // Clashes and leave are what availability is for, so they are read together.
-    { id: 'sec-availability', label: 'Availability', sections: ['sec-availability', 'sec-conflicts'] },
+    { id: 'sec-availability', label: 'Availability', sections: ['sec-capacity-calendar', 'sec-availability', 'sec-conflicts'] },
     { id: 'sec-timesheets', label: 'Timesheets' },
     { id: 'sec-capacity', label: 'Capacity', sections: ['page-capacity'] },
   ],

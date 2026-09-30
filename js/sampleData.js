@@ -131,10 +131,13 @@ function createMarketingCampaign() {
       { id: id('r'), type: 'Dependency', title: 'Legal sign-off on influencer terms', owner: 'Legal', severity: 'High', likelihood: '', status: 'Open', due: '2026-09-10', action: 'Chased 9/8, no response yet.' },
     ],
     roster: [
-      { id: id('p'), name: 'Priya N.', role: 'Campaign Lead', org: 'In-house', email: 'priya@example.com', allocation: 80, start: '2026-09-01', end: '2026-09-30', status: 'Active' },
-      { id: id('p'), name: 'Marcus T.', role: 'Creative Director', org: 'In-house', email: 'marcus@example.com', allocation: 50, start: '2026-09-01', end: '2026-09-23', status: 'Active' },
-      { id: id('p'), name: 'Jordan K.', role: 'Paid Media Manager', org: 'Northside Agency', email: 'jordan@northside.example', allocation: 60, start: '2026-09-03', end: '2026-09-30', status: 'Active' },
-      { id: id('p'), name: 'Legal', role: 'Contract review', org: 'In-house', email: '', allocation: 10, start: '2026-09-04', end: '', status: 'Part time' },
+      // `skills` is what each booking needs; `has` is what the person knows.
+      // Priya's plan needs analytics that only Jordan has — the shortage the
+      // skill table exists to show.
+      { id: id('p'), name: 'Priya N.', role: 'Campaign Lead', org: 'In-house', email: 'priya@example.com', allocation: 80, start: '2026-09-01', end: '2026-09-30', status: 'Active', skills: 'Campaign planning, Analytics', has: 'Campaign planning, Copywriting' },
+      { id: id('p'), name: 'Marcus T.', role: 'Creative Director', org: 'In-house', email: 'marcus@example.com', allocation: 50, start: '2026-09-01', end: '2026-09-23', status: 'Active', skills: 'Design', has: 'Design, Video' },
+      { id: id('p'), name: 'Jordan K.', role: 'Paid Media Manager', org: 'Northside Agency', email: 'jordan@northside.example', allocation: 60, start: '2026-09-03', end: '2026-09-30', status: 'Active', skills: 'Paid media, Analytics', has: 'Paid media, Analytics' },
+      { id: id('p'), name: 'Legal', role: 'Contract review', org: 'In-house', email: '', allocation: 10, start: '2026-09-04', end: '', status: 'Part time', skills: 'Contract law', has: 'Contract law' },
     ],
     raci: [
       { id: id('ra'), activity: 'Campaign strategy & brief', responsible: 'Priya N.', accountable: 'Priya N.', consulted: 'Marcus T.', informed: 'Jordan K.' },

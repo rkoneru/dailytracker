@@ -9,6 +9,7 @@
 // that cannot be made inside a single engagement: the reason to say no is
 // always in a project you are not looking at.
 
+import { capacityGrid, availabilityOutlook, skillBalance, overloadFixes } from './capacityPlan.js';
 import { el } from './dom.js';
 import { confirmAction, toast } from './dialog.js';
 import {
@@ -190,6 +191,7 @@ function allocationRow(alloc, projects) {
     textCell(alloc.percent, 'edit-alloc', 'percent', '50', { type: 'number', step: '5', cls: 'col-num' }),
     textCell(alloc.from, 'edit-alloc', 'from', '', { type: 'date', cls: 'col-date' }),
     textCell(alloc.to, 'edit-alloc', 'to', '', { type: 'date', cls: 'col-date' }),
+    textCell(alloc.skills, 'edit-alloc', 'skills', 'e.g. Java, QA'),
     el('td', { class: 'col-check' }, [
       el('input', { type: 'checkbox', 'data-action': 'edit-alloc', 'data-field': 'billable', checked: !!alloc.billable, 'aria-label': 'Billable' }),
     ]),
@@ -288,6 +290,77 @@ function renderTimesheets(entries, projects) {
     : totals.unapproved > 0 ? `${totals.unapproved}h is not approved yet.` : 'All booked time is approved and priced.');
 }
 
+// ---------- capacity plan ----------
+
+function renderCapacityCalendar(allocations, absences) {
+  const host = document.getElementById('capacity-heatmap');
+  if (!host) return;
+  const people = listResources().slice().sort((a, b) => a.name.localeCompare(b.name));
+  const grid = capacityGrid(people, allocations, absences, view.from, 12);
+  const fmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+  const label = (iso) => fmt.format(new Date(`${iso}T00:00:00`));
+  document.getElementById('capacity-calendar-range').textContent = grid.weeks.length
+    ? `${label(grid.weeks[0].from)} – ${label(grid.weeks[grid.weeks.length - 1].to)}` : '';
+  if (!people.length) {
+    host.replaceChildren(el('p', { class: 'hint', text: 'Add people to the pool to see their weeks.' }));
+  } else {
+    host.replaceChildren(el('table', { class: 'data-table capacity-heatmap', id: 'capacity-heatmap-table' }, [
+      el('thead', {}, [el('tr', {}, [el('th', { text: 'Person' }), ...grid.weeks.map((w) => el('th', { class: 'col-num', text: label(w.from) }))])]),
+      el('tbody', {}, grid.rows.map(({ resource, cells }) => el('tr', { 'data-id': resource.id }, [
+        el('th', { scope: 'row', text: resource.name || 'Unnamed' }),
+        ...cells.map((c) => el('td', {
+          class: `cap-cell is-${c.band}`,
+          title: c.band === 'away' ? 'Away all week' : `${c.allocated}% booked${c.away ? `, ${c.away} days away` : ''}`,
+          text: c.load === null ? 'away' : c.load >= 999 ? 'away+' : `${c.load}%`,
+        })),
+      ]))),
+    ]));
+  }
+
+  const outlook = availabilityOutlook(grid);
+  const tile = (key, title, sub) => el('div', { class: `outlook-tile is-${key}`, 'data-outlook': key }, [
+    el('span', { class: 'outlook-tile__n', text: String(outlook[key].length) }),
+    el('span', { class: 'outlook-tile__label', text: title }),
+    el('span', { class: 'outlook-tile__names', text: outlook[key].map((p) => (key === 'none' ? p.name : `${p.name} (${p.free}% free)`)).join(', ') || sub }),
+  ]);
+  document.getElementById('availability-outlook').replaceChildren(
+    tile('now', 'Available now', 'Nobody this week'),
+    tile('soon', 'Available in 1–2 weeks', '—'),
+    tile('later', 'Available in 3–4 weeks', '—'),
+    tile('none', 'Not free within 4 weeks', '—'),
+  );
+}
+
+function renderSkillBalance(allocations, absences) {
+  const body = document.getElementById('skill-balance-body');
+  if (!body) return;
+  const rows = skillBalance(listResources(), allocations, absences, view.from, view.to);
+  const withDemand = rows.filter((r) => r.demand > 0);
+  const shown = withDemand.length ? rows : [];
+  body.replaceChildren(...shown.map((r) => el('tr', { 'data-skill': r.skill }, [
+    el('td', { text: r.skill }),
+    el('td', { class: 'col-num', text: r.demand ? String(r.demand) : '—' }),
+    el('td', { class: 'col-num', text: String(r.available) }),
+    el('td', { class: `col-num ${r.gap < 0 ? 'is-bad' : ''}`, text: r.gap > 0 ? `+${r.gap}` : String(r.gap) }),
+    el('td', {}, [el('span', { class: `skill-status is-${r.status.toLowerCase()}`, text: r.status })]),
+  ])));
+  document.getElementById('skill-balance-empty').hidden = shown.length > 0;
+  const short = rows.filter((r) => r.status === 'Shortage').length;
+  document.getElementById('skill-balance-count').textContent = shown.length ? (short ? `${short} skill${short === 1 ? '' : 's'} short` : 'No shortages') : '';
+}
+
+function renderFixes(allocations, absences, projects) {
+  const list = document.getElementById('resource-fixes');
+  if (!list) return;
+  const name = (id) => projects.find((p) => p.id === id)?.name || 'a project';
+  const fixes = overloadFixes(listResources(), allocations, absences, view.from, view.to, name);
+  list.replaceChildren(...fixes.map((f) => el('li', { class: `conflict conflict--${f.candidates.length ? 'medium' : 'high'}` }, [
+    el('span', { class: 'conflict__tag', text: `${f.name} +${f.over}%` }),
+    el('span', { class: 'conflict__text', text: f.text }),
+  ])));
+  document.getElementById('resource-fixes-head').hidden = fixes.length === 0;
+}
+
 // ---------- conflicts ----------
 
 function renderConflicts(allocations, absences, projects) {
@@ -329,6 +402,9 @@ export function renderResources() {
   renderAvailability(allocations, absences);
   renderTimesheets(listAllTimesheets(), projects);
   renderConflicts(allocations, absences, projects);
+  renderCapacityCalendar(allocations, absences);
+  renderSkillBalance(allocations, absences);
+  renderFixes(allocations, absences, projects);
 }
 
 // ---------- binding ----------

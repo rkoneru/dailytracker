@@ -146,3 +146,77 @@ export function overloadFixes(resources, allocations, absences, from, to, projec
   });
   return fixes.sort((a, b) => b.over - a.over);
 }
+
+// ---------- day by day ----------
+
+const isWeekend = (d) => d.getDay() === 0 || d.getDay() === 6;
+const dayOf = (iso) => (iso ? new Date(`${String(iso).slice(0, 10)}T00:00:00`) : null);
+
+/**
+ * Each person's days: the hours their tasks ask of them, against the hours
+ * they have that day. A task's estimate is spread evenly over the working
+ * days it runs, which is the honest reading of "40 hours, Monday to Friday"
+ * when nobody has said which day does what. A task with no estimate asks an
+ * unknown amount — it is counted and named, never guessed as zero.
+ *
+ * `tasks` are { name, assigned, start, end, estimate, status, project }
+ * from every project, so one person's week is whole, not one project's
+ * share of it. Leave is its own state; a weekend has no hours.
+ *
+ * Returns { days: [iso], groups: [{ name, people: [{ resource, cells,
+ * tasks, unestimated }] }], summary: [{ hours, capacity, load }] }.
+ */
+export function dailySchedule(resources, tasks, absences, fromISO, count = 14) {
+  const start = dayOf(fromISO);
+  const days = Array.from({ length: count }, (_, i) => addDays(start, i));
+  const iso = days.map((d) => toISO(d));
+  const summary = iso.map(() => ({ hours: 0, capacity: 0 }));
+
+  const people = resources.map((r) => {
+    const perDay = (Number(r.capacityHours) || 40) / 5;
+    const away = absences.filter((a) => a.resourceId === r.id);
+    const mine = tasks.filter((t) => String(t.assigned || '').trim().toLowerCase() === String(r.name || '').trim().toLowerCase()
+      && t.status !== 'Complete' && (t.start || t.end));
+    const bars = [];
+    const hours = iso.map(() => 0);
+    const unestimated = [];
+    mine.forEach((t) => {
+      const s = dayOf(t.start || t.end);
+      const e = dayOf(t.end || t.start);
+      const span = [];
+      for (let d = new Date(s); d <= e; d = addDays(d, 1)) if (!isWeekend(d)) span.push(toISO(d));
+      if (!span.length) return;
+      const estimate = Number(t.estimate);
+      const known = t.estimate !== '' && t.estimate !== undefined && t.estimate !== null && Number.isFinite(estimate) && estimate > 0;
+      if (!known) unestimated.push(t.name || 'Untitled');
+      const each = known ? estimate / span.length : null;
+      const inWindow = span.filter((d) => iso.includes(d));
+      if (!inWindow.length) return;
+      if (each !== null) inWindow.forEach((d) => { hours[iso.indexOf(d)] += each; });
+      bars.push({ name: t.name || 'Untitled', project: t.project || '', from: inWindow[0], to: inWindow[inWindow.length - 1], perDay: each === null ? null : Math.round(each * 10) / 10, total: known ? estimate : null });
+    });
+    const cells = days.map((d, i) => {
+      const leave = away.find((a) => a.from && a.from <= iso[i] && (a.to || a.from) >= iso[i]);
+      if (isWeekend(d)) return { date: iso[i], state: 'weekend', hours: 0, capacity: 0, load: null };
+      if (leave) return { date: iso[i], state: 'away', type: leave.type || 'Leave', hours: Math.round(hours[i] * 10) / 10, capacity: 0, load: null };
+      const h = Math.round(hours[i] * 10) / 10;
+      summary[i].hours += h;
+      summary[i].capacity += perDay;
+      const load = Math.round((h / perDay) * 100);
+      return { date: iso[i], state: load > 100 ? 'over' : load > 0 ? 'booked' : 'free', hours: h, capacity: perDay, load };
+    });
+    return { resource: r, cells, tasks: bars, unestimated, perDay };
+  });
+
+  const groups = new Map();
+  people.forEach((p) => {
+    const key = String(p.resource.location || p.resource.org || 'Team').trim() || 'Team';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(p);
+  });
+  return {
+    days: iso,
+    groups: [...groups].map(([name, list]) => ({ name, people: list })),
+    summary: summary.map((s) => ({ hours: Math.round(s.hours * 10) / 10, capacity: s.capacity, load: s.capacity ? Math.round((s.hours / s.capacity) * 100) : null })),
+  };
+}

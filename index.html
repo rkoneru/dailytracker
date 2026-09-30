@@ -2208,6 +2208,27 @@
           </section>
         </div>
 
+        <section class="card" id="sec-daily-schedule">
+          <div class="card__head hf-head">
+            <h2>Daily schedule</h2>
+            <span class="hint" id="daily-range"></span>
+            <div class="cal-nav no-print">
+              <button type="button" class="btn btn-small btn-ghost" data-ds-nav="-1" aria-label="Previous week">‹</button>
+              <button type="button" class="btn btn-small btn-ghost" data-ds-nav="0">This week</button>
+              <button type="button" class="btn btn-small btn-ghost" data-ds-nav="1" aria-label="Next week">›</button>
+            </div>
+            <select class="field-input field-input--auto no-print" id="daily-days" aria-label="How many days">
+              <option value="14">14 days</option><option value="35">35 days</option>
+            </select>
+          </div>
+          <p class="hint">
+            Each person&rsquo;s hours a day from the tasks assigned to them on every project, against the hours they have that day.
+            A task&rsquo;s estimate is spread over the working days it runs; a task with no estimate is named, not counted as zero.
+            Red is over the day. Open a person to see their tasks as bars.
+          </p>
+          <div class="table-scroll" id="daily-schedule"></div>
+        </section>
+
         <section class="card card--feature" id="sec-timesheets">
           <div class="card__head">
             <h2><span class="section-number">4</span> Timesheets</h2>

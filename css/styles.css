@@ -6603,3 +6603,32 @@ body.login-open { overflow: hidden; }
 .rm-legend { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; }
 .rm-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .rm-dot { width: 14px; height: 14px; border-radius: 50%; border: 4px solid var(--rm-colour); }
+
+/* Daily schedule: hours per person per day. */
+.ds { display: grid; grid-template-columns: 210px repeat(var(--ds-days), minmax(48px, 1fr)); min-width: calc(210px + var(--ds-days) * 48px); font-size: 12.5px; }
+.ds-row { display: contents; }
+.ds-label { grid-column: 1; padding: 6px 8px; display: flex; gap: 6px; align-items: center; border-bottom: 1px solid var(--color-border); text-align: left; min-width: 0; }
+.ds-head > * { position: sticky; top: 0; background: var(--color-surface); z-index: 1; }
+.ds-day { display: grid; justify-items: center; padding: 4px 0; border-bottom: 1px solid var(--color-border); }
+.ds-day.is-weekend { color: var(--color-text-muted); }
+.ds-group .ds-label { grid-column: 1 / -1; background: var(--color-bg); font-size: 13px; }
+.ds-toggle { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+.ds-caret { width: 1em; color: var(--color-text-muted); }
+.ds-cell { margin: 3px; border: 1.5px solid #86efac; border-radius: 6px; display: grid; justify-items: center; align-content: center; padding: 2px 0; min-height: 36px; font-variant-numeric: tabular-nums; }
+.ds-cell strong { font-size: 13.5px; }
+.ds-pct { font-size: 10px; color: var(--color-text-muted); }
+.ds-cell.is-free { border-color: var(--color-border); color: var(--color-text-muted); }
+.ds-cell.is-over { border-color: #dc2626; background: #fee2e2; color: #991b1b; }
+.ds-cell.is-over .ds-pct { color: #991b1b; }
+.ds-cell.is-away { border-color: transparent; background: #e0f2fe; font-size: 18px; }
+.ds-cell.is-weekend { border-color: transparent; background: var(--color-bg); }
+.ds-task .ds-label { padding-left: 30px; color: var(--color-text-muted); border-bottom: 0; }
+.ds-task__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block !important; }
+.ds-bar { margin: 4px 3px; border-radius: 5px; background: #22c55e; color: #fff; font-size: 11px; font-weight: 700; display: grid; align-items: center; padding: 0 8px; min-height: 22px; white-space: nowrap; overflow: hidden; }
+.ds-bar.is-unknown { background: repeating-linear-gradient(45deg, #94a3b8 0 6px, #cbd5e1 6px 12px); color: #1e293b; }
+.ds-summary .ds-label { border-top: 2px solid var(--color-border); }
+.ds-summary .ds-cell { border-color: #94a3b8; }
+@media (prefers-color-scheme: dark) {
+  .ds-cell.is-over { background: #4a1d1d; color: #fecaca; }
+  .ds-cell.is-away { background: #0c2a3d; }
+}

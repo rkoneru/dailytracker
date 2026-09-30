@@ -4,6 +4,7 @@ import {
   KPI_CATEGORIES, KPI_DEFS, projectKpis, formatKpi, kpiTone, coverage,
 } from './kpi.js';
 import { CEO_KPIS, FIT_LABEL } from './ceoKpis.js';
+import { TIERS } from './perfFramework.js';
 import { goToNode } from './nav.js';
 
 // The KPI page: a card per indicator, grouped by category, and a table that
@@ -119,6 +120,36 @@ function renderCeoMap(values) {
   if (summary) summary.textContent = `${counts.same} measured here, ${counts.project} at project level, ${counts.none} not held — of ${CEO_KPIS.length}`;
 }
 
+// Inputs, then the system, then the results: the order they cause each other in.
+function renderFramework(values) {
+  const host = document.getElementById('kpi-framework-body');
+  if (!host) return;
+  const { measured, total } = coverage(values);
+  host.replaceChildren(...TIERS.map((tier, i) => el('section', { class: `pf-tier is-${tier.lead}`, 'data-tier': tier.id }, [
+    el('header', { class: 'pf-tier__head' }, [
+      el('strong', { text: `${i + 1}. ${tier.label}` }),
+      el('span', { class: 'hint', text: tier.note }),
+      el('span', { class: `pf-tier__lead is-${tier.lead}`, text: tier.lead === 'leading' ? 'Leading indicators' : 'Lagging indicators' }),
+    ]),
+    el('div', { class: 'pf-boxes' }, tier.boxes.map((box) => {
+      const defs = box.kpis.map((id) => KPI_DEFS.find((d) => d.id === id)).filter(Boolean);
+      return el('div', { class: `pf-box${!defs.length && !box.coverage ? ' is-unmeasured' : ''}`, 'data-box': box.id }, [
+        el('strong', { text: box.label }),
+        el('span', { class: 'hint', text: box.does }),
+        defs.length > 0 && el('ul', {}, defs.map((def) => {
+          const text = formatKpi(def, values[def.id]);
+          return el('li', { class: `pf-kpi is-${kpiTone(def, values[def.id])}${text === null ? ' is-unmeasured' : ''}` }, [
+            el('button', { type: 'button', class: 'link-btn', 'data-ceo-kpi': def.cat, text: def.name }),
+            el('span', { class: 'pf-kpi__v', text: text === null ? 'Not measured' : text }),
+          ]);
+        })),
+        box.coverage && el('p', { class: 'pf-kpi', text: `${measured} of ${total} indicators have data to judge by.` }),
+        box.why && el('p', { class: 'hint', text: box.why }),
+      ]);
+    })),
+  ])));
+}
+
 export function renderKpis() {
   const project = getState();
   if (!project) return;
@@ -137,6 +168,7 @@ export function renderKpis() {
   renderHeadline(values);
   renderBasis(values);
   renderCeoMap(values);
+  renderFramework(values);
 
   const { measured, total } = coverage(values);
   const badge = document.getElementById('kpi-coverage');
@@ -144,9 +176,9 @@ export function renderKpis() {
 }
 
 export function initKpis() {
-  document.getElementById('kpi-ceo-body')?.addEventListener('click', (e) => {
+  ['kpi-ceo-body', 'kpi-framework-body'].forEach((id) => document.getElementById(id)?.addEventListener('click', (e) => {
     const cat = e.target.closest('[data-ceo-kpi]')?.dataset.ceoKpi;
     if (cat) goToNode(`nav-kpi-${cat}`);
-  });
+  }));
   renderKpis();
 }

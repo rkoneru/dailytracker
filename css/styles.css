@@ -6511,3 +6511,24 @@ body.login-open { overflow: hidden; }
   .d8-badge.is-complete { background: #14361f; color: #bbf7d0; }
   .d8-badge.is-started { background: #3d2f12; color: #fde68a; }
 }
+
+/* Inputs to results: the performance framework over the KPIs. */
+.pf-tiers { display: grid; gap: 10px; }
+.pf-tier { border: 1px solid var(--color-border); border-left: 6px solid #1e3a8a; border-radius: var(--radius); padding: 10px 12px; }
+.pf-tier.is-lagging { border-left-color: #0f766e; }
+.pf-tier__head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 8px; }
+.pf-tier__lead { margin-left: auto; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: #1e3a8a; }
+.pf-tier__lead.is-lagging { color: #0f766e; }
+.pf-boxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.pf-box { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 8px 10px; display: grid; gap: 4px; align-content: start; font-size: 13px; }
+.pf-box.is-unmeasured { border-style: dashed; }
+.pf-box ul { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 3px; }
+.pf-kpi { display: flex; justify-content: space-between; gap: 6px; margin: 0; }
+.pf-kpi .link-btn { text-align: left; }
+.pf-kpi__v { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pf-kpi.is-good .pf-kpi__v { color: var(--color-success-text); }
+.pf-kpi.is-warn .pf-kpi__v { color: var(--color-warn-text); }
+.pf-kpi.is-bad .pf-kpi__v { color: var(--color-danger-text); }
+.pf-kpi.is-unmeasured .pf-kpi__v { color: var(--color-text-muted); font-weight: 400; }
+.pf-quote { font-style: italic; margin-top: 8px; }
+@media (prefers-color-scheme: dark) { .pf-tier__lead { color: #93c5fd; } .pf-tier__lead.is-lagging { color: #5eead4; } }

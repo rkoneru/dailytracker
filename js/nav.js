@@ -248,6 +248,7 @@ export const NAV_TREE = [
           { id: 'nav-kpi-flow', label: 'Flow', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-flow' },
           { id: 'nav-kpi-basis', label: 'How These Work', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-basis' },
           { id: 'nav-kpi-framework', label: 'PM Framework', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-framework' },
+          { id: 'nav-kpi-performance', label: 'Inputs to Results', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-performance' },
           { id: 'nav-kpi-ceo', label: 'Business & Leadership', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-ceo' },
         ],
       },

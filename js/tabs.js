@@ -127,6 +127,7 @@ export const PAGE_TABS = {
     },
     { id: 'sec-kpi-basis', label: 'How They Work' },
     { id: 'sec-kpi-framework', label: 'PM Framework' },
+    { id: 'sec-kpi-performance', label: 'Inputs → Results' },
     { id: 'sec-kpi-ceo', label: 'Business & Leadership' },
   ],
   'page-resources': [

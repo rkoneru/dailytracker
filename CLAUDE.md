@@ -73,6 +73,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/horizons.js`, `horizonsPage.js` | the Plan page's Horizons tab: Now (this week), Next (2–6 weeks), Future (beyond) read off tasks, milestones, gates, phases, dependencies, RAID and bookings, with what each still needs; the weekly check-in (done, next, blocking) |
 | `js/blueprint.js`, `blueprintPage.js` | the Plan page's Approach tab: the hybrid delivery blueprint — ten inputs scored low/medium/high, the predictable/adaptive blend, which elements go which way and why, and the five-part setup checked against what the project has |
 | `js/portfolioDash.js` | Portfolio at a glance: projects complete / in progress / overdue, tasks by status (a CSS conic donut), tasks delivered per month from status history — months before any history are `null`, drawn grey. Pure |
+| `js/handoff.js`, `handoffPage.js` | handoffs on People & Stakeholders: the package read off the project for the current owner, five derived stages, diagnostic checks, a refusal to store anything that looks like a credential, signed acceptance, and the transfer that moves the work |
 | `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
@@ -296,6 +297,15 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   names the inputs it took as medium. `setupInPlace` checks each part against
   the project — sprints, gates, a scope baseline and Gantt, rhythm meetings,
   logged risks — so a recommendation says when it is not yet built.
+- **A handoff moves the work; its record never holds a secret.** The package
+  is read off the project (`handoffPackage`: the current owner's open tasks,
+  deliverables, milestones, activities, RAID items, dependencies and meeting
+  actions); the stage is worked out (`handoffStage`). A value that
+  `looksLikeSecret` is refused at the input, not stored and synced to every
+  member. Acceptance is the new owner's signature over `handoffContent`, which
+  keeps what was `handedOver` so moving the work does not lapse it but editing
+  the record does; `applyTransfer` moves only items still in the old owner's
+  name, after the list is shown. `handoffs` is its own synced kind.
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

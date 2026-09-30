@@ -24,6 +24,7 @@ import { notifyProjectDataChanged } from './taskModel.js';
 import { priorityOf, priorityLabel, SCORE_MIN, SCORE_MAX } from './priority.js';
 import { isApprovedChange, scopeDrift } from './changeControl.js';
 import { initScopeControl, renderScopeControl, afterRegisterEdit, renderBaseline } from './scopeControlPage.js';
+import { initHandoffs, renderHandoffs } from './handoffPage.js';
 
 const SCOPE_FIELDS = ['charterScopeIn', 'charterScopeOut', 'charterSuccess'];
 
@@ -445,6 +446,7 @@ function renderRosterView() {
 
 export function renderEngagement() {
   renderCharter();
+  renderHandoffs();
   renderAll([...SCOPE_REGISTERS, ...PEOPLE_REGISTERS]);
   renderRosterView();
   renderRosterOptions();
@@ -469,6 +471,7 @@ export function initEngagement() {
   });
   renderCharter();
   bindCharter();
+  initHandoffs();
   const onChanged = (def) => {
     afterRegisterEdit(def);
     if (def.key === 'billing') {

@@ -70,6 +70,16 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   eq('its bars are marked critical', await page.$$eval('#gantt-body .gantt-row.is-critical', (e) => e.length), 4);
   eq('the phase that runs alongside has the closing phase as float', await page.$$eval('#gantt-body .gantt-row:not(.is-critical) .gantt-bar__float', (e) => e.map((x) => x.textContent)), ['+9d']);
   eq('a change of owner along the path is listed as a handoff', (await page.textContent('#gantt-ownership')).includes('Priya N. → Jordan K.'), true);
+  await page.click('#gantt-ownership [data-gantt="start-handoff"]');
+  await page.waitForTimeout(400);
+  eq('and starting it opens a handoff record with both owners', [
+    (await page.textContent('#page-people .page-tab.is-active')).startsWith('Handoffs'),
+    await page.inputValue('#handoff-fields [data-handoff="currentOwner"]'),
+    await page.inputValue('#handoff-fields [data-handoff="newOwner"]'),
+  ], [true, 'Priya N.', 'Jordan K.']);
+  await openDestination(page, 'nav-gantt');
+  await page.waitForTimeout(300);
+  eq('the Gantt then offers to open it rather than start another', await page.$$eval('#gantt-ownership [data-gantt="open-handoff"]', (e) => e.length), 1);
 
   console.log('\n--- layout ---');
   await page.setViewportSize({ width: 390, height: 900 });

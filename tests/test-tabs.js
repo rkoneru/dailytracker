@@ -33,7 +33,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
     'tab-tasks': ['page-tasks', ['Task List', 'Priority Board', 'Sprints']],
     'tab-raid': ['page-raid', ['Log', 'Escalations', 'Dependencies']],
     'tab-scope': ['page-scope', ['Charter', 'Scope Baseline', 'Deliverables', 'Change Requests', 'Billing', 'Documents']],
-    'tab-people': ['page-people', ['Team', 'Who Does What', 'Stakeholders & Comms', 'Vendors']],
+    'tab-people': ['page-people', ['Team', 'Who Does What', 'Stakeholders & Comms', 'Vendors', 'Handoffs']],
     'tab-service': ['page-service', ['Service Levels', 'Incidents', 'Go-Live', 'Releases & Change', 'Known Issues']],
     'tab-improve': ['page-improve', ['Improvements', 'Lessons']],
     'tab-meetings': ['page-meetings', ['Calendar', 'Rhythm', 'Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']],

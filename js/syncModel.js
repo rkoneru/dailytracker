@@ -37,6 +37,9 @@ export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog
   // Sprints: the goal, window and commitment. The work in one is the tasks'
   // own `sprintId`, so moving a task between sprints is an edit to the task.
   'sprints',
+  // Handoff records: what passed from one owner to another, and the signed
+  // acceptance. The work itself moves on the rows it lives in.
+  'handoffs',
   // The lifecycle Gantt's activities — their own rows, not the tasks'.
   'ganttActivities',
   ...REGISTER_KEYS];

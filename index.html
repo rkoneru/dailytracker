@@ -928,6 +928,43 @@
         </section>
 
         <div id="people-registers"></div>
+
+        <section class="card" id="sec-handoffs">
+          <div class="card__head hf-head">
+            <h2>Handoffs</h2>
+            <span class="hint" id="handoff-stage-label"></span>
+            <select class="field-input field-input--auto no-print" id="handoff-picker" aria-label="Which handoff"></select>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-handoff-new">+ New handoff</button>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-handoff-delete">Delete</button>
+          </div>
+          <p class="hint">
+            A handoff transfers responsibility and context: the right information to the right people. The package is read off
+            the project — the current owner&rsquo;s work, open issues, dependencies and decisions. Never put a password in a handoff;
+            say how access is obtained and share credentials through an approved tool. Accepting it moves the work to the new owner.
+          </p>
+          <p class="hint" id="handoff-none">No handoffs yet. Start one when work changes hands — between people, teams, or into operations.</p>
+          <div id="handoff-body" hidden>
+            <ol class="hf-stages" id="handoff-stages"></ol>
+            <div class="hf-duties" id="handoff-duties"></div>
+            <div class="charter-grid" id="handoff-fields"></div>
+            <h3 class="rhythm-h3">The package</h3>
+            <div class="hf-packs" id="handoff-package"></div>
+            <div class="charter-grid">
+              <label class="charter-field"><span class="charter-field__label">Walkthrough held on</span>
+                <input type="date" class="field-input" id="handoff-walkthrough"></label>
+              <label class="charter-field"><span class="charter-field__label">Support until</span>
+                <input type="date" class="field-input" id="handoff-monitor"></label>
+            </div>
+            <h3 class="rhythm-h3">Verify usability</h3>
+            <ul class="gate-criteria__list" id="handoff-verify"></ul>
+            <button type="button" class="btn btn-small btn-ghost no-print" data-hf="add-verify">+ Key task</button>
+            <label class="charter-field charter-field--wide"><span class="charter-field__label">Accepted with these exceptions — and their follow-up</span>
+              <textarea class="field-input" rows="2" id="handoff-exceptions"></textarea></label>
+            <div id="handoff-acceptance"></div>
+            <h3 class="rhythm-h3">Diagnostic checks <span class="hint" id="handoff-check-count"></span></h3>
+            <ul class="sprint-checks" id="handoff-checks"></ul>
+          </div>
+        </section>
       </div>
     </section>
 

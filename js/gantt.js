@@ -21,6 +21,9 @@ import {
 } from './ganttModel.js';
 import { gateState, GATE_STATE_TEXT } from './gates.js';
 import { showSection } from './tabs.js';
+import { newHandoff } from './handoff.js';
+import { selectHandoff } from './handoffPage.js';
+import { goToNode } from './nav.js';
 import { offerUndo, offerUndoAction } from './trash.js';
 import { confirmAction } from './dialog.js';
 import { onSectionShown } from './tabs.js';
@@ -155,7 +158,12 @@ function renderCritical(state, rows, cp) {
   box.replaceChildren(
     ...(own.handoffs.length ? [
       el('strong', { text: `Handoffs · ${own.handoffs.length}` }),
-      el('ul', {}, own.handoffs.map((h) => el('li', { 'data-handoff': h.id, text: `${h.from} → ${h.to}: “${h.fromName}” to “${h.toName}”${h.date ? `, ${formatDate(h.date, 'day')}` : ''}. Make the transfer explicit — what is done, what is open, who to ask.` }))),
+      el('ul', {}, own.handoffs.map((h) => el('li', { 'data-handoff': h.id }, [
+        document.createTextNode(`${h.from} → ${h.to}: “${h.fromName}” to “${h.toName}”${h.date ? `, ${formatDate(h.date, 'day')}` : ''}. `),
+        (state.handoffs || []).some((x) => x.fromActivity === h.id)
+          ? el('button', { type: 'button', class: 'link-btn no-print', 'data-gantt': 'open-handoff', 'data-id': h.id, text: 'Open its handoff' })
+          : el('button', { type: 'button', class: 'link-btn no-print', 'data-gantt': 'start-handoff', 'data-id': h.id, text: 'Start the handoff' }),
+      ]))),
     ] : []),
     ...(own.clashes.length ? [
       el('strong', { text: `Shared owners · ${own.clashes.length}` }),
@@ -451,6 +459,23 @@ function bindControls() {
   document.getElementById('sec-gantt').addEventListener('click', async (e) => {
     const action = e.target.closest('[data-gantt]')?.dataset.gantt;
     const state = getState();
+    if (action === 'start-handoff' || action === 'open-handoff') {
+      const id = e.target.closest('[data-id]').dataset.id;
+      if (!Array.isArray(state.handoffs)) state.handoffs = [];
+      let record = state.handoffs.find((x) => x.fromActivity === id);
+      if (!record) {
+        const h = ownershipFindings(state).handoffs.find((x) => x.id === id);
+        if (!h) return;
+        record = newHandoff({ id: uid(), title: h.toName, currentOwner: h.from, newOwner: h.to, date: h.date, fromActivity: id });
+        state.handoffs.push(record);
+        commit();
+      }
+      selectHandoff(record.id);
+      // Its link now reads "Open", so the chart is redrawn when it is next shown.
+      stale = true;
+      goToNode('nav-handoffs');
+      return;
+    }
     if (action === 'fix') {
       const issue = dependencyIssues(state).find((i) => i.id === e.target.closest('[data-id]').dataset.id && i.fix);
       if (issue) apply(issue.id, parseDate(issue.fix.start), parseDate(issue.fix.end));

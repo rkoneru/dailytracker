@@ -6331,3 +6331,33 @@ body.login-open { overflow: hidden; }
 .gantt-row__what { display: grid; gap: 4px; min-width: 0; }
 .gantt-row__who { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 4px; }
 .gantt-row .gantt-row__who .field-input { min-height: 28px; font-size: 12px; padding: 2px 6px; }
+
+/* Operating rhythm. */
+.rhythm-cadences { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.rhythm-card { border: 1px solid var(--color-border); border-top: 4px solid var(--color-primary); border-radius: var(--radius); padding: 12px; display: grid; gap: 10px; align-content: start; }
+.rhythm-card[data-cadence="weekly"] { border-top-color: #16a34a; }
+.rhythm-card[data-cadence="monthly"] { border-top-color: #7c3aed; }
+.rhythm-card.is-off { opacity: 0.6; }
+.rhythm-card__head { display: flex; justify-content: space-between; align-items: baseline; }
+.rhythm-card .charter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rhythm-focus ul { list-style: none; margin: 4px 0; padding: 0; display: grid; gap: 4px; }
+.rhythm-focus li { display: flex; gap: 6px; align-items: center; }
+.rhythm-focus .row-input { flex: 1; min-width: 0; }
+.rhythm-focus .rhythm-focus__min { flex: 0 0 64px; }
+.rhythm-h3 { font-size: 15px; margin: 18px 0 4px; }
+.rhythm-matrix th[scope="row"] { text-align: left; }
+.rhythm-matrix .row-select { min-width: 9em; }
+.row-select.raci-R { font-weight: 700; }
+.row-select.raci-none { color: var(--color-text-muted); }
+.rhythm-signals { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.rhythm-signal-group ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.rhythm-signal { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.rhythm-signal__n { min-width: 26px; height: 22px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--color-bg); color: var(--color-text-muted); }
+.rhythm-signal.is-up .rhythm-signal__n { background: #fee2e2; color: #991b1b; }
+.rhythm-signal.is-clear .rhythm-signal__n { background: #dcfce7; color: #14532d; }
+.rhythm-signal__items { margin: 2px 0 0 !important; padding-left: 16px !important; list-style: disc !important; font-size: 12.5px; color: var(--color-text-muted); }
+@media (prefers-color-scheme: dark) {
+  .rhythm-signal.is-up .rhythm-signal__n { background: #4a1d1d; color: #fecaca; }
+  .rhythm-signal.is-clear .rhythm-signal__n { background: #14361f; color: #bbf7d0; }
+}
+@media (max-width: 600px) { .rhythm-card .charter-grid { grid-template-columns: 1fr; } }

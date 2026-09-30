@@ -63,6 +63,8 @@ export function newMeeting(overrides = {}) {
     // occurrence is its own meeting; the calendar projects the rest.
     repeat: 'None',
     seriesId: '',
+    // Which cadence of the operating rhythm this meeting is (js/rhythm.js).
+    cadence: '',
     notes: '',
     outcome: '',
     agenda: [],
@@ -93,6 +95,7 @@ export function nextOccurrence(meeting, date) {
     expectedOutput: meeting.expectedOutput || '', preRead: meeting.preRead || '',
     repeat: meeting.repeat || 'None',
     seriesId: meeting.seriesId || meeting.id,
+    cadence: meeting.cadence || '',
     agenda: (meeting.agenda || []).map(({ time, topic, lead, minutes }) => newAgendaItem({ time, topic, lead, minutes })),
     attendees: (meeting.attendees || []).map(({ name, role, meetingRole, department }) => newAttendee({ name, role, meetingRole: meetingRole || '', department })),
   });

@@ -17,7 +17,7 @@
 // is. A follow-up's reminder becomes a real alarm on the event, which is the
 // one place a reminder can actually go off; the app has no server to send one.
 
-export const REPEATS = ['None', 'Weekly', 'Every 2 weeks', 'Monthly'];
+export const REPEATS = ['None', 'Weekdays', 'Weekly', 'Every 2 weeks', 'Monthly'];
 
 const pad = (n) => String(n).padStart(2, '0');
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -36,6 +36,14 @@ export function addRepeat(dateISO, repeat, n = 1) {
     const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
     target.setDate(Math.min(d.getDate(), last));
     return iso(target);
+  }
+  if (repeat === 'Weekdays') {
+    // A stand-up: every working day, Saturday and Sunday skipped.
+    for (let left = n; left > 0;) {
+      d.setDate(d.getDate() + 1);
+      if (d.getDay() !== 0 && d.getDay() !== 6) left -= 1;
+    }
+    return iso(d);
   }
   d.setDate(d.getDate() + n * (repeat === 'Weekly' ? 7 : 14));
   return iso(d);
@@ -157,7 +165,7 @@ function plusMinutes(time, minutes) {
   return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
 }
 
-const RRULE = { Weekly: 'FREQ=WEEKLY', 'Every 2 weeks': 'FREQ=WEEKLY;INTERVAL=2', Monthly: 'FREQ=MONTHLY' };
+const RRULE = { Weekdays: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', Weekly: 'FREQ=WEEKLY', 'Every 2 weeks': 'FREQ=WEEKLY;INTERVAL=2', Monthly: 'FREQ=MONTHLY' };
 const ALARM = { '1 day before': '-P1D', '2 days before': '-P2D', '1 week before': '-P1W' };
 const TIME = /^\d{1,2}:\d{2}$/;
 

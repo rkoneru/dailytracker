@@ -31,7 +31,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
   eq('landed on Meetings', await page.textContent('#page-title'), 'Meetings');
   eq('the calendar, then the meeting in the order it happens',
      await page.$$eval('#page-meetings .page-tab', (e) => e.map((x) => x.firstChild.textContent.trim())),
-     ['Calendar', 'Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']);
+     ['Calendar', 'Rhythm', 'Overview & Agenda', 'Notes & Decisions', 'Actions', 'Recording']);
 
   console.log('\n--- the starter project ships a worked example ---');
   // The newest of the two is the worked example these assertions walk through;

@@ -69,6 +69,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/capacityPlan.js` | Resources, week by week: the capacity calendar (load against the time each person had that week), who is free now / in 1–2 / 3–4 weeks, skill demand vs supply from the skills each booking needs, and named fixes for over-allocation. Pure |
 | `js/escalation.js` | risk review on the RAID page: the heat map of open risks (a square filters the log), the log's own reasons to escalate, the escalation pack (why, impact, options, recommendation, who decides, by when) and the decision recorded against it. Pure |
 | `js/gates.js` | decision gates on milestones (`kind: 'gate'`): one owner, entry criteria, options, default path, the recorded decision; the milestone check (not a task, not a progress figure, not a vague date, scarce, owned). Pure |
+| `js/rhythm.js`, `rhythmPage.js` | the operating rhythm on Meetings: daily/weekly/monthly cadences (purpose, length, focus, output), who attends what (R/C/I), "escalate when" triggers read off the project, the setup checklist, and a cadence's meeting series |
 | `js/flow.js` | flow metrics — lead time, cycle time, throughput, WIP, blocked time, predictability — from the status history `recordTaskFlow` writes on every save. Pure |
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
@@ -278,6 +279,14 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   and mark the milestone done (`decisionPatch`), Hold and Stop leave it open.
   The gate card holds no copy of the name, date or owner — those are the
   milestone row's.
+- **The rhythm plans the meetings; it does not hold them.** `project.rhythm`
+  is the cadences (filled from `defaultRhythm` by `rhythmOf`); a cadence's
+  meetings are ordinary meetings carrying `cadence`, so "last held" and "next"
+  are read off them. Each "escalate when" trigger (`triggerSignals`) is read
+  off the project — blocked over a day by its own `statusHistory`, pending
+  change requests, dependencies at risk, top-band risks, overloads, SPI/CPI
+  under 0.9, budget over — and is `null` when nothing could answer it. A
+  stand-up repeats `Weekdays` (RRULE BYDAY=MO..FR).
 - **Phase progress is derived, never stored.** It is read off the milestones
   tagged to each phase — one home for the number. A phase with no milestones
   reports `null`, not `0`, and renders as "Not planned".

@@ -24,6 +24,8 @@ import {
 } from './audioRecorder.js';
 import { saveRecording, listRecordings, deleteRecording } from './audioStore.js';
 import { showSection } from './tabs.js';
+import { renderRhythm, initRhythm } from './rhythmPage.js';
+import { goToNode } from './nav.js';
 import { formatDate } from './dates.js';
 
 // The meetings page: one record per meeting, in the order you actually use it.
@@ -882,6 +884,7 @@ export function renderMeetings() {
   document.getElementById('btn-delete-meeting').disabled = !hasAny;
 
   renderPicker();
+  renderRhythm();
   renderRecorder(meeting);
   const repeats = !!meeting && meeting.repeat && meeting.repeat !== 'None';
   document.getElementById('btn-meeting-next').hidden = !repeats;
@@ -1116,6 +1119,16 @@ export function initMeetings(navigate) {
   document.getElementById('btn-add-meeting').addEventListener('click', () => createOn(todayISO()));
 
   // ---- calendar ----
+  initRhythm({
+    onCreated: (id) => {
+      stopRecordingIfOther(id);
+      selectedId = id;
+      renderMeetings();
+      showSection('page-meetings', 'sec-meeting-overview');
+    },
+    navigate: (node) => goToNode(node),
+  });
+
   document.getElementById('sec-meeting-calendar').addEventListener('click', (e) => {
     const nav = e.target.closest('[data-cal-nav]')?.dataset.calNav;
     if (nav !== undefined) {

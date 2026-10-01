@@ -113,6 +113,9 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   const before = await page.evaluate(async () => (await import('/js/state.js')).getState().meetings.length);
   const repeatDate = await page.getAttribute('#meeting-calendar .cal-chip.is-repeat >> nth=0', 'data-date');
   await page.click('#meeting-calendar .cal-chip.is-repeat >> nth=0');
+  await page.waitForSelector('.dialog');
+  eq('a projected date says it is not a meeting yet', (await page.textContent('.dialog__message')).includes('nothing here to delete'), true);
+  await page.click('.dialog .btn-primary');
   await page.waitForTimeout(400);
   const made = await page.evaluate(async () => {
     const list = (await import('/js/state.js')).getState().meetings;
@@ -132,9 +135,12 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   eq('and Today brings it back', await page.textContent('#meeting-calendar-label'), label);
   const empty = await page.$eval('#meeting-calendar td:not(.is-other)', (td) => td.dataset.day);
   await page.click(`[data-cal-new="${empty}"]`);
+  await page.waitForSelector('.dialog');
+  eq('+ on a day asks for the meeting, on that day, name first', [await page.inputValue('#dialog-field-date'), await page.evaluate(() => document.activeElement.id)], [empty, 'dialog-field-name']);
+  await page.fill('#dialog-field-name', 'Kick-off');
+  await page.click('.dialog [data-dialog-action="open"]');
   await page.waitForTimeout(300);
-  eq('+ on a day starts a meeting on that day', await page.evaluate(async () => { const l = (await import('/js/state.js')).getState().meetings; return l[l.length - 1].date; }), empty);
-  eq('with its name ready to type', await page.evaluate(() => document.activeElement.dataset.meetingField), 'name');
+  eq('Create and open makes it there and opens it', [await page.evaluate(async () => { const l = (await import('/js/state.js')).getState().meetings; return [l[l.length - 1].date, l[l.length - 1].name]; }), (await page.textContent('#page-meetings .page-tab.is-active')).startsWith('Overview')], [[empty, 'Kick-off'], true]);
 
   await openDestination(page, 'nav-meeting-calendar');
   const [file] = await Promise.all([page.waitForEvent('download'), page.click('#btn-meetings-ics')]);

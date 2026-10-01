@@ -70,6 +70,9 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   const from = Number(await page.getAttribute('#meeting-calendar .wk', 'data-from'));
   // Two and a half hours below the top row.
   await page.mouse.click(box.x + box.width / 2, box.y + 48 * 2.5 + 4);
+  await page.waitForSelector('.dialog');
+  await page.fill('#dialog-field-name', 'Design review');
+  await page.click('.dialog [data-dialog-action="open"]');
   await page.waitForTimeout(400);
   const made = await page.evaluate(async () => { const l = (await import('/js/state.js')).getState().meetings; return l[l.length - 1]; });
   const expected = `${String(Math.floor(from / 60) + 2).padStart(2, '0')}:30`;

@@ -235,6 +235,11 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   the plan, never the minutes). The `.ics` export writes floating local times,
   puts the RRULE only on a series' latest meeting, invites attendees whose
   email is on Contacts, and turns a follow-up's reminder into a VALARM.
+  Meetings are made and deleted on the calendar itself: + on a day (or a time
+  in the week) asks for name, date, times and kind and writes nothing until
+  Create, refusing one that ends before it starts; a meeting's chip shows it
+  with Open and Delete (to the Trash, with Undo). A dashed date is not a
+  meeting, so it offers to plan it or to stop the series, never to delete.
 - **A meeting's readiness is derived; its roles are on the invite.** Each
   attendee has a `meetingRole` (why they are there); `readinessChecks` reads
   purpose, expected output, decision maker (only when a decision or approval

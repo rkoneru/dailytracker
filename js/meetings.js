@@ -2,9 +2,9 @@ import { el, dragHandle } from './dom.js';
 import {
   getState, scheduleSave, uid, trashRow, getActiveProjectId, listResources, todayISO,
 } from './state.js';
-import { offerUndoAction } from './trash.js';
+import { offerUndoAction, offerUndo } from './trash.js';
 import { makeSortable, reorderById } from './dragReorder.js';
-import { toast, confirmAction } from './dialog.js';
+import { toast, confirmAction, chooseAction } from './dialog.js';
 import { newTask, notifyProjectDataChanged } from './taskModel.js';
 import {
   MEETING_STATUSES, ACTION_STATUSES, DECISION_TAGS, IMPACT_LEVELS,
@@ -40,7 +40,13 @@ import { formatDate } from './dates.js';
 // meeting belongs to the meeting.
 //
 // The calendar comes first because it is where a meeting starts: pick the
-// day. It reads the meetings; it holds nothing of its own.
+// day. It reads the meetings; it holds nothing of its own. A meeting is made
+// and deleted from it without leaving it: + on a day (or a time in the week)
+// asks for the name, time and kind and writes nothing until Create; a
+// meeting's chip shows what it is, with Open and Delete. Delete goes to the
+// Trash with Undo, like every other delete. A dashed date is not a meeting,
+// so it has nothing to delete; it offers to plan that one, or to stop the
+// series repeating.
 //
 // Recording records audio, on this device, in every current browser. Live
 // transcription is an optional second layer that only some browsers have and
@@ -726,7 +732,7 @@ function chip(e) {
   const label = `${e.time ? `${formatTime(e.time)} ` : ''}${e.kind === 'followUp' ? '↻ ' : e.kind === 'action' ? '☐ ' : ''}${modeIcon(e.mode) ? `${modeIcon(e.mode)} ` : ''}${e.title}`;
   const attrs = e.kind === 'repeat'
     ? { 'data-cal-repeat': e.meetingId, 'data-date': e.date, title: `${e.title} — ${e.status}, not yet held. Open to plan it.` }
-    : { 'data-cal-open': e.meetingId, 'data-cal-tab': tab, title: `${e.title}${e.kind === 'meeting' ? ` — ${e.status}` : ''}` };
+    : { 'data-cal-open': e.meetingId, 'data-cal-tab': tab, 'data-cal-kind': e.kind, title: `${e.title}${e.kind === 'meeting' ? ` — ${e.status}` : ''}` };
   return el('button', {
     type: 'button',
     class: `cal-chip is-${e.kind}${e.status === 'Cancelled' ? ' is-cancelled' : ''}${e.meetingId === selectedId && e.kind === 'meeting' ? ' is-selected' : ''}`,
@@ -845,10 +851,9 @@ function stopRecordingIfOther(id) {
 }
 
 function createOn(date, from = null, time = '') {
-  const end = time ? `${String(Math.min(23, Number(time.slice(0, 2)) + 1)).padStart(2, '0')}${time.slice(2)}` : '';
   const meeting = from
     ? { ...nextOccurrence(from, date), id: uid() }
-    : { ...newMeeting({ date, status: 'Scheduled', startTime: time, endTime: end }), id: uid() };
+    : { ...newMeeting({ date, status: 'Scheduled', startTime: time, endTime: addHour(time) }), id: uid() };
   // The first time a meeting repeats, it becomes the head of its series.
   if (from && !from.seriesId) from.seriesId = from.id;
   meetings().push(meeting);
@@ -856,6 +861,107 @@ function createOn(date, from = null, time = '') {
   openMeeting(meeting.id);
   if (!from) document.querySelector('[data-meeting-field="name"]')?.focus();
   return meeting;
+}
+
+const addHour = (time) => (time ? `${String(Math.min(23, Number(time.slice(0, 2)) + 1)).padStart(2, '0')}${time.slice(2)}` : '');
+const MODE_OPTIONS = [{ value: '', label: 'Not set' }, ...MEETING_MODES.map((m) => ({ value: m.id, label: `${m.icon} ${m.id}` }))];
+
+/** Asks for a new meeting on the calendar; nothing is written until Create. */
+async function quickCreate(date, time = '') {
+  let values = { name: '', date, startTime: time, endTime: addHour(time), mode: '' };
+  let message = 'Name it and set the time. Everything else — agenda, invitees, purpose — is on its Overview.';
+  let action = 'confirm';
+  for (;;) {
+    const result = await chooseAction({
+      title: 'New meeting',
+      message,
+      fields: [
+        { name: 'name', label: 'Meeting name', value: values.name, placeholder: 'e.g. Design review', required: true },
+        { name: 'date', label: 'Date', type: 'date', value: values.date, required: true },
+        { name: 'startTime', label: 'Starts', type: 'time', value: values.startTime },
+        { name: 'endTime', label: 'Ends', type: 'time', value: values.endTime },
+        { name: 'mode', label: 'How', value: values.mode, options: MODE_OPTIONS },
+      ],
+      actions: [{ value: 'open', label: 'Create and open', validate: true }],
+      confirmLabel: 'Create',
+    });
+    if (!result) return null;
+    action = result.action;
+    values = { ...values, ...result.values, name: result.values.name.trim() };
+    // Checked here as well as by the form: Enter in a field submits.
+    if (!values.name || !values.date) { message = 'A meeting needs a name and a date.'; continue; }
+    if (values.startTime && values.endTime && values.endTime <= values.startTime) { message = 'It ends before it starts — change the end time.'; continue; }
+    break;
+  }
+  const meeting = { ...newMeeting({ ...values, status: 'Scheduled' }), id: uid() };
+  meetings().push(meeting);
+  commit();
+  return { meeting, open: action === 'open' };
+}
+
+async function createFromCalendar(date, time = '') {
+  const made = await quickCreate(date, time);
+  if (!made) return;
+  const { meeting } = made;
+  // Week view jumps to the week the meeting landed in, month view to its month.
+  if (calendarView === 'week') calendarWeek = meeting.date;
+  else calendarMonth = { y: Number(meeting.date.slice(0, 4)), m: Number(meeting.date.slice(5, 7)) - 1 };
+  if (made.open) { openMeeting(meeting.id); return; }
+  selectedId = meeting.id;
+  renderMeetings();
+  toast(`“${meeting.name}” is on ${formatDate(meeting.date)}${meeting.startTime ? ` at ${formatTime(meeting.startTime)}` : ''}.`, 'success');
+}
+
+async function deleteMeeting(meeting) {
+  if (session?.meetingId === meeting.id) await stopRecording();
+  const entry = trashRow('meetings', meeting.id);
+  if (selectedId === meeting.id) selectedId = '';
+  renderMeetings();
+  commit();
+  if (entry) offerUndo(entry);
+}
+
+/** A meeting's chip: what it is, with Open and Delete. */
+async function quickView(meeting) {
+  const when = meeting.date ? `${formatDate(meeting.date)}${meeting.startTime ? `, ${formatTime(meeting.startTime)}${meeting.endTime ? `–${formatTime(meeting.endTime)}` : ''}` : ', all day'}` : 'No date';
+  const invited = (meeting.attendees || []).filter((a) => a.name).length;
+  const result = await chooseAction({
+    title: meeting.name || 'Untitled meeting',
+    details: [
+      ['When', when],
+      ['How', meeting.mode ? `${modeIcon(meeting.mode)} ${meeting.mode}` : 'Not set'],
+      ['Status', meeting.status || 'Scheduled'],
+      ['Invited', invited ? `${invited} ${invited === 1 ? 'person' : 'people'}` : 'Nobody yet'],
+      ...(meeting.repeat && meeting.repeat !== 'None' ? [['Repeats', meeting.repeat]] : []),
+    ],
+    actions: [{ value: 'delete', label: 'Delete', tone: 'danger' }],
+    cancelLabel: 'Close',
+    confirmLabel: 'Open',
+  });
+  if (!result) return;
+  if (result.action === 'delete') await deleteMeeting(meeting);
+  else openMeeting(meeting.id);
+}
+
+/** A dashed date: not a meeting yet. Plan it, or stop the series. */
+async function repeatView(from, date) {
+  const result = await chooseAction({
+    title: `${from.name || 'Untitled meeting'} — ${formatDate(date)}`,
+    message: `A coming date of a meeting that repeats ${String(from.repeat).toLowerCase()}. It is not a meeting until it is planned, so there is nothing here to delete. Stop repeating removes every coming date; the meetings already held stay.`,
+    actions: [{ value: 'stop', label: 'Stop repeating', tone: 'danger' }],
+    confirmLabel: 'Plan this one',
+  });
+  if (!result) return;
+  if (result.action === 'stop') {
+    const was = from.repeat;
+    from.repeat = 'None';
+    commit();
+    renderCalendar();
+    offerUndoAction(`“${from.name || 'Untitled meeting'}” no longer repeats.`, () => { from.repeat = was; commit(); renderCalendar(); });
+    return;
+  }
+  createOn(date, from);
+  toast('Planned from the last one: same agenda and invitees, nothing yet decided.', 'success');
 }
 
 function downloadIcs(list, name) {
@@ -1213,7 +1319,7 @@ export function initMeetings(navigate) {
       return;
     }
     const day = e.target.closest('[data-cal-new]')?.dataset.calNew;
-    if (day) { createOn(day); return; }
+    if (day) { createFromCalendar(day); return; }
     const slot = e.target.closest('[data-cal-slot]');
     if (slot && e.target === slot) {
       // The half hour that was clicked, from where in the column: the grid
@@ -1221,18 +1327,22 @@ export function initMeetings(navigate) {
       const from = Number(slot.closest('.wk').dataset.from) || 480;
       const y = e.clientY - slot.getBoundingClientRect().top;
       const mins = Math.min(23 * 60 + 30, Math.max(0, Math.floor((from + (y / HOUR_PX) * 60) / 30) * 30));
-      createOn(slot.dataset.calSlot, null, `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`);
+      createFromCalendar(slot.dataset.calSlot, `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`);
       return;
     }
     const open = e.target.closest('[data-cal-open]');
-    if (open) { openMeeting(open.dataset.calOpen, open.dataset.calTab); return; }
+    if (open) {
+      const meeting = meetings().find((m) => m.id === open.dataset.calOpen);
+      // A meeting's own chip offers Open and Delete; a follow-up or an action
+      // goes straight to where it is kept.
+      if (meeting && open.dataset.calKind === 'meeting') quickView(meeting);
+      else openMeeting(open.dataset.calOpen, open.dataset.calTab);
+      return;
+    }
     const repeat = e.target.closest('[data-cal-repeat]');
     if (repeat) {
       const from = meetings().find((m) => m.id === repeat.dataset.calRepeat);
-      if (from) {
-        createOn(repeat.dataset.date, from);
-        toast('Planned from the last one: same agenda and invitees, nothing yet decided.', 'success');
-      }
+      if (from) repeatView(from, repeat.dataset.date);
     }
   });
   document.getElementById('btn-meetings-ics').addEventListener('click', () => {

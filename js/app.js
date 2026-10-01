@@ -816,6 +816,9 @@ function refreshActiveProjectView() {
   renderCustomerSuccess();
   refreshReport();
   refreshOpenReadOnlyPage();
+  // Meetings is built on arrival; an Undo pressed while it is on screen has
+  // to redraw it there.
+  if (isPageActive('page-meetings')) renderMeetings();
   // The project is half of every link, so switching one has to move the
   // address with it — otherwise Copy link quietly hands out the project
   // someone was looking at a minute ago. Replace rather than push: switching

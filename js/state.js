@@ -276,6 +276,7 @@ function migrateProject(data) {
   if (!Array.isArray(data.sprints)) data.sprints = [];
   if (!Array.isArray(data.handoffs)) data.handoffs = [];
   if (!Array.isArray(data.problems)) data.problems = [];
+  if (!Array.isArray(data.stakeholderNeeds)) data.stakeholderNeeds = [];
   migrateRegisters(data);
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are
@@ -392,6 +393,7 @@ const TRASH_LABELS = {
   meetings: 'Meeting',
   handoffs: 'Handoff',
   problems: '8D report',
+  stakeholderNeeds: 'Stakeholder needs',
   project: 'Project',
 };
 
@@ -400,8 +402,13 @@ const TRASH_LABELS = {
 const TRASH_NAME_FIELDS = ['name', 'text', 'title', 'activity', 'description', 'audience',
   'opportunity', 'symptom', 'criterion', 'service', 'what'];
 
-function trashLabelFor(kind, row) {
+function trashLabelFor(kind, row, project = null) {
   if (kind === 'project') return row.projectName || 'Untitled project';
+  // A needs record holds answers, not the person; name it after who it is for.
+  if (kind === 'stakeholderNeeds') {
+    const who = (project?.stakeholders || []).find((s) => s.id === row.stakeholderId)?.name;
+    if (who) return who;
+  }
   const named = TRASH_NAME_FIELDS.map((f) => row[f]).find((v) => typeof v === 'string' && v.trim());
   return named || `(untitled ${(TRASH_LABELS[kind] || 'row').toLowerCase()})`;
 }
@@ -440,7 +447,7 @@ function trashRowIn(project, collection, id) {
   const entry = pushTrash({
     id: uid(),
     kind: collection,
-    label: trashLabelFor(collection, row),
+    label: trashLabelFor(collection, row, project),
     typeLabel: TRASH_LABELS[collection] || 'Item',
     projectId: project.id,
     projectName: project.projectName || 'Untitled project',
@@ -982,7 +989,7 @@ export function createProject({ name, templateKey, methodology } = {}) {
  */
 function regenerateRowIds(project) {
   const collections = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog',
-    'allocations', 'timesheets', 'ganttActivities', 'sprints', 'handoffs', 'problems', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
+    'allocations', 'timesheets', 'ganttActivities', 'sprints', 'handoffs', 'problems', 'stakeholderNeeds', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
 
   const remap = new Map();
   collections.forEach((key) => {
@@ -1009,6 +1016,9 @@ function regenerateRowIds(project) {
   });
   (project.changeLog || []).forEach((entry) => {
     if (entry.rowId) entry.rowId = swap(entry.rowId);
+  });
+  (project.stakeholderNeeds || []).forEach((n) => {
+    if (n.stakeholderId) n.stakeholderId = swap(n.stakeholderId);
   });
   (project.timesheets || []).forEach((entry) => {
     if (entry.taskId) entry.taskId = swap(entry.taskId);

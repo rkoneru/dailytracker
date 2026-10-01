@@ -27,6 +27,7 @@ import { initScopeControl, renderScopeControl, afterRegisterEdit, renderBaseline
 import { initHandoffs, renderHandoffs } from './handoffPage.js';
 import { initProjectPlan, renderProjectPlan } from './projectPlanPage.js';
 import { initDevIntent, renderDevIntent } from './devIntentPage.js';
+import { initStakeholderNeeds, renderStakeholderNeeds } from './stakeholderNeedsPage.js';
 
 const SCOPE_FIELDS = ['charterScopeIn', 'charterScopeOut', 'charterSuccess'];
 
@@ -451,6 +452,7 @@ export function renderEngagement() {
   renderHandoffs();
   renderProjectPlan();
   renderDevIntent();
+  renderStakeholderNeeds();
   renderAll([...SCOPE_REGISTERS, ...PEOPLE_REGISTERS]);
   renderRosterView();
   renderRosterOptions();
@@ -478,6 +480,7 @@ export function initEngagement() {
   initHandoffs();
   initProjectPlan();
   initDevIntent();
+  initStakeholderNeeds();
   const onChanged = (def) => {
     afterRegisterEdit(def);
     if (def.key === 'billing') {
@@ -485,6 +488,9 @@ export function initEngagement() {
       renderBillingTerms();
       renderAccounting();
     }
+    // The needs record names people from the Stakeholders register and reads
+    // what the Communications Plan delivers to them.
+    if (def.key === 'stakeholders' || def.key === 'comms') renderStakeholderNeeds();
     renderCounters();
     // Deliverable dates reach the Dashboard and the roster feeds every owner
     // field in the app, so an edit here has to travel like a task edit does.

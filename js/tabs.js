@@ -72,6 +72,7 @@ export const PAGE_TABS = {
     { id: 'sec-roster', label: 'Team' },
     { id: 'sec-raci', label: 'Who Does What' },
     { id: 'sec-stakeholders', label: 'Stakeholders & Comms', sections: ['sec-stakeholders', 'sec-comms'] },
+    { id: 'sec-stakeholder-needs', label: 'Stakeholder Needs' },
     { id: 'sec-vendors', label: 'Vendors' },
     { id: 'sec-handoffs', label: 'Handoffs' },
   ],

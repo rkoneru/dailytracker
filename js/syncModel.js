@@ -42,6 +42,9 @@ export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog
   'handoffs',
   // 8D problem-solving reports: one row each, the disciplines nested inside.
   'problems',
+  // What each stakeholder needs to decide: one row per person asked, pointing
+  // at the Stakeholders register; the person lives there.
+  'stakeholderNeeds',
   // The lifecycle Gantt's activities — their own rows, not the tasks'.
   'ganttActivities',
   ...REGISTER_KEYS];

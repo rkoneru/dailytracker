@@ -142,6 +142,7 @@ export const NAV_TREE = [
           { id: 'nav-raci', label: 'Who Does What', page: 'page-people', title: 'People & Stakeholders', section: 'sec-raci' },
           { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-people', title: 'People & Stakeholders', section: 'sec-stakeholders' },
           { id: 'nav-comms', label: 'Communications', page: 'page-people', title: 'People & Stakeholders', section: 'sec-comms' },
+          { id: 'nav-stakeholder-needs', label: 'Stakeholder Needs', page: 'page-people', title: 'People & Stakeholders', section: 'sec-stakeholder-needs' },
           { id: 'nav-vendors', label: 'Vendors', page: 'page-people', title: 'People & Stakeholders', section: 'sec-vendors' },
           { id: 'nav-handoffs', label: 'Handoffs', page: 'page-people', title: 'People & Stakeholders', section: 'sec-handoffs' },
         ],

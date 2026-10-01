@@ -74,6 +74,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/blueprint.js`, `blueprintPage.js` | the Plan page's Approach tab: the hybrid delivery blueprint — ten inputs scored low/medium/high, the predictable/adaptive blend, which elements go which way and why, and the five-part setup checked against what the project has |
 | `js/portfolioDash.js` | Portfolio at a glance: projects complete / in progress / overdue, tasks by status (a CSS conic donut), tasks delivered per month from status history — months before any history are `null`, drawn grey. Pure |
 | `js/handoff.js`, `handoffPage.js` | handoffs on People & Stakeholders: the package read off the project for the current owner, five derived stages, diagnostic checks, a refusal to store anything that looks like a credential, signed acceptance, and the transfer that moves the work |
+| `js/stakeholderNeeds.js`, `stakeholderNeedsPage.js` | the Stakeholder Needs tab on People & Stakeholders: ask each person what they need to decide — nine areas (role, decisions, outcomes, risks, detail, format, cadence, escalation triggers, preferred response), one `stakeholderNeeds` row per person pointing at the Stakeholders register; the five steps (prepare, ask, confirm, agree, test) worked out, the confirmation note, the diagnostic checks, the illustrative example |
 | `js/eightD.js`, `eightDPage.js` | 8D problem solving on Improvement & Lessons: D1–D8 with each discipline's status worked out from its content, five whys and a six-M fishbone, before/after validation, prevention, lessons sent to the Lessons register, closure by three signatures; started from an incident's "8D" action |
 | `js/aiRisk.js`, `sprintReview.js` | the AI PM's admin from the record: on an AI method, nine AI-specific risks (data quality, privacy, lineage, bias, explainability, wrong answers, drift, regulation, misuse) checked against the RAID log by category or wording, with Raise it; a sprint's summary and a drafted retrospective meeting whose notes are facts and whose actions are left to the team. Pure |
 | `js/roadmap.js` | the Portfolio Roadmap tab: every project a lane on one time scale (its Gantt activities, or its span; its milestones and gates), items ending in a risk colour (the project's open-risk band, red when late, grey when no risk was ever logged), goals from the charters' strategic objectives. Pure |
@@ -318,6 +319,15 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   keeps what was `handedOver` so moving the work does not lapse it but editing
   the record does; `applyTransfer` moves only items still in the old owner's
   name, after the list is shown. `handoffs` is its own synced kind.
+- **A stakeholder's needs are asked, per person, and the steps are worked
+  out.** The person lives on the Stakeholders register; the `stakeholderNeeds`
+  row (its own synced kind) holds only the answers, by `stakeholderId`. Ask is
+  done with a conversation date and all nine areas answered. Confirm is a
+  fingerprint of the nine answers (`needsContent`), so changing one lapses it,
+  and it falls due after ninety days. Agree writes an entry on the
+  Communications Plan (`agreedComms`) and counts only while its channel and
+  frequency match what the person asked for. Test counts only after the
+  confirmation, and only if it helped them decide.
 - **An 8D closes on evidence and signatures.** `disciplineState` works each
   D out from what is written; D6 passes only when `validation` shows the
   measure after is better than before (averages of typed values; an empty

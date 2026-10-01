@@ -35,7 +35,7 @@ const { eq, done } = createChecks();
   await page.click('#tab-people');
   await page.waitForTimeout(600);
   eq('people & stakeholders', await page.$$eval('#page-people .card__head h2', (e) => e.map((x) => x.textContent)),
-     ['Team Roster', 'Who Does What (RACI)', 'Stakeholders', 'Communications Plan', 'Vendors & Suppliers', 'Handoffs']);
+     ['Team Roster', 'Who Does What (RACI)', 'Stakeholders', 'Communications Plan', 'Vendors & Suppliers', 'Stakeholder needs', 'Handoffs']);
 
   await page.click('#tab-service');
   await page.waitForTimeout(600);

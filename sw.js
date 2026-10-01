@@ -1,5 +1,5 @@
 // Bump this on every release to roll out a fresh cache and drop the old one.
-const CACHE_VERSION = 'v95';
+const CACHE_VERSION = 'v96';
 const CACHE_NAME = `project-planner-${CACHE_VERSION}`;
 
 // App shell: everything needed to run fully offline after first load.
@@ -112,6 +112,8 @@ const PRECACHE_URLS = [
   './js/journeyMapPage.js',
   './js/weekBoard.js',
   './js/weekBoardPage.js',
+  './js/devIntent.js',
+  './js/devIntentPage.js',
   './js/useCaseStore.js',
   './js/useCaseSync.js',
   './js/useCasesPage.js',

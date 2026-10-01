@@ -6675,6 +6675,36 @@ body.login-open { overflow: hidden; }
 .plan-section header .link-btn { margin-left: auto; font-size: 12px; }
 .plan-section ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; }
 
+/* The development intent: the form, what is read from the project, intent.md. */
+.intent-checks { list-style: none; margin: 0 0 12px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px; }
+.intent-check { display: flex; gap: 8px; align-items: baseline; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 6px 10px; font-size: 13px; }
+.intent-check__mark { font-weight: 800; flex: none; width: 1em; }
+.intent-check.is-ok .intent-check__mark { color: var(--color-success-text); }
+.intent-check.is-bad .intent-check__mark { color: var(--color-danger-text); }
+.intent-check .link-btn { margin-left: auto; font-size: 12px; white-space: nowrap; }
+#intent-count.is-ready { color: var(--color-success-text); font-weight: 700; }
+.intent-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.intent-form { display: grid; gap: 12px; min-width: 0; }
+.intent-group { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 8px 12px 12px; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.intent-group legend { font-weight: 700; padding: 0 4px; }
+.intent-group textarea { width: 100%; resize: vertical; }
+.intent-secret { font-size: 12px; color: var(--color-danger-text); }
+.intent-read { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+.intent-read dt { color: var(--color-text-muted); }
+.intent-read dd { margin: 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.intent-read dd .link-btn { margin-left: auto; font-size: 12px; }
+.intent-preview { position: sticky; top: 12px; min-width: 0; }
+.intent-preview pre { margin: 0; max-height: 75vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 10px 12px; }
+@media (max-width: 900px) {
+  .intent-layout { grid-template-columns: minmax(0, 1fr); }
+  .intent-preview { position: static; }
+  .intent-preview pre { max-height: 50vh; }
+}
+@media (max-width: 600px) {
+  .intent-read { grid-template-columns: minmax(0, 1fr); }
+  .intent-read dt { margin-top: 4px; }
+}
+
 /* Twelve pillars. */
 .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .pillar { border: 1px solid var(--color-border); border-top: 4px solid #eab308; border-radius: var(--radius); padding: 8px 12px; display: grid; gap: 4px; align-content: start; font-size: 13px; }

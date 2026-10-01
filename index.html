@@ -795,6 +795,29 @@
           <h3 class="rhythm-h3">Approval &amp; signatures</h3>
           <div id="plan-approval"></div>
         </section>
+        <section class="card" id="sec-dev-intent">
+          <div class="card__head">
+            <h2>Development intent</h2>
+            <span class="hint" id="intent-count"></span>
+            <button type="button" class="btn btn-small no-print" data-intent="copy">Copy</button>
+            <button type="button" class="btn btn-small btn-primary no-print" data-intent="download">Download intent.md</button>
+          </div>
+          <p class="hint">
+            The brief Claude Code &mdash; or any coding agent &mdash; starts development from, written out as <code>intent.md</code>.
+            The objective, scope, acceptance criteria, milestones, risks and constraints are read from where they already live;
+            the form holds only what a project has nowhere else to keep. A question left blank is written into the file as
+            &ldquo;ask before assuming&rdquo;, so the agent asks instead of guessing. The file is meant for a repository: no prices
+            go into it, and anything that looks like a password or key is not kept.
+          </p>
+          <ul class="intent-checks" id="intent-checks"></ul>
+          <div class="intent-layout">
+            <div class="intent-form" id="intent-form"></div>
+            <div class="intent-preview">
+              <h3 class="rhythm-h3">intent.md</h3>
+              <pre id="intent-preview" tabindex="0" aria-label="intent.md as it will be written"></pre>
+            </div>
+          </div>
+        </section>
         <section class="card" id="sec-scope-baseline">
           <div class="card__head"><h2>Scope Baseline &amp; Creep</h2></div>
           <p class="hint">

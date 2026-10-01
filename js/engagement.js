@@ -26,6 +26,7 @@ import { isApprovedChange, scopeDrift } from './changeControl.js';
 import { initScopeControl, renderScopeControl, afterRegisterEdit, renderBaseline } from './scopeControlPage.js';
 import { initHandoffs, renderHandoffs } from './handoffPage.js';
 import { initProjectPlan, renderProjectPlan } from './projectPlanPage.js';
+import { initDevIntent, renderDevIntent } from './devIntentPage.js';
 
 const SCOPE_FIELDS = ['charterScopeIn', 'charterScopeOut', 'charterSuccess'];
 
@@ -449,6 +450,7 @@ export function renderEngagement() {
   renderCharter();
   renderHandoffs();
   renderProjectPlan();
+  renderDevIntent();
   renderAll([...SCOPE_REGISTERS, ...PEOPLE_REGISTERS]);
   renderRosterView();
   renderRosterOptions();
@@ -475,6 +477,7 @@ export function initEngagement() {
   bindCharter();
   initHandoffs();
   initProjectPlan();
+  initDevIntent();
   const onChanged = (def) => {
     afterRegisterEdit(def);
     if (def.key === 'billing') {

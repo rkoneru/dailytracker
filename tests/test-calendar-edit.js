@@ -112,6 +112,15 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   eq('and it lands in that column, at that time', (await page.textContent('#meeting-calendar .wk-col >> nth=1')).includes('Pairing'), true);
 
   console.log('\n--- phone ---');
+  // The list under the calendar holds the next two weeks; which sample
+  // meetings fall in it depends on the weekday, so make sure one does.
+  await page.click('#sec-meeting-calendar [data-cal-view="month"]');
+  await page.click('#sec-meeting-calendar [data-cal-nav="0"]');
+  await page.click(`[data-cal-new="${await page.evaluate(async () => (await import('/js/dates.js')).todayISO())}"]`);
+  await page.waitForSelector('.dialog');
+  await page.fill('#dialog-field-name', 'Today’s check-in');
+  await page.click('.dialog .btn-primary');
+  await page.waitForTimeout(300);
   await page.setViewportSize({ width: 390, height: 900 });
   await page.waitForTimeout(300);
   await page.click('#meeting-upcoming .cal-chip.is-meeting >> nth=0');

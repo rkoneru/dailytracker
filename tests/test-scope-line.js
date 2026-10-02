@@ -71,6 +71,11 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   eq('the scope statement follows the template', [r.statement[0], r.statement.includes('In scope (must-haves and enabling work):'), r.statement.includes('  - Pilot group has access'), r.statement.includes('  - Integration with CRM (Out of scope for this pilot)')], ['Project name: Pilot', true, true, true]);
 
   console.log('\n--- on the page ---');
+  // Start from an empty line: the sample project comes with one of its own.
+  await page.evaluate(async () => { const st = await import('/js/state.js'); st.getState().scopeItems = []; st.scheduleSave(); });
+  await page.waitForTimeout(500);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(800);
   await openDestination(page, 'nav-scope-line');
   await page.waitForTimeout(300);
   eq('Scope Line is a tab of Scope & Contract, with its register', [(await page.textContent('#page-scope .page-tab.is-active')).startsWith('Scope Line'), await page.isVisible('#sec-scope-items')], [true, true]);

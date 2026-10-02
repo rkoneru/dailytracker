@@ -6784,6 +6784,28 @@ body.login-open { overflow: hidden; }
 .needs-check.is-na .needs-check__box { border-style: dashed; color: var(--color-text-muted); }
 #mit-reference h4 { margin: 10px 0 4px; }
 
+/* The scope line. */
+.sl-counts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.sl-count { border-radius: 999px; padding: 3px 10px; font-size: 13px; border: 1px solid var(--color-border); }
+.sl-count strong { font-variant-numeric: tabular-nums; }
+.sl-count.is-in { background: #dcfce7; color: #14532d; border-color: #86efac; }
+.sl-count.is-optional { background: #fef9c3; color: #713f12; border-color: #fde047; }
+.sl-count.is-out { background: #f1f5f9; color: #334155; }
+.sl-steps { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.sl-questions { margin: 8px 0; padding: 8px 12px; border: 1px solid #f59e0b; border-radius: var(--radius); background: #fffbeb; color: #78350f; font-size: 13px; }
+.sl-questions ul { margin: 4px 0 0; padding-left: 18px; }
+#scope-line-reference h4 { margin: 10px 0 4px; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sl-count.is-in { background: #14321f; color: #bbf7d0; }
+  :root:not([data-theme="light"]) .sl-count.is-optional { background: #3a3110; color: #fef08a; }
+  :root:not([data-theme="light"]) .sl-count.is-out { background: #1e293b; color: #cbd5e1; }
+  :root:not([data-theme="light"]) .sl-questions { background: #3b2a0a; color: #fde68a; }
+}
+:root[data-theme="dark"] .sl-count.is-in { background: #14321f; color: #bbf7d0; }
+:root[data-theme="dark"] .sl-count.is-optional { background: #3a3110; color: #fef08a; }
+:root[data-theme="dark"] .sl-count.is-out { background: #1e293b; color: #cbd5e1; }
+:root[data-theme="dark"] .sl-questions { background: #3b2a0a; color: #fde68a; }
+
 /* Twelve pillars. */
 .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .pillar { border: 1px solid var(--color-border); border-top: 4px solid #eab308; border-radius: var(--radius); padding: 8px 12px; display: grid; gap: 4px; align-content: start; font-size: 13px; }

@@ -394,6 +394,7 @@ const TRASH_LABELS = {
   handoffs: 'Handoff',
   problems: '8D report',
   stakeholderNeeds: 'Stakeholder needs',
+  scopeItems: 'Scope item',
   project: 'Project',
 };
 

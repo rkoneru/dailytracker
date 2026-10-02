@@ -80,6 +80,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/aiRisk.js`, `sprintReview.js` | the AI PM's admin from the record: on an AI method, nine AI-specific risks (data quality, privacy, lineage, bias, explainability, wrong answers, drift, regulation, misuse) checked against the RAID log by category or wording, with Raise it; a sprint's summary and a drafted retrospective meeting whose notes are facts and whose actions are left to the team. Pure |
 | `js/roadmap.js` | the Portfolio Roadmap tab: every project a lane on one time scale (its Gantt activities, or its span; its milestones and gates), items ending in a risk colour (the project's open-risk band, red when late, grey when no risk was ever logged), goals from the charters' strategic objectives. Pure |
 | `js/projectPlan.js`, `projectPlanPage.js` | the Project Plan tab on Scope & Contract: the nineteen sections of a plan document assembled from where each lives (never a second copy), filled / part filled / empty / none needed, a SMART check on the objective (achievable left `null` for people), and approval signed over `planContent` — the commitments, not the task churn |
+| `js/scopeLine.js`, `scopeLinePage.js` | the Scope Line tab on Scope & Contract: the Scope Items register (must-have, enabling work, optional improvement, deferred, explicit exclusion, judged on outcome impact, dependency, obligation, effort and risk), the questions the criteria raise, acceptance signed over `lineContent`, the line written onto the charter's In and Out of scope, the six steps, the ten checks and the scope statement |
 | `js/devIntent.js`, `devIntentPage.js` | the Dev Intent tab on Scope & Contract: `intent.md`, the brief Claude Code starts development from. Objective, scope, acceptance criteria, milestones, risks, dependencies and constraints are read from their homes; the form (`project.devIntent`) holds only what has none — product, users, journeys, stack, starting point, first slice, done, ask-first. A blank is written in as "ask before assuming" and counted; ready is worked out from nine checks; no commercial figure goes in; a value that `looksLikeSecret` is refused at the input |
 | `js/journeyMap.js`, `journeyMapPage.js` | the Journey Map tab on Customer Success: stages, steps, touchpoints and the departments that own each (stored, on `project.journeyMap`, from a five-stage template), with counts and the gaps worked out — unowned, empty stage, crowded, a department nowhere |
 | `js/weekBoard.js`, `weekBoardPage.js` | "My week" on My Work: key projects, meetings and recorded wins read off every project for whoever "you are"; the week's objectives, focus blocks, typed wins and review are a personal planning sheet kept in localStorage per week (last twelve), never synced |
@@ -155,6 +156,14 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   scope baseline only by what that change `touches` (`baselineAfter`), never by
   every edit made since — that would launder creep through someone's approval.
   Signatures are records, not locks; SECURITY.md says what they do not secure.
+- **The scope line writes the charter; it is not a second scope.** Items are
+  the `scopeItems` register. No single criterion decides a category, so
+  `categoryQuestions` asks (a legal item left out, a quality item cut, a
+  must-have nothing needs, an exclusion with no reason) and never moves an
+  item. "Write it onto the charter" replaces In and Out of scope with the
+  line (`charterText`), after the preview, so the baseline and creep measure
+  against it. Acceptance is the approver's signature over each item's name
+  and category; moving one lapses it.
 - **The activity log feeds, it does not sit beside.** A logged activity is a
   touch: `accountSignals(project)` gives health the latest activity per account
   alongside open P1/P2s, and `lastTouchOf` takes the later of that and the

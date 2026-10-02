@@ -63,6 +63,7 @@ export const PAGE_TABS = {
     { id: 'sec-charter', label: 'Charter' },
     { id: 'sec-project-plan', label: 'Project Plan' },
     { id: 'sec-dev-intent', label: 'Dev Intent' },
+    { id: 'sec-scope-line', label: 'Scope Line', sections: ['sec-scope-line', 'sec-scope-items'] },
     { id: 'sec-scope-baseline', label: 'Scope Baseline' },
     { id: 'sec-deliverables', label: 'Deliverables' },
     { id: 'sec-change-requests', label: 'Change Requests', sections: ['sec-change-requests', 'sec-cr-workflow', 'sec-cr-route'] },

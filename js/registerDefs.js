@@ -460,6 +460,34 @@ export const DOCUMENTS = {
   newRow: () => ({ title: '', type: 'Other', link: '', version: '', owner: '', status: 'Draft', review: '' }),
 };
 
+// The scope line: every piece of work the project might do, in one of five
+// categories, judged on five criteria. js/scopeLine.js works the line out of
+// it and writes it onto the charter's In and Out of scope.
+export const SCOPE_ITEMS = {
+  key: 'scopeItems',
+  id: 'scope-items',
+  title: 'Scope Items (Acceptance Line)',
+  rowLabel: 'scope item',
+  addLabel: '+ Add Item',
+  refPrefix: 'SI',
+  blurb: 'One row per piece of work the project might do. Classify it, then answer the five criteria together — no single one decides.',
+  emptyText: 'No scope items yet. List what is asked for, including what you expect to leave out.',
+  searchFields: ['name', 'rationale'],
+  searchPlaceholder: 'Search item or rationale…',
+  columns: [
+    { field: '_ref', label: 'ID', type: 'ref' },
+    { field: 'name', label: 'Item', placeholder: 'A piece of work or a feature', cls: 'col-wide' },
+    { field: 'category', label: 'Category', type: 'select', tone: true, options: ['Must-have', 'Enabling work', 'Optional improvement', 'Deferred', 'Explicit exclusion'] },
+    { field: 'outcome', label: 'Outcome impact', type: 'select', options: ['Needed for the outcome', 'Helps the outcome', 'Not needed'] },
+    { field: 'dependency', label: 'Dependency', type: 'select', options: ['Other items need it', 'Nothing needs it'] },
+    { field: 'obligation', label: 'Obligation', type: 'select', options: ['Legal or contractual', 'Policy', 'None'] },
+    { field: 'effort', label: 'Effort', type: 'select', options: [...TSHIRT] },
+    { field: 'risk', label: 'Risk', type: 'select', options: [...HML] },
+    { field: 'rationale', label: 'Rationale', placeholder: 'Why it sits where it does', cls: 'col-wide' },
+  ],
+  newRow: () => ({ name: '', category: '', outcome: '', dependency: '', obligation: '', effort: '', risk: '', rationale: '' }),
+};
+
 // Suppliers are people you depend on under contract, and the contract is what
 // makes them different from a stakeholder: a value, an end date and a service
 // you can hold them to. The owner is the person inside who manages them.
@@ -637,7 +665,7 @@ export const INCIDENTS = {
 // two piles that no single role reads end to end.
 
 /** Commercial: what was agreed, and what has changed since. Leads only. */
-export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS, BILLING, DOCUMENTS];
+export const SCOPE_REGISTERS = [DELIVERABLES, CHANGE_REQUESTS, BILLING, DOCUMENTS, SCOPE_ITEMS];
 
 /** Relationships: who is on it, who decides, who needs telling. Leads only. */
 // The roster used to be the first of these. It is now a view of the central

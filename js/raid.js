@@ -6,6 +6,7 @@ import { mountRegisters, renderAll } from './register.js';
 import { BLOCKER_REGISTERS } from './registerDefs.js';
 import {
   TRIGGERS, shouldEscalate, newPack, packMissing, packText, escalations, heatMap,
+  LEVELS, REACH, levelFor, levelFit, escalationSteps, escalationChecks, blockerMessage, blockedWork, blockerIssue,
 } from './escalation.js';
 import { showSection } from './tabs.js';
 import { confirmAction, toast } from './dialog.js';
@@ -189,6 +190,38 @@ function packField(label, key, pack, { long = false, type = 'text', list = '' } 
   return el('label', { class: `charter-field ${long ? 'charter-field--wide' : ''}` }, [el('span', { class: 'charter-field__label', text: label }), input]);
 }
 
+const FIT_TEXT = {
+  fits: 'The lowest level that can decide this.',
+  low: 'Lower than it reaches — can that level decide it?',
+  high: 'Higher than it reaches — a lower level could decide it, sooner.',
+  emergency: 'Serious harm takes the emergency route, whatever the tolerance says.',
+};
+
+function packSelect(label, key, pack, options, blank) {
+  const sel = el('select', { class: 'field-input', 'data-pack': key }, [el('option', { value: '', text: blank }), ...options.map((o) => el('option', { value: o.id, text: o.label }))]);
+  sel.value = pack[key] || '';
+  return el('label', { class: 'charter-field' }, [el('span', { class: 'charter-field__label', text: label }), sel]);
+}
+
+/** The parts of a card worked out from the pack, redrawn as it is typed in. */
+function derivedParts(item) {
+  const p = item.escalation;
+  const fit = levelFit(p);
+  const level = levelFor(p.level);
+  return [
+    el('ol', { class: 'esc-steps', 'data-derived': 'steps' }, escalationSteps(item).map((st, i) => el('li', { class: `esc-step ${st.done ? 'is-done' : ''}`, 'data-step': st.id }, [
+      el('span', { class: 'esc-step__n', text: st.done ? '✓' : String(i + 1) }), el('span', { text: st.label }),
+    ]))),
+    el('p', { class: `hint esc-fit ${fit && fit !== 'fits' ? 'is-warn' : ''}`, 'data-derived': 'fit', text: fit ? `${FIT_TEXT[fit]}${level ? ` Bring: ${level.evidence.toLowerCase()}. They decide: ${level.decides.toLowerCase()}.` : ''}` : 'Say how far it reaches and the level it goes to.' }),
+  ];
+}
+
+function checksPart(item) {
+  return el('ul', { class: 'needs-checks esc-checks', 'data-derived': 'checks' }, escalationChecks(item).map((c) => el('li', { class: `needs-check ${c.ok ? 'is-ok' : 'is-bad'}`, 'data-check': c.id }, [
+    el('span', { class: 'needs-check__box', 'aria-hidden': 'true', text: c.ok ? '✓' : '' }), el('span', { text: c.label }),
+  ])));
+}
+
 function escalationCard(item, state) {
   const p = item.escalation;
   const missing = packMissing(p);
@@ -196,7 +229,14 @@ function escalationCard(item, state) {
     el('header', { class: 'escalation__head' }, [
       el('strong', { text: item.title || 'Untitled' }),
       el('span', { class: `escalation__state is-${state}`, text: STATE_TEXT[state] }),
-      el('span', { class: 'hint', text: `${item.type} · ${item.owner || 'no owner'}${p.sentAt ? ` · sent ${formatDate(new Date(p.sentAt))}` : ''}` }),
+      el('span', { class: 'hint', text: `${item.type} · ${item.owner || 'no owner'}${p.sentAt ? ` · sent ${formatDate(new Date(p.sentAt))}` : ''}${levelFor(p.level) ? ` · to ${levelFor(p.level).label}` : ''}` }),
+    ]),
+    el('div', { 'data-derived-host': '' }, derivedParts(item)),
+    el('div', { class: 'charter-grid' }, [
+      packSelect('How far it reaches', 'reach', p, REACH, 'Not judged yet'),
+      packSelect('Escalate to', 'level', p, LEVELS, 'Choose the level'),
+      packField('Tried at the current level', 'tried', p, { long: true }),
+      packField('Evidence — data, analysis, documents', 'evidence', p, { long: true }),
     ]),
     el('fieldset', { class: 'escalation__why' }, [
       el('legend', { text: 'Escalate when' }),
@@ -210,19 +250,59 @@ function escalationCard(item, state) {
       packField('Recommendation', 'recommendation', p, { long: true }),
       packField('Who decides', 'to', p, { list: 'roster-names' }),
       packField('Decision needed by', 'decideBy', p, { type: 'date' }),
+      packField('If it waits — does the risk grow, or do options close?', 'delay', p, { long: true }),
     ]),
+    el('details', { class: 'esc-checks-wrap', open: state === 'draft' }, [el('summary', { text: 'Before you escalate' }), checksPart(item)]),
+    el('p', { class: 'esc-message', 'data-derived': 'message', text: blockerMessage(item) }),
     el('p', { class: `hint ${missing.length ? 'is-warn' : ''}`, 'data-missing': '', text: missing.length ? `Before sending, add ${missing.join(', ')}.` : 'Ready to send.' }),
     el('div', { class: 'sync-actions no-print' }, [
       el('button', { type: 'button', class: 'btn btn-small btn-primary', 'data-esc': 'send', disabled: state === 'decided', text: p.sentAt ? 'Send again' : 'Send the pack' }),
+      el('button', { type: 'button', class: 'btn btn-small btn-ghost', 'data-esc': 'copy-line', text: 'Copy the one-line message' }),
       el('button', { type: 'button', class: 'btn btn-small btn-ghost', 'data-esc': 'withdraw', hidden: !!p.sentAt, text: 'Discard draft' }),
-    ]),
+      p.sentAt && !p.acceptedAt && el('button', { type: 'button', class: 'btn btn-small', 'data-esc': 'accepted', text: `${p.to || 'They'} accepted ownership` }),
+      p.acceptedAt && el('span', { class: 'hint', text: `Ownership accepted ${formatDate(new Date(p.acceptedAt))}.` }),
+    ].filter(Boolean)),
     el('div', { class: 'escalation__decision' }, [
       packField('Decision taken', 'decision', p, { long: true }),
       p.decidedAt
-        ? el('p', { class: 'hint', text: `Decided ${formatDate(new Date(p.decidedAt))}. Follow it up in the log: check, update, act, and close the item when done.` })
+        ? el('p', { class: 'hint', text: `Decided ${formatDate(new Date(p.decidedAt))}.${p.communicatedAt ? ` Outcome shared ${formatDate(new Date(p.communicatedAt))}. Update the plan and close the item when done.` : ' Tell the people it affects, update the plan, and close the item when done.'}` })
         : el('button', { type: 'button', class: 'btn btn-small', 'data-esc': 'decide', disabled: !p.sentAt, text: 'Record the decision' }),
-    ]),
+      p.decidedAt && !p.communicatedAt && el('button', { type: 'button', class: 'btn btn-small', 'data-esc': 'communicate', text: 'Share the outcome' }),
+    ].filter(Boolean)),
   ]);
+}
+
+// ---------- Blocked work ----------
+
+function renderLevels() {
+  const host = document.getElementById('raid-esc-levels');
+  if (!host || host.childElementCount) return;
+  host.appendChild(el('table', { class: 'data-table' }, [
+    el('thead', {}, [el('tr', {}, ['Level', 'Typical role', 'When to escalate', 'Evidence to provide', 'Decision needed'].map((h) => el('th', { text: h })))]),
+    el('tbody', {}, LEVELS.map((l) => el('tr', { class: `esc-level is-${l.id}` }, [l.label, l.who, l.when, l.evidence, l.decides].map((c, i) => el(i ? 'td' : 'th', { text: c }))))),
+  ]));
+}
+
+function renderBlocked() {
+  const host = document.getElementById('raid-blocked');
+  if (!host) return;
+  const list = blockedWork(getState());
+  document.getElementById('raid-blocked-count').textContent = list.length ? `${list.length} blocked` : '';
+  host.replaceChildren(list.length
+    ? el('table', { class: 'data-table' }, [
+      el('thead', {}, [el('tr', {}, ['Blocked task', 'Since', 'Waiting on', 'Holds up', 'Due', ''].map((h) => el('th', { text: h })))]),
+      el('tbody', {}, list.map((b) => el('tr', { 'data-task': b.task.id }, [
+        el('td', { text: `${b.task.name || 'Untitled'}${b.task.assigned ? ` — ${b.task.assigned}` : ''}` }),
+        el('td', { text: b.since ? `${b.since}${b.days !== null ? ` (${b.days}d)` : ''}` : '—' }),
+        el('td', { text: b.task.status === 'On Hold' ? 'On hold' : b.waitingOn.map((d) => d.name).join(', ') || '—' }),
+        el('td', { text: b.holdsUp.map((d) => d.name).join(', ') || '—' }),
+        el('td', { text: b.task.end || '—' }),
+        el('td', {}, [b.raised
+          ? el('button', { type: 'button', class: 'btn btn-small btn-ghost', 'data-blocked-open': b.raised.id, text: 'Escalated ▸' })
+          : el('button', { type: 'button', class: 'btn btn-small', 'data-blocked-escalate': b.task.id, text: 'Escalate' })]),
+      ]))),
+    ])
+    : el('p', { class: 'hint', text: 'Nothing blocked: no task is on hold or waiting on unfinished work.' }));
 }
 
 // ---------- AI-specific risks ----------
@@ -281,6 +361,10 @@ function refreshPackNote(card, item) {
   const note = card.querySelector('[data-missing]');
   note.textContent = missing.length ? `Before sending, add ${missing.join(', ')}.` : 'Ready to send.';
   note.className = `hint ${missing.length ? 'is-warn' : ''}`;
+  // Only what is worked out is redrawn; the fields being typed in stay.
+  card.querySelector('[data-derived-host]').replaceChildren(...derivedParts(item));
+  card.querySelector('[data-derived="checks"]').replaceWith(checksPart(item));
+  card.querySelector('[data-derived="message"]').textContent = blockerMessage(item);
 }
 
 function applyFilters() {
@@ -325,6 +409,8 @@ export function renderRaid() {
   renderHeatMap();
   renderAiRisks();
   renderEscalations();
+  renderBlocked();
+  renderLevels();
   const state = getState();
   const tbody = document.getElementById('raid-body');
   tbody.innerHTML = '';
@@ -494,6 +580,28 @@ function bindEscalations(onChanged) {
       }
       return;
     }
+    if (action === 'copy-line') {
+      try { await navigator.clipboard.writeText(blockerMessage(item)); toast('The one-line message is on the clipboard.', 'success'); } catch { toast('The clipboard is not available here.', 'error'); }
+      return;
+    }
+    if (action === 'accepted') {
+      p.acceptedAt = new Date().toISOString();
+      scheduleSave();
+      onChanged();
+      renderRaid();
+      return;
+    }
+    if (action === 'communicate') {
+      const outcome = `Decision on “${item.title || 'untitled'}”: ${p.decision}. Decided by ${p.to || '—'}${p.decidedAt ? ` on ${formatDate(new Date(p.decidedAt))}` : ''}. Next action: ${item.owner || '—'}.`;
+      try { await navigator.clipboard.writeText(outcome); } catch { /* shown below anyway */ }
+      const ok = await confirmAction({ title: 'Share the outcome', message: `Copied to the clipboard:\n\n${outcome}\n\nSend it to the people it affects, then update the plan.`, confirmLabel: 'It is shared' });
+      if (!ok) return;
+      p.communicatedAt = new Date().toISOString();
+      scheduleSave();
+      onChanged();
+      renderRaid();
+      return;
+    }
     if (action === 'withdraw') {
       delete item.escalation;
       scheduleSave();
@@ -511,6 +619,21 @@ function bindEscalations(onChanged) {
       renderRaid();
       toast('Decision recorded. Follow it up in the log and close the item when done.', 'success');
     }
+  });
+
+  document.getElementById('raid-blocked')?.addEventListener('click', (e) => {
+    const open = e.target.closest('[data-blocked-open]')?.dataset.blockedOpen;
+    if (open) { document.querySelector(`#raid-escalations [data-id="${open}"]`)?.scrollIntoView({ block: 'start' }); return; }
+    const taskId = e.target.closest('[data-blocked-escalate]')?.dataset.blockedEscalate;
+    const entry = taskId && blockedWork(getState()).find((b) => b.task.id === taskId);
+    if (!entry) return;
+    const row = { id: uid(), ...blockerIssue(entry) };
+    getState().raid.push(row);
+    scheduleSave();
+    onChanged();
+    renderRaid();
+    document.querySelector(`#raid-escalations [data-id="${row.id}"] [data-pack="reach"]`)?.focus();
+    toast('Raised as an issue with the fact and the impact filled in. Say how far it reaches, the options and who decides.', 'success');
   });
 
   document.getElementById('sec-raid-heatmap').addEventListener('click', (e) => {

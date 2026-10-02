@@ -1017,6 +1017,9 @@ function regenerateRowIds(project) {
   (project.changeLog || []).forEach((entry) => {
     if (entry.rowId) entry.rowId = swap(entry.rowId);
   });
+  (project.raid || []).forEach((item) => {
+    if (item.taskId) item.taskId = swap(item.taskId);
+  });
   (project.stakeholderNeeds || []).forEach((n) => {
     if (n.stakeholderId) n.stakeholderId = swap(n.stakeholderId);
   });

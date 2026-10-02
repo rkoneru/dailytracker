@@ -6755,6 +6755,27 @@ body.login-open { overflow: hidden; }
   .needs-steps { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 }
 
+/* Escalation levels, steps and the one-line message. */
+.esc-steps { list-style: none; margin: 4px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px; font-size: 12px; }
+.esc-step { display: flex; gap: 6px; align-items: baseline; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 4px 8px; }
+.esc-step__n { font-weight: 800; color: var(--color-primary); }
+.esc-step.is-done { border-color: #16a34a; }
+.esc-step.is-done .esc-step__n { color: var(--color-success-text); }
+.esc-fit { margin: 0 0 6px; }
+.esc-message { margin: 8px 0; padding: 10px 12px; border-radius: var(--radius); background: #0f1d3a; color: #f8fafc; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.esc-checks-wrap summary, .esc-levels summary { cursor: pointer; font-weight: 600; }
+.esc-levels { margin: 8px 0 12px; }
+.esc-level th { white-space: nowrap; text-align: left; }
+.esc-level.is-team th { color: #0f766e; }
+.esc-level.is-owner th { color: #1d4ed8; }
+.esc-level.is-sponsor th { color: #b45309; }
+.esc-level.is-emergency th { color: #b91c1c; }
+.esc-urgent { margin: 8px 0 0; padding: 8px 12px; border-radius: var(--radius); border: 1px solid #f59e0b; background: #fffbeb; color: #78350f; font-size: 13px; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .esc-urgent { background: #3b2a0a; color: #fde68a; }
+}
+:root[data-theme="dark"] .esc-urgent { background: #3b2a0a; color: #fde68a; }
+
 /* Twelve pillars. */
 .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .pillar { border: 1px solid var(--color-border); border-top: 4px solid #eab308; border-radius: var(--radius); padding: 8px 12px; display: grid; gap: 4px; align-content: start; font-size: 13px; }

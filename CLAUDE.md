@@ -289,6 +289,16 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   (`suggestedTriggers`: past due, a decision waiting over ten days, the top
   band) but never escalates by itself. Overdue is worked out from `decideBy`
   and the absence of a decision, never picked.
+  It goes to the lowest level that can decide (`LEVELS`: team, project
+  owner, sponsor/governance, emergency route): how far the issue reaches
+  picks the level (`levelFor`), `levelFit` names a level too low or too high,
+  and serious harm takes the emergency route whatever the tolerance. The five
+  steps (attempt, document, escalate, owner accepts, follow through — decided
+  and the outcome shared) and the seven checks are worked out from the pack;
+  `blockerMessage` is the one line. `blockedWork` finds tasks on hold or
+  waiting on unfinished work, since when from their own `statusHistory`, and
+  `blockerIssue` raises one as an Issue (with `taskId`) with the fact and the
+  impact written.
 - **A gate is a milestone with a decision, and its state is worked out.**
   `gateState` reads the entry criteria and the date: no criteria, not ready,
   ready, overdue once the date passes undecided. The decision needs the gate's

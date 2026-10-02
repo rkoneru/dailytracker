@@ -32,7 +32,7 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
     const closed = { ...late, status: 'Closed' };
     const pack = e.newPack(late, today);
     const missingAll = e.packMissing(pack);
-    Object.assign(pack, { impact: 'Launch slips two weeks', options: 'Pay for expedite\nCut scope', recommendation: 'Pay for expedite', to: 'Sponsor', decideBy: '2026-10-05' });
+    Object.assign(pack, { impact: 'Launch slips two weeks', options: 'Pay for expedite\nCut scope', recommendation: 'Pay for expedite', to: 'Sponsor', decideBy: '2026-10-05', level: 'owner' });
     const item = { ...late, escalation: pack };
     const states = [e.escalationState(item, today)];
     pack.sentAt = '2026-10-01T09:00:00Z';
@@ -57,12 +57,12 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   eq('nothing to suggest for a quiet risk or a closed one', r.calm, [false, false]);
   eq('a new pack starts with the log’s reasons ticked', r.prefilled, ['timeline']);
   eq('an empty pack names everything it lacks',
-     r.missing, ['the impact', 'at least one option', 'a recommendation', 'who decides', 'a date the decision is needed by']);
+     r.missing, ['the impact', 'at least one option', 'a recommendation', 'who decides', 'a date the decision is needed by', 'the level that can decide']);
   eq('a filled pack is ready', r.ready, []);
   eq('draft, awaiting, overdue by the date, decided', r.states, ['draft', 'awaiting', 'overdue', 'decided']);
-  eq('the message leads with the item and ends with who decides by when',
-     [r.text.split('\n')[0], r.text.includes('  2. Cut scope'), r.text.trim().split('\n').pop()],
-     ['Escalation — Website: Vendor may slip', true, 'Decision needed from Sponsor by 2026-10-05.']);
+  eq('the message leads with the item, says who decides by when, and ends on the one line',
+     [r.text.split('\n')[0], r.text.includes('  2. Cut scope'), r.text.includes('Decision needed from Sponsor by 2026-10-05.'), r.text.trim().split('\n').pop().startsWith('We are blocked by Vendor may slip.')],
+     ['Escalation — Website: Vendor may slip', true, true, true]);
   eq('the heat map counts open risks only', r.heat, { 'Medium|High': 2, 'Low|Low': 1 });
 
   console.log('\n--- the heat map on the page ---');
@@ -101,6 +101,7 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   await page.fill(`${card} [data-pack="recommendation"]`, 'Run organic only');
   await page.fill(`${card} [data-pack="to"]`, 'Sponsor');
   await page.fill(`${card} [data-pack="decideBy"]`, '2026-10-03');
+  await page.selectOption(`${card} [data-pack="level"]`, 'owner');
   eq('ready to send', await page.textContent(`${card} [data-missing]`), 'Ready to send.');
   await page.click(`${card} [data-esc="send"]`);
   await page.waitForSelector('.dialog');
@@ -119,7 +120,7 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   await page.waitForTimeout(300);
   const decided = await page.evaluate(async () => (await import('/js/state.js')).getState().raid.find((i) => i.escalation));
   eq('decided: back to being worked, decision kept', [decided.status, decided.escalation.decision], ['In Progress', 'Go organic; revisit paid in week 2']);
-  eq('the card says decided and points to the follow-up', (await page.textContent(`${card}`)).includes('Follow it up in the log'), true);
+  eq('the card says decided and points to the follow-up', (await page.textContent(`${card}`)).includes('Tell the people it affects, update the plan'), true);
 
   console.log('\n--- overdue by the dates ---');
   await page.evaluate(async () => {

@@ -152,6 +152,8 @@ function showPage(pageId, title) {
   // Attendees are offered from the project team, which is edited elsewhere,
   // so the page re-reads on arrival rather than trusting the last render.
   if (pageId === 'page-meetings') renderMeetings();
+  // Blocked work is read off the tasks, which are edited on another page.
+  if (pageId === 'page-raid') renderRaid();
   // Re-read on arrival rather than kept warm: membership and the page policy
   // are the server's to state, and a stale "you are an admin" is exactly the
   // claim that must not linger.

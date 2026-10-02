@@ -31,7 +31,7 @@ const { APP_URL, launch, createChecks, openSection, openDestination } = require(
     'tab-portfolio': ['page-portfolio', ['All projects', 'Roadmap', 'AI initiatives', 'Planning layers']],
     'tab-planner': ['page-planner', ['Milestones & Gates', 'Timeline', 'Gantt', 'Horizons', 'Budget & Notes', 'Approach']],
     'tab-tasks': ['page-tasks', ['Task List', 'Priority Board', 'Sprints']],
-    'tab-raid': ['page-raid', ['Log', 'Escalations', 'Dependencies']],
+    'tab-raid': ['page-raid', ['Log', 'Mitigation', 'Escalations', 'Dependencies']],
     'tab-scope': ['page-scope', ['Charter', 'Project Plan', 'Dev Intent', 'Scope Baseline', 'Deliverables', 'Change Requests', 'Billing', 'Documents']],
     'tab-people': ['page-people', ['Team', 'Who Does What', 'Stakeholders & Comms', 'Stakeholder Needs', 'Vendors', 'Handoffs']],
     'tab-service': ['page-service', ['Service Levels', 'Incidents', 'Go-Live', 'Releases & Change', 'Known Issues']],

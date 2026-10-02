@@ -68,6 +68,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/sprints.js`, `sprintsPage.js` | sprint planning on Tasks: capacity from the project's bookings and leave at a focus factor, load from estimates, a nine-step derived checklist, per-person load, a commitment tied to the backlog, velocity from closed sprints |
 | `js/capacityPlan.js` | Resources, week by week: the capacity calendar (load against the time each person had that week), who is free now / in 1–2 / 3–4 weeks, skill demand vs supply from the skills each booking needs, and named fixes for over-allocation; `dailySchedule` gives each person's hours a day from their tasks on every project (an estimate spread over the working days it runs; no estimate is named, not zero) against the hours they have, with leave, weekends and a summary row. Pure |
 | `js/escalation.js` | risk review on the RAID page: the heat map of open risks (a square filters the log), the log's own reasons to escalate, the escalation pack (why, impact, options, recommendation, who decides, by when) and the decision recorded against it. Pure |
+| `js/mitigation.js`, `mitigationPage.js` | the Mitigation tab on the RAID page: a plan on each open risk (`item.mitigation`) — response types (prevention, impact reduction, contingency, monitoring), intended reduction, due, dependency, evidence, residual exposure, trigger; the risk's title, owner and action stay its log row's; `vagueness` names an action that is an intention; the five steps, the nine-question checklist and the common checks worked out. Pure rules |
 | `js/gates.js` | decision gates on milestones (`kind: 'gate'`): one owner, entry criteria, options, default path, the recorded decision; the milestone check (not a task, not a progress figure, not a vague date, scarce, owned). Pure |
 | `js/rhythm.js`, `rhythmPage.js` | the operating rhythm on Meetings: daily/weekly/monthly cadences (purpose, length, focus, output), who attends what (R/C/I), "escalate when" triggers read off the project, the setup checklist, and a cadence's meeting series |
 | `js/horizons.js`, `horizonsPage.js` | the Plan page's Horizons tab: Now (this week), Next (2–6 weeks), Future (beyond) read off tasks, milestones, gates, phases, dependencies, RAID and bookings, with what each still needs; the weekly check-in (done, next, blocking) |
@@ -299,6 +300,15 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   waiting on unfinished work, since when from their own `statusHistory`, and
   `blockerIssue` raises one as an Issue (with `taskId`) with the fact and the
   impact written.
+- **A mitigation plan is more than "monitor", and Reassess moves the risk.**
+  `item.mitigation` holds only what the row has no room for; the action is
+  the row's own `action`, read by `vagueness` (a vague verb with no number,
+  date or rhythm is an intention). Capacity is the owner's bookings to the
+  due date, and `null` — a question, not a pass — for an owner outside the
+  resource pool. Monitoring alone fails the checklist. Reassess
+  (`reassessPatch`) writes the residual severity and likelihood onto the row,
+  keeping what it was in `before`, so the heat map moves; a residual still
+  in the top band needs someone named to accept it.
 - **A gate is a milestone with a decision, and its state is worked out.**
   `gateState` reads the entry criteria and the date: no criteria, not ready,
   ready, overdue once the date passes undecided. The decision needs the gate's

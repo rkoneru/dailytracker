@@ -161,6 +161,7 @@ export const NAV_TREE = [
         title: 'Risks, Issues & Dependencies',
         children: [
           { id: 'nav-raid-log', label: 'RAID Log', page: 'page-raid', title: 'Risks, Issues & Dependencies', section: 'sec-raid-log' },
+          { id: 'nav-mitigation', label: 'Mitigation', page: 'page-raid', title: 'Risks, Issues & Dependencies', section: 'sec-raid-mitigation' },
           { id: 'nav-escalations', label: 'Escalations', page: 'page-raid', title: 'Risks, Issues & Dependencies', section: 'sec-raid-escalations' },
           { id: 'nav-dependencies', label: 'Dependencies', page: 'page-raid', title: 'Risks, Issues & Dependencies', section: 'sec-dependencies' },
         ],

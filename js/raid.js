@@ -13,6 +13,7 @@ import { confirmAction, toast } from './dialog.js';
 import { formatDate } from './dates.js';
 import { AI_RISKS, aiRiskCoverage, aiRiskRow } from './aiRisk.js';
 import { methodOf } from './methodology.js';
+import { initMitigation, renderMitigation } from './mitigationPage.js';
 
 // Dependencies used to be a RAID type. They now have a register of their own,
 // directly below this log, recording direction, party and needed-by — things a
@@ -411,6 +412,7 @@ export function renderRaid() {
   renderEscalations();
   renderBlocked();
   renderLevels();
+  renderMitigation();
   const state = getState();
   const tbody = document.getElementById('raid-body');
   tbody.innerHTML = '';
@@ -656,6 +658,7 @@ export function initRaid({ onChanged } = {}) {
   bindControls(notify);
   bindEscalations(notify);
   bindAiRisks(notify);
+  initMitigation({ rowChanged: () => { renderRaid(); notify(); } });
   // Dependencies sit under the RAID log rather than on a commercial page:
   // "what is in our way" is one question, and a dependency is the half of the
   // answer that belongs to someone else. They were a RAID type until the

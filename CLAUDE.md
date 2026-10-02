@@ -73,6 +73,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/rhythm.js`, `rhythmPage.js` | the operating rhythm on Meetings: daily/weekly/monthly cadences (purpose, length, focus, output), who attends what (R/C/I), "escalate when" triggers read off the project, the setup checklist, and a cadence's meeting series |
 | `js/horizons.js`, `horizonsPage.js` | the Plan page's Horizons tab: Now (this week), Next (2–6 weeks), Future (beyond) read off tasks, milestones, gates, phases, dependencies, RAID and bookings, with what each still needs; the weekly check-in (done, next, blocking) |
 | `js/blueprint.js`, `blueprintPage.js` | the Plan page's Approach tab: the hybrid delivery blueprint — ten inputs scored low/medium/high, the predictable/adaptive blend, which elements go which way and why, and the five-part setup checked against what the project has |
+| `js/capacityReview.js`, `capacityReviewPage.js` | the Plan page's Capacity Review tab: for a review period, planned vs actual demand, the unplanned share, the team's hours and skill shortages read off the record (`pastFigures`, `null` when nothing answers), the six signals of the diagnostic matrix with action and owner, past vs next plan inputs, the action record (`project.capacityReview`), five steps and the final checks. Pure rules |
 | `js/portfolioDash.js` | Portfolio at a glance: projects complete / in progress / overdue, tasks by status (a CSS conic donut), tasks delivered per month from status history — months before any history are `null`, drawn grey. Pure |
 | `js/handoff.js`, `handoffPage.js` | handoffs on People & Stakeholders: the package read off the project for the current owner, five derived stages, diagnostic checks, a refusal to store anything that looks like a credential, signed acceptance, and the transfer that moves the work |
 | `js/stakeholderNeeds.js`, `stakeholderNeedsPage.js` | the Stakeholder Needs tab on People & Stakeholders: ask each person what they need to decide — nine areas (role, decisions, outcomes, risks, detail, format, cadence, escalation triggers, preferred response), one `stakeholderNeeds` row per person pointing at the Stakeholders register; the five steps (prepare, ask, confirm, agree, test) worked out, the confirmation note, the diagnostic checks, the illustrative example |
@@ -333,6 +334,15 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   change requests, dependencies at risk, top-band risks, overloads, SPI/CPI
   under 0.9, budget over — and is `null` when nothing could answer it. A
   stand-up repeats `Weekdays` (RRULE BYDAY=MO..FR).
+- **A capacity review reads the past and types only the future.** Planned
+  demand is tasks due in the period that existed when it began; actual adds
+  the tasks created inside it and the incidents reported; capacity is
+  `sprintCapacity` over the period at full focus from the project's own
+  bookings (people outside the pool are named, not guessed). Only the
+  reserve's past level and use, the next plan's inputs and the actions are
+  typed. A signal is `null` when nothing could answer it. Planning less
+  unplanned work than last time passes the assumptions check only with an
+  action on its causes.
 - **The blueprint stores ten judgements and nothing else.** `blueprint.inputs`
   holds the 1–3 scores; the blend, the elements and the setup are worked out by
   `synthesise`, which refuses (`ready: false`) with fewer than six scored and

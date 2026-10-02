@@ -6806,6 +6806,19 @@ body.login-open { overflow: hidden; }
 :root[data-theme="dark"] .sl-count.is-out { background: #1e293b; color: #cbd5e1; }
 :root[data-theme="dark"] .sl-questions { background: #3b2a0a; color: #fde68a; }
 
+/* Capacity review. */
+.cr-period { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; margin-bottom: 8px; }
+.cr-inline { display: inline-flex; gap: 6px; align-items: center; }
+.cr-inputs td.is-grey { color: var(--color-text-muted); }
+.cr-signal th { text-align: left; }
+.cr-signal.is-lit th, .cr-signal.is-lit [data-signal-state] { color: var(--color-danger-text); }
+.cr-signal.is-clear [data-signal-state] { color: var(--color-success-text); }
+.cr-signal.is-na [data-signal-state] { color: var(--color-text-muted); font-weight: 400; }
+.cr-evidence { display: block; font-size: 12px; }
+.cr-field { padding: 4px 8px; font-size: 13px; min-width: 90px; width: 100%; }
+.cr-dismiss { margin-top: 4px; min-width: 140px; }
+#cr-reference h4 { margin: 10px 0 4px; }
+
 /* Twelve pillars. */
 .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .pillar { border: 1px solid var(--color-border); border-top: 4px solid #eab308; border-radius: var(--radius); padding: 8px 12px; display: grid; gap: 4px; align-content: start; font-size: 13px; }

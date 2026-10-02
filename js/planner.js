@@ -10,6 +10,7 @@ import { onSectionShown } from './tabs.js';
 import { initGantt, renderGantt } from './gantt.js';
 import { initHorizons, renderHorizons } from './horizonsPage.js';
 import { initBlueprint, renderBlueprint } from './blueprintPage.js';
+import { initCapacityReview, markCapacityReviewStale } from './capacityReviewPage.js';
 import { refFor } from './register.js';
 import { METHODOLOGIES, methodOf, phasesOf, phaseProgress, sanitisePhase } from './methodology.js';
 import { toLocalISO, formatDate } from './dates.js';
@@ -918,6 +919,7 @@ export function renderPlannerShared() {
   renderMilestones();
   renderHorizons();
   renderBlueprint();
+  markCapacityReviewStale();
   renderTicks();
   renderBaselineNote();
   renderCostEstimate();
@@ -1085,6 +1087,7 @@ export function initPlanner() {
   bindGates();
   initHorizons();
   initBlueprint();
+  initCapacityReview();
   bindOpenTasks();
   bindTicks();
   initGantt({ onMethodChange: () => { renderMethod(); renderMilestones(); } });

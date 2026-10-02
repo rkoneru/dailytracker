@@ -46,6 +46,7 @@ export const PAGE_TABS = {
     { id: 'sec-horizons', label: 'Horizons' },
     { id: 'sec-budget', label: 'Budget & Notes', sections: ['sec-budget', 'sec-notes'] },
     { id: 'sec-blueprint', label: 'Approach' },
+    { id: 'sec-capacity-review', label: 'Capacity Review' },
   ],
   'page-tasks': [
     // The legend explains the list, so it sits under it rather than a tab away.

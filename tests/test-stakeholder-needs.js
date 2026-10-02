@@ -108,7 +108,8 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   await page.waitForTimeout(300);
   const comms = await page.evaluate(async () => (await import('/js/state.js')).getState().comms.map((c) => [c.audience, c.channel, c.frequency]));
   eq('Agree puts it on the Communications Plan', comms, [['Dana Sponsor', 'Dashboard', 'Monthly']]);
-  await page.fill('#needs-body [data-needs-test="at"]', '2026-10-01');
+  // Shared after it was confirmed: today, on the page's own clock.
+  await page.fill('#needs-body [data-needs-test="at"]', await page.evaluate(async () => (await import('/js/dates.js')).todayISO()));
   await page.selectOption('#needs-body [data-needs-test="helped"]', 'yes');
   await page.waitForTimeout(200);
   eq('then all five steps are done', await page.$$eval('#needs-steps .needs-step.is-done', (e) => e.length), 5);

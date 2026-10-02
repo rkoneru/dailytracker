@@ -866,12 +866,12 @@ body { overflow-anchor: none; }
 
 .report-type-picker {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 @media (max-width: 700px) {
   .report-type-picker { grid-template-columns: 1fr 1fr; }
-  /* Five in two columns leaves one over; it takes the whole last row. */
+  /* An odd count in two columns leaves one over; it takes the whole last row. */
   .report-type-btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 

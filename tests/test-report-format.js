@@ -8,7 +8,7 @@
 const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
-const TYPES = ['daily', 'weekly', 'steerco', 'executive'];
+const TYPES = ['daily', 'team', 'weekly', 'steerco', 'executive'];
 
 (async () => {
   const browser = await launch();
@@ -50,6 +50,21 @@ const TYPES = ['daily', 'weekly', 'steerco', 'executive'];
     eq(`${type} titles the sheet`,
        (await page.textContent('.rpt-sheet__title')).length > 0, true);
   }
+
+  console.log('\n--- the chapters run in order, none missing ---');
+  const chapters = [];
+  for (const type of [...TYPES, 'closure']) {
+    await show(type);
+    chapters.push(Number((await page.textContent('.rpt-sheet__chapter span')).replace('CHAPTER ', '')));
+  }
+  eq('daily, team, weekly, monthly, portfolio, closure are chapters 1 to 6', chapters, [1, 2, 3, 4, 5, 6]);
+
+  console.log('\n--- chapter 2 is the team’s week ---');
+  await show('team');
+  const teamBoxes = await page.$$eval('.rpt-sheet:first-of-type .rpt-box__title', (e) => e.map((x) => x.textContent));
+  eq('it says what got done, what is next, what is blocked and who is away',
+     ['COMPLETED THIS WEEK', 'PLANNED NEXT WEEK', 'IN PROGRESS', 'BLOCKED', 'AWAY THIS WEEK'].every((t) => teamBoxes.includes(t)), true);
+  eq('its cadence is weekly operational', (await page.$$eval('.rpt-sheet__chapter span', (e) => e[2].textContent)).toUpperCase(), 'WEEKLY OPERATIONAL');
 
   console.log('\n--- and the same legend on every one of them ---');
   const expected = ['Negative Trend', 'Positive Trend', 'On Plan',

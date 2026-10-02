@@ -22,7 +22,7 @@ import { exportAsPDF, exportAsPNG, buildMailtoUrl, exportProjectJSON, exportBack
 import { initProjects } from './projects.js';
 import { initReports, refreshReport, setReportType } from './reports.js';
 import { captureSnapshotIfDue } from './history.js';
-import { initRaid, renderRaid } from './raid.js';
+import { initRaid, renderRaid, renderBlocked } from './raid.js';
 import { initEngagement, renderEngagement } from './engagement.js';
 import { initService, renderService } from './service.js';
 import { initCustomerSuccess, renderCustomerSuccess } from './customerSuccessPage.js';
@@ -153,7 +153,8 @@ function showPage(pageId, title) {
   // so the page re-reads on arrival rather than trusting the last render.
   if (pageId === 'page-meetings') renderMeetings();
   // Blocked work is read off the tasks, which are edited on another page.
-  if (pageId === 'page-raid') renderRaid();
+  // Only that list: redrawing the log would drop a linked row's mark.
+  if (pageId === 'page-raid') renderBlocked();
   // Re-read on arrival rather than kept warm: membership and the page policy
   // are the server's to state, and a stale "you are an admin" is exactly the
   // claim that must not linger.

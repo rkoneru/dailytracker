@@ -201,6 +201,7 @@ function kpiSlides(project, { resources, absences }) {
 
 const TITLES = {
   daily: 'Daily Operational Report',
+  team: 'Weekly Team Status Report',
   weekly: 'Weekly Status Report',
   steerco: 'Steering Committee Report',
   executive: 'Executive Leadership Report',

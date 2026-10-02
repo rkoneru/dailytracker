@@ -40,7 +40,7 @@ const os = require('os');
   }
 
   console.log('\n--- every cadence produces a deck ---');
-  for (const type of ['daily', 'weekly', 'steerco', 'executive']) {
+  for (const type of ['daily', 'team', 'weekly', 'steerco', 'executive']) {
     const { name, bytes } = await grab(type);
     eq(`${type} downloads`, bytes.length > 2000, true);
     eq(`${type} is a ZIP`, bytes.subarray(0, 2).toString('latin1'), 'PK');

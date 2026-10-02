@@ -180,7 +180,7 @@ export function createServiceTransition() {
 
     incidents: [
       { id: id('inc'), title: 'Orders stuck in payment pending', priority: 'P1', service: 'Orders platform', account: 'Orders platform client', contact: 'Marcus Lee', reported: '2026-10-01T07:45', responded: '2026-10-01T08:05', resolved: '2026-10-01T10:20', status: 'Resolved', assignee: 'Dev Raman', knownError: 'KE-01', survey: { sentAt: '2026-10-01', via: 'reply' }, csat: '4' },
-      { id: id('inc'), title: 'Nightly stock sync overran into trading hours', priority: 'P2', service: 'Integrations', account: 'Orders platform client', contact: 'Marcus Lee', reported: '2026-10-02T06:30', responded: '2026-10-02T07:10', resolved: '', status: 'In Progress', assignee: 'Dev Raman', knownError: '' },
+      { id: id('inc'), title: 'Nightly stock sync overran into trading hours', priority: 'P2', service: 'Integrations', account: 'Orders platform client', contact: 'Marcus Lee', reported: '2026-09-24T09:30', responded: '2026-09-24T10:10', resolved: '', status: 'In Progress', assignee: 'Dev Raman', knownError: '' },
     ],
 
     // The client whose service this is: the account the transition is, in
@@ -189,6 +189,13 @@ export function createServiceTransition() {
       { id: id('ac'), name: 'Orders platform client', segment: 'Enterprise', csm: 'Dev Raman', stage: 'Onboard', arr: 420000, startArr: 420000, start: '2026-09-21', renewal: '2029-12-31', adoption: '', nps: 7, lastTouch: '2026-10-02', acquisitionCost: 38000, stageHistory: [{ stage: 'Onboard', at: '2026-09-21' }] },
     ],
 
+    scopeItems: [
+      { id: id('si'), name: '24x7 P1 incident cover', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Nothing needs it', obligation: 'Legal or contractual', effort: 'L', risk: 'High', rationale: 'In the service schedule.' },
+      { id: id('si'), name: 'Knowledge transfer from the incumbent', category: 'Enabling work', outcome: 'Helps the outcome', dependency: 'Other items need it', obligation: 'None', effort: 'M', risk: 'High', rationale: 'Nothing can be supported until it is understood.' },
+      { id: id('si'), name: 'Tooling migration to our ITSM', category: 'Enabling work', outcome: 'Helps the outcome', dependency: 'Other items need it', obligation: 'None', effort: 'L', risk: 'Medium', rationale: 'Tickets and SLAs run on it.' },
+      { id: id('si'), name: 'Continual improvement backlog, quarter one', category: 'Optional improvement', outcome: 'Helps the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'M', risk: 'Low', rationale: 'If the run settles early.' },
+      { id: id('si'), name: 'Re-platforming the integrations', category: 'Explicit exclusion', outcome: 'Not needed', dependency: 'Nothing needs it', obligation: 'None', effort: 'XL', risk: 'High', rationale: 'A separate project if wanted.' },
+    ],
     documents: [
       { id: id('doc'), title: 'Master services agreement and service schedule', type: 'Contract', link: '', version: 'v3.0', owner: 'Helen Ward', status: 'Approved', review: '2026-12-01' },
       { id: id('doc'), title: 'Incumbent exit plan', type: 'Plan', link: '', version: 'v1.2', owner: 'Dev Raman', status: 'Approved', review: '' },
@@ -388,6 +395,13 @@ export function createServiceDeskLaunch() {
       { id: id('ac'), name: 'Finance department', segment: 'Mid-market', csm: 'Owen Clarke', stage: 'Adopt', arr: '', startArr: '', start: '2026-10-05', renewal: '', adoption: 40, nps: 6, lastTouch: '2026-10-02', acquisitionCost: '', stageHistory: [{ stage: 'Onboard', at: '2026-10-05' }, { stage: 'Adopt', at: '2026-10-19' }] },
     ],
 
+    scopeItems: [
+      { id: id('si'), name: 'Service desk portal and request catalogue', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'Medium', rationale: 'How departments reach the desk.' },
+      { id: id('si'), name: 'Priority model and SLAs', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Other items need it', obligation: 'Policy', effort: 'S', risk: 'Low', rationale: 'Required by the service policy.' },
+      { id: id('si'), name: 'Agent training', category: 'Enabling work', outcome: 'Helps the outcome', dependency: 'Other items need it', obligation: 'None', effort: 'M', risk: 'Medium', rationale: 'Needed before go-live.' },
+      { id: id('si'), name: 'Self-service knowledge base', category: 'Deferred', outcome: 'Helps the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'M', risk: 'Low', rationale: 'Phase 2, once the common requests are known.' },
+      { id: id('si'), name: 'Out-of-hours cover', category: 'Explicit exclusion', outcome: 'Not needed', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'Low', rationale: 'Business hours only at launch.' },
+    ],
     documents: [
       { id: id('doc'), title: 'Priority model and SLA definition', type: 'Policy', link: '', version: 'v1.0', owner: 'Owen Clarke', status: 'Approved', review: '2027-04-01' },
       { id: id('doc'), title: 'Request catalogue', type: 'Design', link: '', version: 'v0.8', owner: 'Sara Boyd', status: 'In Review', review: '2026-10-24' },

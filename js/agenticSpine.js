@@ -154,6 +154,16 @@ const SPINE_DOCUMENTS = (d) => [
   { title: 'Operations runbook', type: 'Plan', link: '', version: '', owner: d.roleNames.design, status: 'Draft', review: wk(26) },
 ];
 
+// Every agentic programme draws the same scope line: the agent and its
+// guardrails are in, evaluation enables them, and acting without a human
+// in the loop is left out until the evidence says otherwise.
+const SPINE_SCOPE_ITEMS = (d) => [
+  { name: 'The agent for the core workflow', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'High', rationale: 'It is the outcome.' },
+  { name: 'Guardrails and human review of actions', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Other items need it', obligation: 'Policy', effort: 'M', risk: 'High', rationale: `Required by ${d.roleNames.compliance}.` },
+  { name: 'Evaluation harness and held-out cases', category: 'Enabling work', outcome: 'Helps the outcome', dependency: 'Other items need it', obligation: 'None', effort: 'M', risk: 'Medium', rationale: 'No release without it.' },
+  { name: 'Fully autonomous actions', category: 'Explicit exclusion', outcome: 'Not needed', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'High', rationale: 'Not until the evaluation supports it.' },
+];
+
 // Every agentic programme buys its model; that contract is the one vendor they
 // all share, and the one whose terms (retention, training on your data) the
 // guardrail specification has to agree with.
@@ -293,6 +303,7 @@ export function agenticSpine(d) {
     stakeholders: [...SPINE_STAKEHOLDERS(d), ...(d.stakeholders || [])].map((x) => ({ id: uid('sh'), ...x })),
     comms: [...SPINE_COMMS(d), ...(d.comms || [])].map((x) => ({ id: uid('cm'), ...x })),
     documents: [...SPINE_DOCUMENTS(d), ...(d.documents || [])].map((x) => ({ id: uid('doc'), ...x })),
+    scopeItems: [...SPINE_SCOPE_ITEMS(d), ...(d.scopeItems || [])].map((x) => ({ id: uid('si'), ...x })),
     vendors: [...SPINE_VENDORS(d), ...(d.vendors || [])].map((x) => ({ id: uid('vn'), ...x })),
     customers: [...SPINE_CUSTOMERS(d), ...(d.customers || [])].map((x) => ({ id: uid('ac'), ...x })),
     contacts: [...SPINE_CONTACTS(d), ...(d.contacts || [])].map((x) => ({ id: uid('ct'), ...x })),

@@ -171,6 +171,13 @@ function createMarketingCampaign() {
       { id: id('cm'), audience: 'Campaign team', purpose: 'Unblock the week', channel: 'Meeting', frequency: 'Weekly', owner: 'Priya N.', format: '30 minutes Monday, standing agenda.' },
       { id: id('cm'), audience: 'Finance', purpose: 'Spend against budget', channel: 'Email', frequency: 'Monthly', owner: 'Jordan K.', format: 'Spend export plus commentary.' },
     ],
+    scopeItems: [
+      { id: id('si'), name: 'Paid social on Meta and TikTok', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'Medium', rationale: 'The main driver of site visits.' },
+      { id: id('si'), name: 'Tracking pixels and UTM tagging', category: 'Enabling work', outcome: 'Helps the outcome', dependency: 'Other items need it', obligation: 'None', effort: 'S', risk: 'Low', rationale: 'Without it the 5,000 visits cannot be counted.' },
+      { id: id('si'), name: 'Influencer partnerships', category: 'Optional improvement', outcome: 'Helps the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'M', risk: 'High', rationale: 'Adds reach if contracts land in time.' },
+      { id: id('si'), name: 'Podcast sponsorship', category: 'Deferred', outcome: 'Not needed', dependency: 'Nothing needs it', obligation: 'None', effort: 'M', risk: 'Low', rationale: 'Held for the next quarter.' },
+      { id: id('si'), name: 'Paid search', category: 'Explicit exclusion', outcome: 'Not needed', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'Low', rationale: 'Run by the performance team, not this campaign.' },
+    ],
     documents: [
       { id: id('doc'), title: 'Agency statement of work', type: 'Statement of Work', link: 'https://drive.example.com/northside-sow', version: 'v2.1', owner: 'Jordan K.', status: 'Approved', review: '2026-09-30' },
       { id: id('doc'), title: 'Campaign brief', type: 'Plan', link: 'https://drive.example.com/campaign-brief', version: 'v1.3', owner: 'Priya N.', status: 'Approved', review: '' },

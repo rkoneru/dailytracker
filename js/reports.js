@@ -20,11 +20,16 @@ import { listUseCases } from './useCaseStore.js';
 import { roiModel, realisation } from './useCaseModel.js';
 import { billingMetrics } from './billing.js';
 import { CLOSED as INCIDENT_CLOSED } from './serviceDesk.js';
+import { blockedWork } from './escalation.js';
 
 // ---------- Report types ----------
 
 const REPORT_TYPES = {
   daily: { title: 'Daily Status Report', period: 'day', currentLabel: 'Today' },
+  // Chapter 2: the week for the team doing the work — what got done, what is
+  // planned next, who is blocked and who is away. Chapter 3 is the same week
+  // for the people the team reports to.
+  team: { title: 'Weekly Team Status Report', period: 'week', currentLabel: 'This Week' },
   weekly: { title: 'Weekly Status Report', period: 'week', currentLabel: 'This Week' },
   steerco: { title: 'Steering Committee Report', period: 'month', currentLabel: 'This Month' },
   executive: { title: 'Executive Leadership Report', period: 'month', currentLabel: 'This Month' },
@@ -203,6 +208,22 @@ function computeProject(project, periodStart, periodEnd, today) {
     .sort((a, b) => b.daysLate - a.daysLate);
   const inProgress = dashTasks.filter((t) => t.status === 'In Progress');
   const onHold = dashTasks.filter((t) => t.status === 'On Hold');
+  // The week after the period: what the team has said it will do next.
+  const nextStart = addDays(periodEnd, 1);
+  const nextEnd = addDays(periodEnd, 7);
+  const plannedNext = withEnd
+    .filter(({ task, end }) => task.status !== 'Complete' && end && inRange(end, nextStart, nextEnd))
+    .map(({ task }) => task);
+  // Blocked: on hold, or waiting on unfinished work — since when, from history.
+  const blocked = blockedWork(project, today);
+  // Who on the project is away during the period, from the pool's leave.
+  const booked = new Set((project.allocations || []).map((a) => a.resourceId));
+  const pFrom = toLocalISO(periodStart);
+  const pTo = toLocalISO(periodEnd);
+  const people = new Map(listResources().map((r) => [r.id, r.name]));
+  const away = listAbsences()
+    .filter((a) => booked.has(a.resourceId) && a.from <= pTo && a.to >= pFrom)
+    .map((a) => ({ name: people.get(a.resourceId) || 'Someone', from: a.from, to: a.to, reason: a.reason || a.type || '' }));
 
   const milestonesInPeriod = milestones.filter((m) => {
     const due = parseDate(m.due);
@@ -270,6 +291,9 @@ function computeProject(project, periodStart, periodEnd, today) {
     overdue,
     inProgress,
     onHold,
+    plannedNext,
+    blocked,
+    away,
     milestonesInPeriod,
     upcomingMilestones,
     milestonesDone,
@@ -703,6 +727,48 @@ function renderDaily(report, cards, summaryEl) {
   });
 }
 
+// ---------- Chapter 2 | Weekly Operational ----------
+
+function renderTeam(report, cards, summaryEl) {
+  const sum = (k) => report.projects.reduce((n, p) => n + p[k].length, 0);
+  summaryEl.append(
+    statCard('\u2705', 'green', String(report.summary.completedInPeriod), 'Completed This Week'),
+    statCard('\ud83d\udcc5', 'blue', String(sum('plannedNext')), 'Planned Next Week'),
+    statCard('\ud83d\udd28', 'amber', String(report.summary.inProgress), 'In Progress'),
+    statCard('\u26d4', 'purple', String(sum('blocked')), 'Blocked'),
+  );
+
+  report.projects.forEach((p) => {
+    cards.appendChild(sheet({
+      chapter: 2,
+      cadence: 'Weekly Operational',
+      title: 'Weekly Team Status Report',
+      children: [
+        fieldStrip(
+          [{ label: 'Project Name', value: p.name }, { label: 'Lead', value: p.lead }],
+          { tone: p.dimensions[0].tone, trend: p.dimensions[0].trend },
+        ),
+        boxRow([
+          listBox('Completed this week', taskRows(p.completedInPeriod), { empty: 'Nothing completed this week.' }),
+          listBox('Planned next week', taskRows(p.plannedNext, (t) => `${t.assigned || 'unassigned'} \u00b7 due ${t.end}`), { empty: 'Nothing due next week.' }),
+        ]),
+        boxRow([
+          listBox('In progress', taskRows(p.inProgress, (t) => `${t.assigned || 'unassigned'}${t.end ? ` \u00b7 due ${t.end}` : ''}`), { empty: 'Nothing in progress.' }),
+          listBox('Blocked', p.blocked.map((b) => ({
+            label: b.task.name || '(untitled task)',
+            meta: [b.task.status === 'On Hold' ? 'on hold' : `waiting on ${b.waitingOn.map((d) => d.name).join(', ')}`, b.days !== null ? `${b.days}d` : ''].filter(Boolean).join(' \u00b7 '),
+          })), { empty: 'Nothing blocked.' }),
+        ]),
+        boxRow([
+          listBox('Overdue', taskRows(p.overdue, (t) => `${t.daysLate}d late`), { empty: 'Nothing overdue.' }),
+          listBox('Away this week', p.away.map((a) => ({ label: a.name, meta: `${a.from} \u2013 ${a.to}${a.reason ? ` \u00b7 ${a.reason}` : ''}` })), { empty: 'Nobody booked on the project is on leave.' }),
+          listBox('Decisions & issues', [...p.openDecisions, ...p.openIssues].slice(0, 6).map((i) => ({ label: i.title || '(untitled)', meta: `${i.type} \u00b7 ${i.owner || 'unowned'}` })), { empty: 'Nothing waiting.' }),
+        ], { tight: true }),
+      ],
+    }));
+  });
+}
+
 // ---------- Chapter 3 | Weekly Tactical ----------
 
 function renderWeekly(report, cards, summaryEl) {
@@ -924,7 +990,7 @@ function renderClosure(report, cards, summaryEl) {
 }
 
 const RENDERERS = {
-  daily: renderDaily, weekly: renderWeekly, steerco: renderSteerCo, executive: renderExecutive, closure: renderClosure,
+  daily: renderDaily, team: renderTeam, weekly: renderWeekly, steerco: renderSteerCo, executive: renderExecutive, closure: renderClosure,
 };
 
 // ---------- Email / copy text ----------
@@ -996,6 +1062,12 @@ function buildReportText(report) {
     projects.forEach((p) => {
       lines.push(`[${p.rag}] ${p.name} (${p.pctComplete}% complete${trendText(projectTrend(p.id, 'pctComplete', p.pctComplete))})`);
       lines.push(`    Done: ${p.completedInPeriod.length}  Due: ${p.dueInPeriod.length}  Overdue: ${p.overdue.length}`);
+      if (type === 'team' && p.plannedNext.length > 0) {
+        lines.push(`    Planned next week: ${p.plannedNext.slice(0, 5).map((t) => t.name || 'untitled').join(', ')}`);
+      }
+      if (type === 'team' && p.blocked.length > 0) {
+        lines.push(`    Blocked: ${p.blocked.slice(0, 5).map((b) => b.task.name || 'untitled').join(', ')}`);
+      }
       if (p.dueInPeriod.length > 0) {
         lines.push(`    Due ${periodWord}: ${p.dueInPeriod.slice(0, 5).map((t) => t.name || 'untitled').join(', ')}`);
       }

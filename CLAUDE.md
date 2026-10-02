@@ -89,7 +89,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/priority.js` | investment priority from the charter's value, fit and effort scores. Derived, never stored |
 | `js/signatureModel.js`, `signature.js` | signatures: pure record + fingerprint (Node-safe), and the dialog that stamps identity and offers a drawn mark |
 | `js/changeControl.js`, `scopeControlPage.js` | change request workflow, approval route, scope baseline and creep, signed deliverable sign-off: the rules (pure), then the screens |
-| `js/reports.js`, `reportFormat.js` | five report types; Closure is whole-project and reads only the open project |
+| `js/reports.js`, `reportFormat.js` | six report types, numbered as chapters 1–6: Daily operational, Team (weekly operational — done, planned next week, in progress, blocked from `blockedWork`, who is away), Weekly tactical, SteerCo (monthly strategic), Executive (portfolio), Closure; Closure is whole-project and reads only the open project |
 | `js/zip.js`, `pptx.js`, `reportDeck.js` | slide export, written by hand |
 | `js/dates.js` | local calendar dates and the one display formatter. Never `toISOString()` for a day |
 | `js/tableLabels.js` | labels every data table's cells and fields from its header: phone cards and screen-reader names |

@@ -25,7 +25,7 @@ const { APP_URL, out, launch, chooseLifecycle } = require('./harness');
 
   const shots = (name) => out(name);
 
-  for (const type of ['daily', 'weekly', 'steerco', 'executive']) {
+  for (const type of ['daily', 'team', 'weekly', 'steerco', 'executive']) {
     await page.click(`.report-type-btn[data-report="${type}"]`);
     await page.waitForTimeout(250);
     const title = await page.locator('#report-title').textContent();

@@ -284,7 +284,8 @@ function renderLevels() {
   ]));
 }
 
-function renderBlocked() {
+/** Blocked work is read off the tasks, edited on another page, so it is drawn again on arrival. */
+export function renderBlocked() {
   const host = document.getElementById('raid-blocked');
   if (!host) return;
   const list = blockedWork(getState());

@@ -37,8 +37,10 @@ function seedProgress(project) {
 // created, keeping every date's distance from its status date: a campaign
 // written as "a week in" is a week in on whatever day it is opened. The move
 // is in whole weeks, so a Monday stays a Monday (timesheet weeks and the
-// agentic programme start depend on it) and the status date lands within
-// three days of today.
+// agentic programme start depend on it), and it is rounded down: the status
+// date lands on today or up to six days before it, never after. Rounded to
+// the nearest week it could be three days ahead, and a demo "as of" a day
+// that has not come yet shows nothing late that its story says is late.
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 // Incident clocks are local date-times, and move with the rest of the template
 // or every sample incident would open years breached.
@@ -68,7 +70,7 @@ function onToday(project) {
   const anchor = parseDate(project.dashDate || starts[0]);
   if (!anchor) return project;
   const today = parseDate(todayISO());
-  const weeks = Math.round(Math.round((today - anchor) / DAY_MS) / 7);
+  const weeks = Math.floor(Math.round((today - anchor) / DAY_MS) / 7);
   return weeks ? shiftDates(project, weeks * 7) : project;
 }
 

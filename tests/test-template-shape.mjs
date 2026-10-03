@@ -210,7 +210,8 @@ TEMPLATES.forEach((template) => {
     const anchor = p.dashDate || p.dashTasks.map((x) => x.start).filter(Boolean).sort()[0];
     if (!anchor) return;
     const gap = Math.round((day(anchor) - today) / 86400000);
-    check(`${t.key}: its status date is within three days of today`, Math.abs(gap) <= 3, `${anchor} is ${gap} days off`);
+    // Rounded down to whole weeks: today or up to six days before, never ahead.
+    check(`${t.key}: its status date is in the last week, never ahead of today`, gap <= 0 && gap >= -6, `${anchor} is ${gap} days off`);
   });
   // Whole weeks, so a Monday in the template is still a Monday.
   const raw = TEMPLATES.find((t) => t.key === 'marketing').build();

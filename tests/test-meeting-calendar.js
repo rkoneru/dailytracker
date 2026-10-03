@@ -100,14 +100,14 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   await openDestination(page, 'tab-meetings');
   eq('the calendar is the first tab, and where the page opens', (await page.textContent('#page-meetings .page-tab.is-active')).startsWith('Calendar'), true);
   // The starter moves by whole weeks so its weekdays hold; the stand-up lands
-  // within three days of today, not on it, unless today is its weekday.
+  // within six days before today, never after it.
   const standup = await page.evaluate(async () => {
     const m = (await import('/js/state.js')).getState().meetings.find((x) => x.name === 'Weekly campaign stand-up');
     const t = new Date();
     const d = new Date(`${m.date}T00:00:00`);
-    return { date: m.date, near: Math.abs(Math.round((d - new Date(t.getFullYear(), t.getMonth(), t.getDate())) / 86400000)) <= 3, shown: d.getMonth() === t.getMonth() };
+    return { date: m.date, near: Math.abs(Math.round((d - new Date(t.getFullYear(), t.getMonth(), t.getDate())) / 86400000)) <= 6, shown: d.getMonth() === t.getMonth() };
   });
-  eq('the sample stand-up is within a few days of today', standup.near, true);
+  eq('the sample stand-up is within the last week', standup.near, true);
   if (standup.shown) eq('and on its day in the calendar', await page.locator(`td[data-day="${standup.date}"] .cal-chip.is-meeting`).count(), 1);
   eq('and its next week is projected, dashed', await page.locator('#meeting-calendar .cal-chip.is-repeat').count() >= 1, true);
   const before = await page.evaluate(async () => (await import('/js/state.js')).getState().meetings.length);

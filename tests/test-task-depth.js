@@ -6,7 +6,7 @@
 // maths is tested on its own in test-critical.mjs; this is about whether the
 // screen tells the truth about it.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -25,6 +25,7 @@ const { eq, done } = createChecks();
   await page.click('#btn-projects');
   await page.waitForTimeout(400);
   await page.check('#template-transition');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(1200);
   await page.click('#tab-tasks');
@@ -74,7 +75,9 @@ const { eq, done } = createChecks();
 
   console.log('\n--- blocked work is visible without opening anything ---');
   eq('blocked rows are chipped', await page.locator('.dep-chip.is-blocked').count() > 0, true);
+  await openSection(page, 'sec-task-board');
   eq('and the board says so too', await page.locator('.board-card__blocked').count() > 0, true);
+  await openSection(page, 'sec-task-list');
 
   console.log('\n--- a task opens to show what it waits for ---');
   await page.click(`${row(3)} .dep-chip`);

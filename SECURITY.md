@@ -79,6 +79,135 @@ job role, and set page access. They deliberately **cannot**:
 Without the third, delegation would be one UPDATE away from a handover. All
 three are enforced by the `project_members_write` policy, not by the UI.
 
+## Meeting recordings
+
+Audio recorded on the Meetings page is kept in this browser's IndexedDB and
+nowhere else: it is not synced, not exported and not in the workspace
+database, so nobody else on the project can play it and another device of
+yours will not have it. Clearing the site's data deletes it. The optional
+live transcription is different: in Chrome and Edge the browser sends the
+audio to its vendor to be recognised, and the page says so beside the switch.
+The transcript text it produces is part of the meeting, and so is project
+data every member can read.
+
+## Contacts and the activity log
+
+Customer contacts — names, roles, email addresses and phone numbers — and the
+log of calls and meetings are project data, like the accounts they belong to:
+every member of the project can read them, and they go into exports. That is
+deliberate, since the team needs to know who the client's sponsor is, but it
+means they are personal data held by everyone on the project. Keep what is
+commercially sensitive on the use case instead, where only client partners can
+read it.
+
+## Satisfaction surveys: the one thing anonymous visitors can do
+
+A survey emailed when an incident closes is answered by someone with no
+account, so this is the one place the anon key reaches anything at all. It is
+held to exactly one thing:
+
+- **Anonymous visitors can call one function and touch no table.**
+  `submit_incident_survey` records a score of 1 to 5 and a comment (cut to 2,000
+  characters) against an unanswered, unexpired request whose token matches,
+  and only once. The anon role has no grant on `incident_surveys` itself.
+- **Only the token's hash is stored.** The token is made on the device that
+  sends the survey and appears only in the email. Reading the table — which
+  every member of the project can — never yields a working link, and the token
+  is never written into project data.
+- **Nobody writes a score directly.** There is no update policy, and a request
+  cannot be created already answered or set to last more than ninety days, so
+  a member cannot invent a satisfied customer. `tests/rls/attack.sql` attacks
+  all of this, 15 checks of the 82.
+
+What it does not do: prove who answered. A survey link is a bearer token —
+whoever holds the email can answer — and the app says so beside every score
+that came by link. A score typed in from an emailed reply is marked as
+recorded by hand, and is exactly as trustworthy as the person who typed it.
+
+## Use cases and ROI: the one part not every member can read
+
+Everything above lets every member of a project read everything in it. Use
+cases are the exception, because they carry pricing, margin and the client's
+own cost figures. They are stored in their own table, `use_cases`, and:
+
+- **Postgres returns them only to the project's owner and to members holding
+  the `client_partner` grant.** Everyone else — editors, delegated admins,
+  viewers, strangers, anonymous requests — gets zero rows. A client partner who
+  is a viewer on the project can read them and change nothing. A row cannot be
+  moved into a workspace where the writer is not a partner.
+- **Only the owner can grant or remove it.** A delegated admin can neither give
+  it nor edit the membership of anyone who holds it. `tests/rls/attack.sql`
+  attacks all of this for real, 21 checks of the 82.
+- **The client never mixes them into project data.** Use cases live under their
+  own localStorage key and sync on their own lane; they are not in project
+  exports, and converting one into a project copies only the name, outcome,
+  problem, sponsor, value and fit scores, the planned budget and the deal
+  value as the contract value — never the benefits, rates, ROI, NPV,
+  assumptions, signatures, delivery cost or margin.
+- **Quotes are part of the use case too**, with the same protection. The
+  downloadable proposal is a file on the partner's device the moment it is
+  saved; it leaves out delivery cost, margin and probability by construction,
+  and a test holds it to that. A quote's acceptance is a signature record: it
+  shows the quote has not changed since, not that the signer is who they typed.
+- **The sales pipeline is part of the use case.** Deal value, delivery cost,
+  margin and probability are fields on the use case row, so they have the same
+  protection. The contract value a project carries after conversion is project
+  data, readable by every member, and the conversion preview says so.
+- **Client records are rows in the same table**, so a client's budget and
+  shared costs have exactly the same protection as its use cases.
+- **Losing access removes the local copy.** A device that synced a use case and
+  then stops receiving it drops it on the next sync instead of uploading it
+  again.
+
+What it does not cover: the page is offered only to the Account Executive /
+Client Partner job role, and that part is page hiding like any other. Signed
+out, use cases stay on the device and are shared with nobody. In a demo the
+app mirrors the rule and says it enforces nothing. A client partner can print
+or copy what they see; the Closure report shows the business case only on a
+device that holds it. The Client View's journey reads delivery, billing,
+support and the account from the project, which every member can already read;
+putting it beside the deal reveals nothing the project did not. The Expand
+action on Customer Success is offered only to people offered the Use Cases
+page — page hiding again — and what it starts is a use case, stored and
+protected like any other.
+
+## Signatures and approvals
+
+Change requests, the scope baseline and deliverable sign-off are **signed**, and
+the signature is an attestation, not cryptography. It records the typed name,
+the account signed in at the time (if any, and whether it was a demo), the
+moment, the sentence agreed to, a fingerprint of exactly what was signed, and
+optionally a drawn mark.
+
+What that gives you:
+
+- **Edits are caught.** Change a signed change request's cost, or a signed
+  deliverable's acceptance criteria, and the fingerprint stops matching. The
+  signature then counts for nothing: the change drops back to Under Review, the
+  deliverable to In Review, and the screen says "changed since signed".
+- **The status is never typed.** A change request's status comes from the
+  workflow and the signatures; the table does not offer it as a field.
+- **Scope creep is visible.** Anything that differs from the signed scope
+  baseline and is not covered by an approved change is counted and named.
+
+What it does **not** give you:
+
+- **It is not tamper-proof.** The records live in the project data, which any
+  editor can write. Someone determined can rewrite a signature and its
+  fingerprint together; the fingerprint (FNV-1a) is for noticing change, not
+  for resisting forgery.
+- **It does not prove who signed.** Signed out, the name is only what was
+  typed. On a demo account it is an invented person. On a real account it is
+  whoever was using that browser. The app says which, on the dialog and on the
+  signature.
+- **Postgres does not enforce any of it.** Row level security decides who may
+  write the project; it does not know what an approval is, so a contributor
+  with write access can record an approval in the sponsor's name.
+
+If approvals need to bind, they need a separate append-only table that only the
+named approver's account can insert into. That is a schema change, not built
+yet.
+
 ## Checking it yourself
 
 The policies are executed and attacked against a real Postgres:

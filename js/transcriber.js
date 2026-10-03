@@ -33,9 +33,21 @@ export function isSupported() {
  * wrong "this stays on your device" is the one error here that actually costs
  * somebody something, so we never claim it.
  */
-export const PRIVACY_NOTE = 'Your browser does the listening. In Chrome and Edge that means the audio '
-  + 'is sent to the browser vendor to be recognised — unlike the rest of this app, it does not stay '
-  + 'on your device. Nothing is stored anywhere but here.';
+export const PRIVACY_NOTE = 'Live transcription is done by your browser. In Chrome and Edge that means the '
+  + 'audio is sent to the browser vendor to be recognised — unlike the rest of this app, it does not stay '
+  + 'on your device. Choose “Audio only” and nothing leaves this device.';
+
+// The errors that mean listening cannot work at all, as against the ones the
+// engine throws during an ordinary pause. Restarting after one of these is
+// what used to fill the screen with "Recording stopped: not-allowed".
+const FATAL = {
+  'not-allowed': 'the microphone is blocked for this site',
+  'service-not-allowed': 'this browser does not allow speech recognition here',
+  'audio-capture': 'no microphone could be opened',
+  network: 'the browser’s speech service could not be reached (it needs the internet)',
+  'language-not-supported': 'the browser cannot transcribe this language',
+  'bad-grammar': 'the browser’s speech service refused the request',
+};
 
 export function createTranscriber({ onInterim, onFinal, onError, onEnd, lang = 'en-GB' } = {}) {
   if (!Recognition) return null;
@@ -47,7 +59,13 @@ export function createTranscriber({ onInterim, onFinal, onError, onEnd, lang = '
 
   let running = false;
   let stopping = false;
+  let fatal = false;
   let startedAt = 0;
+  // Sessions that ended almost as soon as they began: an engine that does that
+  // every time is not listening, and restarting it forever is a loop. A long
+  // silence in a real meeting ends sessions too, but slowly, so it never counts.
+  let emptyRestarts = 0;
+  let sessionStart = 0;
 
   recognition.addEventListener('result', (event) => {
     let interim = '';
@@ -68,20 +86,26 @@ export function createTranscriber({ onInterim, onFinal, onError, onEnd, lang = '
     // `no-speech` and `aborted` fire routinely during a normal recording and
     // are not worth interrupting anyone over; the rest are.
     if (event.error === 'no-speech' || event.error === 'aborted') return;
-    if (onError) onError(event.error);
+    fatal = true;
+    if (onError) onError(FATAL[event.error] || `the browser stopped listening (${event.error})`, event.error);
   });
 
   recognition.addEventListener('end', () => {
     // The engine stops on its own after a pause. Restarting keeps a long
     // meeting in one continuous transcript rather than ending it whenever
     // somebody thinks for a moment.
-    if (running && !stopping) {
+    emptyRestarts = Date.now() - sessionStart < 1500 ? emptyRestarts + 1 : 0;
+    if (running && !stopping && !fatal && emptyRestarts < 5) {
       try {
+        sessionStart = Date.now();
         recognition.start();
         return;
       } catch (err) {
         console.warn('Could not resume listening.', err);
       }
+    }
+    if (running && !stopping && !fatal && emptyRestarts >= 5 && onError) {
+      onError('the browser keeps stopping without hearing anything', 'no-session');
     }
     running = false;
     stopping = false;
@@ -93,11 +117,14 @@ export function createTranscriber({ onInterim, onFinal, onError, onEnd, lang = '
       if (running) return true;
       try {
         startedAt = Date.now();
+        fatal = false;
+        emptyRestarts = 0;
+        sessionStart = startedAt;
         recognition.start();
         running = true;
         return true;
       } catch (err) {
-        if (onError) onError(err.message || 'could-not-start');
+        if (onError) onError(err.message || 'it could not start', 'could-not-start');
         return false;
       }
     },

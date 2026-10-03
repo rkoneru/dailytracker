@@ -6,7 +6,7 @@
 // So the thing worth testing hardest is precisely that: that each of them sees
 // past the project that happens to be open.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -30,6 +30,7 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(400);
   await page.check('#template-software');
   await page.fill('#new-project-name', 'Second Engagement');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(1100);
   const secondId = await projectId();

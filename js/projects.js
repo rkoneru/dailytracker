@@ -1,6 +1,6 @@
 import { registerPanel } from './nav.js';
 import {
-  listProjects, listTemplates, getActiveProjectId, switchProject,
+  listProjects, listTemplates, templateMethodology, getActiveProjectId, switchProject,
   createProject, cloneProject, renameProject, deleteProject, importProjectFromJSON,
   listResources, allocateResource, listAllAllocations, listAbsences,
 } from './state.js';
@@ -8,6 +8,8 @@ import { KEY_ROLES, rankBySkill, utilisation, skillMatch, toISO, weekStart, addD
 import { readJSONFile } from './export.js';
 import { confirmAction, promptText, toast } from './dialog.js';
 import { el } from './dom.js';
+import { formatDate } from './dates.js';
+import { METHODOLOGIES } from './methodology.js';
 
 function formatUpdatedAt(ts) {
   if (!ts) return 'never';
@@ -17,7 +19,7 @@ function formatUpdatedAt(ts) {
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.round(mins / 60);
   if (hours < 24) return `${hours}h ago`;
-  return new Date(ts).toLocaleDateString();
+  return formatDate(new Date(ts));
 }
 
 export function initProjects({ onProjectChange }) {
@@ -42,7 +44,7 @@ export function initProjects({ onProjectChange }) {
       list.appendChild(el('li', { class: `project-list__item${isActive ? ' is-active' : ''}`, 'data-id': p.id }, [
         el('div', { class: 'project-list__info' }, [
           el('strong', { text: p.name }),
-          el('span', { class: 'hint', text: `${p.dueDate ? `Due ${p.dueDate} · ` : ''}Updated ${formatUpdatedAt(p.updatedAt)}${isActive ? ' · Current' : ''}` }),
+          el('span', { class: 'hint', text: `${p.dueDate ? `Due ${formatDate(p.dueDate)} · ` : ''}Updated ${formatUpdatedAt(p.updatedAt)}${isActive ? ' · Current' : ''}` }),
         ]),
         el('div', { class: 'project-list__actions' }, [
           ...(isActive ? [] : [el('button', { type: 'button', class: 'btn btn-small', 'data-action': 'open-project', text: 'Open' })]),
@@ -53,6 +55,45 @@ export function initProjects({ onProjectChange }) {
       ]));
     });
   }
+
+  // ---------- The lifecycle, which every new project must have ----------
+  //
+  // Chosen here rather than defaulted: it decides the phases the Gantt is laid
+  // out with. A template that follows one proposes it, but only until the
+  // person picks for themselves — switching template must not silently undo a
+  // choice they made.
+  const lifecycle = document.getElementById('new-project-lifecycle');
+  const lifecycleError = document.getElementById('new-project-lifecycle-error');
+  let lifecycleChosen = false;
+
+  function buildLifecycleOptions() {
+    lifecycle.innerHTML = '';
+    lifecycle.appendChild(el('option', { value: '', text: 'Choose a lifecycle…' }));
+    [['lifecycle', 'Lifecycles — phases in order'], ['practice', 'Practices — capabilities, no order']].forEach(([kind, label]) => {
+      const group = el('optgroup', { label });
+      METHODOLOGIES.filter((m) => m.kind === kind).forEach((m) => group.appendChild(
+        el('option', { value: m.id, text: `${m.label} — ${m.full}` })));
+      lifecycle.appendChild(group);
+    });
+  }
+
+  function proposeLifecycle() {
+    if (lifecycleChosen) return;
+    const key = templateGrid.querySelector('input[name="template"]:checked')?.value;
+    lifecycle.value = key ? templateMethodology(key) : '';
+  }
+
+  function showLifecycleError(show) {
+    lifecycleError.hidden = !show;
+    lifecycle.setAttribute('aria-invalid', String(show));
+  }
+
+  buildLifecycleOptions();
+  lifecycle.addEventListener('change', () => {
+    lifecycleChosen = true;
+    showLifecycleError(false);
+  });
+  templateGrid.addEventListener('change', proposeLifecycle);
 
   // Grouped by category so the list stays scannable as templates are added.
   function renderTemplateGrid() {
@@ -212,6 +253,9 @@ export function initProjects({ onProjectChange }) {
     renderTemplateGrid();
     renderProjectList();
     nameInput.value = '';
+    lifecycleChosen = false;
+    showLifecycleError(false);
+    proposeLifecycle();
     // Choices from the last project created are not choices about this one.
     staffing.skills = '';
     staffing.team = new Set();
@@ -302,7 +346,12 @@ export function initProjects({ onProjectChange }) {
   document.getElementById('btn-create-project').addEventListener('click', () => {
     const templateKey = templateGrid.querySelector('input[name="template"]:checked')?.value;
     const name = nameInput.value.trim();
-    const project = createProject({ name, templateKey });
+    if (!lifecycle.value) {
+      showLifecycleError(true);
+      lifecycle.focus();
+      return;
+    }
+    const project = createProject({ name, templateKey, methodology: lifecycle.value });
     applyStaffing(project.id);
     refreshAll();
     onProjectChange();

@@ -29,6 +29,14 @@ jobs:
       - name: Test
         run: npm test
 
+      # The runner is on UTC — the one timezone where treating a UTC date as a
+      # local one happens to give the right day. The date-sensitive suites run
+      # again east of Greenwich, where that mistake starts weeks on a Sunday.
+      - name: Test dates outside UTC
+        run: node tests/run.js timezones edit-timeline history template-shape resources capacity
+        env:
+          TZ: Asia/Kolkata
+
       - name: Upload failure screenshots
         if: failure()
         uses: actions/upload-artifact@v4

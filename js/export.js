@@ -1,5 +1,8 @@
 // PDF export uses the browser's native print-to-PDF (see @media print in
 // styles.css) — zero dependencies, most robust option, no CDN to break offline.
+
+import { todayISO } from './dates.js';
+
 export function exportAsPDF() {
   window.print();
 }
@@ -80,7 +83,7 @@ export function exportProjectJSON(projectData) {
 
 // Every project in one file — the only copy that survives clearing site data.
 export function exportBackupJSON(backup) {
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = todayISO();
   downloadJSON(backup, `project-planner-backup-${stamp}.json`);
 }
 

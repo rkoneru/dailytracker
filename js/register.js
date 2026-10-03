@@ -18,6 +18,7 @@ import { el, dragHandle } from './dom.js';
 import { currentUrl } from './router.js';
 import { toast } from './dialog.js';
 import { setTabCount } from './tabs.js';
+import { formatDate } from './dates.js';
 
 export function slug(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -66,8 +67,54 @@ function inputCell(col, value, type) {
   });
 }
 
+/**
+ * A link typed into a register is only ever opened if it is http(s). The
+ * field keeps whatever was typed — it is the person's text — but a
+ * `javascript:` or `data:` address never becomes something to click.
+ */
+export function safeUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function linkOpener(value) {
+  const href = safeUrl(value);
+  return el('a', {
+    class: 'link-open no-print',
+    href: href || '#',
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    text: 'Open ↗',
+    hidden: !href,
+  });
+}
+
+/**
+ * A value the table shows but does not let you type: a change request's status
+ * is the result of its workflow, not a choice from a list. Marked so it can be
+ * refreshed in place when an edit elsewhere in the row changes it.
+ */
+function readonlyNode(col, value) {
+  const text = value === '' || value === undefined || value === null ? '—' : String(value);
+  const shown = col.type === 'date' && value ? formatDate(value) : text;
+  return el('span', {
+    class: col.tone ? `status-badge tone-${slug(value) || 'none'}` : 'readonly-value',
+    'data-readonly': col.field,
+    text: shown,
+  });
+}
+
 function buildCell(col, row, index, def) {
   const cls = ['register-cell', col.cls].filter(Boolean).join(' ');
+
+  if (col.readonly) return el('td', { class: cls }, [readonlyNode(col, row[col.field])]);
+  // A cell the page draws itself — a signature, say — through the def's own
+  // renderCell, which the page that mounts the register supplies.
+  if (col.type === 'custom') return el('td', { class: `${cls} col-custom` }, [def.renderCell?.(col, row) || '']);
 
   if (col.type === 'ref') {
     // The reference is the address. Clicking D-03 copies a link that opens
@@ -89,6 +136,11 @@ function buildCell(col, row, index, def) {
   if (col.type === 'date') {
     return el('td', { class: `${cls} col-date` }, [inputCell(col, row[col.field], 'date')]);
   }
+  // A local date and time, for clocks that run in hours: when an incident
+  // was reported, answered and fixed.
+  if (col.type === 'datetime') {
+    return el('td', { class: `${cls} col-datetime` }, [inputCell(col, row[col.field], 'datetime-local')]);
+  }
   if (col.type === 'number') {
     const node = inputCell(col, row[col.field], 'number');
     if (col.min != null) node.min = String(col.min);
@@ -96,11 +148,16 @@ function buildCell(col, row, index, def) {
     if (col.step != null) node.step = String(col.step);
     return el('td', { class: `${cls} col-num` }, [node]);
   }
+  if (col.type === 'link') {
+    return el('td', { class: `${cls} col-link` }, [
+      el('div', { class: 'link-cell' }, [inputCell(col, row[col.field], 'url'), linkOpener(row[col.field])]),
+    ]);
+  }
   if (col.type === 'person') {
     // A free-text name that offers the roster, rather than a hard select:
     // a RACI often names a team or an outside party that has no roster row.
     const node = inputCell(col, row[col.field], 'text');
-    node.setAttribute('list', 'roster-names');
+    node.setAttribute('list', col.list || 'roster-names');
     return el('td', { class: cls }, [node]);
   }
   return el('td', { class: cls }, [inputCell(col, row[col.field], 'text')]);
@@ -154,6 +211,13 @@ function renderRow(def, row, index) {
     el('td', { class: 'col-drag no-print' }, [dragHandle()]),
     ...def.columns.map((col) => buildCell(col, row, index, def)),
     el('td', { class: 'col-action no-print' }, [
+      ...(def.rowActions || []).map((a) => el('button', {
+        type: 'button',
+        class: 'btn btn-small btn-ghost row-action',
+        'data-row-action': a.action,
+        'aria-label': `${a.label} ${def.rowLabel || 'row'}`,
+        text: a.text || a.label,
+      })),
       el('button', {
         type: 'button',
         class: 'icon-btn',
@@ -226,6 +290,44 @@ export function renderRosterOptions() {
   };
   (getState().allocations || []).forEach((a) => add(a.name));
   listResources().forEach((r) => add(r.name));
+  // Accounts and contacts are offered the same way, from Customer Success.
+  fill('account-names', (getState().customers || []).map((a) => a.name));
+  fill('contact-names', (getState().contacts || []).map((c) => c.name));
+}
+
+function fill(id, names) {
+  const list = document.getElementById(id);
+  if (!list) return;
+  const unique = [...new Set(names.map((n) => String(n || '').trim()).filter(Boolean))];
+  list.replaceChildren(...unique.map((value) => el('option', { value })));
+}
+
+/**
+ * Rewrites the read-only cells from the rows, without touching any input — so
+ * a status that an edit in the same row changed updates under the caret
+ * rather than by rebuilding the table the caret is in.
+ */
+export function refreshDerivedCells(def) {
+  const tbody = document.getElementById(`${def.id}-body`);
+  if (!tbody) return;
+  const rows = new Map(rowsOf(def).map((r) => [r.id, r]));
+  tbody.querySelectorAll('[data-readonly]').forEach((node) => {
+    const row = rows.get(rowIdOf(node));
+    const col = def.columns.find((c) => c.field === node.dataset.readonly);
+    if (row && col) node.replaceWith(readonlyNode(col, row[col.field]));
+  });
+  // A register can draw more than one column (the incident log draws its SLA
+  // and its satisfaction), so each drawn cell is matched to its own column by
+  // position in the row rather than all given the first.
+  const custom = def.columns.filter((c) => c.type === 'custom');
+  if (!custom.length || !def.renderCell) return;
+  tbody.querySelectorAll('tr').forEach((tr) => {
+    const row = rows.get(tr.dataset.id);
+    if (!row) return;
+    tr.querySelectorAll(':scope > td.col-custom').forEach((td, i) => {
+      if (custom[i]) td.replaceChildren(def.renderCell(custom[i], row));
+    });
+  });
 }
 
 // ---------- Binding ----------
@@ -245,6 +347,13 @@ function bindRegister(def, onChanged) {
     const item = findById(rowsOf(def), rowIdOf(e.target));
     if (!item) return;
     item[field] = e.target.value;
+    // The Open link follows the address as it is typed, in place.
+    const opener = e.target.type === 'url' ? e.target.parentElement.querySelector('.link-open') : null;
+    if (opener) {
+      const href = safeUrl(e.target.value);
+      opener.hidden = !href;
+      opener.href = href || '#';
+    }
     if ((def.searchFields || []).includes(field)) applySearch(def);
     commit();
   });
@@ -264,6 +373,11 @@ function bindRegister(def, onChanged) {
   });
 
   tbody.addEventListener('click', async (e) => {
+    const action = e.target.closest('[data-row-action], [data-cell-action]');
+    if (action) {
+      def.onRowAction?.(action.dataset.rowAction || action.dataset.cellAction, rowIdOf(action), action);
+      return;
+    }
     if (e.target.closest('[data-action="copy-row-link"]')) {
       const url = currentUrl({ navId: def.navId, projectId: getActiveProjectId(), rowId: rowIdOf(e.target) });
       try {

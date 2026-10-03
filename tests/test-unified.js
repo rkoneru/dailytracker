@@ -1,4 +1,4 @@
-const { APP_URL, out, launch } = require('./harness');
+const { APP_URL, out, launch, openSection } = require('./harness');
 let pass = 0, fail = 0;
 const eq = (n, got, want) => {
   const g = JSON.stringify(got), w = JSON.stringify(want);
@@ -18,27 +18,41 @@ const eq = (n, got, want) => {
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(700);
 
-  // Tasks are edited on the Tasks screen. The Planner's tick grid and the
-  // Dashboard's Gantt are read-only views of that same list, each showing it
-  // in a way the others do not.
+  // Tasks are edited on the Tasks screen. The Planner's timeline and the
+  // Dashboard's Gantt are views of that same list, each showing it in a way
+  // the others do not. Only the page on screen is kept built — the rest are
+  // rebuilt as they are opened — so each view is read by going to it, and
+  // the suite comes back to the Task List afterwards.
+  const backToList = async () => {
+    await page.click('#tab-tasks'); await page.waitForTimeout(250);
+    await openSection(page, 'sec-task-list');
+  };
   const trackerNames = () => page.$$eval('#tracker-body tr [data-field="name"]', els => els.map(e => e.value));
-  const plannerNames = () => page.$$eval('#tick-body tr .tick-row-label', els => els.map(e => e.textContent));
-  const ganttNames = () => page.$$eval('#dash-gantt .gantt-chart__label', els => els.map(e => e.textContent));
+  const plannerNames = async () => {
+    await page.click('#tab-planner'); await page.waitForTimeout(250);
+    await openSection(page, 'sec-ticks');
+    const names = await page.$$eval('#tick-body tr .tick-row-label', els => els.map(e => e.textContent));
+    await backToList();
+    return names;
+  };
+  const ganttNames = async () => {
+    await page.click('#tab-dashboard'); await page.waitForTimeout(250);
+    const names = await page.$$eval('#dash-gantt .gantt-chart__label', els => els.map(e => e.textContent));
+    await backToList();
+    return names;
+  };
 
   console.log('\n--- one list behind every view ---');
   await page.click('#tab-tasks'); await page.waitForTimeout(400);
   const t0 = await trackerNames();
-  await page.click('#tab-planner'); await page.waitForTimeout(400);
-  eq('tracker and the planner tick grid show the same tasks', await plannerNames(), t0);
+  eq('tracker and the planner timeline show the same tasks', await plannerNames(), t0);
   eq('and it is the one task set', t0[0], 'Campaign strategy & brief');
 
-  console.log('\n--- a tracker edit reaches the other views while they are hidden ---');
-  await page.click('#tab-tasks'); await page.waitForTimeout(250);
+  console.log('\n--- a tracker edit reaches the other views ---');
   await page.locator('#tracker-body tr').first().locator('[data-field="name"]').fill('RENAMED IN PLANNER');
   await page.waitForTimeout(400);
-  eq('planner tick grid updated', (await plannerNames())[0], 'RENAMED IN PLANNER');
-  eq('dashboard gantt updated too',
-     await page.$eval('#dash-gantt .gantt-chart__label', e => e.textContent), 'RENAMED IN PLANNER');
+  eq('planner timeline updated', (await plannerNames())[0], 'RENAMED IN PLANNER');
+  eq('dashboard gantt updated too', (await ganttNames())[0], 'RENAMED IN PLANNER');
 
   console.log('\n--- a second edit also lands ---');
   await page.locator('#tracker-body tr').nth(1).locator('[data-field="name"]').fill('RENAMED SECOND ROW');
@@ -63,8 +77,12 @@ const eq = (n, got, want) => {
   eq('planner no longer lists it', (await plannerNames()).includes('ADDED ON PLANNER'), false);
 
   console.log('\n--- status is one field, and the board is its other view ---');
-  const boardColumn = (name) => page.$eval(
-    `#priority-board [data-column="${name}"]`, e => e.textContent);
+  const boardColumn = async (name) => {
+    await openSection(page, 'sec-task-board');
+    const text = await page.$eval(`#priority-board [data-column="${name}"]`, e => e.textContent);
+    await openSection(page, 'sec-task-list');
+    return text;
+  };
   eq('first task starts Complete', await page.inputValue('#tracker-body tr:first-child [data-field="status"]'), 'Complete');
   eq('so the board files it under Completed', (await boardColumn('Complete')).includes('RENAMED IN PLANNER'), true);
   await page.selectOption('#tracker-body tr:first-child [data-field="status"]', 'On Hold');
@@ -82,7 +100,7 @@ const eq = (n, got, want) => {
   await page.waitForTimeout(400);
   await page.click('#tab-dashboard'); await page.waitForTimeout(400);
   eq('the gantt picked up the new end date',
-     (await page.$eval('#dash-gantt .gantt-chart__bar', e => e.title)).includes('12/31/2026'), true);
+     (await page.$eval('#dash-gantt .gantt-chart__bar', e => e.title)).includes(await page.evaluate((iso) => import('./js/dates.js').then((m) => m.formatDate(iso)), '2026-12-31')), true);
 
   console.log('\n--- milestones reach the Dashboard live ---');
   // Milestones are still edited on the Planner — only tasks moved out.
@@ -90,15 +108,22 @@ const eq = (n, got, want) => {
   await page.waitForTimeout(400);
   // Row 1 is the soonest-due incomplete milestone, so it is inside the
   // widget's top-6 window; row 3 is due far later and legitimately isn't.
+  const onDashboard = async (read) => {
+    await page.click('#tab-dashboard'); await page.waitForTimeout(300);
+    const result = await read();
+    await page.click('#tab-planner'); await page.waitForTimeout(300);
+    await openSection(page, 'sec-milestones');
+    return result;
+  };
+  const pctBefore = await onDashboard(() => page.$eval('#milestone-progress-pct', e => e.textContent));
   await page.locator('#milestones-body tr').nth(1).locator('[data-field="text"]').fill('MILESTONE RENAMED');
   await page.waitForTimeout(400);
-  const deadlines = await page.$eval('#upcoming-deadlines', e => e.textContent);
-  eq('dashboard deadline list updated live', deadlines.includes('MILESTONE RENAMED'), true);
-  const pctBefore = await page.$eval('#milestone-progress-pct', e => e.textContent);
+  const deadlines = await onDashboard(() => page.$eval('#upcoming-deadlines', e => e.textContent));
+  eq('dashboard deadline list updated', deadlines.includes('MILESTONE RENAMED'), true);
   await page.locator('#milestones-body tr').nth(2).locator('[data-seg="5"]').click();
   await page.waitForTimeout(400);
-  const pctAfter = await page.$eval('#milestone-progress-pct', e => e.textContent);
-  eq('milestone progress % recomputed live', pctBefore !== pctAfter, true);
+  const pctAfter = await onDashboard(() => page.$eval('#milestone-progress-pct', e => e.textContent));
+  eq('milestone progress % recomputed', pctBefore !== pctAfter, true);
   console.log('   milestone progress:', pctBefore, '->', pctAfter);
 
   console.log('\n--- % complete stays consistent across pages ---');

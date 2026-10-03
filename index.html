@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Project Planner</title>
   <meta name="description" content="Offline-first project planning tool with a planner sheet and a live dashboard.">
-  <meta name="theme-color" content="#1d4ed8">
+  <meta name="theme-color" content="#6d4aeb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161320" media="(prefers-color-scheme: dark)">
   <!-- Standalone on iOS too, where the manifest's display mode is ignored. -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -73,7 +74,7 @@
         </div>
         <p class="hint" id="login-note"></p>
         <p class="hint callout" id="login-unconfigured" hidden>
-          No workspace is connected yet. Connect one on <strong>Sync &amp; Team</strong> first
+          No workspace is connected yet. Connect one under <strong>Settings &rarr; Sync</strong> first
           &mdash; signing in needs somewhere to sign in to.
         </p>
       </section>
@@ -98,24 +99,8 @@
                 aria-label="Close menu">&#x2715;</button>
       </div>
 
-      <!-- Who is looking. Filters the nav below to the pages that role uses.
-           On a device of your own it is yours to set; inside a workspace an
-           administrator assigns it and the picker becomes a statement. -->
-      <div class="role-picker">
-        <label class="role-picker__label" for="role-select">I'm working as</label>
-        <select class="field-input role-picker__select" id="role-select"></select>
-        <p class="role-picker__blurb" id="role-blurb"></p>
-        <p class="role-picker__assigned" id="role-assigned" hidden>
-          🔒 Assigned by your administrator
-        </p>
-        <label class="role-picker__toggle" id="role-show-all-row">
-          <input type="checkbox" id="role-show-all">
-          <span>Show every page</span>
-        </label>
-      </div>
-
       <nav class="sidebar__nav" id="sidebar-nav" aria-label="Sections"></nav>
-      <p class="nav-filter-note" id="nav-filter-note" hidden></p>
+      <button type="button" class="nav-filter-note link-btn" id="nav-filter-note" hidden></button>
 
       <div class="sidebar__footer">
         <button type="button" class="btn btn-primary btn-install-sidebar" id="btn-install" hidden>⬇ Install App</button>
@@ -218,8 +203,9 @@
             <button type="button" class="btn btn-small no-print" data-action="add-milestone">+ Add Milestone</button>
           </div>
           <p class="hint no-print">
-            A date you are steering to. Point one at a deliverable when it marks that deliverable
-            landing, and the Dashboard will list it once rather than twice.
+            A result you are steering to — &ldquo;Design complete&rdquo;, not &ldquo;Design&rdquo;. Point one at a deliverable when
+            it marks that deliverable landing, and the Dashboard will list it once rather than twice. Make it a
+            <strong>gate</strong> where a decision says what happens next: one owner, entry criteria, options and a default path.
           </p>
           <div class="table-scroll">
             <table class="data-table" id="milestones-table">
@@ -228,6 +214,8 @@
                   <th class="col-drag no-print"></th>
                   <th class="col-num">#</th>
                   <th>Milestone</th>
+                  <th class="col-status">Kind</th>
+                  <th class="col-assignee">Owner</th>
                   <th class="col-progress">Progress</th>
                   <th class="col-date">Due</th>
                   <th class="col-phase" id="milestone-phase-head" hidden>Phase</th>
@@ -239,29 +227,116 @@
               <tbody id="milestones-body"></tbody>
             </table>
           </div>
+          <div class="ms-findings" id="milestone-findings" hidden></div>
           <label class="field-label field-label--block">Achievement / Reward
             <span class="editable" contenteditable="true" data-field="reward" data-placeholder="What's the reward for hitting these milestones?"></span>
           </label>
         </section>
 
+        <section class="card" id="sec-gates">
+          <div class="card__head">
+            <h2>Decision gates</h2>
+            <span class="hint" id="gate-count"></span>
+          </div>
+          <p class="hint">
+            A point where a decision determines what&rsquo;s next. Write the entry criteria before the gate, agree the options
+            and the default path, then record the owner&rsquo;s decision. Go passes the gate; Hold and Stop leave it open.
+          </p>
+          <div id="gate-cards"></div>
+        </section>
+
         <section class="card" id="sec-ticks">
           <div class="card__head">
-            <h2>Tick Timeline</h2>
-            <span class="hint">Day 1 &middot; <span id="tick-start-label">&mdash;</span></span>
+            <h2>Timeline</h2>
+            <span class="hint tl-range" id="tick-start-label">&mdash;</span>
             <button type="button" class="btn btn-small btn-primary no-print" data-action="open-tasks">Open Task Tracker &rarr;</button>
           </div>
-          <p class="hint">A read-only view of the task list. Marks come from each task's dates. Tasks are added and edited on the Task Tracker; the Dashboard draws the same dates as a Gantt.</p>
+          <p class="hint">Drag a bar to move a task, drag either end to change its start or end, or drag across empty days to schedule one. The Task Tracker, Dashboard and reports change with it, and every edit can be undone.</p>
+          <div class="tl-toolbar no-print">
+            <div class="tl-nav" role="group" aria-label="Which days to show">
+              <button type="button" class="btn btn-small" data-tl="prev">&lsaquo; Week</button>
+              <button type="button" class="btn btn-small" data-tl="today">Today</button>
+              <button type="button" class="btn btn-small" data-tl="fit">Whole project</button>
+              <button type="button" class="btn btn-small" data-tl="next">Week &rsaquo;</button>
+            </div>
+            <ul class="tl-legend" aria-label="Bar colours">
+              <li><span class="tl-key tl-row--todo"></span>Not started</li>
+              <li><span class="tl-key tl-row--active"></span>In progress</li>
+              <li><span class="tl-key tl-row--hold"></span>On hold</li>
+              <li><span class="tl-key tl-row--late"></span>Late</li>
+              <li><span class="tl-key tl-row--done"></span>Complete</li>
+              <li><span class="tl-key tl-key--base"></span>Baseline</li>
+            </ul>
+          </div>
+          <p class="tl-live" id="tl-live" aria-live="polite"></p>
+          <p class="sr-only" id="tl-keys">Left and right arrows move the task a day. Shift with an arrow changes the end date, Alt with an arrow the start date. Enter schedules an undated task for today. Up and down move between tasks.</p>
           <div class="table-scroll">
             <table class="data-table tick-table" id="tick-table">
               <thead>
-                <tr id="tick-head-row">
-                  <th class="col-tickname">Task</th>
-                </tr>
+                <tr id="tick-month-row"></tr>
+                <tr id="tick-head-row"></tr>
               </thead>
               <tbody id="tick-body"></tbody>
             </table>
           </div>
-          <p class="hint" id="tick-empty" hidden>Add a task below and it appears here.</p>
+          <p class="hint" id="tick-empty" hidden>No tasks yet. Add one on the Task Tracker and it appears here.</p>
+        </section>
+
+        <section class="card" id="sec-gantt">
+          <div class="card__head">
+            <h2>Gantt</h2>
+            <span class="hint gantt-method" id="gantt-method"></span>
+          </div>
+          <p class="hint">The project&rsquo;s lifecycle as activities with their own dates, kept apart from the tasks: moving a phase moves the plan, not forty tasks. Drag a bar to move it, drag either end to change a date, or type the dates in. Give each activity an owner and say what it follows; milestones and gates from the Milestones tab sit across the top.</p>
+          <div class="gantt-empty" id="gantt-empty" hidden>
+            <p id="gantt-empty-text"></p>
+            <div class="gantt-empty__choose" id="gantt-empty-choose" hidden>
+              <label class="field-label">Lifecycle
+                <select class="field-input" id="gantt-lifecycle"></select>
+              </label>
+            </div>
+            <button type="button" class="btn btn-primary btn-small no-print" data-gantt="layout">Lay out the phases</button>
+          </div>
+          <div class="gantt-toolbar no-print" id="gantt-toolbar">
+            <label class="field-label gantt-toolbar__phase">Phase
+              <select class="field-input" id="gantt-add-phase" aria-label="Phase for the new activity"></select>
+            </label>
+            <button type="button" class="btn btn-small" data-gantt="add">+ Add activity</button>
+            <button type="button" class="btn btn-small btn-ghost" data-gantt="relayout">Lay out again</button>
+          </div>
+          <p class="tl-live" id="gantt-live" aria-live="polite"></p>
+          <p class="sr-only" id="gantt-keys">Left and right arrows move the activity a day. Shift with an arrow changes the end date, Alt with an arrow the start date.</p>
+          <p class="gantt-critical" id="gantt-critical"></p>
+          <div class="gantt" id="gantt">
+            <div class="gantt__head" aria-hidden="true">
+              <span class="gantt__col-phase"></span>
+              <span class="gantt__col-wbs" title="Work breakdown code: phase, then activity">WBS</span>
+              <span class="gantt__col-name">Activity · owner · follows</span>
+              <span class="gantt__col-date">Start</span>
+              <span class="gantt__col-date">End</span>
+              <span class="gantt__col-done">Done %</span>
+              <span class="gantt__col-act"></span>
+              <div class="gantt__scale" id="gantt-scale"></div>
+            </div>
+            <div class="gantt__body" id="gantt-body"></div>
+          </div>
+          <div class="ms-findings" id="gantt-issues" hidden></div>
+          <div class="ms-findings gantt-ownership" id="gantt-ownership" hidden></div>
+        </section>
+
+        <section class="card" id="sec-horizons">
+          <div class="card__head">
+            <h2>Planning horizons</h2>
+          </div>
+          <p class="hint">Now is for executing the plan, Next for planning the work, Future for shaping the outcomes. Everything here is read from where it lives — pick an item to go there.</p>
+          <div class="hz-cols" id="horizon-columns"></div>
+
+          <div class="card__head hz-checkin-head">
+            <h2>Weekly check-in <span class="hint" id="checkin-range"></span></h2>
+            <button type="button" class="btn btn-small no-print" id="btn-checkin-copy">Copy the check-in</button>
+          </div>
+          <p class="hint">The weekly review&rsquo;s three questions, answered from the record: finished in the last seven days, due in the next seven, and what stands in the way.</p>
+          <div class="hz-cols" id="checkin-columns"></div>
         </section>
 
         <section class="card" id="sec-budget">
@@ -278,6 +353,7 @@
               <input type="number" min="0" step="1" class="field-input" data-field="budgetActual">
             </label>
           </div>
+          <div class="cost-estimate" id="cost-estimate" aria-live="polite"></div>
           <p class="hint" id="planner-baseline-note"></p>
           <div class="sync-actions no-print">
             <button type="button" class="btn btn-small" id="btn-set-baseline">📌 Set Baseline</button>
@@ -291,6 +367,37 @@
             <button type="button" class="btn btn-small no-print" data-action="add-note">+ Add Note</button>
           </div>
           <ul class="notes-list" id="notes-list"></ul>
+        </section>
+
+        <section class="card" id="sec-blueprint">
+          <div class="card__head">
+            <h2>Delivery approach</h2>
+            <span class="hint" id="bp-scored"></span>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-bp-clear">Clear the scores</button>
+          </div>
+          <p class="hint">
+            Ten inputs, one hybrid setup. Score each input low, medium or high for this project; the blend says which
+            parts to plan up front and which to let emerge, and whether the project has the setup it needs. Hybrid is not
+            half-and-half — it is fit for purpose. Press a chosen level again to clear it.
+          </p>
+          <div class="bp-inputs" id="bp-inputs"></div>
+          <div class="bp-synthesis" id="bp-synthesis"></div>
+        </section>
+
+        <section class="card" id="sec-capacity-review">
+          <div class="card__head"><h2>Capacity review</h2></div>
+          <p class="hint">
+            Use facts from past and current work to make the next plan realistic &mdash; a plan that fits capacity delivers more
+            than a busy plan. The past is read off the record for the period: what was planned (tasks due that already existed),
+            what actually came (plus the tasks and incidents that arrived during it), the hours the team had, and skill shortages.
+            Grey means nothing on record could answer it. Set the next plan&rsquo;s inputs against it, act on the signals, and
+            record who does what by when.
+          </p>
+          <div id="cr-body"></div>
+          <details class="needs-example-wrap">
+            <summary>What to review, and an example</summary>
+            <div class="needs-table-wrap" id="cr-reference"></div>
+          </details>
         </section>
       </div>
     </section>
@@ -369,8 +476,8 @@
             <button type="button" class="btn btn-small btn-primary no-print" data-action="add-task-row">+ Add Task</button>
           </div>
           <div class="filter-bar no-print">
-            <input type="search" class="field-input" id="tasks-search" placeholder="Search tasks, owner, comments...">
-            <select class="field-input" id="tasks-status-filter">
+            <input type="search" class="field-input" id="tasks-search" aria-label="Search tasks" placeholder="Search tasks, owner, comments...">
+            <select class="field-input" id="tasks-status-filter" aria-label="Filter by status">
               <option value="">All statuses</option>
               <option>Not Started</option>
               <option>In Progress</option>
@@ -378,7 +485,7 @@
               <option>Overdue</option>
               <option>On Hold</option>
             </select>
-            <select class="field-input" id="tasks-prio-filter">
+            <select class="field-input" id="tasks-prio-filter" aria-label="Filter by priority">
               <option value="">All priorities</option>
               <option>High</option>
               <option>Medium</option>
@@ -421,6 +528,58 @@
             <span class="hint">Drag a card between columns to change its priority or put it on hold.</span>
           </div>
           <div class="board" id="priority-board"></div>
+        </section>
+
+        <section class="card" id="sec-sprints">
+          <div class="card__head">
+            <h2>Sprint Planning</h2>
+            <span class="hint" id="sprint-ready"></span>
+          </div>
+          <p class="hint">
+            A clear goal, the work chosen for it, and a check that the team has the time. Capacity is read from who is
+            booked on this project for the sprint&rsquo;s dates on Resources, less their leave, at the focus factor. The
+            checklist is worked out from the plan; the commitment is recorded against the backlog as it stands, and
+            changing an item afterwards asks the team again.
+          </p>
+          <div class="uc-bar no-print">
+            <label class="field-label uc-bar__picker">Sprint
+              <select class="field-input" id="sprint-picker"></select>
+            </label>
+            <button type="button" class="btn btn-small btn-primary" id="btn-sprint-new">+ New sprint</button>
+            <button type="button" class="btn btn-small btn-ghost" id="btn-sprint-delete">Delete</button>
+          </div>
+          <p class="hint" id="sprint-none">No sprints yet. Start one to plan the next block of work.</p>
+          <div id="sprint-body" hidden>
+            <div class="charter-grid" id="sprint-fields"></div>
+            <dl class="uc-summary" id="sprint-summary"></dl>
+            <h3 class="uc-sub">Planning, step by step</h3>
+            <ol class="sprint-checks" id="sprint-checks"></ol>
+            <ul class="uc-client-notes sprint-warnings" id="sprint-warnings" hidden></ul>
+            <div class="sync-actions no-print">
+              <button type="button" class="btn btn-small btn-primary" id="btn-sprint-commit">Record the team&rsquo;s commitment</button>
+              <button type="button" class="btn btn-small" id="btn-sprint-share">Share the plan</button>
+              <button type="button" class="btn btn-small" id="btn-sprint-summary">Sprint summary</button>
+              <button type="button" class="btn btn-small" id="btn-sprint-retro">Draft the retrospective</button>
+              <button type="button" class="btn btn-small btn-ghost" id="btn-sprint-carry" hidden></button>
+            </div>
+            <h3 class="uc-sub">In this sprint</h3>
+            <div class="table-scroll"><table class="data-table" id="sprint-items-table">
+              <thead><tr><th class="col-wide">Item</th><th>Owner</th><th class="col-num">Estimate</th><th>Status</th><th class="col-action no-print"></th></tr></thead>
+              <tbody id="sprint-items"></tbody>
+            </table></div>
+            <h3 class="uc-sub">Team capacity</h3>
+            <ul class="uc-client-notes" id="sprint-people"></ul>
+            <h3 class="uc-sub">Candidates, highest priority first</h3>
+            <div class="table-scroll"><table class="data-table" id="sprint-candidates-table">
+              <thead><tr><th class="col-wide">Task</th><th>Priority</th><th class="col-num">Estimate</th><th>Owner</th><th class="col-action no-print"></th></tr></thead>
+              <tbody id="sprint-candidates"></tbody>
+            </table></div>
+            <h3 class="uc-sub">Velocity</h3>
+            <div class="table-scroll"><table class="data-table">
+              <thead><tr><th>Sprint</th><th class="col-num">Committed</th><th class="col-num">Delivered by its end</th><th class="col-num">Delivered</th></tr></thead>
+              <tbody id="sprint-velocity"></tbody>
+            </table></div>
+          </div>
         </section>
 
         <div class="dash-row dash-row--2" id="sec-task-help">
@@ -613,6 +772,16 @@
             <span class="kpi__value">0</span>
             <span class="kpi__sub">&mdash;</span>
           </div>
+          <div class="kpi" id="scope-count-billing">
+            <span class="kpi__label">Billed of contract</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="scope-count-creep">
+            <span class="kpi__label">Scope creep</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
         </section>
 
         <section class="card" id="sec-charter">
@@ -624,7 +793,152 @@
           <div class="charter-grid" id="charter-fields"></div>
         </section>
 
+
+        <section class="card" id="sec-project-plan">
+          <div class="card__head">
+            <h2>Project plan</h2>
+            <span class="hint" id="plan-count"></span>
+            <button type="button" class="btn btn-small no-print" data-plan="copy">Copy the plan</button>
+          </div>
+          <p class="hint">
+            The plan as a document, assembled from where each part already lives &mdash; so it is never a second copy that drifts.
+            Each section says whether it is filled and links to where to fill it. It is a living document: approval covers the
+            commitments (objectives, scope, deliverables, milestones, schedule, budget), and moving one asks for approval again.
+          </p>
+          <h3 class="rhythm-h3">Is the objective SMART?</h3>
+          <ul class="plan-smart" id="plan-smart"></ul>
+          <div class="plan-sections" id="plan-sections"></div>
+          <h3 class="rhythm-h3">Approval &amp; signatures</h3>
+          <div id="plan-approval"></div>
+        </section>
+        <section class="card" id="sec-dev-intent">
+          <div class="card__head">
+            <h2>Development intent</h2>
+            <span class="hint" id="intent-count"></span>
+            <button type="button" class="btn btn-small no-print" data-intent="copy">Copy</button>
+            <button type="button" class="btn btn-small btn-primary no-print" data-intent="download">Download intent.md</button>
+          </div>
+          <p class="hint">
+            The brief Claude Code &mdash; or any coding agent &mdash; starts development from, written out as <code>intent.md</code>.
+            The objective, scope, acceptance criteria, milestones, risks and constraints are read from where they already live;
+            the form holds only what a project has nowhere else to keep. A question left blank is written into the file as
+            &ldquo;ask before assuming&rdquo;, so the agent asks instead of guessing. The file is meant for a repository: no prices
+            go into it, and anything that looks like a password or key is not kept.
+          </p>
+          <ul class="intent-checks" id="intent-checks"></ul>
+          <div class="intent-layout">
+            <div class="intent-form" id="intent-form"></div>
+            <div class="intent-preview">
+              <h3 class="rhythm-h3">intent.md</h3>
+              <pre id="intent-preview" tabindex="0" aria-label="intent.md as it will be written"></pre>
+            </div>
+          </div>
+        </section>
+        <section class="card" id="sec-scope-line">
+          <div class="card__head"><h2>Scope line</h2></div>
+          <p class="hint">
+            Reset scope with a clear acceptance line. List every piece of work below, put each in one category
+            &mdash; must-have for the outcome, enabling work, optional improvement, deferred, explicit exclusion &mdash; and
+            answer the five criteria together: no single factor decides. Where the criteria argue with a category, the page
+            asks; it never moves an item. Whoever can approve the scope accepts the line, it is written onto the charter&rsquo;s
+            In and Out of scope (what the baseline and creep are measured against), and then shared.
+          </p>
+          <div id="scope-line-body"></div>
+          <details class="needs-example-wrap">
+            <summary>Categories, decision criteria and an example</summary>
+            <div class="needs-table-wrap" id="scope-line-reference"></div>
+          </details>
+        </section>
+        <section class="card" id="sec-scope-baseline">
+          <div class="card__head"><h2>Scope Baseline &amp; Creep</h2></div>
+          <p class="hint">
+            The scope as it was agreed and signed: the charter&rsquo;s scope statement and the deliverables.
+            Anything that has moved since, and is not covered by an approved change request, is scope creep.
+          </p>
+          <div id="scope-baseline-body"></div>
+        </section>
+
+        <section class="card" id="sec-billing-terms">
+          <div class="card__head"><h2>Contract &amp; Payment Terms</h2></div>
+          <p class="hint">
+            What the contract is worth and how long the client has to pay. The billing plan below should add up to the
+            contract; if it does not, the difference is shown. The margin on the deal is not here &mdash; that stays with the
+            use case, where only client partners can see it.
+          </p>
+          <div class="planner-fields">
+            <label class="field-label">Contract value
+              <input type="number" min="0" step="1000" class="field-input" data-billing-field="contractValue">
+            </label>
+            <label class="field-label">Payment terms (days)
+              <input type="number" min="0" step="1" class="field-input" data-billing-field="paymentTermsDays" placeholder="30">
+            </label>
+          </div>
+          <dl class="uc-summary" id="billing-summary"></dl>
+        </section>
+
         <div id="scope-registers"></div>
+
+        <section class="card" id="sec-billing-accounting">
+          <div class="card__head"><h2>Accounting System</h2></div>
+          <p class="hint">
+            Invoices out and payments back, as files. Export the milestones that are ready to invoice or invoiced into
+            Xero or QuickBooks Online, and bring their payments back to mark them paid. A live connection would need a server to
+            hold the accounting system&rsquo;s secret, and this app has none &mdash; so nothing is sent anywhere until you import
+            the file yourself. Check the columns against your system&rsquo;s current import template before the first import.
+          </p>
+          <div class="planner-fields">
+            <label class="field-label">Bill to (as named in your accounts)
+              <input type="text" class="field-input" data-acct="billTo" placeholder="Contoso Retail Ltd">
+            </label>
+            <label class="field-label">Revenue account code
+              <input type="text" class="field-input" data-acct="accountCode" placeholder="200">
+            </label>
+            <label class="field-label">Tax type
+              <input type="text" class="field-input" data-acct="taxType" placeholder="20% (VAT on Income)">
+            </label>
+            <label class="field-label">Currency
+              <input type="text" class="field-input" data-acct="currency" maxlength="3" placeholder="GBP">
+            </label>
+            <label class="field-label">Date format in your accounts
+              <select class="field-input" data-acct="dateFormat">
+                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+              </select>
+            </label>
+          </div>
+          <div id="acct-export"></div>
+          <h3 class="uc-sub">Payments back</h3>
+          <p class="hint">
+            Choose a payments or receivables export with an invoice number, a payment date and an amount. You will see what
+            it matches before anything is marked paid.
+          </p>
+          <div class="sync-actions no-print">
+            <label class="btn btn-small">Choose a payments file&hellip;
+              <input type="file" id="acct-payments-file" accept=".csv,text/csv" hidden>
+            </label>
+          </div>
+          <div id="acct-preview"></div>
+        </section>
+
+        <section class="card" id="sec-cr-workflow">
+          <div class="card__head"><h2>Change Request Workflow</h2></div>
+          <p class="hint">
+            Raised, impact assessed, decided by the approvers its size calls for, then implemented. Each decision
+            is signed against the change as it stands; edit the change afterwards and those signatures stop counting.
+            This is a record the app keeps, not a lock &mdash; anyone who can edit the project can edit it.
+          </p>
+          <div id="cr-workflow-body"></div>
+        </section>
+
+        <section class="card" id="sec-cr-route">
+          <div class="card__head"><h2>Approval Route</h2></div>
+          <p class="hint">
+            Who has to approve a change, by its size. Every change goes to the project manager; the sponsor and the
+            change board join once either threshold, cost or days, is reached. Applied when a change is assessed.
+          </p>
+          <div class="cr-route" id="cr-route-fields"></div>
+        </section>
       </div>
     </section>
 
@@ -637,7 +951,7 @@
             Who decides, who needs telling, and who is booked on this engagement. The team
             itself is allocated from the central pool on Resources, so one person exists once
             across every project rather than once per project. Accounts and who may edit what
-            are on Sync &amp; Team.
+            are in Settings, under Sync.
           </p>
         </header>
 
@@ -688,6 +1002,64 @@
         </section>
 
         <div id="people-registers"></div>
+
+        <section class="card" id="sec-stakeholder-needs">
+          <div class="card__head">
+            <h2>Stakeholder needs</h2>
+            <span class="hint" id="needs-count"></span>
+            <button type="button" class="btn btn-small no-print" data-needs="table">Copy the needs record</button>
+          </div>
+          <p class="hint">
+            Ask each stakeholder what they need to make, support or escalate a decision &mdash; do not assume a job title
+            says it. Two people in the same role can want different things, so the record is per person. Prepare, ask
+            across the nine areas, confirm what you heard, agree how and when you will provide it (that goes onto the
+            Communications Plan), then test that it helps them decide. Needs change as the project moves: a confirmation
+            older than ninety days is due again. The people themselves live on the Stakeholders register.
+          </p>
+          <div id="needs-body"></div>
+          <details class="needs-example-wrap">
+            <summary>Illustrative example &mdash; different roles, different needs</summary>
+            <p class="hint">The same project can need different information for different people. Adapt it; do not copy it into someone&rsquo;s record without asking them.</p>
+            <div class="needs-table-wrap" id="needs-example"></div>
+          </details>
+        </section>
+
+        <section class="card" id="sec-handoffs">
+          <div class="card__head hf-head">
+            <h2>Handoffs</h2>
+            <span class="hint" id="handoff-stage-label"></span>
+            <select class="field-input field-input--auto no-print" id="handoff-picker" aria-label="Which handoff"></select>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-handoff-new">+ New handoff</button>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-handoff-delete">Delete</button>
+          </div>
+          <p class="hint">
+            A handoff transfers responsibility and context: the right information to the right people. The package is read off
+            the project — the current owner&rsquo;s work, open issues, dependencies and decisions. Never put a password in a handoff;
+            say how access is obtained and share credentials through an approved tool. Accepting it moves the work to the new owner.
+          </p>
+          <p class="hint" id="handoff-none">No handoffs yet. Start one when work changes hands — between people, teams, or into operations.</p>
+          <div id="handoff-body" hidden>
+            <ol class="hf-stages" id="handoff-stages"></ol>
+            <div class="hf-duties" id="handoff-duties"></div>
+            <div class="charter-grid" id="handoff-fields"></div>
+            <h3 class="rhythm-h3">The package</h3>
+            <div class="hf-packs" id="handoff-package"></div>
+            <div class="charter-grid">
+              <label class="charter-field"><span class="charter-field__label">Walkthrough held on</span>
+                <input type="date" class="field-input" id="handoff-walkthrough"></label>
+              <label class="charter-field"><span class="charter-field__label">Support until</span>
+                <input type="date" class="field-input" id="handoff-monitor"></label>
+            </div>
+            <h3 class="rhythm-h3">Verify usability</h3>
+            <ul class="gate-criteria__list" id="handoff-verify"></ul>
+            <button type="button" class="btn btn-small btn-ghost no-print" data-hf="add-verify">+ Key task</button>
+            <label class="charter-field charter-field--wide"><span class="charter-field__label">Accepted with these exceptions — and their follow-up</span>
+              <textarea class="field-input" rows="2" id="handoff-exceptions"></textarea></label>
+            <div id="handoff-acceptance"></div>
+            <h3 class="rhythm-h3">Diagnostic checks <span class="hint" id="handoff-check-count"></span></h3>
+            <ul class="sprint-checks" id="handoff-checks"></ul>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -703,6 +1075,11 @@
         </header>
 
         <section class="kpi-row" aria-label="Service health">
+          <div class="kpi" id="svc-count-incidents">
+            <span class="kpi__label">Incidents open</span>
+            <span class="kpi__value">0</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
           <div class="kpi" id="svc-count-sla">
             <span class="kpi__label">Service levels breached</span>
             <span class="kpi__value">0</span>
@@ -726,6 +1103,16 @@
         </section>
 
         <div id="service-registers"></div>
+
+        <section class="card" id="sec-incident-targets">
+          <div class="card__head"><h2>Response &amp; Resolution Targets</h2></div>
+          <p class="hint">
+            Hours to first response and to resolution, by priority. Every incident&rsquo;s SLA column is judged against these.
+            Each priority runs round the clock &mdash; nights and weekends count &mdash; or in business hours on the service
+            calendar below. Blank uses the default shown. Mean time to resolve is always elapsed time, as the customer waited it.
+          </p>
+          <div id="incident-targets"></div>
+        </section>
       </div>
     </section>
 
@@ -754,6 +1141,217 @@
         </section>
 
         <div id="improve-registers"></div>
+
+        <section class="card" id="sec-8d">
+          <div class="card__head hf-head">
+            <h2>Problem solving (8D)</h2>
+            <span class="hint" id="d8-state"></span>
+            <select class="field-input field-input--auto no-print" id="d8-picker" aria-label="Which 8D report"></select>
+            <button type="button" class="btn btn-small btn-primary no-print" id="btn-d8-new">+ New 8D</button>
+            <button type="button" class="btn btn-small no-print" data-dact="copy">Copy the report</button>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-d8-delete">Delete</button>
+          </div>
+          <p class="hint">
+            Eight disciplines to solve a problem so it stays solved: team, problem, containment, root cause, corrective actions,
+            validation, prevention, and closure. Each one&rsquo;s status is worked out from what is written in it; validation needs the
+            measure before and after. Start one from an incident with its &ldquo;8D&rdquo; action. Great teams solve problems; strong systems prevent them.
+          </p>
+          <p class="hint" id="d8-none">No 8D reports yet.</p>
+          <ol class="d8-strip" id="d8-strip"></ol>
+          <div id="d8-body" hidden></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="page-usecases" class="page" role="region" aria-label="Use cases and ROI">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Use Cases &amp; ROI</span></div>
+          <p class="hint report-subtitle">
+            From a client&rsquo;s idea to a supported, measured service: take it in, evaluate it, model what it is worth,
+            get the go/no-go signed, turn it into a project, and track the value it actually delivers.
+          </p>
+        </header>
+
+        <p class="uc-access" id="uc-access" role="note"></p>
+
+        <div class="uc-bar no-print">
+          <label class="field-label uc-bar__picker">Use case
+            <select class="field-input" id="uc-picker"></select>
+          </label>
+          <button type="button" class="btn btn-small btn-primary" id="btn-uc-new">+ New use case</button>
+          <button type="button" class="btn btn-small btn-ghost" id="btn-uc-delete">Delete</button>
+        </div>
+        <ol class="uc-steps" id="uc-steps" aria-label="Where this use case has got to"></ol>
+        <p class="hint" id="uc-none" hidden>No use cases yet. Start one with + New use case; it sits in the project that is open, which is the workspace whose client partners may see it.</p>
+
+        <div id="uc-body">
+          <section class="card" id="sec-uc-pipeline">
+            <div class="card__head"><h2>Deal Pipeline</h2></div>
+            <p class="hint">
+              The deal behind this use case, then every open deal together. A deal is won when the client&rsquo;s go is signed, so
+              Won waits for the signatures on Decision. Probability follows the stage unless you set it; the forecast weights each
+              deal by it, with the unweighted total beside it. Price and margin stay here, with the client partners &mdash; only the
+              deal value is copied into a project, as its contract value.
+            </p>
+            <div class="charter-grid" id="uc-deal"></div>
+            <div id="uc-deal-read"></div>
+            <div id="uc-pipeline"></div>
+          </section>
+
+          <section class="card" id="sec-uc-intake">
+            <div class="card__head"><h2>Intake</h2></div>
+            <p class="hint">What the client wants, and why. The workspace is the project it was created in.</p>
+            <div class="charter-grid" id="uc-intake"></div>
+          </section>
+
+          <section class="card" id="sec-uc-evaluate">
+            <div class="card__head">
+              <h2>Evaluate</h2>
+              <span class="hint" id="uc-eval-result"></span>
+            </div>
+            <p class="hint">Score each criterion 1&ndash;5 and weigh them. The score is out of 100 and stays &ldquo;Not scored&rdquo; until every criterion has one &mdash; a missing risk score has not been judged low risk.</p>
+            <div id="uc-evaluate"></div>
+          </section>
+
+          <section class="card" id="sec-uc-roi">
+            <div class="card__head"><h2>ROI Model</h2></div>
+            <p class="hint">
+              Monthly over the horizon. One-off costs land in month one; running costs and benefits accrue monthly; benefits climb
+              to the target adoption over the ramp. Low and high scale the benefits, never the costs. Every line says where its
+              number came from, and anything unsourced is listed as an open assumption.
+            </p>
+            <div id="uc-roi"></div>
+          </section>
+
+          <section class="card" id="sec-uc-quote">
+            <div class="card__head"><h2>Quote &amp; Proposal</h2></div>
+            <p class="hint">
+              What the client is asked to pay. Totals are worked out from the lines. Once a quote is sent, the deal is worth what
+              it says; the client&rsquo;s acceptance is a signature against these exact lines and terms, and editing the quote
+              afterwards voids it. The proposal is a page to print or send: it carries the problem, the business case and this
+              quote, never our delivery cost or margin.
+            </p>
+            <div id="uc-quote"></div>
+          </section>
+
+          <section class="card" id="sec-uc-decision">
+            <div class="card__head"><h2>Go / No-go</h2></div>
+            <p class="hint">
+              Signed by the client sponsor and the client partner against the scores and the model as they stand. Change either
+              afterwards and the decision lapses &mdash; a signature on numbers that have since moved approves nothing.
+            </p>
+            <div id="uc-decision"></div>
+          </section>
+
+          <section class="card" id="sec-uc-client">
+            <div class="card__head"><h2>Client View</h2></div>
+            <p class="hint">
+              Every use case for one client, side by side. Each is still decided on its own; this is where shared costs are
+              counted once, benefits two use cases both claim are counted once, and the order to do them in is worked out
+              &mdash; what needs to come first, then the strongest score, then the largest NPV, against the client&rsquo;s budget.
+            </p>
+            <div id="uc-client"></div>
+          </section>
+
+          <section class="card" id="sec-uc-value">
+            <div class="card__head"><h2>Delivery &amp; Value</h2></div>
+            <p class="hint">
+              The project it became, and whether the benefit arrived. The forecast is the expected case for the months since go-live;
+              the actuals are what the client confirms was realised.
+            </p>
+            <div id="uc-value"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-customers" class="page" role="region" aria-label="Customer success">
+      <div class="print-page">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Customer Success</span></div>
+          <p class="hint report-subtitle">
+            Every account, where it is in the customer lifecycle, how healthy it is, and when it renews.
+            Health and the numbers above are worked out from the accounts, never typed.
+          </p>
+        </header>
+
+        <section class="kpi-row" aria-label="Customer health">
+          <div class="kpi" id="cs-tile-retention">
+            <span class="kpi__label">Customer retention</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="cs-tile-nrr">
+            <span class="kpi__label">Net revenue retention</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="cs-tile-nps">
+            <span class="kpi__label">Net Promoter Score</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+          <div class="kpi" id="cs-tile-risk">
+            <span class="kpi__label">ARR at risk</span>
+            <span class="kpi__value">&mdash;</span>
+            <span class="kpi__sub">&mdash;</span>
+          </div>
+        </section>
+
+        <div id="customers-registers"></div>
+
+        <section class="card" id="sec-cs-economics">
+          <div class="card__head"><h2>Unit Economics</h2></div>
+          <p class="hint">
+            Lifetime value needs the one figure an account cannot supply: the gross margin you make on it.
+            LTV is average ARR &times; gross margin &divide; the churn rate of the last twelve months; CAC is the average
+            cost to acquire an account, from the accounts that record one.
+          </p>
+          <label class="field-label cs-margin">Gross margin %
+            <input type="number" class="field-input" id="cs-gross-margin" min="0" max="100" step="1" placeholder="e.g. 75">
+          </label>
+          <dl class="cs-economics" id="cs-economics-read"></dl>
+        </section>
+
+        <section class="card" id="sec-cs-lifecycle">
+          <div class="card__head"><h2>CSM Lifecycle</h2></div>
+          <p class="hint">
+            Six stages, in order, each with the gate that lets an account leave it and the plays a CSM runs in it.
+            Move an account by changing its stage on Accounts; the day it moved is kept, which is how time to value is measured.
+          </p>
+          <div id="cs-lifecycle-body"></div>
+        </section>
+
+        <section class="card" id="sec-cs-journey">
+          <div class="card__head hf-head">
+            <h2>Customer journey map</h2>
+            <span class="hint" id="journey-total"></span>
+            <button type="button" class="btn btn-small btn-ghost no-print" data-jm-act="add-stage">+ Stage</button>
+            <button type="button" class="btn btn-small btn-ghost no-print" data-jm-act="add-dept">+ Department</button>
+          </div>
+          <p class="hint">
+            The journey in layers: the stages a customer goes through, the steps they take, the touchpoints where they meet you,
+            and which departments own each one. It starts from a template; edit it to your own. What it shows beneath &mdash; a
+            touchpoint nobody owns, a stage with none, a department that never meets the customer &mdash; is worked out from it.
+          </p>
+          <div class="table-scroll"><div id="journey-map"></div></div>
+          <div class="ms-findings" id="journey-gaps" hidden></div>
+        </section>
+
+        <section class="card" id="sec-cs-renewals">
+          <div class="card__head">
+            <h2>Renewals</h2>
+            <span class="hint" id="cs-renewals-summary"></span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="cs-renewals-table">
+              <thead><tr><th>Account</th><th>CSM</th><th class="col-date">Renewal</th><th class="col-num">In</th><th class="col-num">ARR</th><th>Health</th><th>Stage</th></tr></thead>
+              <tbody id="cs-renewals-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="cs-renewals-empty" hidden>No renewals in the next six months.</p>
+        </section>
       </div>
     </section>
 
@@ -774,21 +1372,87 @@
 
         <section class="stat-cards stat-cards--4" id="raid-summary"></section>
 
+        <section class="card" id="sec-raid-heatmap">
+          <div class="card__head">
+            <h2>Risk heat map</h2>
+            <span class="hint" id="raid-heatmap-filter"></span>
+          </div>
+          <p class="hint">Open risks by likelihood and impact. Pick a square to show just those risks in the log below.</p>
+          <div class="table-scroll"><div id="raid-heatmap"></div></div>
+        </section>
+
+        <section class="card" id="sec-raid-ai" hidden>
+          <div class="card__head">
+            <h2>AI-specific risks</h2>
+            <span class="hint" id="raid-ai-count"></span>
+          </div>
+          <p class="hint">
+            The risks that kill AI projects are not in the old playbook. This project runs an AI method, so each one is checked
+            against the log — by the category it was raised under or by what its words say. One nobody has raised is the gap,
+            not a pass. And AI projects do not end at launch: drift and retraining belong on the log before go-live.
+          </p>
+          <ul class="ai-risks" id="raid-ai-risks"></ul>
+        </section>
+
+        <section class="card" id="sec-raid-escalations">
+          <div class="card__head">
+            <h2>Escalations</h2>
+            <span class="hint" id="raid-escalation-count"></span>
+          </div>
+          <p class="hint">
+            A clear path from signal to action: why it is being escalated, the impact, the options (not just the problem),
+            a recommendation, who decides and by when. Send it, record the decision, then follow it up in the log until the
+            item closes. An escalation past its date with no decision is overdue.
+            Escalation is not a fixed hierarchy: raise it at the lowest level that can decide, and higher only when needed.
+          </p>
+          <details class="esc-levels">
+            <summary>Escalation levels &mdash; match the issue to the level that can decide</summary>
+            <div class="needs-table-wrap" id="raid-esc-levels"></div>
+            <p class="esc-urgent"><strong>Do not delay if urgent harm exists.</strong> A safety risk, a legal or regulatory breach,
+              or a major operational failure goes by your organisation&rsquo;s emergency route, even if normal tolerances have not been exceeded.</p>
+          </details>
+          <h3 class="rhythm-h3">Blocked work <span class="hint" id="raid-blocked-count"></span></h3>
+          <p class="hint">Tasks on hold or waiting on unfinished work, longest first. Can it be cleared within the team? Resolve it there.
+            Does the forecast move? Say by how much. Is the authority missing? Escalate the choice. Is the due date no longer credible? Split or reassign it.</p>
+          <div class="needs-table-wrap" id="raid-blocked"></div>
+          <h3 class="rhythm-h3">Escalation packs</h3>
+          <div id="raid-escalations"></div>
+        </section>
+
+        <section class="card" id="sec-raid-mitigation">
+          <div class="card__head">
+            <h2>Mitigation plans</h2>
+            <span class="hint" id="mit-count"></span>
+          </div>
+          <p class="hint">
+            A useful mitigation plan says how you will respond, who will do it, when, and how you will know it worked &mdash;
+            &ldquo;monitor&rdquo; alone is not a plan. Choose the response, confirm the owner has the time, act, verify the effect
+            against the evidence, then reassess: the residual exposure is applied to the risk on the log. The risk&rsquo;s title,
+            owner and action are its row on the log; editing them here edits that row.
+          </p>
+          <div class="needs-table-wrap" id="mit-table"></div>
+          <div id="mit-body"></div>
+          <details class="needs-example-wrap">
+            <summary>Response types, vague vs specific, and an example plan</summary>
+            <div class="needs-table-wrap" id="mit-reference"></div>
+          </details>
+        </section>
+
         <section class="card" id="sec-raid-log">
           <div class="card__head">
             <h2>Log</h2>
             <button type="button" class="btn btn-small no-print" id="btn-add-raid">+ Add Entry</button>
           </div>
           <div class="filter-bar no-print">
-            <input type="search" class="field-input" id="raid-search" placeholder="Search title, owner, next step...">
-            <select class="field-input" id="raid-type-filter">
+            <input type="search" class="field-input" id="raid-search" aria-label="Search the log" placeholder="Search title, owner, next step...">
+            <select class="field-input" id="raid-type-filter" aria-label="Filter by type">
               <option value="">All types</option>
               <option>Risk</option>
               <option>Issue</option>
               <option>Decision</option>
               <option>Assumption</option>
             </select>
-            <select class="field-input" id="raid-status-filter">
+            <select class="field-input" id="raid-status-filter" aria-label="Filter by status">
               <option value="open" selected>Open only</option>
               <option value="">All statuses</option>
               <option value="closed">Closed only</option>
@@ -874,9 +1538,77 @@
           </div>
         </section>
 
+        <section class="card" id="sec-meeting-calendar">
+          <div class="card__head">
+            <h2 id="meeting-calendar-label">Calendar</h2>
+            <div class="meeting-calendar__nav no-print">
+              <span class="seg" role="group" aria-label="Calendar view">
+                <button type="button" class="btn btn-small btn-ghost" data-cal-view="week" aria-pressed="false">Week</button>
+                <button type="button" class="btn btn-small btn-ghost" data-cal-view="month" aria-pressed="true">Month</button>
+              </span>
+              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="-1" aria-label="Previous">&lsaquo;</button>
+              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="0">Today</button>
+              <button type="button" class="btn btn-small btn-ghost" data-cal-nav="1" aria-label="Next">&rsaquo;</button>
+              <button type="button" class="btn btn-small" id="btn-meetings-ics">Export calendar (.ics)</button>
+            </div>
+          </div>
+          <p class="hint">
+            Every meeting on its day, with follow-ups and the actions falling due. Press <strong>+</strong> on a day, or
+            pick a time in the week, to create a meeting there; press a meeting to open or delete it. A repeating meeting
+            shows its coming dates dashed; press one to plan it or to stop the series. The export
+            opens in Outlook, Google Calendar or Apple Calendar, and a follow-up&rsquo;s reminder goes in as a real alarm.
+          </p>
+          <div class="meeting-calendar__legend" aria-hidden="true">
+            <span class="cal-chip is-meeting">Meeting</span>
+            <span class="cal-chip is-repeat">Repeat, not yet held</span>
+            <span class="cal-chip is-followUp">Follow-up</span>
+            <span class="cal-chip is-action">Action due</span>
+            <span class="cal-legend-modes">👥 In person · 🎥 Video · 📞 Phone · 🏠 On site</span>
+          </div>
+          <div class="table-scroll"><div id="meeting-calendar"></div></div>
+          <h3 class="uc-sub">Next two weeks</h3>
+          <ul class="meeting-upcoming" id="meeting-upcoming"></ul>
+        </section>
+
+        <section class="card" id="sec-meeting-rhythm">
+          <div class="card__head">
+            <h2>Operating rhythm</h2>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-rhythm-reviewed">We reviewed the rhythm today</button>
+          </div>
+          <p class="hint">
+            A predictable cadence, a clear flow of information, faster decisions. Each cadence has a purpose, a length, who
+            attends, what it covers and what it produces — and the things it hears that must go up to the next one.
+            Create a cadence&rsquo;s meeting series and its meetings appear on the calendar like any other.
+          </p>
+          <div class="rhythm-cadences" id="rhythm-cadences"></div>
+
+          <h3 class="rhythm-h3">Who attends what</h3>
+          <p class="hint">R responsible · C contribute · I inform (send the notes) · – not required. Invite only who adds value.</p>
+          <div class="table-scroll" id="rhythm-matrix"></div>
+
+          <h3 class="rhythm-h3">Escalate now <span class="hint" id="rhythm-signal-count"></span></h3>
+          <p class="hint">Read off the project as it stands. Information flows up for decisions and down for clarity: the team flags,
+            the project manager consolidates, leads and stakeholders decide, the team closes the loop. A dash means nothing is recorded
+            that could answer it, which is not the same as nothing being wrong.</p>
+          <div class="rhythm-signals" id="rhythm-signals"></div>
+
+          <h3 class="rhythm-h3">Setup checklist <span class="hint" id="rhythm-check-count"></span></h3>
+          <ol class="sprint-checks" id="rhythm-checks"></ol>
+          <p class="hint">Protect the rhythm: be consistent, start on time, end on time, follow up.</p>
+        </section>
+
         <section class="card" id="sec-meeting-overview">
-          <div class="card__head"><h2>Meeting Overview</h2></div>
+          <div class="card__head">
+            <h2>Meeting Overview</h2>
+            <button type="button" class="btn btn-small btn-ghost no-print" id="btn-meeting-next" title="Plan the next meeting in this series, with the same agenda and invitees">Schedule the next one</button>
+            <button type="button" class="btn btn-small no-print" id="btn-meeting-ics">Add to calendar (.ics)</button>
+          </div>
           <div class="charter-grid" id="meeting-overview-fields"></div>
+          <div class="meeting-readiness">
+            <h3>Before you meet <span class="hint" id="meeting-readiness-count"></span></h3>
+            <p class="hint">Worked out from the meeting as written: purpose, output, who decides, who runs it, who keeps the notes, a timed agenda, inputs shared, and a reason for everyone invited.</p>
+            <ul class="sprint-checks" id="meeting-readiness"></ul>
+          </div>
         </section>
 
         <section class="card" id="sec-meeting-agenda">
@@ -917,6 +1649,8 @@
           <p class="hint">
             &ldquo;Invite the team&rdquo; pulls everyone allocated to this project from Resources,
             so the list matches who is actually booked rather than who was on the last invite.
+            Give everyone a meeting role — decision maker, facilitator, note keeper, subject expert,
+            contributor, action owner, sponsor or observer. Anyone who is only observing could read the notes instead.
           </p>
           <div class="table-scroll">
             <table class="data-table" id="attendee-table">
@@ -924,7 +1658,8 @@
                 <tr>
                   <th class="col-drag no-print"></th>
                   <th class="col-name">Attendee</th>
-                  <th>Role</th>
+                  <th>Job title</th>
+                  <th class="col-status">Meeting role</th>
                   <th>Department</th>
                   <th class="col-check">Attended</th>
                   <th class="col-action no-print"></th>
@@ -939,7 +1674,7 @@
         <section class="card" id="sec-meeting-notes">
           <div class="card__head"><h2>Discussion Notes</h2></div>
           <p class="hint">What was actually said, in your words. The transcript is kept separately.</p>
-          <textarea class="field-input meeting-notes" id="meeting-notes" rows="14"
+          <textarea class="field-input meeting-notes" id="meeting-notes" aria-label="Discussion notes" rows="14"
                     placeholder="Quarterly results: Q1 revenue up 8% YoY&#10;Budget review: reallocate 10% from discretionary spend&#10;&#10;One line per point reads best in the minutes."></textarea>
         </section>
 
@@ -975,6 +1710,7 @@
             Send an action to the Task Tracker and it becomes a real task with an owner and a due
             date. The two stay linked, so ticking it off there closes it here.
           </p>
+          <div class="meeting-absent no-print" id="meeting-absent-owners" hidden></div>
           <div class="table-scroll">
             <table class="data-table" id="action-table">
               <thead>
@@ -1032,12 +1768,35 @@
             <span class="hint" id="transcript-count"></span>
           </div>
 
-          <p class="hint callout" id="transcript-privacy"></p>
+          <p class="hint">
+            Recordings are kept on this device only, in the browser&rsquo;s own storage. They are not synced to your other
+            devices or to the workspace, and clearing this site&rsquo;s data deletes them &mdash; download any you need to keep.
+          </p>
 
           <div class="recorder no-print" id="recorder">
             <button type="button" class="btn btn-primary" id="btn-record">● Start recording</button>
-            <span class="recorder__state" id="recorder-state">Not recording</span>
+            <button type="button" class="btn btn-ghost" id="btn-record-pause" hidden>❚❚ Pause</button>
+            <span class="recorder__clock" id="recorder-clock" aria-label="Time recorded">0:00</span>
+            <span class="recorder__meter" aria-hidden="true"><span class="recorder__level" id="recorder-level"></span></span>
+            <span class="recorder__state" id="recorder-state" role="status">Not recording</span>
+            <label class="field-label recorder__mode">Capture
+              <select class="field-input" id="recorder-mode" aria-label="What to capture"></select>
+            </label>
+            <button type="button" class="btn btn-small btn-ghost" id="btn-mic-check">Check microphone</button>
             <span class="recorder__interim" id="recorder-interim"></span>
+          </div>
+          <p class="hint" id="recorder-transcript-state" hidden></p>
+          <p class="hint is-warn" id="recorder-problem" hidden></p>
+          <ul class="mic-check" id="mic-check" hidden></ul>
+          <p class="hint callout" id="transcript-privacy"></p>
+
+          <h3 class="uc-sub">Recordings</h3>
+          <ul class="recordings" id="recording-list"></ul>
+          <p class="hint" id="recording-empty">Nothing recorded for this meeting yet.</p>
+
+          <div class="sync-actions no-print transcript-tools">
+            <button type="button" class="btn btn-small btn-ghost" id="btn-copy-transcript">Copy transcript</button>
+            <button type="button" class="btn btn-small btn-ghost" id="btn-clear-transcript">Clear transcript</button>
           </div>
 
           <details class="meeting-paste no-print" id="transcript-paste">
@@ -1047,12 +1806,10 @@
               <code>Name: what they said</code> and <code>[00:12] Name: what they said</code>
               are both understood.
             </p>
-            <textarea class="field-input" id="transcript-input" rows="6"
+            <textarea class="field-input" id="transcript-input" aria-label="Transcript to import" rows="6"
                       placeholder="[00:00] Jessica Morgan: Let's start with the Q1 numbers."></textarea>
             <div class="sync-actions">
               <button type="button" class="btn btn-small btn-primary" id="btn-import-transcript">Add to transcript</button>
-              <button type="button" class="btn btn-small btn-ghost" id="btn-copy-transcript">Copy transcript</button>
-              <button type="button" class="btn btn-small btn-ghost" id="btn-clear-transcript">Clear transcript</button>
             </div>
           </details>
 
@@ -1081,10 +1838,13 @@
             <span class="dash-header__badge" id="kpi-coverage">&mdash;</span>
           </div>
           <p class="hint report-subtitle">
-            Twenty indicators for schedule, cost, scope, risk and quality &mdash; every one of them
-            worked out from the plan and the registers, none of them typed in. An indicator with
-            nothing behind it reads &ldquo;not measured&rdquo; and says which field would fill it,
-            rather than showing a number nobody earned.
+            Indicators for schedule, cost, scope, risk, quality, improvement, customer success and service &mdash;
+            every one of them worked out from the plan and the registers, none of them typed in. An
+            indicator with nothing behind it reads &ldquo;not measured&rdquo; and says which field
+            would fill it, rather than showing a number nobody earned. A card whose number has
+            turned bad is also flagged with what that looks like as a risk &mdash; see
+            <button type="button" class="link-btn" data-goto="nav-kpi-framework">PM Framework</button>
+            for the wider set this app cannot measure yet.
           </p>
         </header>
 
@@ -1131,6 +1891,37 @@
           <div class="card__head"><h2>Quality &amp; Resource KPIs</h2></div>
           <div class="kpi-grid" id="kpi-grid-quality"></div>
         </section>
+        <section class="card" id="sec-kpi-improvement">
+          <div class="card__head"><h2>Improvement KPIs</h2></div>
+          <div class="kpi-grid" id="kpi-grid-improvement"></div>
+        </section>
+        <section class="card" id="sec-kpi-customer">
+          <div class="card__head">
+            <h2>Customer Success KPIs</h2>
+            <span class="hint">Read from the accounts on Customer Success.</span>
+          </div>
+          <div class="kpi-grid" id="kpi-grid-customer"></div>
+        </section>
+        <section class="card" id="sec-kpi-service">
+          <div class="card__head">
+            <h2>Service &amp; Support KPIs</h2>
+            <span class="hint">Read from the incidents on Service &amp; Support, against each priority&rsquo;s clock.</span>
+          </div>
+          <div class="kpi-grid" id="kpi-grid-service"></div>
+        </section>
+
+        <section class="card" id="sec-kpi-flow">
+          <div class="card__head">
+            <h2>Flow KPIs</h2>
+            <span class="hint">How work moves, read from each task&rsquo;s recorded status changes.</span>
+          </div>
+          <p class="hint">
+            Track the flow, not just the output. These show where work waits &mdash; to guide decisions and find
+            bottlenecks, never to rank or punish people. A measure counts only what the app saw happen: a task that
+            existed before its history began adds nothing to lead or cycle time until its next move.
+          </p>
+          <div class="kpi-grid" id="kpi-grid-flow"></div>
+        </section>
 
         <section class="card card--quiet" id="sec-kpi-basis">
           <div class="card__head"><h2>How these are worked out</h2></div>
@@ -1149,6 +1940,143 @@
             </table>
           </div>
         </section>
+
+        <section class="card" id="sec-kpi-performance">
+          <div class="card__head">
+            <h2>Inputs to results</h2>
+          </div>
+          <p class="hint">
+            You cannot change the result, only what comes before it. The inputs and the system are leading indicators — actions
+            today that shape tomorrow&rsquo;s results; the results are lagging. Each box names the indicators here that measure it,
+            or says why none does. Results are the score, not the game.
+          </p>
+          <div class="pf-tiers" id="kpi-framework-body"></div>
+          <p class="hint pf-quote">&ldquo;Every system is perfectly designed to get the results it gets.&rdquo; &mdash; W. Edwards Deming</p>
+        </section>
+
+        <section class="card card--quiet" id="sec-kpi-ceo">
+          <div class="card__head">
+            <h2>Business &amp; leadership KPIs</h2>
+            <span class="hint" id="kpi-ceo-summary"></span>
+          </div>
+          <p class="hint">
+            A company-level KPI set &mdash; business, leadership and personal &mdash; against what this app can answer.
+            Where it measures the same thing, or its project-level equivalent, the value is live and links to its card.
+            Where it cannot, the reason is given: most company finance needs a ledger or a balance sheet, and this app
+            will not invent one.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table" id="kpi-ceo-table">
+              <thead><tr><th>Area</th><th>KPI</th><th>In this app</th><th>Now</th><th>How, or why not</th></tr></thead>
+              <tbody id="kpi-ceo-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" id="sec-kpi-formulas">
+          <div class="card__head"><h2>PMP formulas, on this project</h2></div>
+          <p class="hint">
+            Every formula on the PMP sheet, worked on this project where the record can answer it: earned value from the tasks
+            (in hours, as the indicators are), float from the Gantt, three-point estimates from each task&rsquo;s O&nbsp;/&nbsp;M&nbsp;/&nbsp;P,
+            communication channels from the people on it, expected monetary value from each risk. A dash is a result nothing
+            on record can answer &mdash; not a zero. Procurement, cost of quality, depreciation and the decision tree have no
+            home in a project, so they are calculators: worked on what you type, and kept nowhere.
+          </p>
+          <div class="fx-body" id="fx-body"></div>
+        </section>
+
+        <section class="card" id="sec-kpi-pillars">
+          <div class="card__head">
+            <h2>Twelve pillars of project management</h2>
+            <span class="hint" id="kpi-pillars-count"></span>
+          </div>
+          <p class="hint">
+            Each pillar asked a few plain questions, answered from what this project has on record. A practice that lives only in
+            someone&rsquo;s head scores nothing here. A dash is a question that does not apply yet &mdash; no issues to resolve,
+            nothing bought &mdash; and is left out of the score. Pick a question to go where it is answered.
+          </p>
+          <div class="pillars" id="kpi-pillars-body"></div>
+        </section>
+
+        <section class="card card--quiet" id="sec-kpi-framework">
+          <div class="card__head">
+            <h2>The wider PM framework</h2>
+            <span class="hint">Twelve categories a project management practice typically tracks. Where this app has real data, the KPI links straight to it above; where it does not, that is said plainly rather than guessed at.</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table" id="kpi-framework-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>KPIs</th>
+                  <th>KRIs</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Project Governance</td>
+                  <td><ul class="cap-guidance-list"><li>Steering committee meeting frequency <em>— not tracked</em></li><li>Project charter approval rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Delayed executive decisions</li><li>Lack of governance oversight</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Scope Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-scope">Scope change frequency</button></li><li>Requirements approval timeliness <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Scope creep incidents</li><li>Unapproved requirement changes</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Schedule Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-schedule">Schedule variance</button></li><li><button type="button" class="link-btn" data-goto="nav-kpi-schedule">Milestone completion rate</button></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Missed critical milestones</li><li>Increasing schedule slippage</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Cost Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-cost">Cost variance</button></li><li><button type="button" class="link-btn" data-goto="nav-kpi-cost">Budget utilisation rate</button></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Budget overruns</li><li>Unplanned cost escalations</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Risk Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-risk">Risk response timeliness</button></li><li>Risk register update frequency <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>High residual risk exposure</li><li>Delayed risk response actions</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Quality Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-quality">Defect density</button></li><li>Quality audit pass rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Increasing defect trends</li><li>Rework frequency</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Stakeholder Management</td>
+                  <td><ul class="cap-guidance-list"><li>Stakeholder satisfaction score <em>— not tracked</em></li><li>Communication effectiveness <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Stakeholder complaints</li><li>Escalation frequency</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Procurement Management</td>
+                  <td><ul class="cap-guidance-list"><li>Vendor on-time delivery <em>— not tracked</em></li><li>Contract compliance rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Vendor performance degradation</li><li>Contract compliance gaps</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Change Management</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-scope">Change approval cycle time</button></li><li><button type="button" class="link-btn" data-goto="nav-kpi-scope">Change approval rate</button> <em>— an approval rate, not a success rate; nothing tracks whether an implemented change stuck</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Failed change implementations</li><li>Emergency change frequency</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Communication Management</td>
+                  <td><ul class="cap-guidance-list"><li>Reporting timeliness <em>— not tracked</em></li><li>Status update accuracy <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Information gaps</li><li>Misaligned stakeholder expectations</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Performance Monitoring</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-schedule">Earned value performance</button> — SV, SPI, CV, CPI</li><li>Portfolio health index <em>— not a single number; read as the mix of colours across the grids above</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Declining performance trends</li><li>Uncontrolled variance growth</li></ul></td>
+                </tr>
+                <tr>
+                  <td>Lessons Learned &amp; Improvement</td>
+                  <td><ul class="cap-guidance-list"><li><button type="button" class="link-btn" data-goto="nav-kpi-improvement">Lessons logged</button></li><li>Process improvement adoption rate <em>— not tracked</em></li></ul></td>
+                  <td><ul class="cap-guidance-list"><li>Repeated project failures</li><li>Lack of continuous improvement</li></ul></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -1160,10 +2088,15 @@
             <span class="report-type-btn__label">Daily</span>
             <span class="report-type-btn__sub">Standup view</span>
           </button>
+          <button type="button" class="report-type-btn" data-report="team" aria-pressed="false">
+            <span class="report-type-btn__icon" aria-hidden="true">👥</span>
+            <span class="report-type-btn__label">Team</span>
+            <span class="report-type-btn__sub">Weekly operational</span>
+          </button>
           <button type="button" class="report-type-btn is-active" data-report="weekly" aria-pressed="true">
             <span class="report-type-btn__icon" aria-hidden="true">📅</span>
             <span class="report-type-btn__label">Weekly</span>
-            <span class="report-type-btn__sub">Team status</span>
+            <span class="report-type-btn__sub">Tactical summary</span>
           </button>
           <button type="button" class="report-type-btn" data-report="steerco" aria-pressed="false">
             <span class="report-type-btn__icon" aria-hidden="true">🚦</span>
@@ -1174,6 +2107,11 @@
             <span class="report-type-btn__icon" aria-hidden="true">📈</span>
             <span class="report-type-btn__label">Executive</span>
             <span class="report-type-btn__sub">Portfolio rollup</span>
+          </button>
+          <button type="button" class="report-type-btn" data-report="closure" aria-pressed="false">
+            <span class="report-type-btn__icon" aria-hidden="true">🏁</span>
+            <span class="report-type-btn__label">Closure</span>
+            <span class="report-type-btn__sub">Hand-over &amp; sign-off</span>
           </button>
         </div>
 
@@ -1243,6 +2181,23 @@
             <input type="checkbox" id="mywork-done"> Include finished
           </label>
         </div>
+
+        <section class="card" id="sec-my-week">
+          <div class="card__head hf-head">
+            <h2>My week</h2>
+            <span class="hint" id="week-board-range"></span>
+            <div class="cal-nav no-print">
+              <button type="button" class="btn btn-small btn-ghost" data-wb-nav="-1" aria-label="Previous week">‹</button>
+              <button type="button" class="btn btn-small btn-ghost" data-wb-nav="0">This week</button>
+              <button type="button" class="btn btn-small btn-ghost" data-wb-nav="1" aria-label="Next week">›</button>
+            </div>
+          </div>
+          <p class="hint">
+            Focus, plan, execute, review. Your projects, meetings and recorded wins are read off every project; your objectives,
+            focus blocks and review are your own planning sheet, kept on this device only and never synced.
+          </p>
+          <div class="wb" id="week-board"></div>
+        </section>
 
         <div class="tally-row" id="mywork-tallies">
           <div class="tally tally--bad">
@@ -1359,6 +2314,7 @@
                   <th class="col-num">%</th>
                   <th class="col-date">From</th>
                   <th class="col-date">To</th>
+                  <th>Needs skills</th>
                   <th class="col-check" title="Billable to the client">Bill</th>
                   <th class="col-action no-print"></th>
                 </tr>
@@ -1367,6 +2323,46 @@
             </table>
           </div>
           <p class="hint" id="allocations-empty" hidden>Nobody is booked on anything yet.</p>
+        </section>
+
+        <section class="card" id="sec-skill-balance">
+          <div class="card__head">
+            <h2>Skill demand vs availability</h2>
+            <span class="hint" id="skill-balance-count"></span>
+          </div>
+          <p class="hint">
+            Demand is the bookings in this window that name the skills they need, in full-time people. Available is the
+            time the people holding each skill have in the window, after leave. A shortage is a skill booked beyond the
+            people who have it.
+          </p>
+          <div class="table-scroll">
+            <table class="data-table" id="skill-balance-table">
+              <thead><tr><th>Skill</th><th class="col-num">Demand</th><th class="col-num">Available</th><th class="col-num">Gap</th><th>Status</th></tr></thead>
+              <tbody id="skill-balance-body"></tbody>
+            </table>
+          </div>
+          <p class="hint" id="skill-balance-empty" hidden>No booking names the skills it needs yet. Add them in the Needs skills column above.</p>
+        </section>
+
+        <section class="card" id="sec-capacity-calendar">
+          <div class="card__head">
+            <h2>Capacity calendar</h2>
+            <span class="hint" id="capacity-calendar-range"></span>
+          </div>
+          <p class="hint">
+            Each person&rsquo;s bookings, week by week, as a share of the time they had that week &mdash; so a week of leave
+            shows as more loaded, not less. Twelve weeks from the start of the window above.
+          </p>
+          <div class="capacity-legend" aria-hidden="true">
+            <span class="cap-cell is-optimal">1–70% optimal</span>
+            <span class="cap-cell is-high">71–100% high</span>
+            <span class="cap-cell is-over">101%+ over allocated</span>
+            <span class="cap-cell is-free">free</span>
+            <span class="cap-cell is-away">away</span>
+          </div>
+          <div class="table-scroll"><div id="capacity-heatmap"></div></div>
+          <h3 class="uc-sub">Who is free, and when</h3>
+          <div class="availability-outlook" id="availability-outlook"></div>
         </section>
 
         <div class="dash-row dash-row--2" id="sec-availability">
@@ -1405,6 +2401,27 @@
           </section>
         </div>
 
+        <section class="card" id="sec-daily-schedule">
+          <div class="card__head hf-head">
+            <h2>Daily schedule</h2>
+            <span class="hint" id="daily-range"></span>
+            <div class="cal-nav no-print">
+              <button type="button" class="btn btn-small btn-ghost" data-ds-nav="-1" aria-label="Previous week">‹</button>
+              <button type="button" class="btn btn-small btn-ghost" data-ds-nav="0">This week</button>
+              <button type="button" class="btn btn-small btn-ghost" data-ds-nav="1" aria-label="Next week">›</button>
+            </div>
+            <select class="field-input field-input--auto no-print" id="daily-days" aria-label="How many days">
+              <option value="14">14 days</option><option value="35">35 days</option>
+            </select>
+          </div>
+          <p class="hint">
+            Each person&rsquo;s hours a day from the tasks assigned to them on every project, against the hours they have that day.
+            A task&rsquo;s estimate is spread over the working days it runs; a task with no estimate is named, not counted as zero.
+            Red is over the day. Open a person to see their tasks as bars.
+          </p>
+          <div class="table-scroll" id="daily-schedule"></div>
+        </section>
+
         <section class="card card--feature" id="sec-timesheets">
           <div class="card__head">
             <h2><span class="section-number">4</span> Timesheets</h2>
@@ -1442,10 +2459,170 @@
             <span class="hint" id="conflicts-count">Nothing to flag</span>
           </div>
           <ul class="conflict-list" id="resource-conflicts"></ul>
+          <h3 class="uc-sub" id="resource-fixes-head" hidden>Recommended action</h3>
+          <ul class="conflict-list" id="resource-fixes"></ul>
           <p class="hint" id="conflicts-empty" hidden>
             No over-allocation, no bookings across leave, and every project has its key roles filled.
           </p>
         </section>
+        <div class="merged-page" id="page-capacity" role="region" aria-label="Capacity Planning">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Capacity Planning</span></div>
+          <p class="hint report-subtitle">
+            From demand to a plan the pool can actually deliver. The process below is a reference;
+            the numbers under it are read live off this workspace's projects, resources and bookings.
+          </p>
+        </header>
+
+        <section class="card card--quiet" id="sec-capacity-process">
+          <div class="card__head">
+            <h2><span class="section-number">1</span> The process</h2>
+            <span class="hint">From demand to balanced execution. No data on this card — it is a reference, not a form.</span>
+          </div>
+          <ol class="cap-steps">
+            <li class="cap-step">
+              <span class="cap-step__n">1</span>
+              <h3 class="cap-step__title">Capture demand</h3>
+              <p class="cap-step__text">Collect the work that wants doing: projects, tasks and the estimates behind them. This is <button type="button" class="link-btn" data-goto="tab-portfolio">Portfolio</button> and each project's own Task Tracker.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">2</span>
+              <h3 class="cap-step__title">Analyse capacity</h3>
+              <p class="cap-step__text">Understand who is available, at what capacity, and what leave and other commitments already take off the top. This is the <button type="button" class="link-btn" data-goto="tab-resources">Resources</button> pool and its Availability tab.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">3</span>
+              <h3 class="cap-step__title">Compare &amp; prioritise</h3>
+              <p class="cap-step__text">Match demand against what is actually available. Where the two do not fit, decide what defers, shrinks or gets more people rather than letting every project run 5% behind.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">4</span>
+              <h3 class="cap-step__title">Allocate resources</h3>
+              <p class="cap-step__text">Book the right people to the right work, time-phased rather than open-ended. This is <button type="button" class="link-btn" data-goto="tab-resources">Resources → Allocations</button>.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">5</span>
+              <h3 class="cap-step__title">Execute &amp; monitor</h3>
+              <p class="cap-step__text">Keep the plan honest as it runs: watch utilisation, catch overload before it becomes a missed date, adjust when the picture changes.</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">6</span>
+              <h3 class="cap-step__title">Review &amp; improve</h3>
+              <p class="cap-step__text">After the fact, look at what the plan assumed against what happened, and feed it into the next round of estimates. See <button type="button" class="link-btn" data-goto="tab-improve">Improvement &amp; Lessons</button>.</p>
+            </li>
+          </ol>
+        </section>
+
+        <section class="card card--feature" id="sec-capacity-overview">
+          <div class="card__head">
+            <h2><span class="section-number">2</span> Portfolio capacity overview</h2>
+            <span class="hint">Every project's own window, coloured by RAG status. The number on each bar is its estimated effort in days.</span>
+          </div>
+          <div class="chart-scroll"><div class="gantt-chart" id="capacity-gantt"></div></div>
+          <p class="hint" id="capacity-gantt-empty" hidden>Give a project a due date to see it here — a start and a due date are all a bar needs.</p>
+        </section>
+
+        <section class="card card--feature" id="sec-capacity-metrics">
+          <div class="card__head">
+            <h2><span class="section-number">3</span> KPI dashboard</h2>
+            <span class="hint">Measured over the window below, across every resource and project in the workspace.</span>
+          </div>
+          <div class="res-controls no-print">
+            <label class="field-label">From
+              <input type="date" class="field-input" id="cap-from">
+            </label>
+            <label class="field-label">To
+              <input type="date" class="field-input" id="cap-to">
+            </label>
+          </div>
+          <section class="cap-kpis" id="capacity-metrics"></section>
+          <p class="hint" id="capacity-metrics-empty" hidden>Add someone to the Resources pool to see utilisation and capacity numbers here.</p>
+        </section>
+
+        <section class="card card--quiet" id="sec-capacity-formula">
+          <div class="card__head">
+            <h2><span class="section-number">4</span> Capacity formula</h2>
+            <span class="hint">The arithmetic behind the numbers above, worked through for one real person.</span>
+          </div>
+          <div class="cap-formula" id="capacity-formula"></div>
+          <p class="hint" id="capacity-formula-empty" hidden>Add someone to the Resources pool to see a worked example.</p>
+        </section>
+
+        <div class="dash-row dash-row--3" id="sec-capacity-signals">
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Overload</h2></div>
+            <ul class="cap-guidance-list">
+              <li>High resource utilisation (over 85%)</li>
+              <li>Demand running ahead of capacity (gap over +10%)</li>
+              <li>Overloaded roles climbing</li>
+              <li>On-time delivery falling</li>
+            </ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Underutilisation</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Low resource utilisation (under 70%)</li>
+              <li>Demand running behind capacity (gap under -10%)</li>
+              <li>Buffer capacity high (over 20%)</li>
+              <li>Throughput falling with people still free</li>
+            </ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Healthy balance</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Utilisation in the 70–85% band</li>
+              <li>Demand-vs-capacity gap within ±10%</li>
+              <li>On-time delivery in the 85–95% band</li>
+              <li>Buffer capacity in the 10–20% band</li>
+            </ul>
+          </section>
+        </div>
+
+        <section class="card card--quiet" id="sec-capacity-checklist">
+          <div class="card__head"><h2>Monthly review checklist</h2></div>
+          <p class="hint">A five-step check to keep the portfolio on track. Look at these together — one number out of band is a watch item, several moving the same way is the thing to act on.</p>
+          <ol class="cap-guidance-list cap-guidance-list--numbered">
+            <li>Review utilisation by person, not just the average</li>
+            <li>Compare demand against capacity for the weeks ahead, not just now</li>
+            <li>Check on-time delivery and throughput together</li>
+            <li>Look at forecast accuracy — is the plan learning from what actually happened?</li>
+            <li>Confirm buffer capacity is enough to absorb the next surprise</li>
+          </ol>
+        </section>
+
+        <div class="dash-row dash-row--3" id="sec-capacity-guidance">
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Common capacity gaps</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Too many projects running at once, none of them fully staffed</li>
+              <li>Estimates that assumed nobody would ever be on leave</li>
+              <li>A skill only one person has, booked on two projects at once</li>
+              <li>Allocations nobody revisits once the project is under way</li>
+              <li>Priorities that change faster than the plan can be re-run</li>
+            </ul>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>When demand exceeds capacity</h2></div>
+            <ol class="cap-guidance-list cap-guidance-list--numbered">
+              <li>Reassess priorities — which projects actually deliver the most value?</li>
+              <li>Reduce or split scope — can the project be smaller, or phased?</li>
+              <li>Shift timelines — can it start later, or run longer?</li>
+              <li>Add resources — internally, or from outside?</li>
+              <li>Defer or stop the lowest-value work rather than spread everyone thinner</li>
+            </ol>
+          </section>
+          <section class="card card--quiet">
+            <div class="card__head"><h2>Best practice</h2></div>
+            <ul class="cap-guidance-list">
+              <li>Plan against realistic capacity, not a full week per person</li>
+              <li>Count all the work — projects, BAU and support, not just the visible plan</li>
+              <li>Book against skills, not just headcount</li>
+              <li>Revisit allocations on a schedule, not only when something breaks</li>
+              <li>Keep one shared, transparent view rather than a spreadsheet per team</li>
+            </ul>
+          </section>
+        </div>
+        </div>
       </div>
     </section>
 
@@ -1459,6 +2636,24 @@
             own Dashboard shows &mdash; side by side rather than one at a time.
           </p>
         </header>
+        <div id="sec-portfolio-all">
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Portfolio at a glance</h2>
+            <span class="hint">Every project, read off its tasks and dates.</span>
+          </div>
+          <div id="portfolio-overview"></div>
+        </section>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Project tiles</h2>
+            <span class="hint">The same rows as the table below, one card per project. Click a tile to open it.</span>
+          </div>
+          <div class="pf-tiles" id="portfolio-tiles"></div>
+          <p class="hint" id="portfolio-tiles-empty" hidden>No projects yet.</p>
+        </section>
 
         <section class="card">
           <div class="card__head">
@@ -1474,13 +2669,224 @@
           </div>
           <p class="hint" id="portfolio-empty" hidden>No projects yet.</p>
         </section>
+        </div>
+        <section class="card" id="sec-roadmap">
+          <div class="card__head">
+            <h2>Roadmap</h2>
+            <span class="hint">Every project on one time scale. Pick a project to open its Gantt.</span>
+          </div>
+          <p class="hint">
+            Each lane is a project&rsquo;s own plan &mdash; its Gantt activities, or its span when it has none &mdash; with its milestones
+            and gates above. Each item ends in its risk colour: the project&rsquo;s open-risk band, red when the item is late, grey when no
+            risk has been logged at all. Goals along the top are the strategic objectives on the projects&rsquo; charters.
+          </p>
+          <ul class="rm-legend">
+            <li><span class="rm-dot is-tbc"></span>No risks logged</li><li><span class="rm-dot is-ok"></span>OK</li>
+            <li><span class="rm-dot is-low"></span>Low risk</li><li><span class="rm-dot is-med"></span>Medium risk</li>
+            <li><span class="rm-dot is-high"></span>High risk or late</li>
+          </ul>
+          <div class="table-scroll"><div id="roadmap-body"></div></div>
+        </section>
+        <div class="merged-page" id="page-ai-portfolio" role="region" aria-label="AI Portfolio">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>AI Portfolio</span></div>
+          <p class="hint report-subtitle">
+            Every project running an AI or ML methodology, in one place. A project lands here the moment
+            it names one on its <button type="button" class="link-btn" data-goto="tab-planner">Plan</button>
+            page — nothing else to maintain.
+          </p>
+        </header>
+
+        <section class="stat-cards" id="ai-portfolio-stats"></section>
+
+        <section class="card">
+          <div class="card__head">
+            <h2>Initiatives</h2>
+            <span class="hint">Click a card to open that project's Plan page.</span>
+          </div>
+          <div class="pf-tiles" id="ai-portfolio-tiles"></div>
+          <p class="hint" id="ai-portfolio-empty" hidden>
+            No project has an AI or ML methodology set yet. Give one a method on its Plan page — CPMAI,
+            CRISP-DM, ADLC, Agentic DLC, MLOps or LLMOps — and it appears here.
+          </p>
+        </section>
+        </div>
+        <div class="merged-page" id="page-planning-layers" role="region" aria-label="Planning Layers">
+        <header class="dash-header">
+          <div class="dash-header__title"><span>Planning Layers</span></div>
+          <p class="hint report-subtitle">
+            Three horizons, cascading into each other: where the practice is going, how that becomes
+            coordinated work, and what actually happens today. A number that cannot be traced back up
+            this chain to a strategic priority is busywork, however well it is executed.
+          </p>
+        </header>
+
+        <section class="card cap-layer" id="layer-strategic">
+          <div class="cap-layer__head">
+            <span class="cap-layer__n">01</span>
+            <div class="cap-layer__title-group">
+              <h2 class="cap-layer__title">Strategic Planning</h2>
+              <p class="cap-layer__subtitle">Long-term direction — sets vision, defines where and how to compete.</p>
+            </div>
+            <span class="cap-layer__span">3–5 years</span>
+          </div>
+          <div class="cap-layer__grid">
+            <div class="cap-layer__col">
+              <h3>Key focus</h3>
+              <ul class="cap-guidance-list">
+                <li>Market position and differentiation</li>
+                <li>Competitive advantage</li>
+                <li>Vision and growth opportunities</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Owned by</h3>
+              <ul class="cap-guidance-list">
+                <li>Leadership sets direction</li>
+                <li>Sponsors and the steering committee agree priorities</li>
+                <li>Governance validates the choice</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Best practice</h3>
+              <ul class="cap-guidance-list">
+                <li>A handful of priorities, not a wishlist</li>
+                <li>Decide what you will not do, not only what you will</li>
+                <li>Revisit as the market moves, not on a fixed clock</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Common mistakes</h3>
+              <ul class="cap-guidance-list">
+                <li>Vague or overly broad goals</li>
+                <li>Avoiding the hard trade-offs</li>
+                <li>Chasing every opportunity at once</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="card cap-layer" id="layer-tactical">
+          <div class="cap-layer__head">
+            <span class="cap-layer__n">02</span>
+            <div class="cap-layer__title-group">
+              <h2 class="cap-layer__title">Tactical Planning</h2>
+              <p class="cap-layer__subtitle">The bridge to execution — turns strategy into coordinated initiatives.</p>
+            </div>
+            <span class="cap-layer__span">1–3 years</span>
+          </div>
+          <div class="cap-layer__grid">
+            <div class="cap-layer__col">
+              <h3>Key focus</h3>
+              <ul class="cap-guidance-list">
+                <li>Team alignment around initiatives</li>
+                <li>Cross-team resource coordination</li>
+                <li>Progress toward the strategic goals above</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Owned by</h3>
+              <ul class="cap-guidance-list">
+                <li>Programme and delivery leads coordinate</li>
+                <li>Cross-functional owners align</li>
+                <li>Middle management runs it — this is <button type="button" class="link-btn" data-goto="tab-portfolio">Portfolio</button>, <button type="button" class="link-btn" data-goto="tab-resources">Resources</button> and <button type="button" class="link-btn" data-goto="tab-capacity">Capacity Planning</button> territory</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Best practice</h3>
+              <ul class="cap-guidance-list">
+                <li>Roadmaps with real milestones — see <button type="button" class="link-btn" data-goto="tab-planner">Plan</button></li>
+                <li>One accountable owner per initiative</li>
+                <li>Regular checkpoint reviews, not just a kickoff and a retro</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Common mistakes</h3>
+              <ul class="cap-guidance-list">
+                <li>Plans disconnected from the strategy that funded them</li>
+                <li>More initiatives than the pool has capacity for — see <button type="button" class="link-btn" data-goto="tab-capacity">Capacity Planning</button></li>
+                <li>Poor coordination across teams sharing the same people</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="card cap-layer" id="layer-operational">
+          <div class="cap-layer__head">
+            <span class="cap-layer__n">03</span>
+            <div class="cap-layer__title-group">
+              <h2 class="cap-layer__title">Operational Planning</h2>
+              <p class="cap-layer__subtitle">Short-term execution — where the work actually happens, day to day.</p>
+            </div>
+            <span class="cap-layer__span">Days–12 months</span>
+          </div>
+          <div class="cap-layer__grid">
+            <div class="cap-layer__col">
+              <h3>Key focus</h3>
+              <ul class="cap-guidance-list">
+                <li>Consistent delivery and quality</li>
+                <li>Day-to-day process efficiency</li>
+                <li>Frontline execution</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Owned by</h3>
+              <ul class="cap-guidance-list">
+                <li>Team leads manage the daily work</li>
+                <li>Supervisors oversee completion</li>
+                <li>This project's own <button type="button" class="link-btn" data-goto="tab-tasks">Tasks</button> and <button type="button" class="link-btn" data-goto="tab-planner">Plan</button></li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Best practice</h3>
+              <ul class="cap-guidance-list">
+                <li>Standard steps for repeated work</li>
+                <li>Track the handful of indicators that matter — see <button type="button" class="link-btn" data-goto="tab-kpis">KPIs</button></li>
+                <li>Keep the plan realistic, not a full week booked per person</li>
+              </ul>
+            </div>
+            <div class="cap-layer__col">
+              <h3>Common mistakes</h3>
+              <ul class="cap-guidance-list">
+                <li>Mistaking activity for progress</li>
+                <li>Losing sight of the strategy above</li>
+                <li>Overloading the team beyond what capacity supports</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="card card--quiet" id="sec-planning-cascade">
+          <div class="card__head">
+            <h2>From strategy to execution</h2>
+            <span class="hint">Each layer asks the question the one below it has to answer.</span>
+          </div>
+          <ol class="cap-steps">
+            <li class="cap-step">
+              <span class="cap-step__n">1</span>
+              <h3 class="cap-step__title">Define the top-level goal</h3>
+              <p class="cap-step__text">Leadership sets one to three priorities with a measurable outcome — "reach 30% market share in two years," not "grow the business." Ask: what has to be true for this to happen?</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">2</span>
+              <h3 class="cap-step__title">Break it into initiatives</h3>
+              <p class="cap-step__text">Each priority becomes two to four tactical initiatives, each with a deadline and a named owner — tracked as <button type="button" class="link-btn" data-goto="tab-portfolio">projects</button> with their own <button type="button" class="link-btn" data-goto="tab-planner">milestones</button>. Ask: what does the team do every week to make this happen?</p>
+            </li>
+            <li class="cap-step">
+              <span class="cap-step__n">3</span>
+              <h3 class="cap-step__title">Translate into daily execution</h3>
+              <p class="cap-step__text">Each initiative becomes concrete <button type="button" class="link-btn" data-goto="tab-tasks">tasks</button> and the two or three <button type="button" class="link-btn" data-goto="tab-kpis">KPIs</button> that show whether it is working. Ask: what does this look like day to day?</p>
+            </li>
+          </ol>
+        </section>
+        </div>
       </div>
     </section>
 
-    <section id="page-changelog" class="page" role="region" aria-label="Change log">
+    <section id="page-changelog" class="page" role="region" aria-label="History">
       <div class="print-page">
         <header class="dash-header">
-          <div class="dash-header__title"><span>Change Log</span></div>
+          <div class="dash-header__title"><span>History</span></div>
           <p class="hint report-subtitle">
             Statuses, dates, sign-offs, owners and budgets, recorded as they move.
             Deliberately not a keystroke log &mdash; only the changes someone could be asked
@@ -1488,6 +2894,7 @@
             keeps the record of what happened either way.
           </p>
         </header>
+        <div id="sec-changelog">
 
         <section class="card">
           <div class="card__head">
@@ -1515,11 +2922,8 @@
           </div>
           <p class="hint" id="changelog-empty" hidden></p>
         </section>
-      </div>
-    </section>
-
-    <section id="page-trash" class="page" role="region" aria-label="Trash">
-      <div class="print-page">
+        </div>
+        <div class="merged-page" id="page-trash" role="region" aria-label="Trash">
         <header class="dash-header">
           <div class="dash-header__title"><span>Trash</span></div>
           <p class="hint report-subtitle">
@@ -1548,6 +2952,7 @@
             </table>
           </div>
         </section>
+        </div>
       </div>
     </section>
 
@@ -1564,6 +2969,28 @@
             what and which pages each role is offered.
           </p>
         </header>
+
+        <!-- Who is looking. Filters the menu to the pages that role uses. On a
+             device of your own it is yours to set; inside a workspace an
+             administrator assigns it and the picker becomes a statement. It
+             lived at the top of the sidebar, where it took the space of five
+             menu rows to change something most people set once. -->
+        <section class="card" id="sec-settings-role">
+          <div class="card__head"><h2>Your job role</h2></div>
+          <div class="role-picker">
+            <label class="role-picker__label" for="role-select">I'm working as</label>
+            <select class="field-input role-picker__select" id="role-select"></select>
+            <p class="role-picker__blurb" id="role-blurb"></p>
+            <p class="role-picker__assigned" id="role-assigned" hidden>
+              🔒 Assigned by your administrator
+            </p>
+            <label class="role-picker__toggle" id="role-show-all-row">
+              <input type="checkbox" id="role-show-all">
+              <span>Show every page</span>
+            </label>
+            <p class="hint">Decides which pages the menu offers. It is a view, not a permission: what you can read and change is decided by your workspace, not by this.</p>
+          </div>
+        </section>
 
         <section class="card" id="sec-settings-account">
           <div class="card__head"><h2>Account</h2></div>
@@ -1587,7 +3014,7 @@
               which is the quickest way to see the screens below.
             </p>
             <p class="hint callout" id="signin-unconfigured" hidden>
-              No workspace is connected yet. Connect one on <strong>Sync &amp; Team</strong> first &mdash;
+              No workspace is connected yet. Connect one under <strong>Settings &rarr; Sync</strong> first &mdash;
               sign-in needs somewhere to sign in to.
             </p>
           </div>
@@ -1657,6 +3084,8 @@
               <strong>Access</strong> is what somebody may read and write, and it is enforced by the
               server. <strong>Job role</strong> decides which pages the app offers them, and it is
               not a security boundary &mdash; see <em>What is actually enforced</em> below.
+              <strong>Client partner</strong> is: it decides who the database will return use cases and
+              ROI models to. Only the owner can grant it, and a delegated admin cannot edit anyone who holds it.
             </p>
             <div class="table-scroll">
               <table class="data-table" id="members-table">
@@ -1666,6 +3095,7 @@
                     <th class="col-status">Access</th>
                     <th class="col-status">Job role</th>
                     <th class="col-check" title="May manage people and page access">Admin</th>
+                    <th class="col-check" title="May see use cases and ROI models. Enforced by the database; only the owner can grant it">Client partner</th>
                   </tr>
                 </thead>
                 <tbody id="members-body"></tbody>
@@ -1754,11 +3184,7 @@
             <button type="button" class="btn btn-ghost" id="btn-settings-open-export">Export &amp; share options</button>
           </div>
         </section>
-      </div>
-    </section>
-
-    <section id="page-sync" class="page" role="region" aria-label="Sync and team">
-      <div class="print-page">
+        <div class="merged-page" id="page-sync" role="region" aria-label="Sync and team">
         <header class="dash-header">
           <div class="dash-header__title"><span>Sync &amp; Team</span></div>
           <p class="hint report-subtitle">
@@ -1871,6 +3297,7 @@
             </p>
           </section>
         </div>
+        </div>
       </div>
     </section>
 
@@ -1954,6 +3381,11 @@
       <div class="panel__section">
         <h3>New project</h3>
         <div class="template-grid" id="template-grid"></div>
+        <label class="field-label field-label--block" for="new-project-lifecycle">Lifecycle (required)
+          <select class="field-input" id="new-project-lifecycle" required aria-required="true" aria-describedby="new-project-lifecycle-hint"></select>
+        </label>
+        <p class="hint" id="new-project-lifecycle-hint">How the project is run. It decides the phases the Gantt on the Plan page is laid out with; a template that already follows one picks it for you.</p>
+        <p class="field-error" id="new-project-lifecycle-error" role="alert" hidden>Choose a lifecycle to create the project.</p>
         <label class="field-label field-label--block">Project name
           <input type="text" class="field-input" id="new-project-name" placeholder="Leave blank to use the template's name">
         </label>
@@ -1984,7 +3416,7 @@
       <div class="panel__section">
         <h3>Import project</h3>
         <p class="hint">Import a project previously exported as JSON (see Export / Share). This adds a new project — it won't overwrite anything.</p>
-        <input type="file" accept="application/json" class="field-input" id="import-project-file">
+        <input type="file" accept="application/json" class="field-input" id="import-project-file" aria-label="Project file to import">
       </div>
     </div>
   </div>
@@ -2020,7 +3452,7 @@
     <div class="palette" role="dialog" aria-modal="true" aria-label="Search everything">
       <div class="palette__inputrow">
         <span class="palette__icon" aria-hidden="true">🔍</span>
-        <input type="text" class="palette__input" id="palette-input" role="combobox"
+        <input type="text" class="palette__input" id="palette-input" aria-label="Search everything" role="combobox"
                aria-expanded="true" aria-controls="palette-results" aria-autocomplete="list"
                autocomplete="off" spellcheck="false"
                placeholder="Search tasks, risks, deliverables, releases, people&hellip;">
@@ -2040,5 +3472,7 @@
 <!-- Every register's owner field offers the Delivery roster, so the list is
      published once here rather than rebuilt per table. -->
 <datalist id="roster-names"></datalist>
+<datalist id="account-names"></datalist>
+<datalist id="contact-names"></datalist>
 </body>
 </html>

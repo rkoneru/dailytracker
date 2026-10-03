@@ -1,4 +1,4 @@
-const { APP_URL, out, launch } = require('./harness');
+const { APP_URL, out, launch, chooseLifecycle } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -16,6 +16,7 @@ const { APP_URL, out, launch } = require('./harness');
   await page.click('#btn-projects');
   await page.waitForTimeout(200);
   await page.check('#template-software');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(300);
 
@@ -24,7 +25,7 @@ const { APP_URL, out, launch } = require('./harness');
 
   const shots = (name) => out(name);
 
-  for (const type of ['daily', 'weekly', 'steerco', 'executive']) {
+  for (const type of ['daily', 'team', 'weekly', 'steerco', 'executive']) {
     await page.click(`.report-type-btn[data-report="${type}"]`);
     await page.waitForTimeout(250);
     const title = await page.locator('#report-title').textContent();

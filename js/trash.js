@@ -10,6 +10,7 @@ import {
 } from './state.js';
 import { confirmAction, toast } from './dialog.js';
 import { el } from './dom.js';
+import { setTabCount } from './tabs.js';
 
 let onRestored = null;
 
@@ -93,6 +94,8 @@ export function renderTrash() {
     badge.textContent = entries.length > 0 ? String(entries.length) : '';
     badge.hidden = entries.length === 0;
   }
+  // And on the Trash tab of History, where the list itself is.
+  setTabCount('sec-trash', entries.length || '');
 }
 
 export function initTrash({ onRestore } = {}) {

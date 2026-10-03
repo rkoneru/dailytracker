@@ -1,6 +1,7 @@
 import { listFullProjects } from './state.js';
 import { parseDate } from './charts.js';
 import { scheduleSummary } from './schedule.js';
+import { toLocalISO } from './dates.js';
 
 // Weekly snapshots of a handful of numbers per project, kept in their own
 // localStorage key so history never bloats the main project store. A
@@ -47,8 +48,7 @@ function startOfWeek(date) {
 }
 
 function weekKey(date) {
-  const monday = startOfWeek(date);
-  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+  return toLocalISO(startOfWeek(date));
 }
 
 // Point-in-time numbers only — no task lists, no names beyond the label, so

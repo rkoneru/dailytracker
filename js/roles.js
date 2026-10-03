@@ -37,8 +37,8 @@ export const ROLES = [
     aka: 'Delivery manager, programme manager',
     blurb: 'Plan, tasks, risks and reports, plus the change log.',
     home: 'tab-dashboard',
-    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-planning-layers', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
+      'tab-service', 'tab-customers', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'tab-trash', 'btn-export-panel'],
   },
   {
     id: 'product-manager',
@@ -46,8 +46,8 @@ export const ROLES = [
     aka: 'Product owner',
     blurb: 'What is being delivered and why, plus what is landing when.',
     home: 'tab-dashboard',
-    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
-      'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'btn-export-panel'],
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-planning-layers', 'tab-dashboard', 'tab-tasks', 'tab-planner', 'tab-raid',
+      'tab-service', 'tab-customers', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'btn-export-panel'],
   },
   {
     id: 'scrum-master',
@@ -82,8 +82,35 @@ export const ROLES = [
     aka: 'Service delivery manager, operations, support lead',
     blurb: 'Service levels, releases, change control and known issues.',
     home: 'tab-service',
-    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-resources', 'tab-capacity', 'tab-planning-layers', 'tab-dashboard', 'tab-raid', 'tab-service', 'tab-customers', 'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports',
       'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'btn-export-panel'],
+  },
+  {
+    id: 'client-partner',
+    label: 'Account Executive / Client Partner',
+    aka: 'AE, account director, client partner, sales lead',
+    blurb: 'Use cases from intake to support: evaluate them, model the ROI, get the go/no-go signed, and turn the winners into projects.',
+    home: 'tab-usecases',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-usecases', 'tab-dashboard', 'tab-scope', 'tab-people', 'tab-customers',
+      'tab-service', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'btn-export-panel'],
+  },
+  {
+    id: 'customer-success-manager',
+    label: 'Customer Success Manager',
+    aka: 'CSM, account manager, client success lead',
+    blurb: 'Your accounts, where each is in the lifecycle, how healthy it is, and what renews next.',
+    home: 'tab-customers',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-dashboard', 'tab-customers', 'tab-raid', 'tab-service', 'tab-improve',
+      'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'btn-export-panel'],
+  },
+  {
+    id: 'chief-ai-officer',
+    label: 'Chief AI Officer',
+    aka: 'Head of AI, VP of AI/ML, AI programme lead',
+    blurb: 'Every AI or ML initiative across the portfolio — which methodology it follows, how far along, and what is still open.',
+    home: 'tab-ai-portfolio',
+    nav: ['tab-mywork', 'tab-portfolio', 'tab-ai-portfolio', 'tab-resources', 'tab-capacity', 'tab-planning-layers', 'tab-dashboard', 'tab-raid',
+      'tab-improve', 'tab-meetings', 'tab-kpis', 'tab-reports', 'tab-settings', 'btn-projects', 'tab-sync', 'tab-changelog', 'btn-export-panel'],
   },
 ];
 
@@ -241,8 +268,28 @@ export function usePagePolicy(fn) {
  */
 export const ALWAYS_AVAILABLE = ['tab-settings'];
 
+/**
+ * Pages offered to named job roles and nobody else — not the engagement lead's
+ * "everything", not a policy tick box, not "show everything".
+ *
+ * Still page hiding, and still not what protects the data: the use cases
+ * themselves come from a table the database only returns to client partners.
+ * This keeps the page out of everyone else's way; the grant keeps the data
+ * out of their hands.
+ */
+export const RESTRICTED_PAGES = {
+  'tab-usecases': ['client-partner'],
+  'nav-uc-intake': ['client-partner'],
+  'nav-uc-evaluate': ['client-partner'],
+  'nav-uc-roi': ['client-partner'],
+  'nav-uc-decision': ['client-partner'],
+  'nav-uc-client': ['client-partner'],
+  'nav-uc-value': ['client-partner'],
+};
+
 export function roleShows(nodeId) {
   if (ALWAYS_AVAILABLE.includes(nodeId)) return true;
+  if (RESTRICTED_PAGES[nodeId] && !RESTRICTED_PAGES[nodeId].includes(getRole().id)) return false;
   // "Show everything" is a personal convenience and must not survive being
   // governed: an assigned role is somebody else's decision about this account,
   // and a checkbox that overrode it would make the whole policy advisory.

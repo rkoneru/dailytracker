@@ -9,6 +9,7 @@
 // that cannot be made inside a single engagement: the reason to say no is
 // always in a project you are not looking at.
 
+import { capacityGrid, availabilityOutlook, skillBalance, overloadFixes, dailySchedule } from './capacityPlan.js';
 import { el } from './dom.js';
 import { confirmAction, toast } from './dialog.js';
 import {
@@ -16,7 +17,7 @@ import {
   listAbsences, addAbsence, updateAbsence, removeAbsence,
   listAllAllocations, allocateResource, updateAllocation, removeAllocation,
   listAllTimesheets, addTimesheet, updateTimesheet, removeTimesheet,
-  onResourcesChange, listProjects, getActiveProjectId, findResource,
+  onResourcesChange, listProjects, getActiveProjectId, findResource, listFullProjects,
 } from './state.js';
 import {
   SKILL_LEVELS, RESOURCE_STATUS, ORG_TYPES, ABSENCE_TYPES, ONBOARDING, KEY_ROLES,
@@ -30,6 +31,65 @@ let onGo = null;
 // next 12 weeks rather than "now": resourcing is a question about the near
 // future, and a snapshot of today says nothing about whether next month works.
 const view = { from: '', to: '', skills: '', section: 'people' };
+// The daily schedule's own window: where it starts, how many days, and whose
+// task rows are open. A view setting, never saved.
+const daily = { from: '', days: 14, open: new Set() };
+
+const LEAVE_ICON = { 'Annual leave': '🏖', 'Public holiday': '🎉', Sick: '🤒', Training: '🎓', Parental: '👶', Sabbatical: '🧭' };
+
+function renderDailySchedule(absences) {
+  const host = document.getElementById('daily-schedule');
+  if (!host) return;
+  if (!daily.from) daily.from = view.from || toISO(weekStart(new Date()));
+  const tasks = listFullProjects().flatMap((p) => (p.dashTasks || []).map((t) => ({ ...t, project: p.projectName || 'Untitled project' })));
+  const people = listResources().slice().sort((a, b) => a.name.localeCompare(b.name));
+  const s = dailySchedule(people, tasks, absences, daily.from, daily.days);
+  const fmtDay = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const fmtDate = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+  const d = (iso) => new Date(`${iso}T00:00:00`);
+  document.getElementById('daily-range').textContent = `${fmtDate.format(d(s.days[0]))} – ${fmtDate.format(d(s.days[s.days.length - 1]))}`;
+  const grid = el('div', { class: 'ds', style: `--ds-days:${s.days.length}`, role: 'table', 'aria-label': 'Hours booked per person per day' });
+  grid.appendChild(el('div', { class: 'ds-row ds-head', role: 'row' }, [
+    el('span', { class: 'ds-label', role: 'columnheader', text: 'Person' }),
+    ...s.days.map((iso) => el('span', { class: `ds-day${[0, 6].includes(d(iso).getDay()) ? ' is-weekend' : ''}`, role: 'columnheader' }, [
+      el('span', { class: 'hint', text: fmtDay.format(d(iso)) }), el('strong', { text: fmtDate.format(d(iso)) }),
+    ])),
+  ]));
+  s.groups.forEach((g) => {
+    grid.appendChild(el('div', { class: 'ds-row ds-group', role: 'row' }, [el('strong', { class: 'ds-label', role: 'rowheader', text: g.name })]));
+    g.people.forEach((p) => {
+      const open = daily.open.has(p.resource.id);
+      grid.appendChild(el('div', { class: 'ds-row ds-person', role: 'row', 'data-id': p.resource.id }, [
+        el('button', { type: 'button', class: 'ds-label ds-toggle', 'data-ds-toggle': p.resource.id, 'aria-expanded': open ? 'true' : 'false' }, [
+          el('span', { class: 'ds-caret', 'aria-hidden': 'true', text: p.tasks.length ? (open ? '▾' : '▸') : '·' }),
+          el('span', {}, [el('strong', { text: p.resource.name || 'Unnamed' }), el('span', { class: 'hint', text: ` ${p.perDay}h/d${p.resource.title ? ` · ${p.resource.title}` : ''}` })]),
+        ]),
+        ...p.cells.map((c) => el('span', {
+          class: `ds-cell is-${c.state}`, role: 'cell',
+          title: c.state === 'away' ? c.type : c.state === 'weekend' ? 'Weekend' : `${c.hours} of ${c.capacity} h (${c.load}%)`,
+        }, c.state === 'away' ? [el('span', { 'aria-label': c.type, text: LEAVE_ICON[c.type] || '✈' })]
+          : c.state === 'weekend' ? [] : [el('strong', { text: c.hours.toFixed(1) }), el('span', { class: 'ds-pct', text: `${c.load}%` })])),
+      ]));
+      if (open) {
+        p.tasks.forEach((t) => {
+          const a = s.days.indexOf(t.from) + 2;
+          const b = s.days.indexOf(t.to) + 3;
+          grid.appendChild(el('div', { class: 'ds-row ds-task', role: 'row' }, [
+            el('span', { class: 'ds-label ds-task__name', role: 'rowheader', title: `${t.name} — ${t.project}`, text: t.name }),
+            el('span', { class: `ds-bar${t.perDay === null ? ' is-unknown' : ''}`, style: `grid-column:${a} / ${b}`, title: t.perDay === null ? 'No estimate — hours unknown' : `${t.perDay} h a day`, text: t.perDay === null ? 'no estimate' : `${t.perDay} h/d` }),
+          ]));
+        });
+        if (p.unestimated.length) grid.appendChild(el('div', { class: 'ds-row ds-task', role: 'row' }, [el('span', { class: 'ds-label hint', text: `${p.unestimated.length} with no estimate — their hours are unknown, not zero` })]));
+      }
+    });
+  });
+  grid.appendChild(el('div', { class: 'ds-row ds-summary', role: 'row' }, [
+    el('strong', { class: 'ds-label', role: 'rowheader', text: 'Summary' }),
+    ...s.summary.map((c, i) => el('span', { class: `ds-cell${c.capacity ? '' : ' is-weekend'}${c.load > 100 ? ' is-over' : ''}`, role: 'cell' },
+      c.capacity ? [el('strong', { text: c.hours.toFixed(1) }), el('span', { class: 'ds-pct', text: `${c.load}%` })] : [el('span', { 'aria-hidden': 'true', 'data-day': s.days[i] })])),
+  ]));
+  host.replaceChildren(grid);
+}
 
 function defaultWindow() {
   const start = weekStart(new Date());
@@ -190,6 +250,7 @@ function allocationRow(alloc, projects) {
     textCell(alloc.percent, 'edit-alloc', 'percent', '50', { type: 'number', step: '5', cls: 'col-num' }),
     textCell(alloc.from, 'edit-alloc', 'from', '', { type: 'date', cls: 'col-date' }),
     textCell(alloc.to, 'edit-alloc', 'to', '', { type: 'date', cls: 'col-date' }),
+    textCell(alloc.skills, 'edit-alloc', 'skills', 'e.g. Java, QA'),
     el('td', { class: 'col-check' }, [
       el('input', { type: 'checkbox', 'data-action': 'edit-alloc', 'data-field': 'billable', checked: !!alloc.billable, 'aria-label': 'Billable' }),
     ]),
@@ -288,6 +349,77 @@ function renderTimesheets(entries, projects) {
     : totals.unapproved > 0 ? `${totals.unapproved}h is not approved yet.` : 'All booked time is approved and priced.');
 }
 
+// ---------- capacity plan ----------
+
+function renderCapacityCalendar(allocations, absences) {
+  const host = document.getElementById('capacity-heatmap');
+  if (!host) return;
+  const people = listResources().slice().sort((a, b) => a.name.localeCompare(b.name));
+  const grid = capacityGrid(people, allocations, absences, view.from, 12);
+  const fmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+  const label = (iso) => fmt.format(new Date(`${iso}T00:00:00`));
+  document.getElementById('capacity-calendar-range').textContent = grid.weeks.length
+    ? `${label(grid.weeks[0].from)} – ${label(grid.weeks[grid.weeks.length - 1].to)}` : '';
+  if (!people.length) {
+    host.replaceChildren(el('p', { class: 'hint', text: 'Add people to the pool to see their weeks.' }));
+  } else {
+    host.replaceChildren(el('table', { class: 'data-table capacity-heatmap', id: 'capacity-heatmap-table' }, [
+      el('thead', {}, [el('tr', {}, [el('th', { text: 'Person' }), ...grid.weeks.map((w) => el('th', { class: 'col-num', text: label(w.from) }))])]),
+      el('tbody', {}, grid.rows.map(({ resource, cells }) => el('tr', { 'data-id': resource.id }, [
+        el('th', { scope: 'row', text: resource.name || 'Unnamed' }),
+        ...cells.map((c) => el('td', {
+          class: `cap-cell is-${c.band}`,
+          title: c.band === 'away' ? 'Away all week' : `${c.allocated}% booked${c.away ? `, ${c.away} days away` : ''}`,
+          text: c.load === null ? 'away' : c.load >= 999 ? 'away+' : `${c.load}%`,
+        })),
+      ]))),
+    ]));
+  }
+
+  const outlook = availabilityOutlook(grid);
+  const tile = (key, title, sub) => el('div', { class: `outlook-tile is-${key}`, 'data-outlook': key }, [
+    el('span', { class: 'outlook-tile__n', text: String(outlook[key].length) }),
+    el('span', { class: 'outlook-tile__label', text: title }),
+    el('span', { class: 'outlook-tile__names', text: outlook[key].map((p) => (key === 'none' ? p.name : `${p.name} (${p.free}% free)`)).join(', ') || sub }),
+  ]);
+  document.getElementById('availability-outlook').replaceChildren(
+    tile('now', 'Available now', 'Nobody this week'),
+    tile('soon', 'Available in 1–2 weeks', '—'),
+    tile('later', 'Available in 3–4 weeks', '—'),
+    tile('none', 'Not free within 4 weeks', '—'),
+  );
+}
+
+function renderSkillBalance(allocations, absences) {
+  const body = document.getElementById('skill-balance-body');
+  if (!body) return;
+  const rows = skillBalance(listResources(), allocations, absences, view.from, view.to);
+  const withDemand = rows.filter((r) => r.demand > 0);
+  const shown = withDemand.length ? rows : [];
+  body.replaceChildren(...shown.map((r) => el('tr', { 'data-skill': r.skill }, [
+    el('td', { text: r.skill }),
+    el('td', { class: 'col-num', text: r.demand ? String(r.demand) : '—' }),
+    el('td', { class: 'col-num', text: String(r.available) }),
+    el('td', { class: `col-num ${r.gap < 0 ? 'is-bad' : ''}`, text: r.gap > 0 ? `+${r.gap}` : String(r.gap) }),
+    el('td', {}, [el('span', { class: `skill-status is-${r.status.toLowerCase()}`, text: r.status })]),
+  ])));
+  document.getElementById('skill-balance-empty').hidden = shown.length > 0;
+  const short = rows.filter((r) => r.status === 'Shortage').length;
+  document.getElementById('skill-balance-count').textContent = shown.length ? (short ? `${short} skill${short === 1 ? '' : 's'} short` : 'No shortages') : '';
+}
+
+function renderFixes(allocations, absences, projects) {
+  const list = document.getElementById('resource-fixes');
+  if (!list) return;
+  const name = (id) => projects.find((p) => p.id === id)?.name || 'a project';
+  const fixes = overloadFixes(listResources(), allocations, absences, view.from, view.to, name);
+  list.replaceChildren(...fixes.map((f) => el('li', { class: `conflict conflict--${f.candidates.length ? 'medium' : 'high'}` }, [
+    el('span', { class: 'conflict__tag', text: `${f.name} +${f.over}%` }),
+    el('span', { class: 'conflict__text', text: f.text }),
+  ])));
+  document.getElementById('resource-fixes-head').hidden = fixes.length === 0;
+}
+
 // ---------- conflicts ----------
 
 function renderConflicts(allocations, absences, projects) {
@@ -329,6 +461,10 @@ export function renderResources() {
   renderAvailability(allocations, absences);
   renderTimesheets(listAllTimesheets(), projects);
   renderConflicts(allocations, absences, projects);
+  renderCapacityCalendar(allocations, absences);
+  renderDailySchedule(absences);
+  renderSkillBalance(allocations, absences);
+  renderFixes(allocations, absences, projects);
 }
 
 // ---------- binding ----------
@@ -489,6 +625,20 @@ export function initResources(go) {
   onGo = go;
   if (!document.getElementById('resources-body')) return;
   Object.assign(view, defaultWindow());
+  document.getElementById('sec-daily-schedule')?.addEventListener('click', (e) => {
+    const toggle = e.target.closest('[data-ds-toggle]')?.dataset.dsToggle;
+    const nav = e.target.closest('[data-ds-nav]')?.dataset.dsNav;
+    if (toggle) {
+      if (daily.open.has(toggle)) daily.open.delete(toggle); else daily.open.add(toggle);
+    } else if (nav) {
+      daily.from = nav === '0' ? toISO(weekStart(new Date())) : toISO(addDays(new Date(`${daily.from}T00:00:00`), Number(nav) * 7));
+    } else return;
+    renderDailySchedule(listAbsences());
+  });
+  document.getElementById('daily-days')?.addEventListener('change', (e) => {
+    daily.days = Number(e.target.value) || 14;
+    renderDailySchedule(listAbsences());
+  });
 
   document.getElementById('res-from').addEventListener('change', (e) => {
     view.from = e.target.value; renderResources();

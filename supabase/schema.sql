@@ -369,7 +369,10 @@ grant execute on function public.shares_project_with(uuid) to authenticated;
 
 alter table public.project_members
   add column if not exists job_role  text,
-  add column if not exists can_admin boolean not null default false;
+  add column if not exists can_admin boolean not null default false,
+  -- The commercial grant: may this member see the use cases and ROI models
+  -- (see "use cases" below). Only the owner can give or take it away.
+  add column if not exists client_partner boolean not null default false;
 
 -- Free text rather than an enum: job roles are the app's vocabulary and it
 -- gains one every few releases. An unrecognised value falls back to the most
@@ -401,12 +404,18 @@ $$;
 -- to owner, minting another admin, and touching their own row. Without that
 -- last clause an admin could simply grant themselves ownership, and the
 -- delegation would be indistinguishable from handing over the keys.
+--
+-- The fourth fence is commercial: a delegated admin can neither grant the
+-- client partner permission nor touch the row of anyone who holds it. Running
+-- the team does not come with the right to read its pricing, and an admin who
+-- could edit a partner's row could quietly take the grant away.
 drop policy if exists project_members_write on public.project_members;
 create policy project_members_write on public.project_members for all
   using (
     public.project_owner(project_id) = auth.uid()
     or (public.is_project_admin(project_id)
         and role <> 'owner'
+        and client_partner = false
         and user_id <> auth.uid())
   )
   with check (
@@ -414,6 +423,7 @@ create policy project_members_write on public.project_members for all
     or (public.is_project_admin(project_id)
         and role <> 'owner'
         and can_admin = false
+        and client_partner = false
         and user_id <> auth.uid())
   );
 
@@ -479,3 +489,150 @@ create policy workspace_policy_write on public.workspace_policy for all
 
 grant select, insert, update, delete on public.workspace_policy to authenticated;
 grant execute on function public.is_project_admin(uuid) to authenticated;
+
+-- ============================================================ use cases
+--
+-- Use cases, their evaluation and their ROI models: what a client is being
+-- sold and what it is expected to be worth. Pricing, margin and the client's
+-- own cost figures live here, so this is the one part of the workspace that
+-- not every member may read.
+--
+-- It is a table of its own, not rows in project_rows, because project_rows is
+-- readable by every member of a project by design — a page the app merely
+-- hides would still sync its data to a tester's laptop. Here Postgres decides:
+-- a row is visible only to the project's owner and to members holding the
+-- client_partner grant, and writable only by those of them who are not
+-- viewers. Everyone else gets zero rows, whatever the app shows or hides.
+--
+-- The project a use case sits in is its workspace — typically the account or
+-- the sales pipeline — not the delivery project it may later become. Converting
+-- one copies nothing commercial into the new project, for the same reason.
+
+create or replace function public.is_client_partner(p_project uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce(
+    (select owner_id from public.projects where id = p_project) = auth.uid()
+    or exists (
+      select 1 from public.project_members
+      where project_id = p_project and user_id = auth.uid() and client_partner
+    ), false);
+$$;
+
+create table if not exists public.use_cases (
+  id          uuid primary key,
+  project_id  uuid not null references public.projects (id) on delete cascade,
+  data        jsonb not null default '{}'::jsonb,
+  rev         bigint not null default 0,
+  deleted_at  timestamptz,
+  created_by  uuid references auth.users (id) on delete set null default auth.uid(),
+  updated_at  timestamptz not null default now()
+);
+
+create index if not exists use_cases_project_idx on public.use_cases (project_id);
+create index if not exists use_cases_updated_idx on public.use_cases (updated_at);
+
+drop trigger if exists use_cases_touch on public.use_cases;
+create trigger use_cases_touch before update on public.use_cases
+  for each row execute function public.touch_updated_at();
+
+alter table public.use_cases enable row level security;
+
+drop policy if exists use_cases_read on public.use_cases;
+create policy use_cases_read on public.use_cases for select
+  using (public.is_client_partner(project_id));
+
+-- Writing needs the grant and a role that writes at all: a client partner who
+-- is a viewer on the project reads the models and changes none of them. The
+-- check on update also stops a row being moved into a project where the
+-- writer is not a partner.
+drop policy if exists use_cases_insert on public.use_cases;
+create policy use_cases_insert on public.use_cases for insert
+  with check (public.is_client_partner(project_id)
+              and coalesce(public.role_in_project(project_id) <> 'viewer', false));
+
+drop policy if exists use_cases_update on public.use_cases;
+create policy use_cases_update on public.use_cases for update
+  using (public.is_client_partner(project_id)
+         and coalesce(public.role_in_project(project_id) <> 'viewer', false))
+  with check (public.is_client_partner(project_id)
+              and coalesce(public.role_in_project(project_id) <> 'viewer', false));
+
+drop policy if exists use_cases_delete on public.use_cases;
+create policy use_cases_delete on public.use_cases for delete
+  using (public.is_client_partner(project_id)
+         and coalesce(public.role_in_project(project_id) <> 'viewer', false));
+
+grant select, insert, update, delete on public.use_cases to authenticated;
+grant execute on function public.is_client_partner(uuid) to authenticated;
+
+-- ============================================================ satisfaction surveys
+
+-- A survey sent when an incident closes, answered by someone with no account.
+--
+-- The link carries a random token; only its SHA-256 hash is stored, so reading
+-- this table never yields a working link. Answering is one function that the
+-- anon role may call and nothing else it may touch: the token must match an
+-- unanswered, unexpired request, the score must be 1 to 5, the comment is cut
+-- to 2,000 characters, and a token answers once. Members of the project read
+-- the answers; nobody writes a score directly — there is no update policy —
+-- and a request cannot be created already answered, which is what would let a
+-- member invent a happy customer.
+--
+-- What it does not do: tell who answered. A survey link is a bearer token, and
+-- whoever holds it can answer; that is the nature of emailed surveys, and the
+-- app says so beside every score.
+
+create table if not exists public.incident_surveys (
+  id           uuid primary key default gen_random_uuid(),
+  project_id   uuid not null references public.projects (id) on delete cascade,
+  incident_id  text not null check (char_length(incident_id) between 1 and 200),
+  token_hash   text not null unique check (token_hash ~ '^[0-9a-f]{64}$'),
+  expires_at   timestamptz not null default now() + interval '30 days',
+  score        smallint check (score between 1 and 5),
+  comment      text check (char_length(comment) <= 2000),
+  answered_at  timestamptz,
+  created_by   uuid references auth.users (id) on delete set null default auth.uid(),
+  created_at   timestamptz not null default now()
+);
+
+create index if not exists incident_surveys_project_idx on public.incident_surveys (project_id);
+
+alter table public.incident_surveys enable row level security;
+
+drop policy if exists incident_surveys_read on public.incident_surveys;
+create policy incident_surveys_read on public.incident_surveys for select
+  using (public.can_read_project(project_id));
+
+-- Anyone on the project who writes at all may send a survey — a contributor
+-- closing their own incident included — but only a blank one, expiring within
+-- ninety days.
+drop policy if exists incident_surveys_insert on public.incident_surveys;
+create policy incident_surveys_insert on public.incident_surveys for insert
+  with check (coalesce(public.role_in_project(project_id) <> 'viewer', false)
+              and score is null and comment is null and answered_at is null
+              and expires_at <= now() + interval '90 days');
+
+drop policy if exists incident_surveys_delete on public.incident_surveys;
+create policy incident_surveys_delete on public.incident_surveys for delete
+  using (public.can_write_project(project_id));
+
+create or replace function public.submit_incident_survey(p_token text, p_score integer, p_comment text default '')
+returns boolean language plpgsql security definer set search_path = public as $$
+declare n integer;
+begin
+  if p_token is null or char_length(p_token) < 32 or char_length(p_token) > 128 then return false; end if;
+  if p_score is null or p_score < 1 or p_score > 5 then return false; end if;
+  update public.incident_surveys
+     set score = p_score,
+         comment = left(coalesce(p_comment, ''), 2000),
+         answered_at = now()
+   where token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex')
+     and answered_at is null
+     and expires_at > now();
+  get diagnostics n = row_count;
+  return n = 1;
+end $$;
+
+revoke all on function public.submit_incident_survey(text, integer, text) from public;
+grant select, insert, delete on public.incident_surveys to authenticated;
+grant execute on function public.submit_incident_survey(text, integer, text) to anon, authenticated;

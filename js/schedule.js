@@ -1,4 +1,5 @@
 import { parseDate, daysBetween } from './charts.js';
+import { todayISO, formatDate } from './dates.js';
 
 // A baseline is the plan you committed to. `start`/`end` on a task are the
 // current forecast; `baseStart`/`baseEnd` are what was agreed when the
@@ -58,7 +59,7 @@ export function setBaseline(project) {
     t.baseEnd = t.end || '';
     count += 1;
   });
-  project.baselineSetAt = new Date().toISOString().slice(0, 10);
+  project.baselineSetAt = todayISO();
   return count;
 }
 
@@ -78,7 +79,7 @@ export function clearBaseline(project) {
 export function baselineSummaryText(project) {
   const summary = scheduleSummary(project);
   if (!summary.baselined) return 'No baseline set — set one to start tracking slippage.';
-  const setAt = summary.baselineSetAt ? ` (set ${summary.baselineSetAt})` : '';
+  const setAt = summary.baselineSetAt ? ` (set ${formatDate(summary.baselineSetAt)})` : '';
   return summary.slipped.length === 0
     ? `On plan against baseline${setAt}.`
     : `${summary.slipped.length} task${summary.slipped.length === 1 ? '' : 's'} slipped, worst +${summary.maxSlip}d${setAt}.`;

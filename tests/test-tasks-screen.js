@@ -14,8 +14,16 @@ const { eq, done } = createChecks();
   await page.waitForTimeout(1000);
 
   const names = () => page.$$eval('#tracker-body [data-field="name"]', (els) => els.map((e) => e.value));
-  const cardsIn = (col) => page.$$eval(`.board-col__list[data-column="${col}"] .board-card__title`, (els) => els.map((e) => e.textContent));
-  const counts = () => page.$$eval('.board-col__count', (els) => els.map((e) => Number(e.textContent)));
+  // The list and the board are two tabs, and only the one on screen is kept
+  // built, so the board is read the way anyone reads it: by opening it.
+  const onBoard = async (read) => {
+    await openSection(page, 'sec-task-board');
+    const result = await read();
+    await openSection(page, 'sec-task-list');
+    return result;
+  };
+  const cardsIn = (col) => onBoard(() => page.$$eval(`.board-col__list[data-column="${col}"] .board-card__title`, (els) => els.map((e) => e.textContent)));
+  const counts = () => onBoard(() => page.$$eval('.board-col__count', (els) => els.map((e) => Number(e.textContent))));
 
   await page.click('#tab-tasks');
   await page.waitForTimeout(600);
@@ -31,11 +39,11 @@ const { eq, done } = createChecks();
   eq('tracker columns', await page.$$eval('#tracker-table thead th', (els) => els.map((e) => e.textContent).filter(Boolean)),
      ['ID', 'Task', 'Owner', 'Priority', 'Status', 'Start', 'Due date', 'Slip',
       'Waits for', 'Est.', 'Spent', 'Rework', 'Progress', 'Checks', 'Comments']);
-  eq('five board columns', await page.$$eval('.board-col__label', (els) => els.map((e) => e.textContent)),
+  eq('five board columns', await onBoard(() => page.$$eval('.board-col__label', (els) => els.map((e) => e.textContent))),
      ['High Priority', 'Medium Priority', 'Low Priority', 'On Hold', 'Completed']);
   eq('ids are stable refs', (await page.$$eval('#tracker-body .col-ref', (els) => els.map((e) => e.textContent))).slice(0, 3),
      ['T-101', 'T-102', 'T-103']);
-  eq('every column offers Add Task', await page.locator('.board-col__add').count(), 5);
+  eq('every column offers Add Task', await onBoard(() => page.locator('.board-col__add').count()), 5);
 
   console.log('\n--- tallies count what they say ---');
   const tallies = await page.$$eval('#page-tasks .tally__value', (els) => els.map((e) => Number(e.textContent)));
@@ -89,7 +97,9 @@ const { eq, done } = createChecks();
   await openSection(page, 'sec-task-board');
   await page.click('.board-col--low .board-col__add');
   await page.waitForTimeout(500);
+  await openSection(page, 'sec-task-list');
   eq('a row was added', await page.locator('#tracker-body tr').count(), rowsBefore + 1);
+  await openSection(page, 'sec-task-board');
   eq('with that column\'s priority', await page.evaluate(async () => {
     const t = (await import('/js/state.js')).getState().dashTasks;
     return t[t.length - 1].prio;
@@ -129,10 +139,12 @@ const { eq, done } = createChecks();
   // the Dashboard's timeline redrawn; the tick grid is the view only it has.
   eq('no second task table', await page.locator('#tasks-body').count(), 0);
   eq('no second gantt', await page.locator('#planner-timeline').count(), 0);
+  await openSection(page, 'sec-ticks');
   eq('no tick controls', await page.locator('#tick-body button, #tick-body input').count(), 0);
   eq('but the tick grid shows the edit made on the Tasks screen',
      (await page.textContent('#tick-body')).includes('RENAMED ON TRACKER'), true);
   eq('and offers a way to the tracker', await page.locator('#page-planner [data-action="open-tasks"]').count(), 1);
+  await openSection(page, 'sec-milestones');
 
   console.log('\n--- Planner keeps what only it edits ---');
   eq('milestones still editable', await page.locator('#milestones-body input').count() > 0, true);

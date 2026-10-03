@@ -9,7 +9,7 @@
 // The one thing that genuinely cannot be tested from here is delivery itself,
 // and the check says so rather than implying otherwise.
 
-const { APP_URL, API_URL, launch, createChecks } = require('./harness');
+const { APP_URL, API_URL, launch, createChecks, openDestination } = require('./harness');
 const { eq, done } = createChecks();
 
 const API = API_URL;
@@ -21,7 +21,7 @@ async function configure(page) {
   }, API);
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
-  await page.click('#tab-sync');
+  await openDestination(page, 'tab-sync');
   await page.waitForTimeout(350);
 }
 
@@ -83,7 +83,7 @@ const authSettings = (body) => fetch(`${API}/__auth-settings`, {
   });
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
-  await page.click('#tab-sync');
+  await openDestination(page, 'tab-sync');
   await page.waitForTimeout(350);
   results = await runCheck(page);
   eq('it reports one failure and does not guess at the rest', results.length, 1);

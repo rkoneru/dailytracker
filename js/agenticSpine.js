@@ -10,15 +10,16 @@
 // its regulator, the decision its agent may not make, the failure that would
 // end the programme — lives in js/sampleAgentic.js, and is merged on top.
 
-const DAY_MS = 86400000;
+import { toLocalISO } from './dates.js';
 
 /** Every template runs from the same Monday, so two opened side by side line up. */
 export const PROGRAMME_START = new Date('2026-10-05T00:00:00');
 
 /** ISO date n weeks (and optionally d days) after the programme start. */
 export function wk(weeks, days = 0) {
-  return new Date(PROGRAMME_START.getTime() + (weeks * 7 + days) * DAY_MS)
-    .toISOString().slice(0, 10);
+  const d = new Date(PROGRAMME_START);
+  d.setDate(d.getDate() + weeks * 7 + days);
+  return toLocalISO(d);
 }
 
 let counter = 0;
@@ -147,6 +148,62 @@ const SPINE_CHANGE_REQUESTS = (d) => [
   { title: 'Retain full traces for seven years rather than one', raisedBy: d.roleNames.compliance, raised: wk(9), scopeImpact: 'Storage and retrieval for long-lived traces; no change to the agent itself.', scheduleImpact: 0, costImpact: 18000, status: 'Approved', decidedBy: 'Sponsor', decided: wk(11) },
 ];
 
+const SPINE_DOCUMENTS = (d) => [
+  { title: 'Guardrail specification', type: 'Design', link: '', version: 'v0.1', owner: d.roleNames.compliance, status: 'Draft', review: wk(14) },
+  { title: 'Evaluation plan and held-out case set', type: 'Plan', link: '', version: 'v1.0', owner: d.roleNames.engineer, status: 'Approved', review: wk(8) },
+  { title: 'Operations runbook', type: 'Plan', link: '', version: '', owner: d.roleNames.design, status: 'Draft', review: wk(26) },
+];
+
+// Every agentic programme draws the same scope line: the agent and its
+// guardrails are in, evaluation enables them, and acting without a human
+// in the loop is left out until the evidence says otherwise.
+const SPINE_SCOPE_ITEMS = (d) => [
+  { name: 'The agent for the core workflow', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'High', rationale: 'It is the outcome.' },
+  { name: 'Guardrails and human review of actions', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Other items need it', obligation: 'Policy', effort: 'M', risk: 'High', rationale: `Required by ${d.roleNames.compliance}.` },
+  { name: 'Evaluation harness and held-out cases', category: 'Enabling work', outcome: 'Helps the outcome', dependency: 'Other items need it', obligation: 'None', effort: 'M', risk: 'Medium', rationale: 'No release without it.' },
+  { name: 'Fully autonomous actions', category: 'Explicit exclusion', outcome: 'Not needed', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'High', rationale: 'Not until the evaluation supports it.' },
+];
+
+// Every agentic programme buys its model; that contract is the one vendor they
+// all share, and the one whose terms (retention, training on your data) the
+// guardrail specification has to agree with.
+const SPINE_VENDORS = (d) => [
+  { name: 'Model provider', service: 'Hosted foundation model API, under an enterprise agreement', contract: 'Enterprise agreement', value: 120000, start: wk(0), end: wk(52), owner: d.roleNames.engineer, status: 'Active', performance: 'Not reviewed' },
+];
+
+// The business unit the agent is built for is its customer, and adoption is
+// the thing these programmes most often fail on — so it is tracked through
+// the same lifecycle as an external account.
+const SPINE_CUSTOMERS = (d) => [
+  { name: 'Pilot business unit', segment: 'Enterprise', csm: d.roleNames.owner, stage: 'Onboard', arr: '', startArr: '', start: wk(18), renewal: '', adoption: '', nps: '', lastTouch: wk(18), acquisitionCost: '', stageHistory: [{ stage: 'Onboard', at: wk(18) }] },
+];
+
+const SPINE_INCIDENTS = (d) => [
+  { title: `${d.agent} answered from a superseded policy`, priority: 'P2', service: d.agent, account: 'Pilot business unit', reported: `${wk(9)}T10:15`, responded: `${wk(9)}T11:00`, resolved: `${wk(9)}T16:30`, status: 'Resolved', assignee: d.roleNames.engineer, knownError: '' },
+];
+
+// Billed on the programme's gates, a quarter of the contract up front. The
+// contract is the budget with a margin on it; the margin itself is the deal's,
+// on Use Cases, and never here.
+const contractOf = (d) => Math.round((d.budgetPlanned * 1.3) / 1000) * 1000;
+const SPINE_BILLING = (d) => {
+  const total = contractOf(d);
+  const first = Math.round(total * 0.25);
+  const second = Math.round(total * 0.35);
+  return [
+    { milestone: 'Discovery and design complete', amount: first, due: wk(3), status: 'Paid', invoiceNo: 'INV-1001', invoiced: wk(3), paid: wk(7), owner: d.roleNames.lead },
+    { milestone: 'Pilot live', amount: second, due: wk(8), status: 'Invoiced', invoiceNo: 'INV-1002', invoiced: wk(8), paid: '', owner: d.roleNames.lead },
+    { milestone: 'Scale-out and handover', amount: total - first - second, due: d.dueDate, status: 'Planned', invoiceNo: '', invoiced: '', paid: '', owner: d.roleNames.lead },
+  ];
+};
+
+const SPINE_CONTACTS = (d) => [
+  { name: 'Pilot unit lead', account: 'Pilot business unit', title: 'Operations lead, pilot unit', relationship: 'Champion', email: '', phone: '', owner: d.roleNames.owner },
+];
+const SPINE_ACTIVITIES = (d) => [
+  { date: wk(9, 2), type: 'Meeting', account: 'Pilot business unit', contact: 'Pilot unit lead', summary: `Pilot review of ${d.agent}: users want answers to cite the policy clause.`, nextStep: 'Show clause citations in the next build', nextDue: wk(11), status: 'Follow-up due', owner: d.roleNames.owner },
+];
+
 const SPINE_STAKEHOLDERS = (d) => [
   { name: 'Delivery team', org: 'Internal', role: 'Build and run', influence: 'Medium', interest: 'High', attitude: 'Champion', approach: 'Closest to what the agent actually does. Their disagreements with the eval result are usually right.', owner: d.roleNames.lead },
 ];
@@ -203,6 +260,8 @@ export function agenticSpine(d) {
     dashStatus: d.dashStatus,
     budgetPlanned: d.budgetPlanned,
     budgetActual: d.budgetActual,
+    contractValue: contractOf(d),
+    paymentTermsDays: 30,
     reward: 'Programme bonus at steady-state sign-off.',
 
     charterSponsor: d.sponsor,
@@ -243,6 +302,14 @@ export function agenticSpine(d) {
     raci: [...SPINE_RACI(d), ...(d.raci || [])].map((x) => ({ id: uid('ra'), ...x })),
     stakeholders: [...SPINE_STAKEHOLDERS(d), ...(d.stakeholders || [])].map((x) => ({ id: uid('sh'), ...x })),
     comms: [...SPINE_COMMS(d), ...(d.comms || [])].map((x) => ({ id: uid('cm'), ...x })),
+    documents: [...SPINE_DOCUMENTS(d), ...(d.documents || [])].map((x) => ({ id: uid('doc'), ...x })),
+    scopeItems: [...SPINE_SCOPE_ITEMS(d), ...(d.scopeItems || [])].map((x) => ({ id: uid('si'), ...x })),
+    vendors: [...SPINE_VENDORS(d), ...(d.vendors || [])].map((x) => ({ id: uid('vn'), ...x })),
+    customers: [...SPINE_CUSTOMERS(d), ...(d.customers || [])].map((x) => ({ id: uid('ac'), ...x })),
+    contacts: [...SPINE_CONTACTS(d), ...(d.contacts || [])].map((x) => ({ id: uid('ct'), ...x })),
+    activities: [...SPINE_ACTIVITIES(d), ...(d.activities || [])].map((x) => ({ id: uid('act'), ...x })),
+    billing: [...SPINE_BILLING(d), ...(d.billing || [])].map((x) => ({ id: uid('bm'), ...x })),
+    incidents: [...SPINE_INCIDENTS(d), ...(d.incidents || [])].map((x) => ({ id: uid('inc'), ...x })),
     dependencies: [...SPINE_DEPENDENCIES(d), ...(d.dependencies || [])].map((x) => ({ id: uid('dp'), ...x })),
     serviceLevels: [...SPINE_SLA(d), ...(d.serviceLevels || [])].map((x) => ({ id: uid('sl'), ...x })),
     sac: [...SPINE_SAC(d), ...(d.sac || [])].map((x) => ({ verified: '', ...x, id: uid('sa') })),

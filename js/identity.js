@@ -1,3 +1,4 @@
+import { wipeUseCases } from './useCaseStore.js';
 import * as api from './supabase.js';
 import { setPolicy, clearPolicy, sanitisePolicy, defaultPolicy } from './policy.js';
 import { setWorkflow, clearWorkflow } from './workflow.js';
@@ -33,6 +34,10 @@ let current = {
   accessRole: null,    // viewer | contributor | editor | owner
   jobRole: null,       // assigned, or null when this device decides
   canAdmin: false,
+  // The commercial grant: may see use cases and ROI models. The owner holds it
+  // by definition; others only if the owner gave it. Read from the server —
+  // and the server is what enforces it, on the use_cases table itself.
+  clientPartner: false,
   isOwner: false,
   demo: false,         // a costume from demoAccounts.js rather than an account
   projectId: '',
@@ -41,7 +46,7 @@ let current = {
 
 function signedOut() {
   return {
-    user: null, accessRole: null, jobRole: null, canAdmin: false, isOwner: false,
+    user: null, accessRole: null, jobRole: null, canAdmin: false, clientPartner: false, isOwner: false,
     demo: false, projectId: '', loaded: true,
   };
 }
@@ -135,6 +140,7 @@ function installDemo(demo, projectId) {
     accessRole: demo.accessRole,
     jobRole: demo.jobRole || null,
     canAdmin: !!(demo.isOwner || demo.canAdmin),
+    clientPartner: !!(demo.isOwner || demo.clientPartner),
     isOwner: !!demo.isOwner,
     demo: true,
     projectId: projectId || '',
@@ -203,7 +209,7 @@ export async function refreshIdentity(projectId) {
   try {
     const [projects, members, policies] = await Promise.all([
       api.select('projects', `id=eq.${projectId}&select=id,owner_id`),
-      api.select('project_members', `project_id=eq.${projectId}&user_id=eq.${user.id}&select=role,job_role,can_admin`),
+      api.select('project_members', `project_id=eq.${projectId}&user_id=eq.${user.id}&select=role,job_role,can_admin,client_partner`),
       api.select('workspace_policy', `project_id=eq.${projectId}&select=pages,require_sign_in,workflow`),
     ]);
 
@@ -216,6 +222,7 @@ export async function refreshIdentity(projectId) {
     // The owner administers by definition; the column only matters for people
     // the owner has delegated to.
     current.canAdmin = isOwner || !!(membership && membership.can_admin);
+    current.clientPartner = isOwner || !!(membership && membership.client_partner);
     current.loaded = true;
 
     const row = Array.isArray(policies) && policies[0] ? policies[0] : null;
@@ -248,6 +255,7 @@ export async function refreshIdentity(projectId) {
     console.warn('Could not read your membership; treating you as a plain member.', err);
     current.isOwner = false;
     current.canAdmin = false;
+    current.clientPartner = false;
     current.accessRole = current.accessRole || null;
     current.loaded = true;
   }
@@ -270,7 +278,7 @@ export async function listMembership(projectId) {
   if (!projectId || !isSignedIn()) return [];
   try {
     const [members, profiles] = await Promise.all([
-      api.select('project_members', `project_id=eq.${projectId}&select=user_id,role,job_role,can_admin`),
+      api.select('project_members', `project_id=eq.${projectId}&select=user_id,role,job_role,can_admin,client_partner`),
       api.select('profiles', 'select=id,email,display_name'),
     ]);
     const byId = new Map((profiles || []).map((p) => [p.id, p]));
@@ -281,6 +289,7 @@ export async function listMembership(projectId) {
       accessRole: m.role,
       jobRole: m.job_role || '',
       canAdmin: !!m.can_admin,
+      clientPartner: !!m.client_partner,
     }));
   } catch (err) {
     console.warn('Could not list the workspace members.', err);
@@ -310,6 +319,12 @@ export async function assignMember(projectId, userId, patch) {
   if (patch.accessRole !== undefined) body.role = patch.accessRole;
   if (patch.jobRole !== undefined) body.job_role = patch.jobRole || null;
   if (patch.canAdmin !== undefined) body.can_admin = !!patch.canAdmin;
+  // Only the owner may give or take the commercial grant; the server refuses
+  // anyone else, so this check only saves them a pointless round trip.
+  if (patch.clientPartner !== undefined) {
+    if (!current.isOwner) throw new Error('Only the owner can grant or remove client partner access.');
+    body.client_partner = !!patch.clientPartner;
+  }
   await api.patch('project_members', `project_id=eq.${projectId}&user_id=eq.${userId}`, body);
 }
 
@@ -387,6 +402,7 @@ export async function signOut({ wipeLocal = false } = {}) {
   // are still on the server for anyone who signs back in, and leaving a copy
   // in localStorage on a machine somebody else uses is the obvious hole.
   if (wipeLocal) {
+    wipeUseCases();
     try {
       Object.keys(localStorage)
         .filter((key) => key.startsWith('projectPlanner'))

@@ -8,10 +8,9 @@ import { openWizard } from './wizard.js';
 import { getState, scheduleSave, uid, trashRow } from './state.js';
 import { el } from './dom.js';
 import { makeSortable, reorderById } from './dragReorder.js';
-import { parseDate } from './charts.js';
 import {
   STATUS_OPTIONS, PRIORITY_OPTIONS, STATUS_COLORS, PRIORITY_COLORS,
-  newTask, notifyProjectDataChanged, progressForStatus, clampProgress, taskRef,
+  newTask, notifyProjectDataChanged, progressForStatus, clampProgress, taskRef, isOverdue,
   newChecklistItem, checklistProgress, effortTotals, formatHours, hours,
 } from './taskModel.js';
 import { analyse, wouldCycle } from './critical.js';
@@ -19,6 +18,9 @@ import { getMembers, membersLoaded } from './members.js';
 import { slipDays } from './schedule.js';
 import { offerUndo } from './trash.js';
 import { toast } from './dialog.js';
+import { onSectionShown } from './tabs.js';
+import { formatDate } from './dates.js';
+import { renderSprints, initSprints } from './sprintsPage.js';
 
 // The board's columns. Priority is the primary split, with two extra columns for
 // work that has left the priority conversation: on hold and done.
@@ -40,6 +42,8 @@ const expanded = new Set();
 // Recomputed on every render rather than cached — the graph is small, and a
 // stale critical path is worse than no critical path.
 let graph = { critical: [], blocked: [], conflicts: [], cyclic: [], criticalDays: 0 };
+// Task id to its T-ref, built once per render rather than once per row.
+let refs = new Map();
 
 function slug(value) {
   return String(value || '').toLowerCase().replace(/\s+/g, '-');
@@ -66,21 +70,14 @@ function findTask(id) {
   return getState().dashTasks.find((t) => t.id === id);
 }
 
-function isOverdue(task, today) {
-  if (task.status === 'Complete') return false;
-  const end = parseDate(task.end);
-  return !!(end && end < today);
-}
-
 function startOfToday() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
-function formatDate(value) {
-  const d = parseDate(value);
-  return d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+function displayDate(value) {
+  return formatDate(value) || '—';
 }
 
 // ---------- tallies ----------
@@ -125,7 +122,7 @@ function renderTallies() {
 
   const state = getState();
   document.getElementById('tasks-project-name').textContent = state.projectName || 'Untitled project';
-  document.getElementById('tasks-due-date').textContent = formatDate(state.dueDate);
+  document.getElementById('tasks-due-date').textContent = displayDate(state.dueDate);
   const badge = document.getElementById('tasks-owner-badge');
   badge.textContent = `${complete}/${total} done`;
 
@@ -234,7 +231,7 @@ function checklistCell(task) {
 
 /** What this task is waiting for, and whether the plan agrees with itself. */
 function blockedCell(task) {
-  const names = new Map(getState().dashTasks.map((t, i) => [t.id, taskRef(i)]));
+  const names = refs;
   const deps = (task.dependsOn || []).filter((id) => names.has(id));
   const isBlocked = graph.blocked.includes(task.id);
   const clash = graph.conflicts.some((c) => c.taskId === task.id);
@@ -370,6 +367,7 @@ export function renderTracker() {
   // Before any row is built: every row asks the graph whether it is critical,
   // blocked or in a loop.
   graph = analyse(tasks);
+  refs = new Map(tasks.map((t, i) => [t.id, taskRef(i)]));
   tbody.innerHTML = '';
   tasks.forEach((task, i) => {
     tbody.appendChild(trackerRow(task, i, today));
@@ -460,7 +458,7 @@ function boardCard(task, index, today) {
     ]),
     el('h3', { class: 'board-card__title', text: task.name || '(untitled task)', title: task.name || '' }),
     el('div', { class: 'board-card__meta' }, [
-      el('span', { class: 'board-card__date', text: formatDate(task.end) }),
+      el('span', { class: 'board-card__date', text: displayDate(task.end) }),
       // Only shown when there is something to show: a chip reading 0/0 on
       // every card would make the cards that do have a checklist invisible.
       checklistProgress(task).total > 0
@@ -521,11 +519,33 @@ export function renderBoard() {
 
 // ---------- editing ----------
 
+// The list and the board are two tabs of one page, and only one is ever on
+// screen. The hidden one is marked stale instead of rebuilt, and built when
+// its tab is opened — rebuilding the board on every keystroke typed into the
+// list is most of what made typing lag in a large project.
+const stale = { 'sec-task-list': false, 'sec-task-board': false, 'sec-sprints': false };
+const RENDER = { 'sec-task-list': () => renderTracker(), 'sec-task-board': () => renderBoard(), 'sec-sprints': () => renderSprints() };
+
+function sectionOnScreen(id) {
+  const section = document.getElementById(id);
+  return document.getElementById('page-tasks').classList.contains('is-active')
+    && !section.classList.contains('is-tab-hidden');
+}
+
+function renderIfShown(id) {
+  if (sectionOnScreen(id)) {
+    stale[id] = false;
+    RENDER[id]();
+  } else {
+    stale[id] = true;
+  }
+}
+
 function commit({ rerenderTracker = false, rerenderBoard = true } = {}) {
   scheduleSave();
   renderTallies();
-  if (rerenderTracker) renderTracker();
-  if (rerenderBoard) renderBoard();
+  if (rerenderTracker) renderIfShown('sec-task-list');
+  if (rerenderBoard) renderIfShown('sec-task-board');
   notifyProjectDataChanged('tasks');
 }
 
@@ -805,8 +825,9 @@ function renderLegend() {
 
 export function renderTasksPage() {
   renderTallies();
-  renderTracker();
-  renderBoard();
+  renderIfShown('sec-task-list');
+  renderIfShown('sec-task-board');
+  renderIfShown('sec-sprints');
 }
 
 export function initTasks() {
@@ -814,4 +835,13 @@ export function initTasks() {
   renderTasksPage();
   bindTracker();
   bindBoard();
+  initSprints();
+  onSectionShown((pageId, ids) => {
+    if (pageId !== 'page-tasks') return;
+    ids.forEach((id) => {
+      if (!stale[id]) return;
+      stale[id] = false;
+      RENDER[id]();
+    });
+  });
 }

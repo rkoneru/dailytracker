@@ -6819,6 +6819,36 @@ body.login-open { overflow: hidden; }
 .cr-dismiss { margin-top: 4px; min-width: 140px; }
 #cr-reference h4 { margin: 10px 0 4px; }
 
+/* PMP formulas. */
+.fx-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 12px; align-items: start; }
+/* The cards that carry a table take the whole row; the rest sit two abreast. */
+.fx-card[data-fx-card="cpm"], .fx-card[data-fx-card="pert"], .fx-card[data-fx-card="procurement"], .fx-card[data-fx-card="risk"] { grid-column: 1 / -1; }
+.fx-card { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 10px 14px 12px; display: grid; gap: 6px; min-width: 0; }
+.fx-card header { display: flex; gap: 10px; align-items: center; }
+.fx-card header div { display: grid; }
+.fx-card__n { width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; background: var(--color-primary); color: var(--color-on-primary); font-weight: 800; flex: none; }
+.fx-card h4 { margin: 6px 0 0; font-size: 13px; }
+.fx-grid, .fx-defs { display: grid; gap: 2px; }
+.fx-line { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) auto; gap: 4px 10px; align-items: baseline; font-size: 13px; padding: 3px 0; border-bottom: 1px dashed var(--color-border); }
+.fx-line__formula { font-size: 12px; color: var(--color-text-muted); background: none; overflow-wrap: anywhere; }
+.fx-line__value { font-variant-numeric: tabular-nums; text-align: right; }
+.fx-defs .fx-line__value { font-weight: 400; color: var(--color-text-muted); font-size: 12px; }
+.fx-line.is-grey .fx-line__value { color: var(--color-text-muted); font-weight: 400; }
+.fx-line.is-good .fx-line__value { color: var(--color-success-text); }
+.fx-line.is-bad .fx-line__value { color: var(--color-danger-text); }
+.fx-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px 10px; }
+.fx-input { padding: 4px 8px; font-size: 13px; width: 100%; min-width: 64px; }
+.fx-inline { display: inline-flex; gap: 8px; align-items: center; }
+.fx-inline .fx-input { width: 110px; }
+.fx-table td, .fx-table th { font-size: 13px; }
+.fx-table tr.is-critical td { color: var(--color-danger-text); font-weight: 600; }
+.fx-tree { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.fx-tree__option { display: grid; gap: 6px; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 8px; }
+@media (max-width: 600px) {
+  .fx-line { grid-template-columns: minmax(0, 1fr) auto; }
+  .fx-line__formula { grid-column: 1 / -1; grid-row: 2; }
+}
+
 /* Twelve pillars. */
 .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .pillar { border: 1px solid var(--color-border); border-top: 4px solid #eab308; border-radius: var(--radius); padding: 8px 12px; display: grid; gap: 4px; align-content: start; font-size: 13px; }

@@ -137,6 +137,7 @@ export const PAGE_TABS = {
     { id: 'sec-kpi-framework', label: 'PM Framework', sections: ['sec-kpi-pillars', 'sec-kpi-framework'] },
     { id: 'sec-kpi-performance', label: 'Inputs → Results' },
     { id: 'sec-kpi-ceo', label: 'Business & Leadership' },
+    { id: 'sec-kpi-formulas', label: 'Formulas' },
   ],
   'page-resources': [
     { id: 'sec-people', label: 'People' },

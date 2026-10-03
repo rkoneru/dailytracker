@@ -507,6 +507,7 @@ export const VENDORS = {
     { field: 'name', label: 'Vendor', placeholder: 'Company name' },
     { field: 'service', label: 'Provides', placeholder: 'What you buy from them', cls: 'col-wide' },
     { field: 'contract', label: 'Contract', placeholder: 'Reference or PO' },
+    { field: 'contractType', label: 'Contract type', type: 'select', options: ['Fixed price', 'Cost plus', 'Time & materials'] },
     { field: 'value', label: 'Value', type: 'number', step: 100 },
     { field: 'start', label: 'Start', type: 'date' },
     { field: 'end', label: 'End', type: 'date' },

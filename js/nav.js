@@ -257,6 +257,7 @@ export const NAV_TREE = [
           { id: 'nav-kpi-framework', label: 'PM Framework', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-framework' },
           { id: 'nav-kpi-performance', label: 'Inputs to Results', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-performance' },
           { id: 'nav-kpi-ceo', label: 'Business & Leadership', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-ceo' },
+          { id: 'nav-kpi-formulas', label: 'PMP Formulas', page: 'page-kpis', title: 'Project KPIs', section: 'sec-kpi-formulas' },
         ],
       },
       {

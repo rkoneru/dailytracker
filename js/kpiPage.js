@@ -1,4 +1,5 @@
 import { el } from './dom.js';
+import { renderFormulas, initFormulas } from './formulasPage.js';
 import { getState, listResources, listAbsences, listAllAllocations } from './state.js';
 import {
   KPI_CATEGORIES, KPI_DEFS, projectKpis, formatKpi, kpiTone, coverage,
@@ -190,6 +191,7 @@ export function renderKpis() {
   renderCeoMap(values);
   renderFramework(values);
   renderPillars(project);
+  renderFormulas();
 
   const { measured, total } = coverage(values);
   const badge = document.getElementById('kpi-coverage');
@@ -197,6 +199,7 @@ export function renderKpis() {
 }
 
 export function initKpis() {
+  initFormulas();
   document.getElementById('kpi-pillars-body')?.addEventListener('click', (e) => {
     const node = e.target.closest('[data-pillar-go]')?.dataset.pillarGo;
     if (node) goToNode(node);

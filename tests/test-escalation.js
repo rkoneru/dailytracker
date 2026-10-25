@@ -100,7 +100,9 @@ const { APP_URL, launch, createChecks, openDestination } = require('./harness');
   await page.fill(`${card} [data-pack="options"]`, 'Run organic only\nDelay launch a week');
   await page.fill(`${card} [data-pack="recommendation"]`, 'Run organic only');
   await page.fill(`${card} [data-pack="to"]`, 'Sponsor');
-  await page.fill(`${card} [data-pack="decideBy"]`, '2026-10-03');
+  // A week ahead of whenever the suite runs, so the pack is awaiting, not overdue.
+  const weekAhead = await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  await page.fill(`${card} [data-pack="decideBy"]`, weekAhead);
   await page.selectOption(`${card} [data-pack="level"]`, 'owner');
   eq('ready to send', await page.textContent(`${card} [data-missing]`), 'Ready to send.');
   await page.click(`${card} [data-esc="send"]`);

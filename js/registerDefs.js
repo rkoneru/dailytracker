@@ -79,18 +79,19 @@ export const RACI = {
   title: 'Who Does What (RACI)',
   rowLabel: 'activity',
   addLabel: '+ Add Activity',
-  blurb: 'One accountable person per row — that is the whole point of the A. Names offer the roster but are free text, because a row is often owned by a team or an outside party.',
+  blurb: 'One accountable person per row — that is the whole point of the A. Names offer the roster but are free text, because a row is often owned by a team or an outside party. Several names in one column are separated by commas; the matrix above is these same rows.',
   emptyText: 'No activities mapped yet. Add the decisions and deliverables that need an owner.',
   searchFields: ['activity', 'accountable', 'responsible'],
   searchPlaceholder: 'Search activity or person…',
   columns: [
+    { field: 'phase', label: 'Phase', type: 'select', options: ['Initiation', 'Planning', 'Execution', 'Monitoring & Control', 'Closure'] },
     { field: 'activity', label: 'Activity or deliverable', placeholder: 'What is being done' },
     { field: 'responsible', label: 'Responsible', type: 'person', placeholder: 'Does the work' },
     { field: 'accountable', label: 'Accountable', type: 'person', placeholder: 'Answers for it' },
     { field: 'consulted', label: 'Consulted', type: 'person', placeholder: 'Asked beforehand' },
     { field: 'informed', label: 'Informed', type: 'person', placeholder: 'Told afterwards' },
   ],
-  newRow: () => ({ activity: '', responsible: '', accountable: '', consulted: '', informed: '' }),
+  newRow: () => ({ phase: '', activity: '', responsible: '', accountable: '', consulted: '', informed: '' }),
 };
 
 export const DELIVERABLES = {

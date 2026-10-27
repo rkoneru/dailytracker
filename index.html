@@ -1001,6 +1001,32 @@
           </p>
         </section>
 
+        <section class="card" id="sec-raci-matrix">
+          <div class="card__head">
+            <h2>RACI matrix</h2>
+            <span class="hint" id="raci-matrix-count"></span>
+          </div>
+          <p class="hint">
+            Who does what, from initiation to closure. Each cell is who is <strong>R</strong>esponsible (does the work),
+            <strong>A</strong>ccountable (owns the outcome), <strong>C</strong>onsulted (gives input before) or
+            <strong>I</strong>nformed (kept up to date). Press a cell to move it through R, A, C, I and blank, or type the
+            letter. Rules of thumb: exactly one A per activity, at least one R, and keep the C&rsquo;s lean. The grid is the
+            &ldquo;Who Does What&rdquo; list below, drawn the other way round: edit either.
+          </p>
+          <div class="raci-legend" aria-hidden="true">
+            <span class="raci-cell is-R">R</span> Responsible
+            <span class="raci-cell is-A">A</span> Accountable
+            <span class="raci-cell is-C">C</span> Consulted
+            <span class="raci-cell is-I">I</span> Informed
+          </div>
+          <div class="raci-matrix-wrap" id="raci-matrix"></div>
+          <div class="needs-actions no-print raci-tools">
+            <input class="field-input field-input--auto" data-raci-new-party list="roster-names" placeholder="A role or a person" aria-label="New column">
+            <button type="button" class="btn btn-small" data-raci-act="add-party">+ Add a column</button>
+            <button type="button" class="btn btn-small btn-ghost" data-raci-act="template">Start from the standard matrix</button>
+          </div>
+        </section>
+
         <div id="people-registers"></div>
 
         <section class="card" id="sec-stakeholder-needs">

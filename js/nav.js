@@ -141,6 +141,7 @@ export const NAV_TREE = [
         title: 'People & Stakeholders',
         children: [
           { id: 'nav-roster', label: 'Team Roster', page: 'page-people', title: 'People & Stakeholders', section: 'sec-roster' },
+          { id: 'nav-raci-matrix', label: 'RACI Matrix', page: 'page-people', title: 'People & Stakeholders', section: 'sec-raci-matrix' },
           { id: 'nav-raci', label: 'Who Does What', page: 'page-people', title: 'People & Stakeholders', section: 'sec-raci' },
           { id: 'nav-stakeholders', label: 'Stakeholders', page: 'page-people', title: 'People & Stakeholders', section: 'sec-stakeholders' },
           { id: 'nav-comms', label: 'Communications', page: 'page-people', title: 'People & Stakeholders', section: 'sec-comms' },

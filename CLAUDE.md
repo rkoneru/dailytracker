@@ -76,6 +76,7 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
 | `js/capacityReview.js`, `capacityReviewPage.js` | the Plan page's Capacity Review tab: for a review period, planned vs actual demand, the unplanned share, the team's hours and skill shortages read off the record (`pastFigures`, `null` when nothing answers), the six signals of the diagnostic matrix with action and owner, past vs next plan inputs, the action record (`project.capacityReview`), five steps and the final checks. Pure rules |
 | `js/portfolioDash.js` | Portfolio at a glance: projects complete / in progress / overdue, tasks by status (a CSS conic donut), tasks delivered per month from status history — months before any history are `null`, drawn grey. Pure |
 | `js/handoff.js`, `handoffPage.js` | handoffs on People & Stakeholders: the package read off the project for the current owner, five derived stages, diagnostic checks, a refusal to store anything that looks like a credential, signed acceptance, and the transfer that moves the work |
+| `js/raciMatrix.js`, `raciMatrixPage.js` | the RACI matrix on People & Stakeholders' Who Does What tab: the RACI register's rows as a grid of activities by party, grouped by lifecycle phase; a cell press cycles blank/R/A/C/I (or type the letter); the rules per row (exactly one A, an R, C's lean up to half the columns), each party's A·R load, and the 27-activity, ten-role standard matrix to start from |
 | `js/stakeholderNeeds.js`, `stakeholderNeedsPage.js` | the Stakeholder Needs tab on People & Stakeholders: ask each person what they need to decide — nine areas (role, decisions, outcomes, risks, detail, format, cadence, escalation triggers, preferred response), one `stakeholderNeeds` row per person pointing at the Stakeholders register; the five steps (prepare, ask, confirm, agree, test) worked out, the confirmation note, the diagnostic checks, the illustrative example |
 | `js/eightD.js`, `eightDPage.js` | 8D problem solving on Improvement & Lessons: D1–D8 with each discipline's status worked out from its content, five whys and a six-M fishbone, before/after validation, prevention, lessons sent to the Lessons register, closure by three signatures; started from an incident's "8D" action |
 | `js/aiRisk.js`, `sprintReview.js` | the AI PM's admin from the record: on an AI method, nine AI-specific risks (data quality, privacy, lineage, bias, explainability, wrong answers, drift, regulation, misuse) checked against the RAID log by category or wording, with Raise it; a sprint's summary and a drafted retrospective meeting whose notes are facts and whose actions are left to the team. Pure |
@@ -358,6 +359,13 @@ for real. It **skips loudly** when Postgres is absent — a skip is not a pass.
   keeps what was `handedOver` so moving the work does not lapse it but editing
   the record does; `applyTransfer` moves only items still in the old owner's
   name, after the list is shown. `handoffs` is its own synced kind.
+- **The RACI matrix is the register drawn the other way round.** A row keeps
+  its people in four text fields (responsible, accountable, consulted,
+  informed); the grid's columns are `project.raciParties` then every name
+  found in them, and `setCell` moves one party between the four fields of one
+  row and touches nothing else. Removing a column takes that party off every
+  row, after a confirm. Two A's or no R is a broken rule; many C's is only a
+  question.
 - **A stakeholder's needs are asked, per person, and the steps are worked
   out.** The person lives on the Stakeholders register; the `stakeholderNeeds`
   row (its own synced kind) holds only the answers, by `stakeholderId`. Ask is

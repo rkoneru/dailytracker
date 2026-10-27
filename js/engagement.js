@@ -29,6 +29,7 @@ import { initProjectPlan, renderProjectPlan } from './projectPlanPage.js';
 import { initDevIntent, renderDevIntent } from './devIntentPage.js';
 import { initStakeholderNeeds, renderStakeholderNeeds } from './stakeholderNeedsPage.js';
 import { initScopeLine, renderScopeLine, refreshScopeLine } from './scopeLinePage.js';
+import { initRaciMatrix, renderRaciMatrix } from './raciMatrixPage.js';
 
 const SCOPE_FIELDS = ['charterScopeIn', 'charterScopeOut', 'charterSuccess'];
 
@@ -455,6 +456,7 @@ export function renderEngagement() {
   renderDevIntent();
   renderStakeholderNeeds();
   renderScopeLine();
+  renderRaciMatrix();
   renderAll([...SCOPE_REGISTERS, ...PEOPLE_REGISTERS]);
   renderRosterView();
   renderRosterOptions();
@@ -483,6 +485,7 @@ export function initEngagement() {
   initProjectPlan();
   initDevIntent();
   initStakeholderNeeds();
+  initRaciMatrix({ rowsChanged: () => renderCounters() });
   initScopeLine({ charterWritten: () => { renderCharter(); renderCounters(); renderBaseline(); } });
   const onChanged = (def) => {
     afterRegisterEdit(def);
@@ -495,6 +498,7 @@ export function initEngagement() {
     // what the Communications Plan delivers to them.
     if (def.key === 'stakeholders' || def.key === 'comms') renderStakeholderNeeds();
     if (def.key === 'scopeItems' || def.key === 'deliverables') refreshScopeLine();
+    if (def.key === 'raci') renderRaciMatrix();
     renderCounters();
     // Deliverable dates reach the Dashboard and the roster feeds every owner
     // field in the app, so an edit here has to travel like a task edit does.

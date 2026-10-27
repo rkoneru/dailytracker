@@ -34,6 +34,19 @@ export const ROW_KINDS = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog
   // follow-ups and transcript nested inside it, so the whole minute travels
   // as a unit rather than as six collections that can half-arrive.
   'meetings',
+  // Sprints: the goal, window and commitment. The work in one is the tasks'
+  // own `sprintId`, so moving a task between sprints is an edit to the task.
+  'sprints',
+  // Handoff records: what passed from one owner to another, and the signed
+  // acceptance. The work itself moves on the rows it lives in.
+  'handoffs',
+  // 8D problem-solving reports: one row each, the disciplines nested inside.
+  'problems',
+  // What each stakeholder needs to decide: one row per person asked, pointing
+  // at the Stakeholders register; the person lives there.
+  'stakeholderNeeds',
+  // The lifecycle Gantt's activities — their own rows, not the tasks'.
+  'ganttActivities',
   ...REGISTER_KEYS];
 
 // Fields the app keeps locally that must never be pushed to the server.

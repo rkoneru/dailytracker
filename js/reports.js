@@ -11,15 +11,31 @@ import {
   sheet, ragChips, bulletBox, listBox, boxRow, fieldStrip, milestoneGrid,
   milestoneTimeline, issuesTable,
 } from './reportFormat.js';
-import { KEY_ROLES } from './resourceModel.js';
+import { KEY_ROLES, labourEstimate } from './resourceModel.js';
+import { formatDate, toLocalISO } from './dates.js';
+import { projectWindow } from './ganttModel.js';
+import { priorityOf, priorityLabel } from './priority.js';
+import { isApprovedChange, scopeDrift, signOffState } from './changeControl.js';
+import { listUseCases } from './useCaseStore.js';
+import { roiModel, realisation } from './useCaseModel.js';
+import { billingMetrics } from './billing.js';
+import { CLOSED as INCIDENT_CLOSED } from './serviceDesk.js';
+import { blockedWork } from './escalation.js';
 
 // ---------- Report types ----------
 
 const REPORT_TYPES = {
   daily: { title: 'Daily Status Report', period: 'day', currentLabel: 'Today' },
+  // Chapter 2: the week for the team doing the work — what got done, what is
+  // planned next, who is blocked and who is away. Chapter 3 is the same week
+  // for the people the team reports to.
+  team: { title: 'Weekly Team Status Report', period: 'week', currentLabel: 'This Week' },
   weekly: { title: 'Weekly Status Report', period: 'week', currentLabel: 'This Week' },
   steerco: { title: 'Steering Committee Report', period: 'month', currentLabel: 'This Month' },
   executive: { title: 'Executive Leadership Report', period: 'month', currentLabel: 'This Month' },
+  // Not a period: the whole life of the project that is open, as of today. A
+  // closure report is written about one engagement, so it never rolls up.
+  closure: { title: 'Project Closure Summary', period: 'project', currentLabel: 'Today', scope: 'active' },
 };
 
 // ---------- Period math ----------
@@ -56,18 +72,22 @@ function addDays(date, n) {
 }
 
 function fmtDate(d) {
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return formatDate(d, 'day');
 }
 
 function fmtDateFull(d) {
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatDate(d);
 }
 
 function periodFor(type, anchor) {
   const kind = REPORT_TYPES[type].period;
+  if (kind === 'project') {
+    const start = startOfDay(anchor);
+    return { start, end: start, label: `Whole project, as of ${formatDate(start)}` };
+  }
   if (kind === 'day') {
     const start = startOfDay(anchor);
-    return { start, end: start, label: start.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }) };
+    return { start, end: start, label: formatDate(start, 'long') };
   }
   if (kind === 'week') {
     const start = startOfWeek(anchor);
@@ -76,11 +96,12 @@ function periodFor(type, anchor) {
   }
   const start = startOfMonth(anchor);
   const end = endOfMonth(anchor);
-  return { start, end, label: start.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) };
+  return { start, end, label: formatDate(start, 'month') };
 }
 
 function shiftAnchor(type, anchor, direction) {
   const kind = REPORT_TYPES[type].period;
+  if (kind === 'project') return anchor;
   if (kind === 'day') return addDays(anchor, direction);
   if (kind === 'week') return addDays(anchor, direction * 7);
   const d = new Date(anchor);
@@ -134,11 +155,13 @@ function ragDimensions({ project, rag, overdue, pctComplete, burnPct, budgetPlan
   // Scope: approved changes that moved the date are the ones that matter; a
   // pile of drafts nobody has decided on is an amber, not a red.
   const approvedDays = changeRequests
-    .filter((c) => c.status === 'Approved')
+    .filter(isApprovedChange)
     .reduce((n, c) => n + (Number(c.scheduleImpact) || 0), 0);
   const pending = changeRequests.filter((c) => c.status === 'Submitted' || c.status === 'Under Review').length;
-  const scope = changeRequests.length === 0 ? 'green'
-    : approvedDays > 10 ? 'red' : pending > 0 || approvedDays > 0 ? 'amber' : 'green';
+  // Scope that moved with nobody's approval is creep, and never reads green.
+  const creep = scopeDrift(project)?.unapproved.length || 0;
+  const scope = approvedDays > 10 ? 'red'
+    : creep > 0 || pending > 0 || approvedDays > 0 ? 'amber' : 'green';
 
   // Costs: burn against progress, not against the calendar. Spending 60% to
   // deliver 60% is on plan; spending 60% to deliver 20% is not.
@@ -185,6 +208,22 @@ function computeProject(project, periodStart, periodEnd, today) {
     .sort((a, b) => b.daysLate - a.daysLate);
   const inProgress = dashTasks.filter((t) => t.status === 'In Progress');
   const onHold = dashTasks.filter((t) => t.status === 'On Hold');
+  // The week after the period: what the team has said it will do next.
+  const nextStart = addDays(periodEnd, 1);
+  const nextEnd = addDays(periodEnd, 7);
+  const plannedNext = withEnd
+    .filter(({ task, end }) => task.status !== 'Complete' && end && inRange(end, nextStart, nextEnd))
+    .map(({ task }) => task);
+  // Blocked: on hold, or waiting on unfinished work — since when, from history.
+  const blocked = blockedWork(project, today);
+  // Who on the project is away during the period, from the pool's leave.
+  const booked = new Set((project.allocations || []).map((a) => a.resourceId));
+  const pFrom = toLocalISO(periodStart);
+  const pTo = toLocalISO(periodEnd);
+  const people = new Map(listResources().map((r) => [r.id, r.name]));
+  const away = listAbsences()
+    .filter((a) => booked.has(a.resourceId) && a.from <= pTo && a.to >= pFrom)
+    .map((a) => ({ name: people.get(a.resourceId) || 'Someone', from: a.from, to: a.to, reason: a.reason || a.type || '' }));
 
   const milestonesInPeriod = milestones.filter((m) => {
     const due = parseDate(m.due);
@@ -252,6 +291,9 @@ function computeProject(project, periodStart, periodEnd, today) {
     overdue,
     inProgress,
     onHold,
+    plannedNext,
+    blocked,
+    away,
     milestonesInPeriod,
     upcomingMilestones,
     milestonesDone,
@@ -282,13 +324,114 @@ function computeProject(project, periodStart, periodEnd, today) {
   };
 }
 
+// ---------- Closure ----------
+//
+// Everything a closure report says is already somewhere in the project; this
+// only gathers it. It judges nothing it cannot measure: whether the success
+// criteria were met is the sponsor's call at sign-off, so the report sets the
+// criteria beside the evidence and leaves the verdict to them.
+
+const DELIVERABLE_CLOSED = ['Accepted', 'Rejected'];
+
+function computeClosure(project, p, today) {
+  const tasks = project.dashTasks || [];
+  const openTasks = tasks.filter((t) => t.status !== 'Complete');
+  const lastEnd = tasks.map((t) => t.end).filter(Boolean).sort().pop() || '';
+  const due = parseDate(project.dueDate);
+  const finish = parseDate(lastEnd);
+
+  const changeRequests = project.changeRequests || [];
+  const approved = changeRequests.filter(isApprovedChange);
+  const sum = (rows, f) => rows.reduce((n, r) => n + (Number(r[f]) || 0), 0);
+
+  const win = projectWindow(project);
+  const labour = labourEstimate(project.allocations || [], listResources(), {
+    from: win.start ? toLocalISO(win.start) : '',
+    to: win.end ? toLocalISO(win.end) : '',
+  });
+
+  const handover = [
+    ...openTasks.map((t) => ({ label: t.name || '(untitled task)', meta: `Task · ${t.status || 'Not Started'} · ${t.assigned || 'unowned'}` })),
+    ...(project.deliverables || []).filter((d) => !DELIVERABLE_CLOSED.includes(d.status))
+      .map((d) => ({ label: d.name || '(untitled deliverable)', meta: `Deliverable · ${d.status} · ${d.owner || 'unowned'}` })),
+    ...[...p.openRisks, ...p.openIssues].map((i) => ({ label: i.title || '(untitled)', meta: `${i.type} · ${i.severity || '—'} · ${i.owner || 'unowned'}` })),
+    ...(project.dependencies || []).filter((d) => !['Met', 'Missed'].includes(d.status))
+      .map((d) => ({ label: d.description || '(untitled dependency)', meta: `Dependency · ${d.status} · ${d.owner || d.party || 'unowned'}` })),
+    ...(project.knownErrors || []).filter((k) => k.status !== 'Resolved')
+      .map((k) => ({ label: k.symptom || '(untitled known error)', meta: `Known error · ${k.status} · ${k.owner || 'unowned'}` })),
+    // Money still owed, and incidents still open, are handed over like any
+    // other loose end: closing a project does not close either of them.
+    ...(project.billing || []).filter((b) => !['Paid', 'Written off'].includes(b.status))
+      .map((b) => ({ label: b.milestone || '(untitled billing milestone)', meta: `Billing · ${b.status || 'Planned'} · ${money(Number(b.amount) || 0)}${b.invoiceNo ? ` · ${b.invoiceNo}` : ''}` })),
+    ...(project.incidents || []).filter((i) => !INCIDENT_CLOSED.includes(i.status))
+      .map((i) => ({ label: i.title || '(untitled incident)', meta: `Incident · ${i.priority || '—'} · ${i.status || 'New'} · ${i.assignee || 'unassigned'}` })),
+    ...(project.vendors || []).filter((v) => v.status === 'Active' || v.status === 'On Hold')
+      .map((v) => ({ label: v.name || '(unnamed vendor)', meta: `Vendor contract · ${v.status}${v.end ? ` to ${formatDate(v.end)}` : ''}` })),
+  ];
+
+  return {
+    sponsor: project.charterSponsor || '',
+    serviceOwner: project.charterServiceOwner || '',
+    objective: project.objective || '',
+    strategic: project.charterObjective || '',
+    success: project.charterSuccess || '',
+    businessCase: project.charterBusinessCase || '',
+    priority: priorityOf(project),
+    deliverables: project.deliverables || [],
+    accepted: (project.deliverables || []).filter((d) => d.status === 'Accepted').length,
+    dueDate: project.dueDate || '',
+    lastEnd,
+    finishVariance: due && finish ? daysBetween(due, finish) : null,
+    overdueAtClose: due ? due < today : false,
+    changes: changeRequests,
+    approvedDays: sum(approved, 'scheduleImpact'),
+    approvedCost: sum(approved, 'costImpact'),
+    billing: billingMetrics(project, today),
+    labour,
+    lessons: project.lessons || [],
+    documents: project.documents || [],
+    handover,
+    ready: handover.length === 0,
+    // The business case, only when this device holds it — which only a client
+    // partner's does, because the database returns use cases to nobody else.
+    useCase: listUseCases().find((uc) => uc.convertedProjectId === project.id) || null,
+  };
+}
+
+function businessCaseBox(uc) {
+  const model = roiModel(uc);
+  const real = realisation(uc);
+  return listBox('Value against the business case (client partners only)', [
+    { label: 'Use case', meta: uc.name || 'untitled' },
+    { label: 'Expected benefit', meta: model ? money(model.expected.totalBenefit) : 'not modelled' },
+    { label: 'Expected ROI', meta: model && model.expected.roi !== null ? `${Math.round(model.expected.roi * 100)}%` : '—' },
+    { label: 'Forecast to date', meta: real ? money(real.forecast) : 'no go-live date' },
+    { label: 'Realised to date', meta: real && real.actual !== null ? `${money(real.actual)}${real.ratio !== null ? ` (${Math.round(real.ratio * 100)}% of forecast)` : ''}` : 'nothing recorded' },
+  ]);
+}
+
+function money(n) {
+  return `$${Math.round(n).toLocaleString()}`;
+}
+
+// How a deliverable's acceptance reads on a closure pack: a signature that
+// still matches, one voided by a later edit, or a decision nobody signed.
+const SIGN_OFF_NOTE = {
+  signed: (d) => ` \u00b7 signed by ${d.signature.name}, ${formatDate(new Date(d.signature.at))}`,
+  changed: () => ' \u00b7 signature void: changed since signed',
+  unsigned: (d) => (d.signedOffBy ? ` \u00b7 recorded by hand as ${d.signedOffBy}, not signed` : ' \u00b7 not signed'),
+  none: () => '',
+};
+
 // Worst first: a missed dependency outranks one merely at risk.
 const DEP_ORDER = ['Missed', 'At Risk', 'Open'];
 
 function computeReport(type, anchor) {
   const { start, end, label } = periodFor(type, anchor);
   const today = startOfDay(new Date());
-  const projects = listFullProjects().map((p) => computeProject(p, start, end, today));
+  const source = REPORT_TYPES[type].scope === 'active' ? [getState()] : listFullProjects();
+  const projects = source.map((p) => computeProject(p, start, end, today));
+  if (type === 'closure') projects.forEach((p, i) => { p.closure = computeClosure(source[i], p, today); });
 
   const budgetPlanned = projects.reduce((s, p) => s + p.budgetPlanned, 0);
   const budgetActual = projects.reduce((s, p) => s + p.budgetActual, 0);
@@ -332,7 +475,7 @@ function statCard(icon, tone, value, label, trend, goodDirection) {
         chip,
       ]),
       el('span', { class: 'stat-card__label', text: label }),
-      trend ? el('span', { class: 'stat-card__sub', text: `vs ${trend.previous} on ${trend.since.toLocaleDateString()}` }) : null,
+      trend ? el('span', { class: 'stat-card__sub', text: `vs ${trend.previous} on ${formatDate(trend.since)}` }) : null,
     ]),
   ]);
 }
@@ -355,7 +498,7 @@ function trendChip(trend, goodDirection) {
   const sign = up ? '+' : '−';
   return el('span', {
     class: `trend ${tone}`,
-    title: `Was ${trend.previous} on ${trend.since.toLocaleDateString()}`,
+    title: `Was ${trend.previous} on ${formatDate(trend.since)}`,
     text: `${up ? '▲' : '▼'} ${sign}${Math.abs(trend.delta)}`,
   });
 }
@@ -584,6 +727,48 @@ function renderDaily(report, cards, summaryEl) {
   });
 }
 
+// ---------- Chapter 2 | Weekly Operational ----------
+
+function renderTeam(report, cards, summaryEl) {
+  const sum = (k) => report.projects.reduce((n, p) => n + p[k].length, 0);
+  summaryEl.append(
+    statCard('\u2705', 'green', String(report.summary.completedInPeriod), 'Completed This Week'),
+    statCard('\ud83d\udcc5', 'blue', String(sum('plannedNext')), 'Planned Next Week'),
+    statCard('\ud83d\udd28', 'amber', String(report.summary.inProgress), 'In Progress'),
+    statCard('\u26d4', 'purple', String(sum('blocked')), 'Blocked'),
+  );
+
+  report.projects.forEach((p) => {
+    cards.appendChild(sheet({
+      chapter: 2,
+      cadence: 'Weekly Operational',
+      title: 'Weekly Team Status Report',
+      children: [
+        fieldStrip(
+          [{ label: 'Project Name', value: p.name }, { label: 'Lead', value: p.lead }],
+          { tone: p.dimensions[0].tone, trend: p.dimensions[0].trend },
+        ),
+        boxRow([
+          listBox('Completed this week', taskRows(p.completedInPeriod), { empty: 'Nothing completed this week.' }),
+          listBox('Planned next week', taskRows(p.plannedNext, (t) => `${t.assigned || 'unassigned'} \u00b7 due ${t.end}`), { empty: 'Nothing due next week.' }),
+        ]),
+        boxRow([
+          listBox('In progress', taskRows(p.inProgress, (t) => `${t.assigned || 'unassigned'}${t.end ? ` \u00b7 due ${t.end}` : ''}`), { empty: 'Nothing in progress.' }),
+          listBox('Blocked', p.blocked.map((b) => ({
+            label: b.task.name || '(untitled task)',
+            meta: [b.task.status === 'On Hold' ? 'on hold' : `waiting on ${b.waitingOn.map((d) => d.name).join(', ')}`, b.days !== null ? `${b.days}d` : ''].filter(Boolean).join(' \u00b7 '),
+          })), { empty: 'Nothing blocked.' }),
+        ]),
+        boxRow([
+          listBox('Overdue', taskRows(p.overdue, (t) => `${t.daysLate}d late`), { empty: 'Nothing overdue.' }),
+          listBox('Away this week', p.away.map((a) => ({ label: a.name, meta: `${a.from} \u2013 ${a.to}${a.reason ? ` \u00b7 ${a.reason}` : ''}` })), { empty: 'Nobody booked on the project is on leave.' }),
+          listBox('Decisions & issues', [...p.openDecisions, ...p.openIssues].slice(0, 6).map((i) => ({ label: i.title || '(untitled)', meta: `${i.type} \u00b7 ${i.owner || 'unowned'}` })), { empty: 'Nothing waiting.' }),
+        ], { tight: true }),
+      ],
+    }));
+  });
+}
+
 // ---------- Chapter 3 | Weekly Tactical ----------
 
 function renderWeekly(report, cards, summaryEl) {
@@ -705,20 +890,140 @@ function worstTone(projects, index) {
   return order.find((t) => tones.includes(t)) || 'grey';
 }
 
-const RENDERERS = { daily: renderDaily, weekly: renderWeekly, steerco: renderSteerCo, executive: renderExecutive };
+// ---------- Chapter 6 | Closure ----------
+
+function renderClosure(report, cards, summaryEl) {
+  const p = report.projects[0];
+  const c = p.closure;
+  const variance = p.budgetActual - p.budgetPlanned;
+  summaryEl.append(
+    statCard(c.ready ? '\u2705' : '\ud83d\udccb', c.ready ? 'green' : 'amber', c.ready ? 'Ready' : String(c.handover.length),
+      c.ready ? 'Nothing Left Open' : 'Open Items to Hand Over'),
+    statCard('\ud83d\udce6', 'blue', `${c.accepted}/${c.deliverables.length}`, 'Deliverables Accepted'),
+    statCard('\ud83d\udcc5', 'amber', c.finishVariance === null ? '\u2014' : c.finishVariance > 0 ? `+${c.finishVariance}d` : c.finishVariance < 0 ? `${c.finishVariance}d` : 'On date',
+      'Last Task vs Due Date'),
+    statCard('\ud83d\udcb7', 'purple', p.budgetPlanned > 0 ? `${p.burnPct}%` : '\u2014', 'Budget Used'),
+  );
+
+  cards.appendChild(sheet({
+    chapter: 6,
+    cadence: 'Project Closure',
+    title: `Closure Summary \u2014 ${p.name}`,
+    children: [
+      fieldStrip(
+        [{ label: 'Project Name', value: p.name }, { label: 'Sponsor', value: c.sponsor }, { label: 'Lead', value: p.lead }],
+        { tone: p.dimensions[0].tone, trend: 'flat' },
+      ),
+      boxRow([
+        listBox('What it set out to do', [
+          { label: 'Objective', meta: c.objective || 'not written down' },
+          { label: 'Strategic objective', meta: c.strategic || 'not aligned' },
+          { label: 'Success criteria', meta: c.success || 'none agreed on the charter' },
+          { label: 'Priority at approval', meta: priorityLabel(c.priority) },
+        ], { stacked: true }),
+        listBox('Delivered', c.deliverables.map((d) => ({
+          label: d.name || '(untitled deliverable)',
+          meta: `${d.status}${SIGN_OFF_NOTE[signOffState(d)](d)}`,
+        })), { empty: 'No deliverables were listed.' }),
+      ]),
+      boxRow([
+        listBox('Schedule', [
+          { label: 'Due date', meta: c.dueDate ? formatDate(c.dueDate) : 'never set' },
+          { label: 'Last task ends', meta: c.lastEnd ? formatDate(c.lastEnd) : 'no dated tasks' },
+          { label: 'Against the due date', meta: c.finishVariance === null ? 'cannot say' : c.finishVariance > 0 ? `${c.finishVariance} days late` : c.finishVariance < 0 ? `${-c.finishVariance} days early` : 'on the day' },
+          { label: 'Against the baseline', meta: p.schedule.baselined ? `${p.schedule.slipped.length} task${p.schedule.slipped.length === 1 ? '' : 's'} slipped, worst +${p.schedule.maxSlip}d` : 'no baseline was set' },
+          { label: 'Tasks complete', meta: `${p.taskComplete} of ${p.taskTotal}` },
+          { label: 'Milestones reached', meta: `${p.milestonesDone} of ${p.milestoneTotal}` },
+        ]),
+        listBox('Cost', [
+          { label: 'Planned budget', meta: p.budgetPlanned > 0 ? money(p.budgetPlanned) : 'never set' },
+          { label: 'Actual spend', meta: money(p.budgetActual) },
+          { label: 'Variance', meta: p.budgetPlanned > 0 ? `${variance > 0 ? '+' : '\u2212'}${money(Math.abs(variance))} (${p.burnPct}% used)` : 'no budget to compare with' },
+          { label: 'Labour, from bookings', meta: c.labour.cost === null ? 'not estimated \u2014 no cost rates' : `${money(c.labour.cost)}${c.labour.unpriced.length ? ` (${c.labour.unpriced.length} unpriced)` : ''}` },
+          { label: 'Approved changes', meta: `${money(c.approvedCost)}, ${c.approvedDays} day${c.approvedDays === 1 ? '' : 's'}` },
+        ]),
+        listBox('Billing', c.billing.count || c.billing.contract !== null ? [
+          { label: 'Contract value', meta: c.billing.contract === null ? 'never set' : money(c.billing.contract) },
+          { label: 'Billed, including paid', meta: `${money(c.billing.billed)}${c.billing.billedPct !== null ? ` (${Math.round(c.billing.billedPct * 100)}%)` : ''}` },
+          { label: 'Paid', meta: money(c.billing.paid) },
+          { label: 'Still owed', meta: c.billing.outstanding ? `${money(c.billing.outstanding)}${c.billing.overdueCount ? `, ${money(c.billing.overdueAmount)} overdue` : ''}` : 'nothing' },
+          { label: 'Not yet billed', meta: c.billing.contract === null ? '\u2014' : money(Math.max(0, c.billing.contract - c.billing.billed)) },
+          { label: 'Days to collect', meta: c.billing.dso === null ? 'nothing paid yet' : `${c.billing.dso.toFixed(0)} days` },
+        ] : [], { empty: 'No contract value or billing plan on Scope & Contract.' }),
+      ]),
+      issuesTable('Scope changes', c.changes.map((cr) => ({
+        title: cr.title,
+        status: cr.status,
+        days: cr.scheduleImpact === '' || cr.scheduleImpact === undefined ? '' : String(cr.scheduleImpact),
+        cost: cr.costImpact ? money(Number(cr.costImpact)) : '',
+        decided: cr.decidedBy,
+      })), [
+        { key: 'title', label: 'Change' },
+        { key: 'status', label: 'Status' },
+        { key: 'days', label: 'Days' },
+        { key: 'cost', label: 'Cost' },
+        { key: 'decided', label: 'Decided by' },
+      ]),
+      boxRow([
+        listBox('Open items to hand over', c.handover.slice(0, 14).concat(c.handover.length > 14
+          ? [{ label: `and ${c.handover.length - 14} more`, meta: '' }] : []), { empty: 'Nothing is left open. Ready to close.' }),
+        listBox('Lessons learned', c.lessons.map((l) => ({
+          label: l.what || '(untitled lesson)',
+          meta: l.recommendation ? `\u2192 ${l.recommendation}` : (l.status || ''),
+        })), { empty: 'No lessons recorded. Record them on Improvement & Lessons before closing.', stacked: true }),
+      ]),
+      c.useCase ? businessCaseBox(c.useCase) : null,
+      boxRow([
+        listBox('Sign-off', [
+          { label: `Sponsor${c.sponsor ? ` \u2014 ${c.sponsor}` : ''}`, meta: 'Signature ____________  Date ________' },
+          { label: `Service owner${c.serviceOwner ? ` \u2014 ${c.serviceOwner}` : ''}`, meta: 'Signature ____________  Date ________' },
+          { label: `Project lead${p.lead ? ` \u2014 ${p.lead}` : ''}`, meta: 'Signature ____________  Date ________' },
+        ]),
+        bulletBox('About this summary', [
+          'Assembled from the project as it stands today; nothing here was typed into the report.',
+          'Signing the printed copy is the approval. The app records no signature and closes nothing by itself.',
+          `${c.documents.length} document${c.documents.length === 1 ? '' : 's'} in the index on Scope & Contract to archive with it.`,
+        ]),
+      ]),
+    ],
+  }));
+}
+
+const RENDERERS = {
+  daily: renderDaily, team: renderTeam, weekly: renderWeekly, steerco: renderSteerCo, executive: renderExecutive, closure: renderClosure,
+};
 
 // ---------- Email / copy text ----------
 
 function trendText(trend) {
   if (!trend || trend.delta === 0) return '';
-  return ` (${trend.delta > 0 ? '+' : '\u2212'}${Math.abs(trend.delta)} since ${trend.since.toLocaleDateString()})`;
+  return ` (${trend.delta > 0 ? '+' : '\u2212'}${Math.abs(trend.delta)} since ${formatDate(trend.since)})`;
 }
 
 function buildReportText(report) {
   const { type, periodLabel, projects, summary } = report;
   const lines = [`${REPORT_TYPES[type].title} — ${periodLabel}`, ''];
 
-  if (type === 'executive') {
+  if (type === 'closure') {
+    const p = projects[0];
+    const c = p.closure;
+    lines.push(`${p.name}${c.sponsor ? ` — sponsor ${c.sponsor}` : ''}`);
+    lines.push(c.ready ? 'Nothing left open: ready to close.' : `${c.handover.length} open item${c.handover.length === 1 ? '' : 's'} to hand over.`);
+    lines.push('');
+    lines.push(`Objective: ${c.objective || 'not written down'}`);
+    if (c.success) lines.push(`Success criteria: ${c.success}`);
+    lines.push(`Deliverables: ${c.accepted} of ${c.deliverables.length} accepted`);
+    lines.push(`Schedule: due ${c.dueDate || 'never set'}, last task ends ${c.lastEnd || 'undated'}${c.finishVariance ? ` (${c.finishVariance > 0 ? '+' : ''}${c.finishVariance}d)` : ''}`);
+    lines.push(`Cost: ${money(p.budgetActual)} of ${p.budgetPlanned > 0 ? money(p.budgetPlanned) : 'no budget'}${p.budgetPlanned > 0 ? ` (${p.burnPct}% used)` : ''}; approved changes ${money(c.approvedCost)}, ${c.approvedDays}d`);
+    if (c.handover.length) {
+      lines.push('', 'To hand over:');
+      c.handover.slice(0, 10).forEach((h) => lines.push(`    ${h.label} — ${h.meta}`));
+    }
+    if (c.lessons.length) {
+      lines.push('', 'Lessons:');
+      c.lessons.slice(0, 6).forEach((l) => lines.push(`    ${l.what || 'untitled'}${l.recommendation ? ` → ${l.recommendation}` : ''}`));
+    }
+  } else if (type === 'executive') {
     lines.push(`${summary.totalProjects} projects · ${summary.portfolioPct}% complete${trendText(portfolioPctTrend(summary.portfolioPct))} · budget ${summary.burnPct}% used ($${summary.budgetActual.toLocaleString()} of $${summary.budgetPlanned.toLocaleString()})`);
     lines.push(`RAG: ${summary.green} green, ${summary.amber} amber, ${summary.red} red`);
     lines.push('');
@@ -757,6 +1062,12 @@ function buildReportText(report) {
     projects.forEach((p) => {
       lines.push(`[${p.rag}] ${p.name} (${p.pctComplete}% complete${trendText(projectTrend(p.id, 'pctComplete', p.pctComplete))})`);
       lines.push(`    Done: ${p.completedInPeriod.length}  Due: ${p.dueInPeriod.length}  Overdue: ${p.overdue.length}`);
+      if (type === 'team' && p.plannedNext.length > 0) {
+        lines.push(`    Planned next week: ${p.plannedNext.slice(0, 5).map((t) => t.name || 'untitled').join(', ')}`);
+      }
+      if (type === 'team' && p.blocked.length > 0) {
+        lines.push(`    Blocked: ${p.blocked.slice(0, 5).map((b) => b.task.name || 'untitled').join(', ')}`);
+      }
       if (p.dueInPeriod.length > 0) {
         lines.push(`    Due ${periodWord}: ${p.dueInPeriod.slice(0, 5).map((t) => t.name || 'untitled').join(', ')}`);
       }
@@ -784,10 +1095,14 @@ function renderReport() {
   document.getElementById('period-range-label').textContent = report.periodLabel;
   document.getElementById('btn-current-period').textContent = REPORT_TYPES[currentType].currentLabel;
 
+  // A closure summary covers the whole project, so there is no period to step.
+  const whole = REPORT_TYPES[currentType].period === 'project';
+  ['btn-prev-period', 'btn-next-period', 'btn-current-period'].forEach((id) => { document.getElementById(id).hidden = whole; });
   const historical = !isCurrentPeriod(currentType, currentAnchor);
-  document.getElementById('report-subtitle').textContent =
-    `Generated ${fmtDateFull(new Date())} · RAG is derived from each project's status plus its overdue items`
-    + (historical ? ' · viewing a past/future period, but overdue counts are always measured against today' : '');
+  document.getElementById('report-subtitle').textContent = whole
+    ? `Generated ${fmtDateFull(new Date())} · the project that is open, from its first task to today`
+    : `Generated ${fmtDateFull(new Date())} · RAG is derived from each project's status plus its overdue items`
+      + (historical ? ' · viewing a past/future period, but overdue counts are always measured against today' : '');
 
   const summaryEl = document.getElementById('report-summary-cards');
   const cards = document.getElementById('report-project-cards');

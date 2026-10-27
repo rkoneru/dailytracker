@@ -11,13 +11,14 @@
 // it is a sequence, a practice is not because it is not, and a phase nobody
 // has planned reads "Not planned" rather than a green 0%.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 
 async function useTemplate(page, key) {
   await page.click('#btn-projects');
   await page.waitForTimeout(250);
   await page.locator(`#template-${key}`).scrollIntoViewIfNeeded();
   await page.check(`#template-${key}`);
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(600);
 }
@@ -147,7 +148,13 @@ const phaseCards = (page) => page.$$eval('.method-phase', (els) => els.map((e) =
   // ---------- no method ----------
 
   console.log('\n--- and a project that has no method says so plainly ---');
+  // A new project cannot be made without one any more, so this is a project
+  // from before that rule: the method field blank, as an old save leaves it.
   await useTemplate(page, 'marketing');
+  await page.evaluate(async () => {
+    (await import('./js/state.js')).getState().methodology = '';
+    (await import('./js/planner.js')).renderPlanner();
+  });
   await openMethod(page);
   eq('nothing is claimed', await page.inputValue('#method-select'), '');
   eq('there is no strip', await page.locator('.method-phase').count(), 0);

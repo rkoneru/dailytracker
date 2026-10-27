@@ -34,9 +34,15 @@ export function createServiceTransition() {
     dashStatus: 'AT RISK',
     budgetPlanned: 180000,
     budgetActual: 96500,
+    contractValue: 240000,
+    paymentTermsDays: 30,
 
     charterSponsor: 'Helen Ward, COO (client)',
     charterServiceOwner: 'Dev Raman, Service Delivery Manager',
+    charterObjective: 'Cut the cost of running core platforms without losing service quality.',
+    charterValue: '5',
+    charterFit: '4',
+    charterEffort: '4',
     charterBusinessCase: 'The incumbent contract ends on 31 December and will not be renewed. A managed service is forecast to cut run cost by 22% and halve P1 resolution time.',
     charterScopeIn: 'Run, monitor and support the Orders platform and its three integrations. 24x7 P1 cover, business-hours P2 to P4. Knowledge transfer, tooling migration, and the first quarter of continual improvement.',
     charterScopeOut: 'New feature development, the data warehouse, and anything touching the payments gateway — those stay with the client under a separate agreement.',
@@ -152,6 +158,55 @@ export function createServiceTransition() {
       { id: id('dl'), name: 'Knowledge transfer record', type: 'Document', owner: 'Tom Byrne', due: '2026-11-14', acceptance: 'Session log, recordings and a competency check signed by both leads.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
     ],
 
+    // The client's people, and the last fortnight of talking to them. The
+    // open follow-up is on Dev Raman's My Work.
+    contacts: [
+      { id: id('ct'), name: 'Helen Ward', account: 'Orders platform client', title: 'COO', relationship: 'Sponsor', email: 'helen.ward@example.com', phone: '', owner: 'Dev Raman' },
+      { id: id('ct'), name: 'Marcus Lee', account: 'Orders platform client', title: 'Head of IT Operations', relationship: 'Decision maker', email: 'marcus.lee@example.com', phone: '', owner: 'Dev Raman' },
+    ],
+    activities: [
+      { id: id('act'), date: '2026-09-24', type: 'Meeting', account: 'Orders platform client', contact: 'Helen Ward', summary: 'Transition steering: parallel run start agreed for 12 October.', nextStep: '', nextDue: '', status: 'No follow-up', owner: 'Dev Raman' },
+      { id: id('act'), date: '2026-10-02', type: 'Call', account: 'Orders platform client', contact: 'Marcus Lee', summary: 'Stock sync overran into trading hours; they want a root cause.', nextStep: 'Send the incident review', nextDue: '2026-10-07', status: 'Follow-up due', owner: 'Dev Raman' },
+    ],
+
+    // Billed on transition milestones. The knowledge-transfer invoice is past
+    // its thirty days, which is what the Billing tab exists to catch.
+    billing: [
+      { id: id('bm'), milestone: 'Mobilisation', amount: 48000, due: '2026-08-10', status: 'Paid', invoiceNo: 'INV-2041', invoiced: '2026-08-10', paid: '2026-09-08', owner: 'Dev Raman' },
+      { id: id('bm'), milestone: 'Knowledge transfer complete', amount: 48000, due: '2026-08-31', status: 'Invoiced', invoiceNo: 'INV-2077', invoiced: '2026-08-31', paid: '', owner: 'Dev Raman' },
+      { id: id('bm'), milestone: 'Parallel run complete', amount: 72000, due: '2026-10-30', status: 'Planned', invoiceNo: '', invoiced: '', paid: '', owner: 'Dev Raman' },
+      { id: id('bm'), milestone: 'Steady-state sign-off', amount: 72000, due: '2026-12-18', status: 'Planned', invoiceNo: '', invoiced: '', paid: '', owner: 'Dev Raman' },
+    ],
+
+    incidents: [
+      { id: id('inc'), title: 'Orders stuck in payment pending', priority: 'P1', service: 'Orders platform', account: 'Orders platform client', contact: 'Marcus Lee', reported: '2026-10-01T07:45', responded: '2026-10-01T08:05', resolved: '2026-10-01T10:20', status: 'Resolved', assignee: 'Dev Raman', knownError: 'KE-01', survey: { sentAt: '2026-10-01', via: 'reply' }, csat: '4' },
+      { id: id('inc'), title: 'Nightly stock sync overran into trading hours', priority: 'P2', service: 'Integrations', account: 'Orders platform client', contact: 'Marcus Lee', reported: '2026-09-24T09:30', responded: '2026-09-24T10:10', resolved: '', status: 'In Progress', assignee: 'Dev Raman', knownError: '' },
+    ],
+
+    // The client whose service this is: the account the transition is, in
+    // the end, meant to keep.
+    customers: [
+      { id: id('ac'), name: 'Orders platform client', segment: 'Enterprise', csm: 'Dev Raman', stage: 'Onboard', arr: 420000, startArr: 420000, start: '2026-09-21', renewal: '2029-12-31', adoption: '', nps: 7, lastTouch: '2026-10-02', acquisitionCost: 38000, stageHistory: [{ stage: 'Onboard', at: '2026-09-21' }] },
+    ],
+
+    scopeItems: [
+      { id: id('si'), name: '24x7 P1 incident cover', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Nothing needs it', obligation: 'Legal or contractual', effort: 'L', risk: 'High', rationale: 'In the service schedule.' },
+      { id: id('si'), name: 'Knowledge transfer from the incumbent', category: 'Enabling work', outcome: 'Helps the outcome', dependency: 'Other items need it', obligation: 'None', effort: 'M', risk: 'High', rationale: 'Nothing can be supported until it is understood.' },
+      { id: id('si'), name: 'Tooling migration to our ITSM', category: 'Enabling work', outcome: 'Helps the outcome', dependency: 'Other items need it', obligation: 'None', effort: 'L', risk: 'Medium', rationale: 'Tickets and SLAs run on it.' },
+      { id: id('si'), name: 'Continual improvement backlog, quarter one', category: 'Optional improvement', outcome: 'Helps the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'M', risk: 'Low', rationale: 'If the run settles early.' },
+      { id: id('si'), name: 'Re-platforming the integrations', category: 'Explicit exclusion', outcome: 'Not needed', dependency: 'Nothing needs it', obligation: 'None', effort: 'XL', risk: 'High', rationale: 'A separate project if wanted.' },
+    ],
+    documents: [
+      { id: id('doc'), title: 'Master services agreement and service schedule', type: 'Contract', link: '', version: 'v3.0', owner: 'Helen Ward', status: 'Approved', review: '2026-12-01' },
+      { id: id('doc'), title: 'Incumbent exit plan', type: 'Plan', link: '', version: 'v1.2', owner: 'Dev Raman', status: 'Approved', review: '' },
+      { id: id('doc'), title: 'Integration inventory from due diligence', type: 'Design', link: '', version: 'v0.4', owner: 'Dev Raman', status: 'In Review', review: '2026-10-16' },
+    ],
+
+    vendors: [
+      { id: id('vn'), name: 'Incumbent support supplier', service: 'Current run and support, until handover', contract: 'Existing contract, not renewed', value: 42000, start: '2026-01-01', end: '2026-12-31', owner: 'Helen Ward', status: 'Active', performance: 'Below' },
+      { id: id('vn'), name: 'Monitoring tooling vendor', service: 'Observability licences for the new support team', contract: 'PO 7731', value: 9600, start: '2026-10-15', end: '2027-10-14', owner: 'Dev Raman', status: 'Onboarding', performance: 'Not reviewed' },
+    ],
+
     changeRequests: [
       { id: id('cr'), title: 'Support the twelve integrations found in due diligence', raisedBy: 'Dev Raman', raised: '2026-10-06', scopeImpact: 'Adds twelve interfaces to the supported estate, three of which have no documentation at all.', scheduleImpact: 10, costImpact: 34000, status: 'Under Review', decidedBy: '', decided: '' },
       { id: id('cr'), title: 'Extend hypercare from two weeks to four', raisedBy: 'Grace Lin', raised: '2026-10-02', scopeImpact: 'Two further weeks of daily client stand-ups and on-site presence.', scheduleImpact: 0, costImpact: 12500, status: 'Draft', decidedBy: '', decided: '' },
@@ -229,9 +284,15 @@ export function createServiceDeskLaunch() {
     dashStatus: 'ON TRACK',
     budgetPlanned: 64000,
     budgetActual: 21000,
+    contractValue: 64000,
+    paymentTermsDays: 15,
 
     charterSponsor: 'Priya Shah, IT Director',
     charterServiceOwner: 'Owen Clarke, Service Desk Manager',
+    charterObjective: 'Make IT support measurable, so it can be improved.',
+    charterValue: '4',
+    charterFit: '3',
+    charterEffort: '2',
     charterBusinessCase: 'Three mailboxes and a spreadsheet mean nothing is measured and nothing is prioritised. A single desk gives a queue, a priority model and a number to improve.',
     charterScopeIn: 'One intake channel, a four-tier priority model, a starter catalogue of twelve request types, and reporting from day one.',
     charterScopeOut: 'Asset management, procurement approval, and anything for the manufacturing site — those follow in a later phase.',
@@ -308,6 +369,46 @@ export function createServiceDeskLaunch() {
       { id: id('dl'), name: 'Request catalogue', type: 'Service', owner: 'Sara Boyd', due: '2026-10-24', acceptance: 'Twelve request types, each with an owner, a target and a form that does not ask for what IT already knows.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Configured service desk', type: 'Software', owner: 'Ben Iqbal', due: '2026-10-31', acceptance: 'Routing, escalation and reporting work end to end on the pilot data.', status: 'In Progress', signedOffBy: '', signOffDate: '' },
       { id: id('dl'), name: 'Weekly service report', type: 'Report', owner: 'Owen Clarke', due: '2026-11-30', acceptance: 'Volumes, first-response and breaches, produced by the tool rather than by hand.', status: 'Not Started', signedOffBy: '', signOffDate: '' },
+    ],
+
+    contacts: [
+      { id: id('ct'), name: 'Rachel Kim', account: 'Finance department', title: 'Finance Operations Lead', relationship: 'Champion', email: 'rachel.kim@example.com', phone: '', owner: 'Owen Clarke' },
+    ],
+    activities: [
+      { id: id('act'), date: '2026-10-01', type: 'Meeting', account: 'Finance department', contact: 'Rachel Kim', summary: 'Walked Finance through the request portal; purchase requests failing.', nextStep: 'Confirm the fix with Rachel', nextDue: '2026-10-06', status: 'Follow-up due', owner: 'Owen Clarke' },
+    ],
+
+    // An internal desk has no client invoice, but it is still recharged to
+    // the departments that use it; the same register tracks that.
+    billing: [
+      { id: id('bm'), milestone: 'Design recharge to business units', amount: 16000, due: '2026-09-01', status: 'Paid', invoiceNo: 'RC-114', invoiced: '2026-09-01', paid: '2026-09-12', owner: 'Priya Shah' },
+      { id: id('bm'), milestone: 'Launch recharge to business units', amount: 48000, due: '2026-11-30', status: 'Planned', invoiceNo: '', invoiced: '', paid: '', owner: 'Priya Shah' },
+    ],
+
+    incidents: [
+      { id: id('inc'), title: 'Finance cannot raise purchase requests in the portal', priority: 'P2', service: 'Service desk portal', account: 'Finance department', contact: 'Rachel Kim', reported: '2026-10-01T09:10', responded: '2026-10-01T09:40', resolved: '2026-10-01T15:05', status: 'Resolved', assignee: 'Ben Iqbal', knownError: '' },
+      { id: id('inc'), title: 'Password reset emails arrive after an hour', priority: 'P3', service: 'Identity', account: 'Finance department', reported: '2026-10-02T08:30', responded: '', resolved: '', status: 'New', assignee: 'Owen Clarke', knownError: '' },
+    ],
+
+    // The desk's customers are the departments it serves.
+    customers: [
+      { id: id('ac'), name: 'Finance department', segment: 'Mid-market', csm: 'Owen Clarke', stage: 'Adopt', arr: '', startArr: '', start: '2026-10-05', renewal: '', adoption: 40, nps: 6, lastTouch: '2026-10-02', acquisitionCost: '', stageHistory: [{ stage: 'Onboard', at: '2026-10-05' }, { stage: 'Adopt', at: '2026-10-19' }] },
+    ],
+
+    scopeItems: [
+      { id: id('si'), name: 'Service desk portal and request catalogue', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'Medium', rationale: 'How departments reach the desk.' },
+      { id: id('si'), name: 'Priority model and SLAs', category: 'Must-have', outcome: 'Needed for the outcome', dependency: 'Other items need it', obligation: 'Policy', effort: 'S', risk: 'Low', rationale: 'Required by the service policy.' },
+      { id: id('si'), name: 'Agent training', category: 'Enabling work', outcome: 'Helps the outcome', dependency: 'Other items need it', obligation: 'None', effort: 'M', risk: 'Medium', rationale: 'Needed before go-live.' },
+      { id: id('si'), name: 'Self-service knowledge base', category: 'Deferred', outcome: 'Helps the outcome', dependency: 'Nothing needs it', obligation: 'None', effort: 'M', risk: 'Low', rationale: 'Phase 2, once the common requests are known.' },
+      { id: id('si'), name: 'Out-of-hours cover', category: 'Explicit exclusion', outcome: 'Not needed', dependency: 'Nothing needs it', obligation: 'None', effort: 'L', risk: 'Low', rationale: 'Business hours only at launch.' },
+    ],
+    documents: [
+      { id: id('doc'), title: 'Priority model and SLA definition', type: 'Policy', link: '', version: 'v1.0', owner: 'Owen Clarke', status: 'Approved', review: '2027-04-01' },
+      { id: id('doc'), title: 'Request catalogue', type: 'Design', link: '', version: 'v0.8', owner: 'Sara Boyd', status: 'In Review', review: '2026-10-24' },
+    ],
+
+    vendors: [
+      { id: id('vn'), name: 'Service desk tool vendor', service: 'The already-licensed service desk platform and its configuration support', contract: 'Existing licence', value: 18000, start: '2026-01-01', end: '2027-03-31', owner: 'Ben Iqbal', status: 'Active', performance: 'Meeting' },
     ],
 
     changeRequests: [

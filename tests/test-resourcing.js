@@ -6,7 +6,7 @@
 // allocations rather than a second copy of it, and whether the app tells you
 // the truth when a booking cannot be kept.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -26,6 +26,7 @@ const { eq, done } = createChecks();
     await page.waitForTimeout(500);
     await page.check(`#template-${template}`);
     if (name) await page.fill('#new-project-name', name);
+    await chooseLifecycle(page);
     await page.click('#btn-create-project');
     await page.waitForTimeout(1400);
   };
@@ -163,6 +164,7 @@ const { eq, done } = createChecks();
   await page.check('#new-project-team li:nth-child(3) input');
   await page.check('#template-software');
   await page.fill('#new-project-name', 'Staffed');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(1500);
   await page.click('#tab-people');

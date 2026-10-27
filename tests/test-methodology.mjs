@@ -37,23 +37,40 @@ function eq(label, got, want) {
     `got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
 }
 
-// ---------- the four methods ----------
+// ---------- the eight methods ----------
 
-eq('there are four', METHODOLOGIES.map((m) => m.id),
-  ['cpmai', 'crisp-dm', 'mlops', 'llmops']);
+eq('there are nine, the general one first', METHODOLOGIES.map((m) => m.id),
+  ['project', 'cpmai', 'crisp-dm', 'sdlc', 'web', 'adlc', 'agentic-dlc', 'mlops', 'llmops']);
+
+// The general lifecycle is the PMI process groups, and there are five of them;
+// every other method has six. A sixth invented to match would be the only
+// phase in the file with no source.
+// Web redesign follows its book's five phases.
+const PHASE_COUNT = { project: 5, web: 5 };
+eq('which are AI methods is stated, not inferred', METHODOLOGIES.filter((m) => !m.ai).map((m) => m.id), ['project', 'sdlc', 'web']);
+{
+  const { layOut } = await import('../js/ganttModel.js');
+  let n = 0;
+  const laid = layOut({ methodology: 'web', dashTasks: [], dashDate: '2026-10-05', dueDate: '2026-12-27' }, undefined, () => `a${++n}`);
+  check('web redesign lays out as its fifteen steps, end to end', laid.length === 15 && laid.every((a, i) => (i === 0 ? !a.after : a.after === laid[i - 1].id)), laid.map((a) => a.name).join(', '));
+  check('the steps of a phase fill its span without gaps', laid.every((a, i) => i === 0 || new Date(`${a.start}T00:00:00`) - new Date(`${laid[i - 1].end}T00:00:00`) === 86400000), '');
+}
+eq('web redesign names three steps in every phase, each with its tasks',
+  findMethod('web').phases.map((p) => (p.steps || []).filter((s) => s.label && s.tasks.length).length), [3, 3, 3, 3, 3]);
 
 METHODOLOGIES.forEach((m) => {
   check(`${m.id}: is a lifecycle or a practice, and says which`,
     m.kind === 'lifecycle' || m.kind === 'practice', `kind = ${m.kind}`);
-  check(`${m.id}: has six phases`, m.phases.length === 6, `${m.phases.length}`);
+  const count = PHASE_COUNT[m.id] || 6;
+  check(`${m.id}: has ${count} phases`, m.phases.length === count, `${m.phases.length}`);
   check(`${m.id}: every phase says what it asks and when it is left`,
     m.phases.every((p) => p.asks && p.gate), '');
   check(`${m.id}: phase ids are unique`,
-    new Set(m.phases.map((p) => p.id)).size === 6, '');
+    new Set(m.phases.map((p) => p.id)).size === count, '');
   // A lifecycle is ordered and numbered; a practice is a set and must not be,
   // because numbering it would assert a sequence that does not exist.
   const numbered = m.phases.filter((p) => p.n).length;
-  eq(`${m.id}: numbering matches its kind`, numbered, m.kind === 'lifecycle' ? 6 : 0);
+  eq(`${m.id}: numbering matches its kind`, numbered, m.kind === 'lifecycle' ? count : 0);
 });
 
 // CPMAI is CRISP-DM's descendant and keeps four of its six phase ids; the two

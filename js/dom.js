@@ -7,7 +7,7 @@
 //
 //   - `class` and `text` are spelled the way they read in markup
 //   - attributes that must exist in the DOM as attributes (data-*, aria-*,
-//     role, type, tabindex) are set as attributes
+//     role, type, tabindex, list) are set as attributes
 //   - anything else is assigned as a property, so `hidden`, `htmlFor`,
 //     `value`, `checked`, `selected` and event handlers behave as expected
 //   - falsy children are skipped, so a caller can write
@@ -19,7 +19,9 @@ export function el(tag, props = {}, children = []) {
     if (key === 'class') node.className = value;
     else if (key === 'text') node.textContent = value;
     else if (key.startsWith('data-') || key.startsWith('aria-')
-      || key === 'role' || key === 'type' || key === 'tabindex') {
+      || key === 'role' || key === 'type' || key === 'tabindex'
+      // `list` is a read-only property on inputs; only the attribute sets it.
+      || key === 'list') {
       node.setAttribute(key, value);
     } else node[key] = value;
   });

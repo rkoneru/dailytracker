@@ -4,11 +4,9 @@
 // status and priority splits are the Priority Board's job now, and nothing
 // else drew one.
 
-export function parseDate(str) {
-  if (!str) return null;
-  const d = new Date(`${str}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+import { parseDate, formatDate } from './dates.js';
+
+export { parseDate };
 
 export function daysBetween(a, b) {
   const MS_PER_DAY = 86400000;
@@ -40,7 +38,7 @@ export function renderGanttChart(container, items, today = null) {
 
   const ruler = document.createElement('div');
   ruler.className = 'gantt-chart__ruler';
-  const fmt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const fmt = (d) => formatDate(d, 'day');
   ruler.innerHTML = `<span>${fmt(minStart)}</span><span>${fmt(maxEnd)}</span>`;
   container.appendChild(ruler);
 
@@ -83,7 +81,7 @@ export function renderGanttChart(container, items, today = null) {
     bar.style.width = `${widthPct}%`;
     bar.style.background = item.color;
     bar.textContent = item.durationLabel || '';
-    bar.title = `${item.label}: ${item.start.toLocaleDateString()} – ${item.end.toLocaleDateString()}`;
+    bar.title = `${item.label}: ${formatDate(item.start)} – ${formatDate(item.end)}`;
 
     // Baseline sits as a thin bar under the actual one, so a slipped task
     // reads as "was here, now here" at a glance.
@@ -94,7 +92,7 @@ export function renderGanttChart(container, items, today = null) {
       baseBar.className = 'gantt-chart__baseline';
       baseBar.style.left = `${(baseOffset / spanDays) * 100}%`;
       baseBar.style.width = `${(baseDuration / spanDays) * 100}%`;
-      baseBar.title = `Baseline: ${item.baseStart.toLocaleDateString()} – ${item.baseEnd.toLocaleDateString()}`;
+      baseBar.title = `Baseline: ${formatDate(item.baseStart)} – ${formatDate(item.baseEnd)}`;
       track.appendChild(baseBar);
     }
 

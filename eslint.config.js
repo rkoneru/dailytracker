@@ -9,7 +9,7 @@ const browserGlobals = {
   fetch: 'readonly', Blob: 'readonly', File: 'readonly', FileReader: 'readonly', URL: 'readonly',
   URLSearchParams: 'readonly', Intl: 'readonly', crypto: 'readonly', caches: 'readonly',
   setTimeout: 'readonly', clearTimeout: 'readonly', setInterval: 'readonly', clearInterval: 'readonly',
-  requestAnimationFrame: 'readonly', structuredClone: 'readonly', alert: 'readonly',
+  requestAnimationFrame: 'readonly', cancelAnimationFrame: 'readonly', MediaRecorder: 'readonly', indexedDB: 'readonly', structuredClone: 'readonly', alert: 'readonly',
   confirm: 'readonly', prompt: 'readonly', MutationObserver: 'readonly', DragEvent: 'readonly',
   DataTransfer: 'readonly', Image: 'readonly', getComputedStyle: 'readonly', CustomEvent: 'readonly',
   CSS: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly',

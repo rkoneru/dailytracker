@@ -2,6 +2,7 @@
 // and PostgREST select/upsert on the two sync tables. Enough to drive the real
 // client and the real engine over a real network hop.
 const http = require('http');
+const crypto = require('crypto');
 
 const db = {
   projects: new Map(),
@@ -10,7 +11,12 @@ const db = {
   project_invites: new Map(),
   profiles: new Map(),
   workspace_policy: new Map(),
+  use_cases: new Map(),
+  incident_surveys: new Map(),
 };
+// Tables a test has made disappear, to stand up a database whose schema
+// predates them.
+const hidden = new Set();
 let requests = 0;
 
 // GoTrue's own settings, which the app's setup check reads to explain why a
@@ -48,8 +54,14 @@ const server = http.createServer((req, res) => {
     }
     if (url.pathname === '/__reset') {
       Object.values(db).forEach((store) => store.clear());
+      hidden.clear();
       authSettings = { disable_signup: false, mailer_autoconfirm: false };
       return send(res, 200, {});
+    }
+    if (url.pathname === '/__hide-table') {
+      (json.tables || []).forEach((t) => hidden.add(t));
+      (json.show || []).forEach((t) => hidden.delete(t));
+      return send(res, 200, { hidden: [...hidden] });
     }
     // Lets a test stand up an account without a mail round trip.
     if (url.pathname === '/__seed') {
@@ -58,6 +70,7 @@ const server = http.createServer((req, res) => {
       (json.policies || []).forEach((p) => db.workspace_policy.set(p.project_id, { ...p, id: p.project_id }));
       (json.projects || []).forEach((p) => db.projects.set(p.id, p));
       (json.rows || []).forEach((r) => db.project_rows.set(r.id, r));
+      (json.useCases || []).forEach((r) => db.use_cases.set(r.id, r));
       return send(res, 200, {});
     }
     if (url.pathname === '/__dump') {
@@ -67,13 +80,29 @@ const server = http.createServer((req, res) => {
         members: [...db.project_members.values()],
         invites: [...db.project_invites.values()],
         policies: [...db.workspace_policy.values()],
+        useCases: [...db.use_cases.values()],
+        surveys: [...db.incident_surveys.values()],
         requests,
       });
     }
 
+    // The survey answer function, as the real one behaves: hash the token,
+    // answer an unanswered, unexpired request once, score 1 to 5.
+    if (url.pathname === '/rest/v1/rpc/submit_incident_survey') {
+      if (hidden.has('incident_surveys')) return send(res, 404, { code: 'PGRST202', message: 'Could not find the function' });
+      const { p_token: token, p_score: score, p_comment: comment = '' } = json || {};
+      if (typeof token !== 'string' || token.length < 32 || token.length > 128 || !(score >= 1 && score <= 5)) return send(res, 200, false);
+      const hash = crypto.createHash('sha256').update(token, 'utf8').digest('hex');
+      const row = [...db.incident_surveys.values()].find((r) => r.token_hash === hash && !r.answered_at
+        && (!r.expires_at || new Date(r.expires_at) > new Date()));
+      if (!row) return send(res, 200, false);
+      Object.assign(row, { score, comment: String(comment).slice(0, 2000), answered_at: new Date().toISOString() });
+      return send(res, 200, true);
+    }
+
     const table = url.pathname.replace('/rest/v1/', '');
-    const store = db[table];
-    if (!store) return send(res, 404, { message: `no table ${table}` });
+    const store = hidden.has(table) ? null : db[table];
+    if (!store) return send(res, 404, { code: 'PGRST205', message: `Could not find the table 'public.${table}' in the schema cache` });
 
     if (req.method === 'GET') {
       // Just enough PostgREST: eq. filters and in.(...) on any column, which

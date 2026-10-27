@@ -164,6 +164,18 @@ function memberRow(member) {
   // could would be able to build themselves a majority.
   admin.disabled = locked || !identity.isOwner;
 
+  // The commercial grant is the owner's alone to give — the database refuses
+  // everyone else, and refuses a delegated admin any edit to a partner's row.
+  const partner = el('input', {
+    type: 'checkbox', 'data-field': 'clientPartner', checked: !!member.clientPartner, 'aria-label': 'Client partner',
+  });
+  partner.disabled = locked || !identity.isOwner;
+  if (member.clientPartner && !identity.isOwner) {
+    access.disabled = true;
+    job.disabled = true;
+    admin.disabled = true;
+  }
+
   return el('tr', { 'data-user': member.userId }, [
     el('td', { class: 'col-name' }, [
       el('span', { class: 'member-name', text: member.name || member.email || 'Unknown' }),
@@ -172,6 +184,7 @@ function memberRow(member) {
     el('td', { class: 'col-status' }, [access]),
     el('td', { class: 'col-status' }, [job]),
     el('td', { class: 'col-check' }, [admin]),
+    el('td', { class: 'col-check' }, [partner]),
   ]);
 }
 

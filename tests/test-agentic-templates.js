@@ -8,7 +8,7 @@
 // blocks it, and row ids are the primary key on the server rather than being
 // scoped to a project.
 
-const { APP_URL, launch, createChecks } = require('./harness');
+const { APP_URL, launch, createChecks, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -28,6 +28,7 @@ const { eq, done } = createChecks();
     await page.waitForTimeout(500);
     await page.check(`#template-${key}`);
     if (name) await page.fill('#new-project-name', name);
+    await chooseLifecycle(page);
     await page.click('#btn-create-project');
     await page.waitForTimeout(1300);
   };

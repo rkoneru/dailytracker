@@ -54,9 +54,11 @@ function findChromium() {
   return candidates.find((candidate) => fs.existsSync(candidate));
 }
 
-async function launch() {
+// `args` adds browser flags: the recording suite passes Chromium's fake
+// microphone, so a real MediaRecorder runs against a synthetic tone.
+async function launch({ args = [] } = {}) {
   const executablePath = findChromium();
-  return chromium.launch({ args: ['--no-sandbox'], ...(executablePath ? { executablePath } : {}) });
+  return chromium.launch({ args: ['--no-sandbox', ...args], ...(executablePath ? { executablePath } : {}) });
 }
 
 // ---------- assertions ----------
@@ -96,7 +98,42 @@ async function openSection(page, sectionId) {
   if (await tab.count()) {
     await tab.click();
     await page.waitForTimeout(150);
+    return;
   }
+  // A section that shares a tab with others (Notes sits under Budget & Notes)
+  // has no button of its own: select the tab that holds it.
+  await page.evaluate(async (id) => {
+    const host = document.getElementById(id)?.closest('.page');
+    if (host) (await import('./js/tabs.js')).showSection(host.id, id);
+  }, sectionId);
+  await page.waitForTimeout(150);
 }
 
-module.exports = { ROOT, findChromium, APP_URL, SW_URL, API_URL, TMP, SW_COPY, OUT, out, launch, createChecks, openSection };
+/**
+ * Goes to a destination by its nav id — a page, or a tab of one. AI Portfolio,
+ * Capacity, Sync and Trash are tabs of other pages now and have no sidebar row
+ * to click, but their ids still name where they are.
+ */
+// Started in the page and waited on by a flag rather than awaited through
+// evaluate: under a full parallel run Playwright has dropped ("garbage
+// collected") the promise it was holding for a navigation that builds a
+// large page, failing a suite that had done nothing wrong.
+async function openDestination(page, navId) {
+  await page.evaluate((id) => {
+    window.__navDone = false;
+    import('./js/nav.js').then((m) => m.goToNode(id)).finally(() => { window.__navDone = true; });
+  }, navId);
+  await page.waitForFunction(() => window.__navDone === true);
+  await page.waitForTimeout(400);
+}
+
+/**
+ * A new project needs a lifecycle. A template that follows one proposes it in
+ * the Projects panel; for the rest, a suite that is not about lifecycles takes
+ * the general one, the way a person creating a plain project would.
+ */
+async function chooseLifecycle(page, id = 'project') {
+  if (!(await page.inputValue('#new-project-lifecycle'))) await page.selectOption('#new-project-lifecycle', id);
+}
+
+module.exports = { ROOT, findChromium, APP_URL, SW_URL, API_URL, TMP, SW_COPY, OUT, out, launch, createChecks, openSection, openDestination, chooseLifecycle };

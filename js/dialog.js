@@ -25,7 +25,7 @@ function focusables(root) {
  * The one place a dialog is actually built. `fields` turns it into a prompt;
  * with none it is a confirm.
  */
-function present({ title, message, confirmLabel = 'OK', cancelLabel = 'Cancel', tone = 'default', fields = [] }) {
+function present({ title, message, confirmLabel = 'OK', cancelLabel = 'Cancel', tone = 'default', fields = [], actions = [], details = [], choice = false }) {
   // Two dialogs at once would fight over focus, and the second's result would
   // be the only one anyone sees. Refuse rather than stack.
   if (openDialog) return Promise.resolve(null);
@@ -37,13 +37,17 @@ function present({ title, message, confirmLabel = 'OK', cancelLabel = 'Cancel', 
 
     const form = el('form', { class: 'dialog__form' });
     fields.forEach((field) => {
-      const input = el('input', {
-        type: field.type || 'text',
-        class: 'field-input',
-        id: `dialog-field-${field.name}`,
-        value: field.value || '',
-        placeholder: field.placeholder || '',
-      });
+      const input = field.options
+        ? el('select', { class: 'field-input', id: `dialog-field-${field.name}` }, field.options.map((o) => el('option', { value: o.value, text: o.label })))
+        : el('input', {
+          type: field.type || 'text',
+          class: 'field-input',
+          id: `dialog-field-${field.name}`,
+          value: field.value || '',
+          placeholder: field.placeholder || '',
+          required: !!field.required,
+        });
+      if (field.options) input.value = field.value || '';
       inputs.set(field.name, input);
       form.appendChild(el('label', { class: 'field-label field-label--block', htmlFor: input.id }, [
         document.createTextNode(field.label),
@@ -61,9 +65,25 @@ function present({ title, message, confirmLabel = 'OK', cancelLabel = 'Cancel', 
     const body = el('div', { class: 'dialog__body' }, [
       el('h2', { class: 'dialog__title', id: 'dialog-title', text: title }),
       ...(message ? [el('p', { class: 'dialog__message', text: message })] : []),
+      ...(details.length ? [el('dl', { class: 'dialog__details' }, details.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]))] : []),
     ]);
 
-    form.appendChild(el('div', { class: 'dialog__actions' }, [cancelBtn, confirmBtn]));
+    const collect = () => {
+      const values = {};
+      inputs.forEach((input, name) => { values[name] = input.value; });
+      return values;
+    };
+    // Extra choices besides the main one. Each resolves { action, values };
+    // one that needs the fields filled checks them first, as submit would.
+    const extra = actions.map((a) => {
+      const b = el('button', { type: 'button', class: `btn ${a.tone === 'danger' ? 'btn-danger' : 'btn-ghost'}`, 'data-dialog-action': a.value, text: a.label });
+      b.addEventListener('click', () => {
+        if (a.validate && !form.reportValidity()) return;
+        close({ action: a.value, values: collect() });
+      });
+      return b;
+    });
+    form.appendChild(el('div', { class: 'dialog__actions' }, [cancelBtn, ...extra, confirmBtn]));
 
     const panel = el('div', {
       class: 'dialog',
@@ -98,10 +118,9 @@ function present({ title, message, confirmLabel = 'OK', cancelLabel = 'Cancel', 
     overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) close(null); });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (choice) { close({ action: 'confirm', values: collect() }); return; }
       if (fields.length === 0) { close(true); return; }
-      const values = {};
-      inputs.forEach((input, name) => { values[name] = input.value; });
-      close(values);
+      close(collect());
     });
 
     document.addEventListener('keydown', onKeyDown, true);
@@ -119,6 +138,16 @@ function present({ title, message, confirmLabel = 'OK', cancelLabel = 'Cancel', 
 /** Resolves true when confirmed, false otherwise. Never rejects. */
 export async function confirmAction(options) {
   return (await present(options)) === true;
+}
+
+/**
+ * A dialog with more than one way out: `actions` adds buttons beside the main
+ * one. Resolves { action, values } — `action` is 'confirm' for the main
+ * button — or null if cancelled. `details` is a list of [label, value] pairs
+ * shown above the fields.
+ */
+export async function chooseAction(options) {
+  return present({ ...options, choice: true });
 }
 
 /** Resolves the entered string, or null if cancelled. */

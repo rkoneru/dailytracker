@@ -1,4 +1,4 @@
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, chooseLifecycle } = require('./harness');
 const { eq, done } = createChecks();
 
 (async () => {
@@ -40,7 +40,10 @@ const { eq, done } = createChecks();
 
   const status = await tile('kpi-status');
   eq('status is the one the Planner set', status.value, 'ON TRACK');
-  eq('and carries its date', status.sub, 'as at 2026-09-08');
+  eq('and carries its date', status.sub, `as at ${await page.evaluate(async () => {
+    const { formatDate } = await import('./js/dates.js');
+    return formatDate((await import('./js/state.js')).getState().dashDate);
+  })}`);
   eq('and reads as good', status.tone, 'is-good');
   eq('and links to the page that sets it', status.goto, 'tab-planner');
 
@@ -109,6 +112,7 @@ const { eq, done } = createChecks();
   await page.click('#btn-projects');
   await page.waitForTimeout(400);
   await page.check('#template-event');
+  await chooseLifecycle(page);
   await page.click('#btn-create-project');
   await page.waitForTimeout(700);
   await page.click('#tab-dashboard');

@@ -12,7 +12,7 @@
 // screen which normally says "enforced by the server" stops saying so when
 // there is no server.
 
-const { APP_URL, launch, createChecks, openSection } = require('./harness');
+const { APP_URL, launch, createChecks, openSection, openDestination } = require('./harness');
 
 (async () => {
   const browser = await launch();
@@ -49,7 +49,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
     await page.click('#btn-account');
     await page.waitForTimeout(400);
     eq('and opens it', await page.locator('#login-screen').isVisible(), true);
-    eq('with the whole cast', await page.locator('.login-account').count(), 5);
+    eq('with the whole cast', await page.locator('.login-account').count(), 6);
     eq('the administrator is marked out',
        await page.locator('.login-account.is-admin').count(), 2);
     eq('and there is a way past it', await page.locator('#btn-login-skip').isVisible(), true);
@@ -93,7 +93,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
     await page.waitForTimeout(700);
     await openSection(page, 'sec-settings-people');
     eq('the member table is offered', await page.locator('#admin-people').isVisible(), true);
-    eq('with everybody in it', await page.locator('#members-body tr').count(), 5);
+    eq('with everybody in it', await page.locator('#members-body tr').count(), 6);
     eq('and not the "you cannot" panel', await page.locator('#admin-denied').isVisible(), false);
 
     await openSection(page, 'sec-settings-pages');
@@ -199,6 +199,7 @@ const { APP_URL, launch, createChecks, openSection } = require('./harness');
     await page.click('[data-demo="demo-tester"]');
     await page.waitForTimeout(1000);
 
+    await openDestination(page, 'nav-settings-role');
     eq('the role follows the account', await page.inputValue('#role-select'), 'tester');
     eq('and is not theirs to change', await page.locator('#role-select').isDisabled(), true);
     eq('with the escape hatch withdrawn',

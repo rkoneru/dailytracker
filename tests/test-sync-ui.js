@@ -1,4 +1,4 @@
-const { APP_URL, launch } = require('./harness');
+const { APP_URL, launch, openDestination } = require('./harness');
 
 // The app uses in-page dialogs now, not window.confirm, so a test drives them
 // like any other UI: click the button, then the dialog's own action.
@@ -21,7 +21,7 @@ async function acceptDialog(page) {
   await page.waitForTimeout(600);
 
   console.log('sync pill hidden when unconfigured (expect true):', await page.locator('#sync-pill').isHidden());
-  await page.click('#tab-sync');
+  await openDestination(page, 'tab-sync');
   await page.waitForTimeout(300);
   console.log('page title:', await page.locator('#page-title').textContent());
   console.log('setup visible:', await page.locator('#sync-setup').isVisible(),

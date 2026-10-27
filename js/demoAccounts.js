@@ -59,6 +59,18 @@ export const DEMO_ACCOUNTS = [
       + 'delegation must not hand over are refused here, as the server refuses them.',
   },
   {
+    id: 'demo-partner',
+    name: 'Morgan Lee',
+    email: 'morgan@demo.local',
+    title: 'Client Partner',
+    accessRole: 'editor',
+    jobRole: 'client-partner',
+    canAdmin: false,
+    clientPartner: true,
+    blurb: 'Holds the commercial grant: the use cases, their evaluation and ROI models, '
+      + 'from intake to the project they become. Nobody else in the demo sees them.',
+  },
+  {
     id: 'demo-dev',
     name: 'Sam Okafor',
     email: 'sam@demo.local',
@@ -182,6 +194,7 @@ export function demoMembers() {
       accessRole: patch.accessRole || account.accessRole,
       jobRole: patch.jobRole === undefined ? account.jobRole : patch.jobRole,
       canAdmin: patch.canAdmin === undefined ? account.canAdmin : !!patch.canAdmin,
+      clientPartner: patch.clientPartner === undefined ? !!account.clientPartner : !!patch.clientPartner,
     };
   });
 }
@@ -208,6 +221,8 @@ export function assignDemoMember(userId, patch) {
     if (target.accessRole === 'owner') throw new Error('An administrator cannot change the owner.');
     if (patch.accessRole === 'owner') throw new Error('Only the owner can make somebody else the owner.');
     if (patch.canAdmin) throw new Error('Only the owner can make another administrator.');
+    if (patch.clientPartner !== undefined) throw new Error('Only the owner can grant or remove client partner access.');
+    if (target.clientPartner) throw new Error('An administrator cannot edit someone who holds client partner access.');
   }
 
   const state = read();

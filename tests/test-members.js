@@ -1,4 +1,4 @@
-const { APP_URL, API_URL, launch, createChecks } = require('./harness');
+const { APP_URL, API_URL, launch, createChecks, openDestination } = require('./harness');
 const { eq, done } = createChecks();
 
 const OWNER = { id: '00000000-0000-4000-8000-000000000001', email: 'owner@x.test', display_name: 'Ada Owner' };
@@ -41,7 +41,7 @@ const acceptDialog = async (page) => {
   await page.waitForTimeout(1500);
 
   console.log('\n--- the owner sees themselves as owner ---');
-  await page.click('#tab-sync');
+  await openDestination(page, 'tab-sync');
   await page.waitForTimeout(800);
   eq('team section visible once signed in', await page.locator('#sync-team').isVisible(), true);
   const rows = () => page.$$eval('#team-body tr .team-person__name', (els) => els.map((e) => e.textContent));
@@ -120,7 +120,7 @@ const acceptDialog = async (page) => {
   eq('not buried in the jsonb blob', synced && 'assigneeUserId' in synced.data, false);
 
   console.log('\n--- removing a member ---');
-  await page.click('#tab-sync');
+  await openDestination(page, 'tab-sync');
   await page.waitForTimeout(700);
   await page.click('#team-body [data-remove-member]');
   await acceptDialog(page);
@@ -139,7 +139,7 @@ const acceptDialog = async (page) => {
   });
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(1800);
-  await page.click('#tab-sync');
+  await openDestination(page, 'tab-sync');
   await page.waitForTimeout(900);
   eq('invite form hidden from a contributor', await page.locator('#team-invite').isHidden(), true);
   eq('no role dropdowns offered', await page.locator('#team-body select[data-role-for]').count(), 0);

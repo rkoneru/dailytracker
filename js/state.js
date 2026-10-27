@@ -4,6 +4,9 @@ import { REGISTER_KEYS, LEGACY_REGISTER_KEYS, CHARTER_FIELDS } from './registerD
 import { newResource, resourceIdFor } from './resourceModel.js';
 import { snapshotOf, diffSnapshots } from './changeLog.js';
 import { sanitiseMethodology, sanitisePhase } from './methodology.js';
+import { layOut, sanitiseActivity } from './ganttModel.js';
+import { todayISO, toLocalISO } from './dates.js';
+import { recordTaskFlow } from './flow.js';
 
 const STORAGE_KEY = 'projectPlannerStore_v2';
 const LEGACY_STORAGE_KEY = 'projectPlannerData_v1';
@@ -30,13 +33,33 @@ export function uid() {
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
 
-export function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+export { todayISO };
 
 function earliestStart(data) {
   const starts = (data.dashTasks || []).map((t) => t.start).filter(Boolean).sort();
   return starts[0] || '';
+}
+
+/**
+ * The old tick grid kept its own day numbers beside each task's dates. The
+ * Timeline now draws only from start/end, so a task that was ticked but
+ * never dated gets the dates its ticks meant rather than vanishing from the
+ * timeline. Tasks that already have dates keep them: those were always the
+ * ones every other page believed. With no saved anchor, day 1 was the
+ * earliest task start, as the old grid had it.
+ */
+function datesFromLegacyTicks(task, anchorISO) {
+  const days = Array.isArray(task.cells) ? task.cells.filter((d) => Number.isInteger(d) && d > 0) : [];
+  if (task.start || task.end || !days.length || !anchorISO) return;
+  const anchor = new Date(`${anchorISO}T00:00:00`);
+  if (Number.isNaN(anchor.getTime())) return;
+  const at = (day) => {
+    const d = new Date(anchor);
+    d.setDate(d.getDate() + day - 1);
+    return toLocalISO(d);
+  };
+  task.start = at(Math.min(...days));
+  task.end = at(Math.max(...days));
 }
 
 function normalisePriority(value) {
@@ -179,7 +202,7 @@ function migrateProject(data) {
   (data.dashTasks || []).forEach((t) => {
     if (t.baseStart === undefined) t.baseStart = '';
     if (t.baseEnd === undefined) t.baseEnd = '';
-    // Tick-timeline state, added after the task lists were unified.
+    datesFromLegacyTicks(t, data.tickStart || earliestStart(data) || data.dashDate);
     // The account a task is assigned to, as opposed to the free-text name.
     // Empty means "not linked to anyone" — the text still shows.
     if (t.assigneeUserId === undefined) t.assigneeUserId = '';
@@ -188,8 +211,6 @@ function migrateProject(data) {
     if (t.progress === undefined) {
       t.progress = t.status === 'Complete' ? 100 : 0;
     }
-    if (!Array.isArray(t.cells)) t.cells = [];
-    if (t.tickType !== 'diamond') t.tickType = 'check';
     // Checklist, effort and dependencies, added together. Estimate and spent
     // stay empty strings rather than becoming 0: an unestimated task and a
     // task estimated at nothing are different claims, and a migration that
@@ -217,6 +238,10 @@ function migrateProject(data) {
     // planned without one, and guessing a phase from a milestone's wording
     // would put a made-up answer where the project has a real blank.
     if (m.phase === undefined) m.phase = '';
+    // A decision gate is a milestone with a decision attached (js/gates.js).
+    // Every milestone saved before gates existed is a plain milestone.
+    if (m.kind === undefined) m.kind = 'milestone';
+    if (m.owner === undefined) m.owner = '';
   });
   // The method this project is run by — a CPMAI or CRISP-DM phase set, or an
   // MLOps/LLMOps capability set. Empty means "no named method", which is what
@@ -229,6 +254,11 @@ function migrateProject(data) {
   (data.milestones || []).forEach((m) => {
     m.phase = sanitisePhase(data.methodology, m.phase);
   });
+  // The lifecycle Gantt (js/ganttModel.js): its own rows, not the tasks. An
+  // activity whose phase is not in the method in force is kept, not dropped —
+  // it is somebody's plan, and the Gantt shows it apart until it is moved.
+  if (!Array.isArray(data.ganttActivities)) data.ganttActivities = [];
+  data.ganttActivities = data.ganttActivities.map(sanitiseActivity);
   // The change log is per project and append-only; projects made before it
   // existed simply start empty rather than inventing a history.
   if (!Array.isArray(data.changeLog)) data.changeLog = [];
@@ -241,14 +271,17 @@ function migrateProject(data) {
   // are not six more row kinds.
   if (!Array.isArray(data.meetings)) data.meetings = [];
   data.meetings.forEach(migrateMeeting);
+  // Sprints hold a goal, a window and a commitment; the work in one is each
+  // task's own `sprintId`.
+  if (!Array.isArray(data.sprints)) data.sprints = [];
+  if (!Array.isArray(data.handoffs)) data.handoffs = [];
+  if (!Array.isArray(data.problems)) data.problems = [];
+  if (!Array.isArray(data.stakeholderNeeds)) data.stakeholderNeeds = [];
   migrateRegisters(data);
   if (data.baselineSetAt === undefined) data.baselineSetAt = null;
   // Projects that predate this field have unknown provenance, so they are
   // never treated as untouched starters — 0 can't equal a real updatedAt.
   if (data.createdAt === undefined) data.createdAt = 0;
-  // Day 1 of the tick timeline. Stored rather than derived, so adding a task
-  // that starts earlier doesn't silently shift what every existing tick means.
-  if (!data.tickStart) data.tickStart = earliestStart(data) || data.dashDate || todayISO();
   return data;
 }
 
@@ -338,6 +371,7 @@ function emitTrashChanged() {
 const TRASH_LABELS = {
   milestones: 'Milestone',
   dashTasks: 'Task',
+  ganttActivities: 'Gantt activity',
   notes: 'Note',
   raid: 'RAID entry',
   roster: 'Team member',
@@ -357,6 +391,10 @@ const TRASH_LABELS = {
   allocations: 'Allocation',
   timesheets: 'Timesheet entry',
   meetings: 'Meeting',
+  handoffs: 'Handoff',
+  problems: '8D report',
+  stakeholderNeeds: 'Stakeholder needs',
+  scopeItems: 'Scope item',
   project: 'Project',
 };
 
@@ -365,8 +403,13 @@ const TRASH_LABELS = {
 const TRASH_NAME_FIELDS = ['name', 'text', 'title', 'activity', 'description', 'audience',
   'opportunity', 'symptom', 'criterion', 'service', 'what'];
 
-function trashLabelFor(kind, row) {
+function trashLabelFor(kind, row, project = null) {
   if (kind === 'project') return row.projectName || 'Untitled project';
+  // A needs record holds answers, not the person; name it after who it is for.
+  if (kind === 'stakeholderNeeds') {
+    const who = (project?.stakeholders || []).find((s) => s.id === row.stakeholderId)?.name;
+    if (who) return who;
+  }
   const named = TRASH_NAME_FIELDS.map((f) => row[f]).find((v) => typeof v === 'string' && v.trim());
   return named || `(untitled ${(TRASH_LABELS[kind] || 'row').toLowerCase()})`;
 }
@@ -405,7 +448,7 @@ function trashRowIn(project, collection, id) {
   const entry = pushTrash({
     id: uid(),
     kind: collection,
-    label: trashLabelFor(collection, row),
+    label: trashLabelFor(collection, row, project),
     typeLabel: TRASH_LABELS[collection] || 'Item',
     projectId: project.id,
     projectName: project.projectName || 'Untitled project',
@@ -562,8 +605,9 @@ function adoptLegacyRosters(projects) {
           email: row.email || '',
           org: ['Internal', 'Client', 'Partner', 'Contractor'].includes(row.org) ? row.org : 'Internal',
           title: row.role || '',
-          // A roster never recorded these, and inventing them would be worse
-          // than leaving them for someone to fill in.
+          // A template's roster can say what the person knows; an old one never
+          // did, and inventing skills would be worse than leaving them blank.
+          skills: String(row.has || '').split(',').map((x) => x.trim()).filter(Boolean).map((name) => ({ name, level: 'Working' })),
           status: row.status === 'Rolled off' ? 'Left' : 'Allocated',
           notes: row.org && !['Internal', 'Client', 'Partner', 'Contractor'].includes(row.org)
             ? `Organisation on the old roster: ${row.org}` : '',
@@ -585,6 +629,7 @@ function adoptLegacyRosters(projects) {
           to: row.end || '',
           billable: true,
           notes: '',
+          skills: row.skills || '',
         });
       }
       adopted += 1;
@@ -741,6 +786,11 @@ function recordChanges() {
   const project = s.projects[s.activeProjectId];
   if (!project) return;
 
+  // Every status change, from any page, is written to the task's own history
+  // here — the one place every edit passes through — so flow metrics have
+  // something true to measure.
+  recordTaskFlow(project);
+
   const next = snapshotOf(project);
 
   if (auditProjectId !== project.id) {
@@ -833,6 +883,14 @@ function emitProjectsChanged() {
   projectsChangeListeners.forEach((fn) => fn());
 }
 
+const templateMethods = new Map();
+
+/** The lifecycle a template follows, or '' — read off a build, and remembered. */
+export function templateMethodology(key) {
+  if (!templateMethods.has(key)) templateMethods.set(key, findTemplate(key).build().methodology || '');
+  return templateMethods.get(key);
+}
+
 export function listTemplates() {
   return TEMPLATES.map(({ key, category, label, description }) => ({ key, category, label, description }));
 }
@@ -885,9 +943,22 @@ export function switchProject(id) {
   emitProjectsChanged();
 }
 
-export function createProject({ name, templateKey } = {}) {
+/**
+ * A new project, from a template, run by the lifecycle chosen for it.
+ *
+ * The lifecycle is required, and refused rather than defaulted when it is
+ * missing or unknown: it decides what the Gantt lays out, and a project quietly
+ * given one nobody picked would be planned against phases nobody chose.
+ */
+export function createProject({ name, templateKey, methodology } = {}) {
+  if (!sanitiseMethodology(methodology)) throw new Error('Choose a lifecycle for the project.');
   const s = getStore();
   const project = buildProjectFromTemplate(templateKey, name);
+  if (project.methodology !== methodology) {
+    project.methodology = methodology;
+    project.milestones.forEach((m) => { m.phase = sanitisePhase(methodology, m.phase); });
+  }
+  project.ganttActivities = layOut(project, undefined, uid);
   s.projects[project.id] = project;
   // A template still ships the old roster shape; folding it into the pool has
   // to happen as the project appears, or the people on it would be invisible
@@ -919,7 +990,7 @@ export function createProject({ name, templateKey } = {}) {
  */
 function regenerateRowIds(project) {
   const collections = ['milestones', 'dashTasks', 'notes', 'raid', 'changeLog',
-    'allocations', 'timesheets', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
+    'allocations', 'timesheets', 'ganttActivities', 'sprints', 'handoffs', 'problems', 'stakeholderNeeds', ...REGISTER_KEYS, ...LEGACY_REGISTER_KEYS];
 
   const remap = new Map();
   collections.forEach((key) => {
@@ -934,6 +1005,7 @@ function regenerateRowIds(project) {
 
   (project.dashTasks || []).forEach((task) => {
     if (Array.isArray(task.dependsOn)) task.dependsOn = task.dependsOn.map(swap);
+    if (task.sprintId) task.sprintId = swap(task.sprintId);
     // Checklist items are not project rows — they live inside the task — but
     // they carry ids of their own and two identical tasks would share them.
     if (Array.isArray(task.checklist)) {
@@ -945,6 +1017,12 @@ function regenerateRowIds(project) {
   });
   (project.changeLog || []).forEach((entry) => {
     if (entry.rowId) entry.rowId = swap(entry.rowId);
+  });
+  (project.raid || []).forEach((item) => {
+    if (item.taskId) item.taskId = swap(item.taskId);
+  });
+  (project.stakeholderNeeds || []).forEach((n) => {
+    if (n.stakeholderId) n.stakeholderId = swap(n.stakeholderId);
   });
   (project.timesheets || []).forEach((entry) => {
     if (entry.taskId) entry.taskId = swap(entry.taskId);

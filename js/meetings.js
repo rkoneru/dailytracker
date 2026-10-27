@@ -2,19 +2,31 @@ import { el, dragHandle } from './dom.js';
 import {
   getState, scheduleSave, uid, trashRow, getActiveProjectId, listResources, todayISO,
 } from './state.js';
-import { offerUndoAction } from './trash.js';
+import { offerUndoAction, offerUndo } from './trash.js';
 import { makeSortable, reorderById } from './dragReorder.js';
-import { toast, confirmAction } from './dialog.js';
+import { toast, confirmAction, chooseAction } from './dialog.js';
 import { newTask, notifyProjectDataChanged } from './taskModel.js';
 import {
   MEETING_STATUSES, ACTION_STATUSES, DECISION_TAGS, IMPACT_LEVELS,
   FOLLOWUP_TYPES, REMINDER_OPTIONS,
   newMeeting, newAgendaItem, newAttendee, newDecision, newAction, newFollowUp,
   newUtterance, stamp, scheduleAgenda, agendaLoad, attendance, actionTally,
-  sortMeetings, transcriptText, parseTranscript, suggestions, formatTime,
+  sortMeetings, transcriptText, parseTranscript, suggestions, formatTime, nextOccurrence,
+  MEETING_ROLES, OUTPUT_TYPES, readiness, absentOwners, MEETING_MODES, modeIcon,
 } from './meetingModel.js';
 import { createTranscriber, isSupported, PRIVACY_NOTE } from './transcriber.js';
 import { slug } from './register.js';
+import {
+  REPEATS, monthGrid, calendarEvents, addRepeat, icsCalendar, weekDays, weekLayout,
+} from './meetingCalendar.js';
+import {
+  startAudio, recordingBlocker, formatDuration, formatSize, meterContext, testMicrophone,
+} from './audioRecorder.js';
+import { saveRecording, listRecordings, deleteRecording } from './audioStore.js';
+import { showSection } from './tabs.js';
+import { renderRhythm, initRhythm } from './rhythmPage.js';
+import { goToNode } from './nav.js';
+import { formatDate } from './dates.js';
 
 // The meetings page: one record per meeting, in the order you actually use it.
 //
@@ -26,6 +38,20 @@ import { slug } from './register.js';
 // An action item is the one thing here that leaves the page: it can become a
 // real task, and stays linked to the one it became. Everything else about a
 // meeting belongs to the meeting.
+//
+// The calendar comes first because it is where a meeting starts: pick the
+// day. It reads the meetings; it holds nothing of its own. A meeting is made
+// and deleted from it without leaving it: + on a day (or a time in the week)
+// asks for the name, time and kind and writes nothing until Create; a
+// meeting's chip shows what it is, with Open and Delete. Delete goes to the
+// Trash with Undo, like every other delete. A dashed date is not a meeting,
+// so it has nothing to delete; it offers to plan that one, or to stop the
+// series repeating.
+//
+// Recording records audio, on this device, in every current browser. Live
+// transcription is an optional second layer that only some browsers have and
+// that sends audio away to work, so it is off unless ticked. The old button
+// did only the second, failed silently where it could not, and looked dead.
 
 const NEW_ROW = {
   agenda: newAgendaItem,
@@ -44,7 +70,12 @@ const LIST_LABEL = {
 };
 
 let selectedId = '';
-let transcriber = null;
+// The recording in progress: its audio controller, the meeting it belongs to
+// (kept, so switching meetings mid-recording saves to the right one) and the
+// live transcriber, if one was asked for.
+let session = null;
+let calendarMonth = null;
+let recordingUrls = [];
 let onChanged = () => {};
 
 // ---------- selection ----------
@@ -74,18 +105,27 @@ const OVERVIEW_FIELDS = [
   { field: 'startTime', label: 'Start', type: 'time' },
   { field: 'endTime', label: 'End', type: 'time' },
   { field: 'location', label: 'Virtual / location', placeholder: 'e.g. Zoom, or Room 3' },
+  { field: 'mode', label: 'How', options: ['', ...MEETING_MODES.map((m) => m.id)] },
   { field: 'status', label: 'Status', options: MEETING_STATUSES },
+  { field: 'repeat', label: 'Repeats', options: REPEATS },
   { field: 'owner', label: 'Meeting owner', person: true, placeholder: 'Who called it' },
   { field: 'preparedBy', label: 'Prepared by', person: true, placeholder: 'Who is writing it up' },
   { field: 'purpose', label: 'Meeting purpose', long: true, placeholder: 'What this meeting is for, in a sentence.' },
+  { field: 'expectedOutput', label: 'Expected output', list: 'meeting-outputs', placeholder: 'Decision, plan, alignment…' },
+  { field: 'preRead', label: 'Pre-read and inputs', long: true, placeholder: 'What people should read first, with links.' },
+  { field: 'preReadShared', label: 'Pre-read shared with the invitees', check: true },
 ];
 
 function overviewField(meeting, def) {
   let input;
+  if (def.check) {
+    input = el('input', { type: 'checkbox', 'data-meeting-field': def.field, checked: !!meeting[def.field] });
+    return el('label', { class: 'check-inline' }, [input, document.createTextNode(def.label)]);
+  }
   if (def.options) {
     input = el('select', { class: 'field-input', 'data-meeting-field': def.field });
     def.options.forEach((opt) => input.appendChild(
-      el('option', { value: opt, text: opt, selected: meeting[def.field] === opt })));
+      el('option', { value: opt, text: opt ? `${modeIcon(opt) ? `${modeIcon(opt)} ` : ''}${opt}` : '—', selected: (meeting[def.field] || '') === opt })));
   } else if (def.long) {
     input = el('textarea', { class: 'field-input', rows: '2', 'data-meeting-field': def.field, placeholder: def.placeholder || '' });
     input.value = meeting[def.field] || '';
@@ -98,6 +138,7 @@ function overviewField(meeting, def) {
       placeholder: def.placeholder || '',
     });
     if (def.person) input.setAttribute('list', 'roster-names');
+    if (def.list) input.setAttribute('list', def.list);
   }
   return el('label', { class: `field-label${def.long ? ' field-label--block' : ''}` },
     [document.createTextNode(def.label), input]);
@@ -107,6 +148,47 @@ function renderOverview(meeting) {
   const host = document.getElementById('meeting-overview-fields');
   host.innerHTML = '';
   OVERVIEW_FIELDS.forEach((def) => host.appendChild(overviewField(meeting, def)));
+  if (!document.getElementById('meeting-outputs')) {
+    document.body.appendChild(el('datalist', { id: 'meeting-outputs' }, OUTPUT_TYPES.map((t) => el('option', { value: t }))));
+  }
+}
+
+// Derived, so it is redrawn on every edit that could move it; it holds no
+// inputs of its own, so redrawing never drops a caret.
+function renderReadiness(meeting) {
+  const host = document.getElementById('meeting-readiness');
+  if (!host) return;
+  const { checks, done, of } = readiness(meeting);
+  document.getElementById('meeting-readiness-count').textContent = `${done} of ${of} ready`;
+  host.replaceChildren(...checks.map((c) => el('li', {
+    class: `sprint-check ${c.na ? 'is-na' : c.ok ? 'is-ok' : 'is-bad'}`, 'data-ready': c.id,
+  }, [
+    el('span', { class: 'sprint-check__mark', 'aria-hidden': 'true', text: c.na ? '–' : c.ok ? '✓' : '✗' }),
+    el('span', {}, [el('strong', { text: c.label }), c.detail && el('span', { class: 'hint', text: ` — ${c.detail}` })]),
+  ])));
+}
+
+function renderAbsentOwners(meeting) {
+  const host = document.getElementById('meeting-absent-owners');
+  if (!host) return;
+  const flags = absentOwners(meeting);
+  const present = (meeting.attendees || []).filter((a) => a.attended && String(a.name || '').trim()).map((a) => a.name);
+  host.hidden = flags.length === 0;
+  host.replaceChildren(...(flags.length ? [
+    el('strong', { text: `Absent action owner${flags.length === 1 ? '' : 's'}` }),
+    el('ul', {}, flags.map(({ action, owner }) => el('li', { 'data-action-id': action.id }, [
+      document.createTextNode(`${owner} owns “${action.text || 'an action'}” but did not attend. `),
+      el('label', { class: 'check-inline' }, [
+        document.createTextNode('Reassign to'),
+        el('select', { class: 'row-select', 'data-reassign': '', 'aria-label': 'Reassign to' }, [
+          el('option', { value: '', text: '— pick —' }),
+          ...present.map((n) => el('option', { value: n, text: n })),
+        ]),
+      ]),
+      document.createTextNode(' or '),
+      el('button', { type: 'button', class: 'link-btn', 'data-confirm-owner': '', text: `confirmed with ${owner}` }),
+    ]))),
+  ] : []));
 }
 
 // ---------- tables ----------
@@ -188,7 +270,13 @@ function renderAttendees(meeting) {
     body.appendChild(el('tr', { 'data-id': person.id, 'data-list': 'attendees', draggable: true }, [
       el('td', { class: 'col-drag no-print' }, [dragHandle()]),
       personCell(person, 'name'),
-      textCell(person, 'role', 'Their role'),
+      textCell(person, 'role', 'Their job title'),
+      el('td', { class: 'col-status' }, [el('select', {
+        class: 'row-select', 'data-field': 'meetingRole', 'aria-label': 'Meeting role',
+      }, [
+        el('option', { value: '', text: '— why invited —', selected: !person.meetingRole }),
+        ...MEETING_ROLES.map((r) => el('option', { value: r.id, text: r.id, title: r.does, selected: person.meetingRole === r.id })),
+      ])]),
       textCell(person, 'department', 'Department'),
       el('td', { class: 'col-check' }, [el('input', {
         type: 'checkbox', 'data-field': 'attended', checked: !!person.attended, 'aria-label': 'Attended',
@@ -328,47 +416,560 @@ function renderSuggestions(meeting) {
   group('Sounds like an action', actions, 'actions');
 }
 
-function setRecorderState(text, live) {
+// ---------- recording ----------
+//
+// Three ways to capture, because devices differ in what they can do at once:
+// audio and a live transcript together (the default where both work), audio
+// only, or a live transcript only. Android, and some laptops, will not let a
+// page record and run the browser's speech recogniser on one microphone at
+// the same time; when that happens the page says so and names the mode that
+// will work, rather than leaving a transcript that silently never arrives.
+
+const MODE_KEY = 'projectPlannerRecorderMode_v1';
+const MODES = {
+  both: 'Audio and live transcript',
+  audio: 'Audio only',
+  transcript: 'Live transcript only',
+};
+
+function availableModes() {
+  const canAudio = !recordingBlocker();
+  const canText = isSupported();
+  return Object.keys(MODES).filter((m) => (m === 'both' ? canAudio && canText : m === 'audio' ? canAudio : canText));
+}
+
+// A per-device convenience: which mode this person last chose here.
+function chosenMode() {
+  const modes = availableModes();
+  let saved = '';
+  try { saved = localStorage.getItem(MODE_KEY) || ''; } catch { saved = ''; }
+  return modes.includes(saved) ? saved : modes[0] || '';
+}
+
+function setRecorderState(text, mode = 'idle') {
   const state = document.getElementById('recorder-state');
   state.textContent = text;
-  state.classList.toggle('is-live', !!live);
-  document.getElementById('btn-record').textContent = live ? '■ Stop recording' : '● Start recording';
-  document.getElementById('recorder').classList.toggle('is-live', !!live);
+  const live = mode === 'live' || mode === 'paused';
+  state.className = `recorder__state is-${mode}`;
+  const record = document.getElementById('btn-record');
+  record.textContent = live ? '■ Stop and save' : mode === 'pending' ? 'Starting…' : '● Start recording';
+  record.disabled = mode === 'pending' || mode === 'saving' || (!live && (!current() || !availableModes().length));
+  const pause = document.getElementById('btn-record-pause');
+  pause.hidden = !live || !session?.controller;
+  pause.textContent = mode === 'paused' ? '▶ Resume' : '❚❚ Pause';
+  document.getElementById('recorder').classList.toggle('is-live', mode === 'live');
+  document.getElementById('recorder-mode').disabled = live || mode === 'pending';
+  document.getElementById('btn-mic-check').disabled = live || mode === 'pending';
+  if (!live) {
+    document.getElementById('recorder-level').style.width = '0%';
+    document.getElementById('recorder-interim').textContent = '';
+  }
 }
 
-function startRecording() {
-  const meeting = current();
-  if (!meeting) return;
+function showProblem(text) {
+  const note = document.getElementById('recorder-problem');
+  note.textContent = text || '';
+  note.hidden = !text;
+}
 
-  transcriber = createTranscriber({
+function showTranscriptState(text) {
+  const note = document.getElementById('recorder-transcript-state');
+  note.textContent = text || '';
+  note.hidden = !text;
+}
+
+function startTranscriber(meetingId, elapsed, { withAudio }) {
+  let lines = 0;
+  showTranscriptState('Live transcript: listening — speak and lines appear below.');
+  const transcriber = createTranscriber({
     onInterim: (text) => { document.getElementById('recorder-interim').textContent = text; },
-    onFinal: (text, elapsed) => {
-      const live = current();
-      if (!live) return;
-      live.transcript.push(newUtterance(text, { at: stamp(elapsed) }));
+    onFinal: (text) => {
+      const target = meetings().find((m) => m.id === meetingId);
+      if (!target) return;
+      target.transcript.push(newUtterance(text, { at: stamp(elapsed()) }));
+      lines += 1;
+      showTranscriptState(`Live transcript: ${lines} line${lines === 1 ? '' : 's'} so far.`);
       document.getElementById('recorder-interim').textContent = '';
-      renderTranscript(live);
+      if (current()?.id === target.id) renderTranscript(target);
       commit();
     },
-    onError: (err) => {
-      toast(`Recording stopped: ${err}. You can paste a transcript instead.`, 'error');
-      setRecorderState('Not recording', false);
+    onError: (reason, code) => {
+      showTranscriptState('');
+      const shared = withAudio && (code === 'audio-capture' || code === 'not-allowed' || code === 'no-session');
+      showProblem(shared
+        ? `Live transcription stopped: ${reason}. This device may not let a page record and transcribe on one microphone at the same time — the recording carries on. For a transcript, choose “${MODES.transcript}” next time, or paste one afterwards.`
+        : `Live transcription stopped: ${reason}.${withAudio ? ' The recording carries on.' : ''}`);
+      if (!withAudio && session) stopRecording();
     },
-    onEnd: () => setRecorderState('Not recording', false),
   });
-
-  if (!transcriber || !transcriber.start()) {
-    toast('This browser will not record. Paste a transcript instead.', 'error');
-    return;
-  }
-  setRecorderState('Listening…', true);
+  if (!transcriber || !transcriber.start()) return null;
+  return transcriber;
 }
 
-function stopRecording() {
-  if (transcriber) transcriber.stop();
-  transcriber = null;
-  document.getElementById('recorder-interim').textContent = '';
-  setRecorderState('Not recording', false);
+async function startRecording() {
+  const meeting = current();
+  if (!meeting || session) return;
+  const mode = document.getElementById('recorder-mode').value || chosenMode();
+  showProblem('');
+  showTranscriptState('');
+  // Made now, inside the click, so Chrome does not start it suspended.
+  const context = mode === 'transcript' ? null : meterContext();
+  setRecorderState(mode === 'transcript' ? 'Starting the transcript…' : 'Asking for the microphone…', 'pending');
+
+  if (mode === 'transcript') {
+    const began = Date.now();
+    const tick = setInterval(() => { document.getElementById('recorder-clock').textContent = formatDuration(Date.now() - began); }, 250);
+    session = { controller: null, meetingId: meeting.id, transcriber: null, tick };
+    session.transcriber = startTranscriber(meeting.id, () => Date.now() - began, { withAudio: false });
+    if (!session.transcriber) {
+      clearInterval(tick);
+      session = null;
+      setRecorderState('Not recording');
+      showProblem('The browser would not start its speech recogniser.');
+      return;
+    }
+    setRecorderState('Transcribing', 'live');
+    return;
+  }
+
+  let controller;
+  try {
+    controller = await startAudio({
+      audioContext: context,
+      onLevel: (level) => { document.getElementById('recorder-level').style.width = `${Math.round(level * 100)}%`; },
+      onTick: (ms) => { document.getElementById('recorder-clock').textContent = formatDuration(ms); },
+    });
+  } catch (err) {
+    context?.close?.().catch(() => {});
+    setRecorderState('Not recording');
+    showProblem(err.message);
+    return;
+  }
+  session = { controller, meetingId: meeting.id, transcriber: null };
+  setRecorderState('Recording', 'live');
+  if (mode === 'both') session.transcriber = startTranscriber(meeting.id, () => controller.elapsed(), { withAudio: true });
+}
+
+async function stopRecording() {
+  if (!session) return;
+  const { controller, meetingId, transcriber, tick } = session;
+  session = null;
+  transcriber?.stop();
+  if (tick) clearInterval(tick);
+  document.getElementById('recorder-clock').textContent = '0:00';
+  if (!controller) {
+    setRecorderState('Not recording');
+    showTranscriptState('');
+    toast('Transcript saved with the meeting.', 'success');
+    return;
+  }
+  setRecorderState('Saving…', 'saving');
+  const { blob, mimeType, duration } = await controller.stop();
+  const meeting = meetings().find((m) => m.id === meetingId);
+  if (blob.size) {
+    try {
+      await saveRecording({
+        id: uid(), meetingId, projectId: getActiveProjectId(), createdAt: Date.now(),
+        duration, mimeType, size: blob.size, blob, title: meeting?.name || 'Meeting',
+      });
+      toast(`Recording saved on this device (${formatDuration(duration)}).`, 'success');
+    } catch (err) {
+      showProblem(`The recording could not be saved on this device: ${err.message} Private browsing windows often refuse; try a normal window.`);
+    }
+  } else {
+    showProblem('Nothing was captured — the microphone sent no sound.');
+  }
+  setRecorderState('Not recording');
+  showTranscriptState('');
+  if (current()?.id === meetingId) renderRecordings(current());
+}
+
+function togglePause() {
+  if (!session?.controller) return;
+  if (session.controller.isPaused()) {
+    session.controller.resume();
+    setRecorderState('Recording', 'live');
+  } else {
+    session.controller.pause();
+    setRecorderState('Paused', 'paused');
+  }
+}
+
+// ---------- Check microphone ----------
+//
+// Every piece recording depends on, tested on this device, in order, with
+// what to do about the first one that fails. It is how "recording is not
+// working" becomes something a person can act on.
+
+async function runMicCheck() {
+  const list = document.getElementById('mic-check');
+  const button = document.getElementById('btn-mic-check');
+  const context = meterContext();
+  list.hidden = false;
+  button.disabled = true;
+  const rows = [];
+  const draw = () => list.replaceChildren(...rows.map((r) => el('li', { class: `mic-check__row is-${r.state}` }, [
+    el('span', { class: 'mic-check__mark', text: { ok: '✓', bad: '✗', warn: '!', wait: '…' }[r.state] }),
+    el('strong', { text: `${r.label}: ` }),
+    document.createTextNode(r.text),
+  ])));
+  const add = (label, state, text) => { rows.push({ label, state, text }); draw(); return rows[rows.length - 1]; };
+
+  // Which version is running: the cache the service worker serves from.
+  try {
+    const names = (await caches.keys()).filter((n) => n.startsWith('project-planner-')).sort();
+    const reg = await navigator.serviceWorker?.getRegistration?.();
+    add('App version', reg?.waiting ? 'warn' : 'ok', `${names[names.length - 1] || 'not cached'}${reg?.waiting ? ' — a newer version is waiting: press Reload on the banner, or close every tab of the app and open it again.' : ''}`);
+  } catch {
+    add('App version', 'warn', 'could not be read');
+  }
+  add('Secure page', window.isSecureContext ? 'ok' : 'bad', window.isSecureContext
+    ? 'yes (https or localhost)'
+    : 'no — this page is plain http, so the browser will not give it a microphone. Open it over https.');
+  try {
+    const status = await navigator.permissions?.query({ name: 'microphone' });
+    const state = status?.state || 'unknown';
+    add('Microphone permission', state === 'denied' ? 'bad' : state === 'granted' ? 'ok' : 'warn',
+      state === 'denied' ? 'blocked for this site — allow it from the icon in the address bar, then check again.'
+        : state === 'prompt' ? 'not decided yet — the browser will ask.' : state === 'granted' ? 'allowed' : 'this browser does not say');
+  } catch {
+    add('Microphone permission', 'warn', 'this browser does not say');
+  }
+  const mic = add('Microphone', 'wait', 'listening for 1.5 seconds — say something…');
+  const heard = await testMicrophone(1500, context);
+  Object.assign(mic, { state: heard.ok ? 'ok' : 'bad', text: heard.message });
+  draw();
+  add('Recorder', typeof MediaRecorder === 'undefined' ? 'bad' : 'ok', typeof MediaRecorder === 'undefined'
+    ? 'this browser cannot record audio'
+    : `records as ${['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find((t) => MediaRecorder.isTypeSupported?.(t)) || 'the browser’s default format'}`);
+  try {
+    const id = `check-${Date.now()}`;
+    await saveRecording({ id, meetingId: '__check', createdAt: Date.now(), duration: 0, mimeType: 'text/plain', size: 1, blob: new Blob(['x']) });
+    await deleteRecording(id);
+    add('Storage on this device', 'ok', 'recordings can be saved');
+  } catch (err) {
+    add('Storage on this device', 'bad', `recordings cannot be saved (${err.message}). Private windows often refuse.`);
+  }
+  if (!isSupported()) {
+    add('Live transcript', 'warn', 'this browser has no speech recogniser (Firefox, and some others). Record audio, and paste a transcript from your meeting tool.');
+  } else {
+    const row = add('Live transcript', 'wait', 'listening for 5 seconds — say a sentence…');
+    const result = await new Promise((resolve) => {
+      let said = '';
+      let done = false;
+      const finish = (r) => { if (done) return; done = true; t?.stop(); resolve(r); };
+      const t = createTranscriber({
+        onInterim: (text) => { said = text || said; },
+        onFinal: (text) => { said = text; finish({ ok: true, text: `heard “${text}”` }); },
+        onError: (reason) => finish({ ok: false, text: reason }),
+      });
+      if (!t || !t.start()) finish({ ok: false, text: 'the speech recogniser would not start' });
+      setTimeout(() => finish(said ? { ok: true, text: `heard “${said}”` } : { ok: false, text: 'nothing was recognised — speak up, or the browser’s speech service may be unavailable here' }), 5000);
+    });
+    Object.assign(row, { state: result.ok ? 'ok' : 'bad', text: result.text });
+    draw();
+  }
+  button.disabled = !!session;
+}
+
+const EXTENSION = { 'audio/mp4': 'm4a', 'audio/ogg': 'ogg', 'audio/webm': 'webm' };
+
+function renderRecordings(meeting) {
+  const host = document.getElementById('recording-list');
+  const empty = document.getElementById('recording-empty');
+  recordingUrls.forEach((u) => URL.revokeObjectURL(u));
+  recordingUrls = [];
+  if (!meeting) { host.replaceChildren(); return; }
+  listRecordings(meeting.id).then((rows) => {
+    if (current()?.id !== meeting.id) return;
+    host.replaceChildren(...rows.map((r) => {
+      const url = URL.createObjectURL(r.blob);
+      recordingUrls.push(url);
+      const ext = EXTENSION[String(r.mimeType || '').split(';')[0]] || 'webm';
+      const when = new Date(r.createdAt);
+      return el('li', { class: 'recording', 'data-recording': r.id }, [
+        el('div', { class: 'recording__meta', text: `${formatDate(when)} ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')} · ${formatDuration(r.duration)} · ${formatSize(r.size)}` }),
+        el('audio', { controls: true, preload: 'metadata', src: url }),
+        el('div', { class: 'recording__actions' }, [
+          el('a', { class: 'btn btn-small btn-ghost', href: url, download: `${slug(meeting.name || 'meeting') || 'meeting'}-${meeting.date || 'recording'}-${r.id.slice(-4)}.${ext}`, text: 'Download' }),
+          el('button', { type: 'button', class: 'btn btn-small btn-ghost', 'data-recording-delete': r.id, text: 'Delete' }),
+        ]),
+      ]);
+    }));
+    empty.hidden = rows.length > 0;
+  }).catch((err) => {
+    host.replaceChildren();
+    empty.hidden = false;
+    empty.textContent = `Recordings cannot be listed here: ${err.message}`;
+  });
+}
+
+function renderRecorder(meeting) {
+  const modes = availableModes();
+  const select = document.getElementById('recorder-mode');
+  if (!session) {
+    const want = chosenMode();
+    select.replaceChildren(...modes.map((m) => el('option', { value: m, text: MODES[m], selected: m === want })));
+    const blocked = recordingBlocker();
+    setRecorderState(modes.length ? 'Not recording' : 'Recording is not available here');
+    showProblem(!modes.length ? blocked
+      : blocked ? `Audio cannot be recorded here: ${blocked} A live transcript still can.` : '');
+  }
+  select.closest('label').hidden = modes.length < 2;
+  document.getElementById('transcript-privacy').textContent = isSupported()
+    ? PRIVACY_NOTE
+    : 'This browser cannot transcribe live, so recording makes the audio only. For a transcript, paste one from your meeting tool — that path works everywhere.';
+  renderRecordings(meeting);
+}
+
+// ---------- calendar ----------
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+function chip(e) {
+  const tab = e.kind === 'followUp' || e.kind === 'action' ? 'sec-meeting-actions' : 'sec-meeting-overview';
+  const label = `${e.time ? `${formatTime(e.time)} ` : ''}${e.kind === 'followUp' ? '↻ ' : e.kind === 'action' ? '☐ ' : ''}${modeIcon(e.mode) ? `${modeIcon(e.mode)} ` : ''}${e.title}`;
+  const attrs = e.kind === 'repeat'
+    ? { 'data-cal-repeat': e.meetingId, 'data-date': e.date, title: `${e.title} — ${e.status}, not yet held. Open to plan it.` }
+    : { 'data-cal-open': e.meetingId, 'data-cal-tab': tab, 'data-cal-kind': e.kind, title: `${e.title}${e.kind === 'meeting' ? ` — ${e.status}` : ''}` };
+  return el('button', {
+    type: 'button',
+    class: `cal-chip is-${e.kind}${e.status === 'Cancelled' ? ' is-cancelled' : ''}${e.meetingId === selectedId && e.kind === 'meeting' ? ' is-selected' : ''}`,
+    ...attrs,
+    text: label,
+  });
+}
+
+// Month or week: a per-device view choice, remembered, never synced.
+const VIEW_KEY = 'projectPlannerMeetingView_v1';
+let calendarView = (() => { try { return localStorage.getItem(VIEW_KEY) === 'week' ? 'week' : 'month'; } catch { return 'month'; } })();
+let calendarWeek = null;
+const HOUR_PX = 48;
+
+function renderWeek(host, today) {
+  if (!calendarWeek) calendarWeek = isoOf(today);
+  const days = weekDays(calendarWeek);
+  const events = calendarEvents(meetings(), days[0], days[6]);
+  const layout = weekLayout(events, days);
+  const todayIso = isoOf(today);
+  const fmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+  const dayName = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const at = (d) => new Date(`${d}T00:00:00`);
+  document.getElementById('meeting-calendar-label').textContent = `Calendar — ${fmt.format(at(days[0]))} to ${fmt.format(at(days[6]))}`;
+  const hours = [];
+  for (let m = layout.from; m < layout.to; m += 60) hours.push(m);
+  const height = ((layout.to - layout.from) / 60) * HOUR_PX;
+  const nowMin = today.getHours() * 60 + today.getMinutes();
+  host.replaceChildren(el('div', { class: 'wk', role: 'grid', 'aria-label': 'Week', 'data-from': String(layout.from) }, [
+    el('div', { class: 'wk-corner' }),
+    ...days.map((d) => el('div', { class: `wk-head${d === todayIso ? ' is-today' : ''}${[0, 6].includes(at(d).getDay()) ? ' is-weekend' : ''}`, role: 'columnheader' }, [
+      el('span', { class: 'wk-head__day', text: dayName.format(at(d)) }), el('span', { class: 'wk-head__n', text: String(at(d).getDate()) }),
+    ])),
+    el('div', { class: 'wk-allday-label', text: 'All day' }),
+    ...days.map((d) => el('div', { class: 'wk-allday', 'data-day': d }, layout.days.get(d).allDay.map(chip))),
+    el('div', { class: 'wk-hours', style: `height:${height}px` }, hours.map((m) => el('span', { class: 'wk-hour', style: `top:${((m - layout.from) / 60) * HOUR_PX}px`, text: formatTime(`${String(m / 60).padStart(2, '0')}:00`) }))),
+    ...days.map((d) => el('div', {
+      class: `wk-col${d === todayIso ? ' is-today' : ''}${[0, 6].includes(at(d).getDay()) ? ' is-weekend' : ''}`, 'data-cal-slot': d, style: `height:${height}px`, title: 'Pick a time to plan a meeting',
+    }, [
+      ...layout.days.get(d).timed.map((e) => {
+        const c = chip(e);
+        c.classList.add('wk-event');
+        c.style.top = `${((e.startMin - layout.from) / 60) * HOUR_PX}px`;
+        c.style.height = `${Math.max(18, ((e.endMin - e.startMin) / 60) * HOUR_PX - 2)}px`;
+        c.style.left = `${(e.lane / e.lanes) * 100}%`;
+        c.style.width = `calc(${100 / e.lanes}% - 2px)`;
+        return c;
+      }),
+      d === todayIso && nowMin >= layout.from && nowMin <= layout.to && el('span', { class: 'wk-now', style: `top:${((nowMin - layout.from) / 60) * HOUR_PX}px`, title: `Now, ${formatTime(`${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`)}` }),
+    ])),
+  ]));
+}
+
+function renderCalendar() {
+  const host = document.getElementById('meeting-calendar');
+  if (!host) return;
+  const today = new Date();
+  document.querySelectorAll('#sec-meeting-calendar [data-cal-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.calView === calendarView)));
+  if (calendarView === 'week') {
+    renderWeek(host, today);
+    renderUpcoming(today);
+    return;
+  }
+  if (!calendarMonth) calendarMonth = { y: today.getFullYear(), m: today.getMonth() };
+  const weeks = monthGrid(calendarMonth.y, calendarMonth.m);
+  const events = calendarEvents(meetings(), weeks[0][0], weeks[5][6]);
+  const todayIso = isoOf(today);
+  const monthLabel = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(calendarMonth.y, calendarMonth.m, 1));
+  document.getElementById('meeting-calendar-label').textContent = `Calendar — ${monthLabel}`;
+  const dayName = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const heads = weeks[0].map((d) => dayName.format(new Date(`${d}T00:00:00`)));
+  const inMonth = (d) => Number(d.slice(5, 7)) - 1 === calendarMonth.m;
+  host.replaceChildren(el('table', { class: 'cal-grid', 'aria-label': monthLabel }, [
+    el('thead', {}, [el('tr', {}, heads.map((h) => el('th', { scope: 'col', text: h })))]),
+    el('tbody', {}, weeks.map((week) => el('tr', {}, week.map((d) => {
+      const list = events.get(d) || [];
+      return el('td', { class: `cal-day${inMonth(d) ? '' : ' is-other'}${d === todayIso ? ' is-today' : ''}`, 'data-day': d }, [
+        el('div', { class: 'cal-day__head' }, [
+          el('span', { class: 'cal-day__n', text: String(Number(d.slice(8))) }),
+          el('button', { type: 'button', class: 'cal-day__add no-print', 'data-cal-new': d, 'aria-label': `New meeting on ${formatDate(d)}`, text: '+' }),
+        ]),
+        el('div', { class: 'cal-day__events' }, list.map(chip)),
+      ]);
+    })))),
+  ]));
+
+  renderUpcoming(today);
+}
+
+// The same thing as a list, which is what reads on a phone.
+function renderUpcoming(today) {
+  const todayIso = isoOf(today);
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 13);
+  const soon = calendarEvents(meetings(), todayIso, isoOf(end));
+  const upcoming = document.getElementById('meeting-upcoming');
+  upcoming.replaceChildren(...(soon.size
+    ? [...soon.entries()].map(([d, list]) => el('li', { class: 'meeting-upcoming__day' }, [
+      el('span', { class: 'meeting-upcoming__date', text: d === todayIso ? `Today, ${formatDate(d)}` : formatDate(d) }),
+      el('div', { class: 'cal-day__events' }, list.map(chip)),
+    ]))
+    : [el('li', { class: 'hint', text: 'Nothing in the next two weeks.' })]));
+}
+
+function openMeeting(id, sectionId = 'sec-meeting-overview') {
+  stopRecordingIfOther(id);
+  selectedId = id;
+  renderMeetings();
+  showSection('page-meetings', sectionId);
+}
+
+function stopRecordingIfOther(id) {
+  if (session && session.meetingId !== id) {
+    stopRecording();
+    toast('The recording was stopped and saved to the meeting it started in.', 'info');
+  }
+}
+
+function createOn(date, from = null, time = '') {
+  const meeting = from
+    ? { ...nextOccurrence(from, date), id: uid() }
+    : { ...newMeeting({ date, status: 'Scheduled', startTime: time, endTime: addHour(time) }), id: uid() };
+  // The first time a meeting repeats, it becomes the head of its series.
+  if (from && !from.seriesId) from.seriesId = from.id;
+  meetings().push(meeting);
+  commit();
+  openMeeting(meeting.id);
+  if (!from) document.querySelector('[data-meeting-field="name"]')?.focus();
+  return meeting;
+}
+
+const addHour = (time) => (time ? `${String(Math.min(23, Number(time.slice(0, 2)) + 1)).padStart(2, '0')}${time.slice(2)}` : '');
+const MODE_OPTIONS = [{ value: '', label: 'Not set' }, ...MEETING_MODES.map((m) => ({ value: m.id, label: `${m.icon} ${m.id}` }))];
+
+/** Asks for a new meeting on the calendar; nothing is written until Create. */
+async function quickCreate(date, time = '') {
+  let values = { name: '', date, startTime: time, endTime: addHour(time), mode: '' };
+  let message = 'Name it and set the time. Everything else — agenda, invitees, purpose — is on its Overview.';
+  let action = 'confirm';
+  for (;;) {
+    const result = await chooseAction({
+      title: 'New meeting',
+      message,
+      fields: [
+        { name: 'name', label: 'Meeting name', value: values.name, placeholder: 'e.g. Design review', required: true },
+        { name: 'date', label: 'Date', type: 'date', value: values.date, required: true },
+        { name: 'startTime', label: 'Starts', type: 'time', value: values.startTime },
+        { name: 'endTime', label: 'Ends', type: 'time', value: values.endTime },
+        { name: 'mode', label: 'How', value: values.mode, options: MODE_OPTIONS },
+      ],
+      actions: [{ value: 'open', label: 'Create and open', validate: true }],
+      confirmLabel: 'Create',
+    });
+    if (!result) return null;
+    action = result.action;
+    values = { ...values, ...result.values, name: result.values.name.trim() };
+    // Checked here as well as by the form: Enter in a field submits.
+    if (!values.name || !values.date) { message = 'A meeting needs a name and a date.'; continue; }
+    if (values.startTime && values.endTime && values.endTime <= values.startTime) { message = 'It ends before it starts — change the end time.'; continue; }
+    break;
+  }
+  const meeting = { ...newMeeting({ ...values, status: 'Scheduled' }), id: uid() };
+  meetings().push(meeting);
+  commit();
+  return { meeting, open: action === 'open' };
+}
+
+async function createFromCalendar(date, time = '') {
+  const made = await quickCreate(date, time);
+  if (!made) return;
+  const { meeting } = made;
+  // Week view jumps to the week the meeting landed in, month view to its month.
+  if (calendarView === 'week') calendarWeek = meeting.date;
+  else calendarMonth = { y: Number(meeting.date.slice(0, 4)), m: Number(meeting.date.slice(5, 7)) - 1 };
+  if (made.open) { openMeeting(meeting.id); return; }
+  selectedId = meeting.id;
+  renderMeetings();
+  toast(`“${meeting.name}” is on ${formatDate(meeting.date)}${meeting.startTime ? ` at ${formatTime(meeting.startTime)}` : ''}.`, 'success');
+}
+
+async function deleteMeeting(meeting) {
+  if (session?.meetingId === meeting.id) await stopRecording();
+  const entry = trashRow('meetings', meeting.id);
+  if (selectedId === meeting.id) selectedId = '';
+  renderMeetings();
+  commit();
+  if (entry) offerUndo(entry);
+}
+
+/** A meeting's chip: what it is, with Open and Delete. */
+async function quickView(meeting) {
+  const when = meeting.date ? `${formatDate(meeting.date)}${meeting.startTime ? `, ${formatTime(meeting.startTime)}${meeting.endTime ? `–${formatTime(meeting.endTime)}` : ''}` : ', all day'}` : 'No date';
+  const invited = (meeting.attendees || []).filter((a) => a.name).length;
+  const result = await chooseAction({
+    title: meeting.name || 'Untitled meeting',
+    details: [
+      ['When', when],
+      ['How', meeting.mode ? `${modeIcon(meeting.mode)} ${meeting.mode}` : 'Not set'],
+      ['Status', meeting.status || 'Scheduled'],
+      ['Invited', invited ? `${invited} ${invited === 1 ? 'person' : 'people'}` : 'Nobody yet'],
+      ...(meeting.repeat && meeting.repeat !== 'None' ? [['Repeats', meeting.repeat]] : []),
+    ],
+    actions: [{ value: 'delete', label: 'Delete', tone: 'danger' }],
+    cancelLabel: 'Close',
+    confirmLabel: 'Open',
+  });
+  if (!result) return;
+  if (result.action === 'delete') await deleteMeeting(meeting);
+  else openMeeting(meeting.id);
+}
+
+/** A dashed date: not a meeting yet. Plan it, or stop the series. */
+async function repeatView(from, date) {
+  const result = await chooseAction({
+    title: `${from.name || 'Untitled meeting'} — ${formatDate(date)}`,
+    message: `A coming date of a meeting that repeats ${String(from.repeat).toLowerCase()}. It is not a meeting until it is planned, so there is nothing here to delete. Stop repeating removes every coming date; the meetings already held stay.`,
+    actions: [{ value: 'stop', label: 'Stop repeating', tone: 'danger' }],
+    confirmLabel: 'Plan this one',
+  });
+  if (!result) return;
+  if (result.action === 'stop') {
+    const was = from.repeat;
+    from.repeat = 'None';
+    commit();
+    renderCalendar();
+    offerUndoAction(`“${from.name || 'Untitled meeting'}” no longer repeats.`, () => { from.repeat = was; commit(); renderCalendar(); });
+    return;
+  }
+  createOn(date, from);
+  toast('Planned from the last one: same agenda and invitees, nothing yet decided.', 'success');
+}
+
+function downloadIcs(list, name) {
+  const text = icsCalendar(list, { contacts: getState().contacts || [], calendarName: `${getState().projectName || 'Project'} meetings` });
+  const a = el('a', { href: URL.createObjectURL(new Blob([text], { type: 'text/calendar' })), download: `${slug(name) || 'meetings'}.ics` });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 // ---------- the page ----------
@@ -420,6 +1021,9 @@ function renderCounters(meeting) {
       : tally.total ? `${tally.done} already done` : 'No actions yet',
     !tally.total ? 'idle' : tally.unowned ? 'bad' : tally.open ? 'warn' : 'good');
 
+  renderReadiness(meeting);
+  renderAbsentOwners(meeting);
+
   const badge = document.getElementById('meeting-status-badge');
   badge.textContent = meeting.name
     ? `${meeting.status} · ${meeting.date || 'no date'}${meeting.startTime ? ` ${formatTime(meeting.startTime)}` : ''}`
@@ -430,6 +1034,7 @@ export function renderMeetings() {
   const list = meetings();
   const meeting = current();
   selectedId = meeting ? meeting.id : '';
+  renderCalendar();
 
   const empty = document.getElementById('meeting-none');
   const hasAny = list.length > 0;
@@ -443,10 +1048,11 @@ export function renderMeetings() {
   document.getElementById('btn-delete-meeting').disabled = !hasAny;
 
   renderPicker();
-  document.getElementById('transcript-privacy').textContent = isSupported()
-    ? PRIVACY_NOTE
-    : 'This browser cannot record. Paste a transcript from your meeting tool instead — that path works everywhere.';
-  document.getElementById('btn-record').disabled = !isSupported() || !hasAny;
+  renderRhythm();
+  renderRecorder(meeting);
+  const repeats = !!meeting && meeting.repeat && meeting.repeat !== 'None';
+  document.getElementById('btn-meeting-next').hidden = !repeats;
+  document.getElementById('btn-meeting-ics').disabled = !meeting?.date;
 
   if (!meeting) return;
 
@@ -554,7 +1160,7 @@ function bindTable(bodyId, name) {
     const found = rowFrom(e.target);
     if (!found || !found.row) return;
     found.row[field] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    if (e.target.tagName === 'SELECT') {
+    if (e.target.tagName === 'SELECT' && field !== 'meetingRole') {
       e.target.className = `row-select tone-${slug(e.target.value) || 'none'}`;
     }
     // An action closed here closes the task it became, and the other way round
@@ -669,18 +1275,96 @@ export function initMeetings(navigate) {
   goTo = navigate;
 
   document.getElementById('meeting-picker').addEventListener('change', (e) => {
+    stopRecordingIfOther(e.target.value);
     selectedId = e.target.value;
-    stopRecording();
     renderMeetings();
   });
 
-  document.getElementById('btn-add-meeting').addEventListener('click', () => {
-    const meeting = { ...newMeeting({ date: todayISO(), status: 'Scheduled' }), id: uid() };
-    meetings().push(meeting);
-    selectedId = meeting.id;
-    renderMeetings();
-    commit();
-    document.querySelector('[data-meeting-field="name"]')?.focus();
+  document.getElementById('btn-add-meeting').addEventListener('click', () => createOn(todayISO()));
+
+  // ---- calendar ----
+  initRhythm({
+    onCreated: (id) => {
+      stopRecordingIfOther(id);
+      selectedId = id;
+      renderMeetings();
+      showSection('page-meetings', 'sec-meeting-overview');
+    },
+    navigate: (node) => goToNode(node),
+  });
+
+  document.getElementById('sec-meeting-calendar').addEventListener('click', (e) => {
+    const view = e.target.closest('[data-cal-view]')?.dataset.calView;
+    if (view) {
+      calendarView = view;
+      try { localStorage.setItem(VIEW_KEY, view); } catch { /* a view preference; losing it is harmless */ }
+      renderCalendar();
+      return;
+    }
+    const nav = e.target.closest('[data-cal-nav]')?.dataset.calNav;
+    if (nav !== undefined && calendarView === 'week') {
+      const base = new Date(`${calendarWeek || isoOf(new Date())}T00:00:00`);
+      calendarWeek = nav === '0' ? isoOf(new Date()) : isoOf(new Date(base.getFullYear(), base.getMonth(), base.getDate() + Number(nav) * 7));
+      renderCalendar();
+      return;
+    }
+    if (nav !== undefined) {
+      const t = new Date();
+      if (nav === '0') calendarMonth = { y: t.getFullYear(), m: t.getMonth() };
+      else {
+        const d = new Date(calendarMonth.y, calendarMonth.m + Number(nav), 1);
+        calendarMonth = { y: d.getFullYear(), m: d.getMonth() };
+      }
+      renderCalendar();
+      return;
+    }
+    const day = e.target.closest('[data-cal-new]')?.dataset.calNew;
+    if (day) { createFromCalendar(day); return; }
+    const slot = e.target.closest('[data-cal-slot]');
+    if (slot && e.target === slot) {
+      // The half hour that was clicked, from where in the column: the grid
+      // says which hour its top row is.
+      const from = Number(slot.closest('.wk').dataset.from) || 480;
+      const y = e.clientY - slot.getBoundingClientRect().top;
+      const mins = Math.min(23 * 60 + 30, Math.max(0, Math.floor((from + (y / HOUR_PX) * 60) / 30) * 30));
+      createFromCalendar(slot.dataset.calSlot, `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`);
+      return;
+    }
+    const open = e.target.closest('[data-cal-open]');
+    if (open) {
+      const meeting = meetings().find((m) => m.id === open.dataset.calOpen);
+      // A meeting's own chip offers Open and Delete; a follow-up or an action
+      // goes straight to where it is kept.
+      if (meeting && open.dataset.calKind === 'meeting') quickView(meeting);
+      else openMeeting(open.dataset.calOpen, open.dataset.calTab);
+      return;
+    }
+    const repeat = e.target.closest('[data-cal-repeat]');
+    if (repeat) {
+      const from = meetings().find((m) => m.id === repeat.dataset.calRepeat);
+      if (from) repeatView(from, repeat.dataset.date);
+    }
+  });
+  document.getElementById('btn-meetings-ics').addEventListener('click', () => {
+    const dated = meetings().filter((m) => m.date);
+    if (!dated.length) { toast('No meeting has a date yet.', 'info'); return; }
+    downloadIcs(dated, `${getState().projectName || 'project'}-meetings`);
+    toast(`${dated.length} meeting${dated.length === 1 ? '' : 's'} exported. Open the file to add them to your calendar.`, 'success');
+  });
+  document.getElementById('btn-meeting-ics').addEventListener('click', () => {
+    const meeting = current();
+    if (!meeting?.date) return;
+    downloadIcs([meeting], `${meeting.name || 'meeting'}-${meeting.date}`);
+  });
+  document.getElementById('btn-meeting-next').addEventListener('click', () => {
+    const meeting = current();
+    if (!meeting?.date || !meeting.repeat || meeting.repeat === 'None') return;
+    const series = meetings().filter((m) => (m.seriesId || m.id) === (meeting.seriesId || meeting.id) && m.date);
+    const latest = series.reduce((a, b) => (b.date > a.date ? b : a), meeting);
+    const date = addRepeat(latest.date, latest.repeat || meeting.repeat);
+    if (!date) return;
+    createOn(date, latest);
+    toast(`Next one planned for ${formatDate(date)}.`, 'success');
   });
 
   document.getElementById('btn-delete-meeting').addEventListener('click', async () => {
@@ -693,7 +1377,7 @@ export function initMeetings(navigate) {
       tone: 'danger',
     });
     if (!ok) return;
-    stopRecording();
+    if (session?.meetingId === meeting.id) await stopRecording();
     trashRow('meetings', meeting.id);
     selectedId = '';
     renderMeetings();
@@ -705,11 +1389,17 @@ export function initMeetings(navigate) {
     if (!field) return;
     const meeting = current();
     if (!meeting) return;
-    meeting[field] = e.target.value;
+    meeting[field] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     // The agenda hangs off the meeting's start time, and the picker and badge
     // both show its name and date.
     if (field === 'startTime' || field === 'endTime') renderAgenda(meeting);
     if (field === 'name' || field === 'date' || field === 'status') renderPicker();
+    if (['name', 'date', 'startTime', 'status', 'repeat'].includes(field)) renderCalendar();
+    if (field === 'repeat') {
+      if (meeting.repeat !== 'None' && !meeting.seriesId) meeting.seriesId = meeting.id;
+      document.getElementById('btn-meeting-next').hidden = meeting.repeat === 'None';
+    }
+    if (field === 'date') document.getElementById('btn-meeting-ics').disabled = !meeting.date;
     renderCounters(meeting);
     commit();
   });
@@ -725,6 +1415,34 @@ export function initMeetings(navigate) {
 
   document.querySelectorAll('[data-meeting-add]').forEach((button) => {
     button.addEventListener('click', () => addRow(button.dataset.meetingAdd));
+  });
+
+  const absentHost = document.getElementById('meeting-absent-owners');
+  const flaggedAction = (target) => {
+    const meeting = current();
+    const id = target.closest('[data-action-id]')?.dataset.actionId;
+    return meeting && { meeting, action: (meeting.actions || []).find((a) => a.id === id) };
+  };
+  absentHost.addEventListener('change', (e) => {
+    if (!e.target.matches('[data-reassign]') || !e.target.value) return;
+    const found = flaggedAction(e.target);
+    if (!found?.action) return;
+    found.action.owner = e.target.value;
+    // The task it became, if any, follows its owner.
+    const task = found.action.taskId && (getState().dashTasks || []).find((t) => t.id === found.action.taskId);
+    if (task) { task.assigned = found.action.owner; notifyProjectDataChanged('meetings:action-owner'); }
+    renderActions(found.meeting);
+    renderCounters(found.meeting);
+    commit();
+    toast(`Reassigned to ${found.action.owner}.`, 'success');
+  });
+  absentHost.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-confirm-owner]')) return;
+    const found = flaggedAction(e.target);
+    if (!found?.action) return;
+    found.action.ownerConfirmed = true;
+    renderCounters(found.meeting);
+    commit();
   });
 
   bindTable('agenda-body', 'agenda');
@@ -759,8 +1477,31 @@ export function initMeetings(navigate) {
   });
 
   document.getElementById('btn-record').addEventListener('click', () => {
-    if (transcriber && transcriber.isRunning()) stopRecording();
+    if (session) stopRecording();
     else startRecording();
+  });
+  document.getElementById('btn-record-pause').addEventListener('click', togglePause);
+  document.getElementById('recorder-mode').addEventListener('change', (e) => {
+    try { localStorage.setItem(MODE_KEY, e.target.value); } catch { /* a convenience only */ }
+  });
+  document.getElementById('btn-mic-check').addEventListener('click', runMicCheck);
+  document.getElementById('recording-list').addEventListener('click', async (e) => {
+    const id = e.target.closest('[data-recording-delete]')?.dataset.recordingDelete;
+    if (!id) return;
+    const ok = await confirmAction({
+      title: 'Delete this recording?',
+      message: 'It is removed from this device and cannot be restored. Download it first if you need to keep it.',
+      confirmLabel: 'Delete', tone: 'danger',
+    });
+    if (!ok) return;
+    await deleteRecording(id);
+    renderRecordings(current());
+  });
+  // Closing the tab mid-meeting would lose the recording, so the browser asks.
+  window.addEventListener('beforeunload', (e) => {
+    if (!session) return;
+    e.preventDefault();
+    e.returnValue = '';
   });
 
   document.getElementById('btn-import-transcript').addEventListener('click', () => {
@@ -827,6 +1568,11 @@ export function initMeetings(navigate) {
   });
 
   renderMeetings();
+}
+
+/** Which meeting the page shows next time it is drawn. */
+export function selectMeeting(id) {
+  selectedId = id;
 }
 
 export function setMeetingsChangedHandler(fn) {

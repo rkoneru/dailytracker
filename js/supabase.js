@@ -328,6 +328,24 @@ export async function remove(table, filter) {
   });
 }
 
+/**
+ * A plain insert, for tables that must not be upserted: a survey request is
+ * created once and never updated from the client, so there is no conflict to
+ * merge and no update policy to meet.
+ */
+export async function insert(table, rows) {
+  return request(`/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: rows,
+  });
+}
+
+/** Calls a Postgres function through PostgREST. */
+export async function rpc(fn, args = {}, { auth = true } = {}) {
+  return request(`/rest/v1/rpc/${fn}`, { method: 'POST', body: args, auth });
+}
+
 /** `in` filter helper — PostgREST wants in.(a,b,c) with quoted values. */
 export function inList(values) {
   return `in.(${values.map((v) => `"${String(v).replace(/"/g, '\\"')}"`).join(',')})`;

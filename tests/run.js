@@ -6,9 +6,17 @@
 // the failure patterns below match — the older suites predate assertion
 // counting and report by printing, so both signals are honoured.
 //
+// Suites run several at a time: each launches its own browser, so each has
+// its own storage and nothing to collide over. The exceptions share a server
+// or a directory — the fake Supabase, the service-worker copy, the Postgres
+// the RLS suite starts — and are spotted by naming one of those, then run one
+// at a time after the rest.
+//
 // Usage:  node tests/run.js [name-fragment ...]
+//         JOBS=1 node tests/run.js       (one at a time, as before)
 
-const { spawn, spawnSync } = require('child_process');
+const { spawn } = require('child_process');
+const os = require('os');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -57,13 +65,36 @@ function makeSwCopy() {
 }
 
 function runSuite(file) {
-  const result = spawnSync('node', [path.join(__dirname, file)], {
-    encoding: 'utf8', env: { ...process.env, APP_URL, SW_URL, API_URL },
+  return new Promise((resolve) => {
+    const child = spawn('node', [path.join(__dirname, file)], {
+      env: { ...process.env, APP_URL, SW_URL, API_URL },
+    });
+    let output = '';
+    child.stdout.on('data', (d) => { output += d; });
+    child.stderr.on('data', (d) => { output += d; });
+    child.on('close', (status) => {
+      const cleaned = ALLOWED.reduce((acc, pattern) => acc.replace(new RegExp(pattern, 'g'), ''), output);
+      const failed = status !== 0 || FAILURE_PATTERNS.some((p) => p.test(cleaned));
+      resolve({ failed, output });
+    });
   });
-  const output = `${result.stdout || ''}${result.stderr || ''}`;
-  const cleaned = ALLOWED.reduce((acc, pattern) => acc.replace(new RegExp(pattern, 'g'), ''), output);
-  const failed = result.status !== 0 || FAILURE_PATTERNS.some((p) => p.test(cleaned));
-  return { failed, output };
+}
+
+const SHARED = /API_URL|SW_URL|SW_COPY|fake-supabase|postgres|pg_ctl|__dump/;
+
+function sharesAServer(file) {
+  return SHARED.test(fs.readFileSync(path.join(__dirname, file), 'utf8'));
+}
+
+async function runPool(files, jobs, onDone) {
+  const queue = files.slice();
+  const worker = async () => {
+    while (queue.length) {
+      const file = queue.shift();
+      onDone(file, await runSuite(file));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(jobs, files.length) }, worker));
 }
 
 async function main() {
@@ -103,11 +134,15 @@ async function main() {
   const failures = [];
   const started = Date.now();
 
-  suites.forEach((file) => {
-    const { failed, output } = runSuite(file);
+  const jobs = Math.max(1, Number(process.env.JOBS) || Math.min(4, os.cpus().length));
+  const report = (file, { failed, output }) => {
     console.log(`${failed ? '✗' : '✓'} ${file}`);
     if (failed) failures.push({ file, output });
-  });
+  };
+  const serial = suites.filter(sharesAServer);
+  await runPool(suites.filter((f) => !serial.includes(f)), jobs, report);
+  await runPool(serial, 1, report);
+  failures.sort((a, b) => a.file.localeCompare(b.file));
 
   const seconds = ((Date.now() - started) / 1000).toFixed(0);
   console.log(`\n${suites.length - failures.length}/${suites.length} suites passed in ${seconds}s`);
